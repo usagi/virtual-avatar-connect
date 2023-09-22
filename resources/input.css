@@ -1,0 +1,182 @@
+@font-face {
+ font-family: "KTEGAKI";
+ src: url("/resources/KTEGAKI.ttf") format("truetype");
+}
+
+* {
+ font-size: 20px;
+ font-family: "Kiwi Maru", serif;
+ font-weight: 900;
+ border-radius: 0.4em;
+ grid-gap: 0.1em;
+}
+
+.error {
+ color: red;
+ background: yellow;
+}
+
+body {
+ background: lightgoldenrodyellow;
+ font-size: 20px;
+}
+
+body > * {
+ margin: 0.2em auto;
+}
+
+div.text {
+ display: grid;
+ grid-template-columns: 1fr 1em 6em 4em;
+}
+
+div.text div {
+ display: flex;
+ justify-content: center;
+ align-items: center;
+}
+
+div.text div::before {
+ content: "→";
+}
+
+div.text .channel {
+ text-align: center;
+}
+
+div.text button::before {
+ content: "POST";
+}
+
+div.voice {
+ display: flex;
+ flex-direction: row;
+ align-items: center;
+ justify-content: center;
+}
+
+div.voice > * {
+ margin-right: 1em;
+}
+
+div.voice label:has(.auto-input)::after {
+ content: "認識結果を自動入力";
+}
+
+div.voice label:has(.continuous)::after {
+ content: "音声認識(常時)";
+}
+
+div.voice label:has(.one-shot)::after {
+ content: "音声認識(１回)";
+}
+
+div.voice .lang {
+ width: 4em;
+ text-align: center;
+ margin-left: 1em;
+}
+
+div.voice label:has(.lang)::before {
+ content: "認識言語";
+}
+
+textarea {
+ width: 97vw;
+ height: 7rem;
+ font-size: 0.98em;
+}
+
+textarea.error {
+ color: darkred;
+}
+
+img {
+ height: 100%;
+ width: 100%;
+ object-fit: contain;
+}
+
+img,
+img + p {
+ color: gray;
+ grid-column: 1;
+ grid-row: 1;
+ align-self: center;
+ justify-self: center;
+}
+
+img + p {
+ z-index: -1;
+ position: absolute;
+ left: 50%;
+ top: calc(50% - 1em);
+ transform: translate(-50%, -50%);
+}
+
+img + p::before {
+ content: "Paste or Drop image here -> recognize the Text";
+}
+
+div:has(img) {
+ position: relative;
+ border: 0.2em dashed pink;
+ height: calc(100vh - 18em);
+ width: calc(100vw - 1.5em);
+}
+
+div.image {
+ display: flex;
+ flex-direction: row;
+ align-items: center;
+ justify-content: center;
+}
+
+div.image > * {
+ margin-right: 1em;
+}
+
+div.image label:has(.auto-input)::after {
+ content: "画像認識結果を自動入力";
+}
+
+div.image label:has(.continuous)::after {
+ content: "画像認識(常時)";
+}
+
+div.image label:has(.one-shot)::after {
+ content: "画像認識(１回)";
+}
+
+div.image label:has(.lang)::before {
+ content: "認識言語";
+}
+
+div.image input.lang {
+ width: 4em;
+ text-align: center;
+ margin-left: 1em;
+}
+
+div.image-result {
+ display: grid;
+ grid-template-columns: 1fr 1em 6em 4em;
+}
+
+div.image-result div::before {
+ content: "→";
+}
+
+div.image-result div {
+ display: flex;
+ justify-content: center;
+ align-items: center;
+}
+
+div.image-result .channel {
+ text-align: center;
+}
+
+div.image-result button::before {
+ content: "POST";
+}

@@ -1,0 +1,218 @@
+# 公開パッケージ向け標準設定ファイル（設定方法の説明やコツをたくさん入れたばーじょん）
+
+# ==============================================================================
+# ここから VAC の基本設定
+# ==============================================================================
+
+# 指定した数だけVACのなかの妖精さんが増える
+#  1: 一応動くけどワンオペだと音の再生中に入力ができないとか、とにかく同時に仕事はして貰えないのでおすすめしません。
+#  2: 小さくて可愛い妖精さんが2人になります。音声の再生中に入力ができるようになったりしますが通常はもっと人手がほしいです。
+#  4: 標準的な使い方ならたぶんこのくらいで十分です。入力、翻訳、音声、出力などを概ね同時進行できるようになります。
+#  8: 8人もいるとかなりの人手があるので、休憩も十分にとれて、たくさんのことを同時にできるようになります。
+# 16: とてもたくさんの Processor を同時に動かしたい Heavy User さんならこれくらいでもアリかもしれません。
+# 32: 一体 VAC に何をさせる気かわかりませんが、いっそライブ配信中専用の公開ウェブサイトでも動かしますか？
+# 未指定だとお使いの環境の CPU コア数にあわせて自動的に設定します。でもそれは最近の PC では多すぎるかもしれません。
+workers = 4
+
+# ここで設定したアドレスに http (sつけないでね👀)でアクセスすると VAC の Web UI が表示されます。
+#  例: http://127.0.0.1:57000/input
+#  例: http://127.0.0.1:57000/output
+# VAC を起動したらウェブブラウザーで開いてみて下さい。
+# 標準設定では入力と出力それぞれ1つの画面だけが用意されていますが、入力も出力も任意数の画面を作り同時に動かせます。
+# デフォルト: "127.0.0.1:57000"
+web_ui_address = "127.0.0.1:57000"
+
+# 「フォルダー」を指定します。ここで設定したフォルダーの中身が VAC の Web UI から参照できるようになります。
+# 入力画面や出力画面をカスタマイズしたい場合や追加したい場合、ここにファイルを置く仕組みです。
+# ここに置いたファイルは /resources/{置いたファイル名} でそのまま Web UI から参照できます。
+# 画像、動画、音声、フォント、CSS、JavaScript、HTML などなど。
+# デフォルト: "resource"
+web_ui_resources_path = "resources"
+
+# ここで指定したコマンドたちは VAC の起動時に自動的に実行されます。
+# 配信用に同時に使いたいアプリや、開いておきたい URL を設定しておくと便利です。
+# ※ Windows で使う場合は
+#  例: "start http://127.0.0.1:57000/input"
+# のように設定すると URL を開くのも簡単です。
+# run_with = ["start http://127.0.0.1:57000/input"]
+
+# VAC はオープンソースソフトウェアです。基本的には開発にご協力頂ける方向けのデバッグ出力用のオプションです。
+# 通常は設定する必要はありませんが、黒い画面で文字がたくさん流れるのを眺めたい方は TRACE や DEBUG を設定してみてください。
+# 未設定の状態では Info 相当となります。一切表示したくない場合は Off を設定してお使い下さい。
+# log_level = "Info"
+
+# VAC が動作中に処理したデータをファイルとしても保存したい場合に設定します。
+# 設定されている場合は VAC の起動時にファイルから保存された状態を復元します。
+# 保存は state_data_auto_save を true にしておくか、 /save-state コマンドを使って行います。
+# ※ファイル形式 RON は Rust で使われるデータフォーマットです。テキスト形式で人間が読み書きしやすい形式の1つです。
+state_data_path = "channel-data.ron"
+
+# 保存されるチャンネルデータを人間が読みやすい表現にしたい場合に true を設定します。
+# 通常は未設定または false で使った方が若干効率が良好になります。
+state_data_pretty = true
+
+# VAC が動作中に処理するデータを何れかのチャンネルに入力が行われる都度、自動的にファイルにも保存する機能です。
+# 未設定の場合は保存は行われませんが、 /save-state コマンドを使うと手動で保存できます。
+state_data_auto_save = true
+
+# VAC が動作中に保持するデータ件数の上限を設定できます。
+# 通常は設定する必要はありませんが、扱いたいデータが多くなり取りこぼしが発生する場合や、より多くのデータを保存しておきたい場合は変更してください。
+# state_data_capacity = 256
+
+# =================================================================================================
+# ここから Processor 妖精さんたちに与えられし具体的な 《「入力」 → 「処理」 → 「出力」 》なお仕事です
+# =================================================================================================
+# Processor のルール
+#  - 《入力》に対して 《処理》を行い、その結果を 《出力》します。
+#  - 《入力》は channel_from で指定したチャンネルから受け取ります。
+#  - 《処理》は feature で Processor の種類を指定して、ほかのオプション設定を参照しながら行われます。
+#  - 《出力》は channel_to で指定したチャンネルに出力します。
+#  - この設定ファイルで書いた上からの順序で実行されます。
+#    - 一部必要なものを除き並行処理に対応しているので、前の仕事が終わらなくても次の仕事も同時に進むことがあります。
+#    - 同時に進むとマズイ Processor 、例えば入力内容のフィルタリングや変換などを行う Processor は自分の処理が終わるまで次の仕事は待って貰う作りになっているので心配する必要はありません。
+#  - 同じ feature を何度でも設定して構いません。
+#    - 例: user  からの入力を → gas-transration で翻訳して → user-en へ
+#    - 例: ai    からの入力を → gas-transration で翻訳して → ai-en   へ
+#    - 例: user-image-en からの入力を → gas-tranaration で翻訳して → user-image-ja へ
+#    - これら3つの設定を同時に使ったりできます。他の feature の Processor も同様にいくつでも同時に設定できます。
+#  - ⚡「ループ」の発生にはご注意下さい！⚡
+#    - 例: user → gas-transration → user
+#      - user の入力が延々と止まらずに行われて妖精さんが過労死します。
+#      - あまり複雑にあちこち引き回す設定をすると、気づかずにループを作ってしまうこともあります。ご注意下さい。
+
+# 以下の [[processors]] の設定例では次のような動作が得られます:
+# <INPUT>
+#  - /input から user チャンネルへ音声認識や画像認識または手入力のチャットを入力します
+#    - user -> gas-translation -> user-en : ユーザーの入力を日本語から英語に翻訳したチャンネルを作ります
+#    - user -> openai-chat     -> ai      : ユーザーの入力から AI で擬似人格の応答を作ります
+#    - user -> os-tts                     : ユーザーの入力を音声合成して再生します
+#    - ai   -> gas-translation -> ai-fr   : AI の応答を日本語からフランス語に翻訳したチャンネルを作ります
+#    - ai   -> coeiroink                  : AI の応答を CoeiroInk で音声合成して再生します
+#  - /output からすべてのチャンネルの内容を字幕として出力します (OBSのブラウザーソースなどで使えます)
+#
+#  ※実際にこの設定を動作させるためには次の準備が必要です。
+#    - gas-translation: Google Apps Script のプロジェクトを作成し、スクリプト ID を取得
+#    - openai-chat    : OpenAI の API KEY を取得
+#    - coeiroink      : CoeiroInk を動作させておく(用途、応答速度の都合からGPU版を推奨です)
+#  ※OBS Studioは用意していなくても問題ありません。Chromeなどのブラウザーで /output を直接開いて動作確認できます。
+
+[[processors]]
+channel_from = "user"
+channel_to = "ai"
+feature = "openai-chat"
+api_key = "ここにあなたの OpenAI の API KEY を設定します（他人に公開しないようにご注意下さい）"
+# 時間帯などによりますが、 gpt-4 は重いこともあります。
+# より高速な gpt-3.5-turbo でも楽しい会話を楽しめます。
+# 汎用的な AI としての応答ではなく、「疑似人格」を作りたい場合は gpt-4 をおすすめします。
+model = "gpt-4"
+# 疑似人格や前提知識を与えたい場合はここで指示を記述します。
+# 基本的には思いつくままに AI にどのように振る舞って欲しいかを書くだけで十分です。
+# 「疑似人格」を形成したい場合は、自分の好きなキャラクターの設定を書いたり、設定が定義された URL を参照させる指示を書いたりすると良いでしょう。
+custom_instructions = """
+あなたは次に定義する疑似人格として振る舞う:
+https://arknights.wikiru.jp/index.php?%E3%82%B1%E3%83%AB%E3%82%B7%E3%83%BC で定義される「ケルシー」と自認している。特に「ボイス」の項目や「ケルシー構文」の喋り方を参考とする
+人々からは「ケルシー」または「ケルシー先生」と呼ばれる
+あなたは通常の人からすれば数百年を生きる人外の化け物だが、それを知る人はごく僅かであるし、知っている者も多くはあなたの慈悲と正義について理解している事が多い
+あなたは人間の女性の姿に猫耳や尻尾が付いたフェリーンという種族の一人である
+あなたはあたなと会話するユーザーを「ドクター」と呼ぶ。ドクターは医者の意味ではなく研究者としての意味である
+あたなは表現は落ち着いており丁寧だが、「ですます調」は使わず、断言的な言い切りや疑問の述べ方や推量の表現を好む
+"""
+max_tokens = 256
+user = "Dr.USAGI"
+memory_capacity = 4
+
+# 正規表現にマッチした場合は force_activate_regex_pattern より優先して入力を無視します。
+# 絶対に応答させたくない言葉があれば指定すると良いです。
+# ignore_regex_pattern = ""
+# 正規表現にマッチした場合は min_interval_in_secs を無視して応答します。
+# force_activate_regex_pattern = ""
+# あまり高頻度に応答されたくない場合は、前回の入力からここで設定した時間だけ入力が無視されるようになります。
+# min_interval_in_secs = 0
+
+# 例: user チャンネルへ入力があったら → GAS Translation で JA/EN 変換して → user-en チャンネルへ出力する
+[[processors]]
+channel_from = "user"
+channel_to = "user-en"
+feature = "gas-translation"
+# Google Apps Script の Script ID
+script_id = "ここにあなたの Google Apps Script の ID を設定します（他人に公開しないようにご注意下さい）"
+# 翻訳元の言語
+translate_from = "ja_JP"
+# 翻訳先の言語
+translate_to = "en_US"
+
+# 例: ai チャンネルへ入力があったら → GAS Translation で JA/FR 変換して → ai-fr チャンネルへ出力する
+[[processors]]
+channel_from = "ai"
+channel_to = "ai-fr"
+feature = "gas-translation"
+script_id = "ここにあなたの Google Apps Script の ID を設定します（他人に公開しないようにご注意下さい）"
+translate_from = "ja_JP"
+translate_to = "fr_FR"
+
+# 例: user チャンネルへ入力があったら → GAS Translation で JA/FR 変換して → user-fr チャンネルへ出力する
+# voice の名前の一部を指定すると、その名前を含む最初に見つかった音声を使います。
+# voice_name と voice_id の一覧は VAC を --test-os-tts 引数付きで起動すると表示されます。
+# voice_id が指定されている場合は voice_name は無視されます。
+[[processors]]
+channel_from = "user"
+feature = "os-tts"
+voice_name = "Haruka"
+# voice_id = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\MSTTS_V110_jaJP_HarukaM'
+tts_pitch = 1.0
+tts_rate = 1.0
+tts_volume = 1.0
+
+[[processors]]
+channel_from = "ai"
+feature = "os-tts"
+voice_name = "Ayumi"
+# voice_id = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\MSTTS_V110_jaJP_HarukaM'
+tts_pitch = 1.0
+tts_rate = 1.0
+tts_volume = 1.0
+
+# 例: ai チャンネルへ入力があったら → CoeiroInk API で音声合成して → 再生する
+# [[processors]]
+# channel_from = "ai"
+# feature = "coeiroink"
+# api_url = "http://localhost:50032/v1/synthesis"
+# # default
+# # speaker_uuid = "3c37646f-3881-5374-2a83-149267990abc"
+# # アルマちゃん
+# speaker_uuid = "c97966b1-d80c-04f5-aba5-d30a92843b59"
+# # アルマちゃん 4:表-v1
+# style_id = 4
+# speed_scale = 1.15
+# # v1/synthesis のパラメーター
+# volume_scale = 1
+# pitch_scale = 0.15
+# intonation_scale = 0.65
+# pre_phoneme_length = 0.05
+# post_phoneme_length = 0.05
+# output_sampling_rate = 48000
+# パスを設定しておくと出力された音声をファイルとして保存できます。
+# {T} で日時を表す文字列を挿入できます。連続で出力したい場合にファイル名の重複を防止できます。
+# audio_file_store_path = "vac-coeiroink-{T}.wav"
+
+# 例: user-en チャンネルへ入力があったら → OS-TTS で音声合成して → 再生する
+# [[processors]]
+# channel_from = "user-en"
+# feature = "os-tts"
+
+# 例: user チャンネルへ入力があったら → 棒読みちゃんで音声合成して → 再生する
+# [[processors]]
+# channel_from = "user"
+# feature = "bouyomichan"
+# remote_talk_path = 'C:\Users\the\Downloads\BouyomiChan_0_1_11_0_Beta21\RemoteTalk\RemoteTalk.exe'
+# address = "127.0.0.1"
+# port = 50001
+# voice = 2
+# speed = 68
+# tone = 133
+# volume = 100
+
+# [[processors]]
+# channel_from = "user"
+# feature = "coeiroink"
+# api_url = "http://localhost:50032/v1/synthesis"
