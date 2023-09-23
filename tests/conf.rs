@@ -1,9 +1,11 @@
-#[test]
-fn conf() -> anyhow::Result<()> {
+#[tokio::test]
+async fn conf() -> anyhow::Result<()> {
+ use virtual_avatar_connect::Args;
  use virtual_avatar_connect::Conf;
 
- let conf_path = "conf.toml";
- let conf = Conf::load(conf_path)?;
+ let mut args = Args::init().await?;
+ args.conf = "conf.toml".to_string();
+ let conf = Conf::new(&args)?;
 
  println!("{:#?}", conf);
 

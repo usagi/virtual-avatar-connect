@@ -18,7 +18,6 @@ pub use crate::{
 };
 
 use actix_files::Files;
-use actix_web::web;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 
@@ -47,12 +46,13 @@ async fn run_services(conf: Conf, state: SharedState) -> Result<()> {
   let conf = conf.clone();
   let app = actix_web::App::new()
    .app_data(actix_web::web::Data::new(state))
+   .service(web_interface::websocket)
    .service(web_interface::input::post)
-   .service(web::redirect("/input/", "/input"))
-   .service(Files::new("/input", "input").index_file("index.html"))
+   .service(web_interface::input::get_index)
+   .service(web_interface::input::get_subfile)
    .service(web_interface::output::post)
-   .service(web::redirect("/output/", "/output"))
-   .service(Files::new("/output", "output").index_file("index.html"))
+   .service(web_interface::output::get_index)
+   .service(web_interface::output::get_subfile)
    .service(web_interface::favicon);
   if let Some(web_ui_resources_path) = conf.web_ui_resources_path {
    app.service(Files::new("/resources", web_ui_resources_path))

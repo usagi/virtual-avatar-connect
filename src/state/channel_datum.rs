@@ -1,9 +1,8 @@
+use crate::{Arc, RwLock};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashSet, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone)]
 pub struct ChannelDatum {
@@ -25,6 +24,10 @@ impl ChannelDatum {
 
  pub fn reset_id_counter(id: u64) {
   ID_COUNTER.store(id, Ordering::Relaxed);
+ }
+
+ pub fn get_last_id() -> u64 {
+  ID_COUNTER.load(Ordering::Relaxed)
  }
 
  pub fn new(channel: String, content: String) -> Self {

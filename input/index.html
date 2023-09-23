@@ -1,21 +1,28 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <title>VAC/input</title>
+
 <link rel="stylesheet" href="/resources/input.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@500&display=swap" rel="stylesheet">
+
+<script
+ src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"></script>
 <script src='https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js'></script>
+<script src="/resources/api.js"></script>
 <script src="/resources/input.lang_codes.js"></script>
-<script src="/resources/input.post.js"></script>
+<script src="/resources/input.js"></script>
 <script src="/resources/input.voice.js"></script>
 <script src="/resources/input.image.js"></script>
+
 <div class="text">
- <input name="content" autocomplete="off" class="content" placeholder=" -> Virtual Avatar Connect">
+ <input data-vac-input="user" name="content" autocomplete="off" class="content" placeholder=" -> Virtual Avatar Connect">
  <div></div>
  <input autocomplete="off" class="channel" placeholder="user" value="user">
  <button></button>
 </div>
+
 <div class="voice">
  <label><input autocomplete="off" class="auto-input" type="checkbox"></label>
  <label><input autocomplete="off" class="continuous" type="checkbox"></label>
@@ -23,12 +30,14 @@
  <label><input autocomplete="off" class="lang" placeholder="ja-JP"></label>
  <a href="/output" target="VAC/output">🔗/output</button></a>
 </div>
-<textarea autocomplete="off"
+
+<textarea data-vac-status autocomplete="off"
  placeholder="Responses to input sent to VAC will be displayed. (You can check the output for display at /output.)"></textarea>
 <div>
  <img>
  <p>
 </div>
+
 <div class="image">
  <label><input autocomplete="off" class="auto-input" type="checkbox"></label>
  <label><input autocomplete="off" class="continuous" type="checkbox"></label>
@@ -37,6 +46,7 @@
  <a href="https://tesseract-ocr.github.io/tessdoc/Data-Files#data-files-for-version-400-november-29-2016"
   target="tesseract/lang-code">🔗lang code</button></a>
 </div>
+
 <div class="image-result">
  <input name="content" autocomplete="off" placeholder="(recognized text here if paste or drop the image.)">
  <div></div>

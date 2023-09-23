@@ -11,7 +11,7 @@ pub type SharedState = Arc<RwLock<State>>;
 
 const DEFAULT_STATE_DATA_CAPACITY: usize = 256;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct State {
  pub state_data_capacity: usize,
  pub state_data_path: Option<PathBuf>,
@@ -52,9 +52,17 @@ impl State {
   datum.cloned()
  }
 
+ pub async fn push_channel_data(&self, channel_data: ChannelData) {
+  for cd in channel_data.into_iter() {
+   self.push_channel_datum(cd).await;
+  }
+ }
+
  pub async fn push_channel_datum(&self, cd: ChannelDatum) {
   let id = cd.get_id();
   let channel_from = cd.channel.clone();
+
+  // データ追加
   log::trace!("ChannelDatum を追加します: {:?}", cd);
   {
    let mut channel_data = self.channel_data.write().await;
@@ -65,6 +73,8 @@ impl State {
    }
    log::trace!("channel_data の容量: {}", channel_data.len());
   }
+
+  // Processor の実行
   for (i, p) in self.processors.iter().enumerate() {
    log::trace!("Processor を実行します: {:?} / {:?}", i, self.processors.len());
    if p.is_channel_from(&channel_from) {
@@ -73,6 +83,7 @@ impl State {
    log::trace!("Processor の実行が完了しました。")
   }
   log::trace!("Processors の実行が完了しました。");
+
   if self.state_data_auto_save {
    log::trace!("state_data_auto_save が有効になっているため、保存処理を行います。");
    self.save().await.unwrap();

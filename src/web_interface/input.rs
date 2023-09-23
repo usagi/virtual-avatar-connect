@@ -1,6 +1,7 @@
 use crate::{resource::CONTENT_TYPE_APPLICATION_JSON, ChannelDatum, Result, SharedState};
 use actix_web::{post, web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct InputPayload {
@@ -36,4 +37,24 @@ async fn process_command(state: &SharedState, payload: &InputPayload) -> Result<
   state.write().await.load().await?;
  }
  Ok(())
+}
+
+#[actix_web::get("/input")]
+pub async fn get_index() -> Result<impl Responder> {
+ // ./input/index.html を読み込む
+ let path = Path::new("./input/index.html");
+ match tokio::fs::read_to_string(path).await {
+  Ok(content) => Ok(HttpResponse::Ok().content_type("text/html").body(content)),
+  _ => Ok(HttpResponse::NotFound().finish()),
+ }
+}
+
+#[actix_web::get("/input/{subindex}")]
+pub async fn get_subfile(subindex: web::Path<String>) -> Result<impl Responder> {
+ // ./input/{subindex}.html を読み込む
+ let path = Path::new("./input/").join(subindex.as_str()).with_extension("html");
+ match tokio::fs::read_to_string(path).await {
+  Ok(content) => Ok(HttpResponse::Ok().content_type("text/html").body(content)),
+  _ => Ok(HttpResponse::NotFound().finish()),
+ }
 }

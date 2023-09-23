@@ -7,8 +7,6 @@ document.addEventListener("DOMContentLoaded", () =>
  let one_shot = document.querySelector('.voice .one-shot')
  let lang = document.querySelector('.voice .lang')
 
- let textarea = document.querySelector('textarea')
-
  let input = document.querySelector('.text input')
 
  let SpeechRecognition = window.SpeechRecognition || webkitSpeechRecognition
@@ -44,11 +42,13 @@ document.addEventListener("DOMContentLoaded", () =>
   let is_final = latest.isFinal
   input.value = content
   if (auto_input.checked)
-   await post(channel_to.value, input, is_final, textarea)
+   vi.post(input, is_final)
  }
 
  let save = () =>
  {
+  input.dataset.vacChannel = channel_to.value
+
   localStorage.setItem('settings', JSON.stringify({
    channel: channel_to.value,
 
@@ -81,8 +81,8 @@ document.addEventListener("DOMContentLoaded", () =>
  }
 
  // let ti = document.querySelector('.text input')
- input.addEventListener('keydown', async e => e.key == 'Enter' && await post(channel_to.value, input, true, textarea))
- document.querySelector('.text button').addEventListener('click', async () => await post(channel_to.value, input, true, textarea))
+ input.addEventListener('keydown', e => e.key == 'Enter' && vi.post(input, true))
+ document.querySelector('.text button').addEventListener('click', () => vi.post(input, true))
 
  auto_input.addEventListener('input', save)
 

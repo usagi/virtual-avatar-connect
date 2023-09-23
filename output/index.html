@@ -1,21 +1,51 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <title>VAC/output</title>
+
+<!--
+ １つの出力を配信画面と同じ縦横比で作って、各要素の位置調整などはこちら側で行う場合は、
+ このファイルで作り込んで OBS Studio などのブラウザーソースでは配信画面とぴったり同じになるように
+ サイズと位置を調整するのもアリです。画面全体のエフェクトなども一緒に作り込みたい場合には便利かもしれません。
+
+ 別の方法としては、要素ごとに個別の出力画面を作り、それぞれの出力画面を OBS Studio などのブラウザーソースで
+ 個別に配置する方法もあります。この場合は、各要素の位置調整などは OBS Studio などで調整して作り込みます。
+ 画面の一部に出ればよい要素やエフェクトの作り込みは、この方法の方が便利かもしれません。
+
+ もちろん、両方の方法を組み合わせるのもよいですし、配信画面と同じサイズで複数の出力画面を作り込んで、
+ 多重レイヤーな全画面効果を実現したり、LOADING画面やBRB画面などのスイッチングもこちらで作り込むのも
+ たぶんアリです。
+
+ index.html は /output でアクセスできます。他に追加の出力画面を用意したい場合は、任意の名前で
+ ファイルを作成し、例えば chat.html なら /output/chat でアクセスして使用できます。ファイルを作成するだけで
+ VACは再起動などしなくても自動的に認識します。楽しい画面作りを！
+ -->
+
 <link rel="stylesheet" href="/resources/output.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@500&display=swap" rel="stylesheet">
+
+<script
+ src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"></script>
+<script src="/resources/api.js"></script>
 <script src="/resources/output.js"></script>
-<div data-user class="too_old" style="color:white">
- <p></p>
- <p></p>
-</div>
-<div data-ai class="too_old" style="color:yellow">
- <p></p>
- <p></p>
-</div>
-<div data-user-en class="too_old" style="color:maroon">
- <p></p>
- <p></p>
-</div>
-<div data-ai-fr class="too_old" style="color: violet;">
- <p></p>
- <p></p>
-</div>
+
+<article class="text-container">
+ <p data-vac-output="user"></p>
+ <p data-vac-output="user"></p>
+</article>
+
+<article class="text-container">
+ <p data-vac-output="user-en"></p>
+ <p data-vac-output="user-en"></p>
+</article>
+
+<article class="text-container">
+ <p data-vac-output="ai"></p>
+ <p data-vac-output="ai"></p>
+</article>
+
+<article class="text-container">
+ <p data-vac-output="ai-fr"></p>
+ <p data-vac-output="ai-fr"></p>
+</article>

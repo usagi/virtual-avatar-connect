@@ -123,7 +123,7 @@ fn make_client(conf: &SharedConf) -> Result<Client<OpenAIConfig>> {
 }
 
 fn make_request_template(conf: &SharedConf) -> Result<CreateChatCompletionRequest> {
- let conf = conf.read().unwrap();
+ let conf = conf.read().await;
  let mut builder = CreateChatCompletionRequestArgs::default();
 
  if let Some(model) = conf.ai.model.as_ref() {
@@ -164,13 +164,13 @@ fn make_request_template(conf: &SharedConf) -> Result<CreateChatCompletionReques
 }
 
 fn make_memory_capacity(conf: &SharedConf) -> Result<usize> {
- let conf = conf.read().unwrap();
+ let conf = conf.read().await;
  let memory_capacity = conf.ai.memory_capacity.unwrap_or(DEFAULT_AI_MEMORY_CAPACITY);
  Ok(memory_capacity)
 }
 
 fn make_interaction_rate(conf: &SharedConf) -> Result<f64> {
- let conf = conf.read().unwrap();
+ let conf = conf.read().await;
  let interaction_rate = conf.ai.interaction_rate.unwrap_or(DEFAULT_INTERACTION_RATE);
  Ok(interaction_rate)
 }

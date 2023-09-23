@@ -61,7 +61,6 @@ impl ProcessorKind {
   match self {
    Self::OpenAiChat(p) => p.process(id).await,
    Self::GasTranslation(p) => p.process(id).await,
-   // Self::OsTts => todo!(),
    Self::CoeiroInk(p) => p.process(id).await,
    Self::Bouyomichan(p) => p.process(id).await,
    Self::OsTts(p) => p.process(id).await,

@@ -2,6 +2,7 @@ use crate::{resource::CONTENT_TYPE_APPLICATION_JSON, Result, SharedState};
 use actix_web::{post, web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 
 #[derive(Deserialize, Debug)]
 struct OutputRequestPayload {
@@ -95,4 +96,24 @@ async fn post(state: web::Data<SharedState>, request_paylaod: web::Json<OutputRe
  }
 
  Ok(HttpResponse::Ok().content_type(CONTENT_TYPE_APPLICATION_JSON).json(output_response))
+}
+
+#[actix_web::get("/output")]
+pub async fn get_index() -> Result<impl Responder> {
+ // ./output/index.html を読み込む
+ let path = Path::new("./output/index.html");
+ match tokio::fs::read_to_string(path).await {
+  Ok(content) => Ok(HttpResponse::Ok().content_type("text/html").body(content)),
+  _ => Ok(HttpResponse::NotFound().finish()),
+ }
+}
+
+#[actix_web::get("/output/{subindex}")]
+pub async fn get_subfile(subindex: web::Path<String>) -> Result<impl Responder> {
+ // ./output/{subindex}.html を読み込む
+ let path = Path::new("./output/").join(subindex.as_str()).with_extension("html");
+ match tokio::fs::read_to_string(path).await {
+  Ok(content) => Ok(HttpResponse::Ok().content_type("text/html").body(content)),
+  _ => Ok(HttpResponse::NotFound().finish()),
+ }
 }

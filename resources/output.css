@@ -1,43 +1,151 @@
-@font-face {
- font-family: "KTEGAKI";
- src:
-  url("/resources/KTEGAKI.ttf") format("truetype"),
-  url("/resources/KTEGAKI.local.ttf") format("truetype");
+/* 変数を定義 */
+:root {
+ /* 全体の背景色 */
+ --background-color: lightgoldenrodyellow;
+ /* ダークモードの場合の背景色 */
+ /* ※OBS Studioでは見えなくなりますが、
+    ブラウザーで直接確認する場合には設定しておくと闇の民も安心です。
+    同じにしたい場合は var(--background-color) と書くとよいです。
+  */
+ --background-color-dark: var(--background-color);
+
+ /* フォント */
+ --font-family: "Kiwi Maru", serif;
+
+ /* user の名前 */
+ --user-name: "[Dr.USAGI](JA)";
+ /* ai の名前 */
+ --ai-name: "[Kal'tsit](JA)";
+
+ /* user-en の名前 */
+ --user-en-name: "[Dr.USAGI(transEN)]";
+ /* ai-fr の名前 */
+ --ai-fr-name: "[Kal'tsit](transFR)";
+
+ /* user の色 */
+ --user-color: hsl(0, 20%, 56%);
+ /* user-en の色 */
+ --user-en-color: hsl(60, 20%, 56%);
+
+ /* ai の色 */
+ --ai-color: hsl(138, 100%, 50%);
+ /* ai-fr の色 */
+ --ai-fr-color: hsl(198, 100%, 50%);
+
+ /* 文字の影の色 */
+ /* note: 文字の色が明るい場合は black、暗い場合は white がおすすめです。  */
+ --text-shadow-color: white;
+
+ /* 文字の影の太さ */
+ --text-shadow-width: 0.33em;
+
+ /* ふきだしの囲い */
+ /* note: 表示範囲確認用 */
+ --dialogue-border: 3px pink dashed;
+
+ /* ふきだしの透明度変化 */
+ --dialogue-opacity-transition: 1.333s;
+
+ /* 未確定入力の不透明度 */
+ --dialogue-opacity: 0.67;
+
+ /* 表示から時間が経過して見えなくなる際の最終的な不透明度 */
+ /* note: OBS Studio で調整する際には見える程度にしておくと楽です */
+ --dialogue-opacity-final: 1;
+
+ /* フォントサイズ */
+ /*
+  「表示領域の高さ」を文字の大きさの基準になる方式
+  OBS Studio のブラウザソースの「高さ」の設定次第で、
+  フォントサイズが変わるので OBS Studio 側で調整しやすい
+  （※もちろんお好みで px でガチガチしてもいいし、好きにしてOK）
+  */
+ --font-size: 8vh;
 }
 
 * {
  margin: 0;
  padding: 0;
- font-size: 10vh;
- font-family: "KTEGAKI";
- font-weight: 900;
+ font-family: var(--font-family);
 }
 
 body {
- background: lightgoldenrodyellow;
+ background: var(--background-color);
  width: 100vw;
  height: 100vh;
+ font-size: var(--font-size);
+
+ display: flex;
+ /* 上から下へ並べる、全体を下によせる */
+ flex-direction: column;
+ justify-content: flex-end;
+ /* 左から右へ並べる、全体を中央によせる */
+ align-items: center;
 }
 
-body > div {
+.text-container {
  display: grid;
- border: 3px solid blue;
- transition: opacity 1.333s;
+ border: var(--dialogue-border);
+ max-height: 25vh;
+ overflow: hidden;
 }
 
-body > div > p {
+.text-container > *:before {
+ display: block;
+}
+
+.text-container:first-child {
+ color: var(--user-color);
+}
+
+.text-container:first-child > *:before {
+ content: var(--user-name);
+}
+
+.text-container:nth-child(2) {
+ color: var(--user-en-color);
+}
+
+.text-container:nth-child(2) > *:before {
+ content: var(--user-en-name);
+}
+
+.text-container:nth-child(3) {
+ color: var(--ai-color);
+}
+
+.text-container:nth-child(3) > *:before {
+ content: var(--ai-name);
+}
+
+.text-container:nth-child(4) {
+ color: var(--ai-fr-color);
+}
+
+.text-container:nth-child(4) > *:before {
+ content: var(--ai-fr-name);
+}
+
+.text-container > * {
  grid-column: 1;
  grid-row: 1;
+ transition: opacity var(--dialogue-opacity-transition);
 }
 
-body > div > p:first-child {
- -webkit-text-stroke: 0.16em #000;
+.text-container > *:first-child {
+ -webkit-text-stroke: var(--text-shadow-width) var(--text-shadow-color);
 }
 
-body > div:not(.is_final) {
- opacity: 0.67;
+.text-container:has(> :not(.is_final)) {
+ opacity: var(--dialogue-opacity);
 }
 
-body > div.too_old {
- opacity: 0;
+.text-container:has(> .too_old) {
+ opacity: var(--dialogue-opacity-final);
+}
+
+@media (prefers-color-scheme: dark) {
+ body {
+  background-color: var(--background-color-dark);
+ }
 }

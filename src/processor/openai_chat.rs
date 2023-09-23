@@ -1,6 +1,6 @@
 use super::Processor;
 use crate::{Arc, ChannelDatum, Mutex, ProcessorConf, ProcessorKind, SharedChannelData, SharedState};
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 use async_openai::{
  config::OpenAIConfig,
  types::{ChatCompletionRequestMessageArgs, CreateChatCompletionRequest, CreateChatCompletionRequestArgs, Role},
@@ -115,6 +115,7 @@ impl Processor for OpenAiChat {
 
    // リクエストを生成
    let mut request = request_template;
+   log::error!("ai req: {:?}", request);
    request.messages.extend(reversed_sources.into_iter().rev().filter_map(|cd| {
     ChatCompletionRequestMessageArgs::default()
      .role(match cd.channel.as_str() {
@@ -128,9 +129,30 @@ impl Processor for OpenAiChat {
    }));
 
    // OpenAIChat に応答をリクエスト
-   log::trace!("request = {:?}", request);
+   log::error!("request = {:?}", request);
    log::debug!("OpenAIChat に応答をリクエストします。");
-   let response = client.chat().create(request).await.map_err(|e| anyhow!("{e:?}"))?;
+   let response = match client.chat().create(request).await {
+    Ok(response) => response,
+    Err(e) => {
+     log::error!("OpenAIChat へのリクエストに失敗しました: {:?}", e);
+     let es = e.to_string().to_lowercase();
+     if es.contains("billing") || es.contains("quota") || es.contains("limit") || es.contains("exceeded") {
+      static MSG: &str = r#"
+=================================================================
+=================================================================
+ OpenAIChat へのリクエストの失敗理由に
+  Billing Exceeded Limit Quota
+ などのキーワードが含まれています。使用状況やプランを確認して下さい。
+ 慌てず落ち着いて Usage ページを確認して計画的に人生を楽しみましょう。
+ Usage: https://platform.openai.com/account/usage
+=================================================================
+=================================================================
+"#;
+      eprint!("{}", MSG);
+     }
+     bail!("{e:?}");
+    },
+   };
    log::trace!("response = {:?}", response);
 
    let content = response
