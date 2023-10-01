@@ -6,6 +6,7 @@ mod processor;
 mod resource;
 mod state;
 
+pub mod utility;
 pub mod web_interface;
 
 pub use crate::{
@@ -18,19 +19,35 @@ pub use crate::{
 };
 
 use actix_files::Files;
+use rodio::{OutputStream, Sink};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
+
+pub struct AudioSink(pub Sink);
+pub type SharedAudioSink = Arc<Mutex<AudioSink>>;
+impl std::fmt::Debug for AudioSink {
+ fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+  write!(f, "AudioSink")
+ }
+}
 
 pub async fn run() -> Result<()> {
  // ロガーの実装を初期化
  logger::init();
+
+ // 音声再生用の handle を生成
+ // Sink は Shared 化できるが、 steam_handle は Shared 化できないため、
+ // ここで actix_web のサービスが .await を抜けるまで保持してしまう。
+ let (_stream, stream_handle) = OutputStream::try_default()?;
+ let audio_sink = Sink::try_new(&stream_handle)?;
+ let audio_sink = Arc::new(Mutex::new(AudioSink(audio_sink)));
 
  // コマンドライン引数をパースし、ログレベルを更新
  let args = Args::init().await?;
  // 設定を読み込みし、ログレベルを更新
  let conf = Conf::new(&args)?;
  // 共有ステートを作成
- let state = State::new(&conf).await?;
+ let state = State::new(&conf, audio_sink).await?;
 
  // 通常の動作モードで実行
  run_services(conf, state).await?;

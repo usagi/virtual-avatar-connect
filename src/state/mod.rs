@@ -2,7 +2,7 @@ mod channel_datum;
 
 pub use channel_datum::{ChannelData, ChannelDatum, SharedChannelData};
 
-use crate::{processor::*, Arc, Conf, RwLock};
+use crate::{processor::*, Arc, Conf, RwLock, SharedAudioSink};
 use anyhow::Result;
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -19,10 +19,11 @@ pub struct State {
  pub state_data_pretty: bool,
  pub channel_data: SharedChannelData,
  pub processors: Vec<ProcessorKind>,
+ pub audio_sink: SharedAudioSink,
 }
 
 impl State {
- pub async fn new(conf: &Conf) -> Result<SharedState> {
+ pub async fn new(conf: &Conf, audio_sink: SharedAudioSink) -> Result<SharedState> {
   let channel_data = match &conf.state_data_path {
    Some(path) => load_channel_data(path).await?,
    None => Arc::new(RwLock::new(VecDeque::new())),
@@ -36,10 +37,18 @@ impl State {
    state_data_pretty: conf.state_data_pretty.unwrap_or(false),
    channel_data,
    processors: vec![],
+   audio_sink,
   }));
   log::trace!("State の生成が完了しました。");
 
-  let processors = init_processors(&conf, &state).await?;
+  let processors = match init_processors(&conf, &state).await {
+   Ok(processors) => processors,
+   Err(e) => {
+    log::error!("Processor の初期化に失敗しました。直前に表示されたエラーログ等を参考に設定の見直しを検討して下さい。🙏");
+    log::trace!("ProcessorConf: {:?}", e);
+    return Err(e);
+   },
+  };
 
   state.write().await.processors.extend(processors);
   log::trace!("State の processors を更新し、 State の初期化が完了しました。");
@@ -76,9 +85,20 @@ impl State {
 
   // Processor の実行
   for (i, p) in self.processors.iter().enumerate() {
-   log::trace!("Processor を実行します: {:?} / {:?}", i, self.processors.len());
+   log::trace!("Processor を実行します: {:?} / {:?}", i + 1, self.processors.len());
    if p.is_channel_from(&channel_from) {
-    p.process(id).await.unwrap();
+    match p.process(id).await {
+     Ok(ca) => {
+      log::trace!("Processor の実行が完了しました。(非同期処理部分が継続して実行中の可能性があります。)");
+      if ca == CompletedAnd::Break {
+       log::debug!("Processor から CompletedAnd::Break が返されたためこの入力に対する Processor 群の実行はここで中断されます。");
+       break;
+      }
+     },
+     Err(e) => {
+      log::error!("Processor の実行中にエラーが発生しました。直前に表示されたエラーログ等を参考に設定の見直しを検討して下さい。🙏 {e:?}");
+     },
+    }
    }
    log::trace!("Processor の実行が完了しました。")
   }
@@ -116,7 +136,11 @@ async fn init_processors(conf: &Conf, state: &SharedState) -> Result<Vec<Process
    continue;
   }
   let feature = pc.feature.as_ref().unwrap();
+  log::info!("Processor を初期化します: {:?}", feature);
   let pk = match feature.to_lowercase().as_str() {
+   Modify::FEATURE => Modify::new(&pc, state).await?,
+   Screenshot::FEATURE => Screenshot::new(&pc, state).await?,
+   Ocr::FEATURE => Ocr::new(&pc, state).await?,
    OpenAiChat::FEATURE => OpenAiChat::new(&pc, state).await?,
    GasTranslation::FEATURE => GasTranslation::new(&pc, state).await?,
    Bouyomichan::FEATURE => Bouyomichan::new(&pc, state).await?,

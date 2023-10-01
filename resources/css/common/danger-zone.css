@@ -1,0 +1,16 @@
+:root {
+ --danger-zone-scaling: 1;
+}
+.danger-zone:before,
+.danger-zone:after {
+ content: "";
+ display: block;
+ height: calc(1em * var(--danger-zone-scaling));
+ background: repeating-linear-gradient(
+  -45deg,
+  black,
+  black calc(1em * var(--danger-zone-scaling)),
+  yellow calc(1em * var(--danger-zone-scaling)),
+  yellow calc(2em * var(--danger-zone-scaling))
+ );
+}

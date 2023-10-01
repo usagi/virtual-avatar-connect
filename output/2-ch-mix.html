@@ -1,0 +1,85 @@
+<!--
+ # 2-channel-subtitles
+
+ 2つのチャンネルを表示する汎用の字幕表示ソースです。
+
+ OBS 等のブラウザーソースを読み込む側で、URL のフラグメント部分 ( # 以降の部分) を変えるだけで
+ ソース側は複製や修正なしで複数のソースを作成できる汎用便利タイプのソースの例です。
+
+ ## 例1: シンプルな使い方
+  ブラウザーソースのURL: /output/2-ch-mix#user,user-en
+
+  例のように URL のフラグメント部分 ( # 以降の部分) に user,user-en と指定すると、
+  user と user-en の2つのチャンネルを上下に並べて表示します。
+
+  日本語と英語翻訳のような字幕の汎用表示を想定しています。
+
+ ## 例2: 字幕の後ろにC.V.等のライセンス表示を付けたい場合
+  ブラウザーソースのURL: /output/2-ch-mix#user;C.V. Nyanko,user-en;C.V. Wanko
+   ※URLにしたときに空白文字が%20に変わりますが、問題なく認識できます。
+
+  セミコロンで区切った後ろの部分がコンテントの下に本文よりはやや小さめですがしっかり表示されるようになります。
+
+ ## 例3: 字幕の前の表示を変えたい場合
+  ブラウザーソースのURL: /output/2-ch-mix#user;C.V. Nyanko;[Dr.USAGI(ja)],user-en;C.V. Wanko;[Dr.USAGI(transEN)]
+
+  channel;suffix;prefix のように指定できます。 prefix が前に出る方で、 suffix が後ろに出る方です。
+  「suffix は無いけど prefix は変えたい」場合は channel;;suffix のようにも指定できます。
+
+ ## 例4: 色指定も付けたい場合
+   http://127.0.0.1:57000/output/2-ch-mix#ai|hsl(0,33%,66%);;[Kal'tsit Pseudo]|green,ai-en|hsl(120,33%,66%);C.V. CoeiroInk/アルマちゃん;[Kal'tsit(transEN)]|skyblue
+
+   channel と suffix と prefix それぞれの後ろに | で区切って色を指定できます。
+   例えば ai|hsl(0,33%,66%);;[Kal'tsit Pseudo]|green と指定すると、
+    - ai の本文の文字色は hsl(0,33%,66%)
+    - ai の prefix の文字色は green になります。
+
+ ## tips
+  ブラウザーに設定したURLからコピペして編集しようとすると "URLエンコード" が邪魔になることがあるかもしれません。
+  そんなときは F12 キーなどで開く開発者ツールのコンソールに以下のようなコードを貼り付けて実行してみてください。
+
+   decodeURI(location.href)
+
+  これで元の文字列がコンソールに表示されます。コンソールの表示からコピーして取り出すと解決です。
+
+ ## 動作確認用のおまけ機能
+  keydown の 1, 2 または onclick に動作確認用のおまけ機能を入れてあります。
+  OBS の場合も「対話(操作)」から行えます。配置中の動作確認としてどうぞ。
+ -->
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>VAC/output</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+ href="https://fonts.googleapis.com/css2?family=Chivo:ital,wght@0,500;1,900&family=Dorsa&family=Dosis&family=Kiwi+Maru:wght@500&family=Odibee+Sans&family=Pompiere&display=swap"
+ rel="stylesheet">
+<link rel="stylesheet" href="/resources/css/2-ch-mix.css">
+
+<script
+ src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"></script>
+<script type="module" src="/resources/js/output.js"></script>
+<script type="module" src="/resources/js/2-ch-mix.js"></script>
+
+<script>
+ document.addEventListener("DOMContentLoaded", async () =>
+ {
+  Promise.all(Object.values(vac).map(m => typeof m.run === 'function' ? m.run() : null))
+ })
+</script>
+
+<body class="flex-stack-from-bottom">
+ <div>
+  <article class="moco-moji ch1">
+   <p data-vac-output></p>
+   <p data-vac-output></p>
+  </article>
+
+  <article class="moco-moji ch2">
+   <p data-vac-output></p>
+   <p data-vac-output></p>
+  </article>
+ </div>
+</body>

@@ -21,6 +21,7 @@ static ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 impl ChannelDatum {
  pub const FLAG_IS_FINAL: &str = "is_final";
+ pub const DATA_URLS: &str = "data_urls";
 
  pub fn reset_id_counter(id: u64) {
   ID_COUNTER.store(id, Ordering::Relaxed);
@@ -40,12 +41,32 @@ impl ChannelDatum {
   }
  }
 
+ pub fn move_from(channel_datum: ChannelDatum) -> ChannelDatum {
+  Self {
+   channel: channel_datum.channel,
+   content: channel_datum.content,
+   flags: channel_datum.flags,
+   id: ID_COUNTER.fetch_add(1, Ordering::Relaxed) + 1,
+   datetime: Utc::now(),
+  }
+ }
+
  pub fn get_id(&self) -> u64 {
   self.id
  }
 
  pub fn get_datetime(&self) -> DateTime<Utc> {
   self.datetime
+ }
+
+ pub fn with_channel(mut self, channel: String) -> Self {
+  self.channel = channel;
+  self
+ }
+
+ pub fn with_content(mut self, content: String) -> Self {
+  self.content = content;
+  self
  }
 
  pub fn with_flag_if(mut self, flag: &str, condition: bool) -> Self {

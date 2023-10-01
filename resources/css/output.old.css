@@ -15,12 +15,15 @@
  /* user の名前 */
  --user-name: "[Dr.USAGI](JA)";
  /* ai の名前 */
- --ai-name: "[Kal'tsit](JA)";
+ --ai-name: "[Kal'tsit Pseudo](JA)";
+
+ /* ai のクレジット */
+ --ai-credit: "C.V. CoeiroInk/アルマちゃん";
 
  /* user-en の名前 */
  --user-en-name: "[Dr.USAGI(transEN)]";
  /* ai-fr の名前 */
- --ai-fr-name: "[Kal'tsit](transFR)";
+ --ai-fr-name: "[Kal'tsit](transEN)";
 
  /* user の色 */
  --user-color: hsl(0, 20%, 56%);
@@ -28,9 +31,9 @@
  --user-en-color: hsl(60, 20%, 56%);
 
  /* ai の色 */
- --ai-color: hsl(138, 100%, 50%);
+ --ai-color: hsl(140, 20%, 56%);
  /* ai-fr の色 */
- --ai-fr-color: hsl(198, 100%, 50%);
+ --ai-fr-color: hsl(200, 20%, 56%);
 
  /* 文字の影の色 */
  /* note: 文字の色が明るい場合は black、暗い場合は white がおすすめです。  */
@@ -67,9 +70,11 @@
  margin: 0;
  padding: 0;
  font-family: var(--font-family);
+ overflow: hidden;
 }
 
 body {
+
  background: var(--background-color);
  width: 100vw;
  height: 100vh;
@@ -78,7 +83,7 @@ body {
  display: flex;
  /* 上から下へ並べる、全体を下によせる */
  flex-direction: column;
- justify-content: flex-end;
+ justify-content: center;
  /* 左から右へ並べる、全体を中央によせる */
  align-items: center;
 }
@@ -90,40 +95,50 @@ body {
  overflow: hidden;
 }
 
+body:has(.system)
+{
+ display: grid;
+}
+
 .text-container > *:before {
  display: block;
 }
 
-.text-container:first-child {
+.text-container.user {
  color: var(--user-color);
 }
 
-.text-container:first-child > *:before {
+.text-container.user > *:before {
  content: var(--user-name);
 }
 
-.text-container:nth-child(2) {
+.text-container.user-en {
  color: var(--user-en-color);
 }
 
-.text-container:nth-child(2) > *:before {
+.text-container.user-en > *:before {
  content: var(--user-en-name);
 }
 
-.text-container:nth-child(3) {
+.text-container.ai {
  color: var(--ai-color);
 }
 
-.text-container:nth-child(3) > *:before {
+.text-container.ai > *:before {
  content: var(--ai-name);
 }
 
-.text-container:nth-child(4) {
+.text-container.ai-fr {
  color: var(--ai-fr-color);
 }
 
-.text-container:nth-child(4) > *:before {
+.text-container.ai-fr > *:before {
  content: var(--ai-fr-name);
+}
+
+.text-container.ai-fr > *:after {
+ content: var(--ai-credit);
+ font-size: 0.333em;
 }
 
 .text-container > * {

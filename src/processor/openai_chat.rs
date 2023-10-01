@@ -1,4 +1,4 @@
-use super::Processor;
+use super::{CompletedAnd, Processor};
 use crate::{Arc, ChannelDatum, Mutex, ProcessorConf, ProcessorKind, SharedChannelData, SharedState};
 use anyhow::{bail, Context, Result};
 use async_openai::{
@@ -28,7 +28,7 @@ const DEFAULT_MEMORY_CAPACITY: usize = 4;
 impl Processor for OpenAiChat {
  const FEATURE: &'static str = "openai-chat";
 
- async fn process(&self, id: u64) -> Result<()> {
+ async fn process(&self, id: u64) -> Result<CompletedAnd> {
   log::debug!("OpenAIChat::process() が呼び出されました。");
 
   let last_activated = self.last_activated.clone();
@@ -76,22 +76,38 @@ impl Processor for OpenAiChat {
    // log::error!("reversed_sources = {:?}", reversed_sources);
    // log::debug!("debug end");
    // return Ok(());
+   log::warn!("reversed_sources = {:?}", reversed_sources);
 
    // 強制無視の正規表現による判定 => match したら確定で無視
    // (強制無視判定は強制応答判定よりも優先される)
    if let Some(ignore_regex) = ignore_regex {
-    let target_content = &reversed_sources.iter().next().unwrap().content;
+    log::trace!(
+     "強制無視の正規表現が設定されています: {:?} match to {:?}",
+     ignore_regex,
+     reversed_sources
+    );
+    let target_content = &reversed_sources.iter().next().unwrap().content.trim();
     let ignore = ignore_regex.is_match(target_content);
     if ignore {
-     log::debug!("強制無視の正規表現にマッチしたので処理をスキップします。");
+     log::debug!(
+      "強制無視の正規表現にマッチしたので処理をスキップします。 ignore_regex: {:?} target_content: {:?}",
+      ignore_regex,
+      target_content
+     );
      return Ok(());
     }
    }
 
    // 強制応答の判定
    if let Some(force_activate_regex) = force_activate_regex {
-    let target_content = &reversed_sources.iter().next().unwrap().content;
+    log::trace!(
+     "強制応答が設定されています: {:?} match to {:?}",
+     force_activate_regex,
+     reversed_sources
+    );
+    let target_content = &reversed_sources.iter().next().unwrap().content.trim();
     let force_activate = force_activate_regex.is_match(target_content);
+    log::debug!("強制応答の判定結果: {:?} target_content: {:?}", force_activate, target_content);
 
     // 強制応答ではない場合 => 応答時間による判定
     if !force_activate {
@@ -109,13 +125,14 @@ impl Processor for OpenAiChat {
         bail!("{e:?}");
        },
       }
+      *last_activated.lock().await = SystemTime::now();
      }
     }
    }
 
    // リクエストを生成
    let mut request = request_template;
-   log::error!("ai req: {:?}", request);
+   log::trace!("ai req: {:?}", request);
    request.messages.extend(reversed_sources.into_iter().rev().filter_map(|cd| {
     ChatCompletionRequestMessageArgs::default()
      .role(match cd.channel.as_str() {
@@ -129,7 +146,7 @@ impl Processor for OpenAiChat {
    }));
 
    // OpenAIChat に応答をリクエスト
-   log::error!("request = {:?}", request);
+   log::trace!("request = {:?}", request);
    log::debug!("OpenAIChat に応答をリクエストします。");
    let response = match client.chat().create(request).await {
     Ok(response) => response,
@@ -178,7 +195,7 @@ impl Processor for OpenAiChat {
 
   log::trace!("OpenAIChat::process() は非同期処理を開始しました。");
 
-  Ok(())
+  Ok(CompletedAnd::Next)
  }
 
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {

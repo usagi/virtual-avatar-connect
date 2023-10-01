@@ -1,14 +1,7 @@
-// condition が false の場合に message を console.error しつつ throw する
-function ensure(condition, message)
-{
- if (!condition)
- {
-  console.error(message)
-  throw message
- }
-}
+import VacApi from './api.js'
+import ensure from './common/ensure.js'
 
-class VacOutput
+export default class VacOutput
 {
  /// API URL
  ///  note: 'ws://' または 'wss://' で始まる場合は websocket として扱われ、それ以外の場合は HTTP fetch による処理となります
@@ -172,16 +165,14 @@ class VacOutput
 
  register_ws()
  {
-  this.api = new Api({
-   ws_message_event: e =>
-   {
-    let payload = JSON.parse(e.data)
-    if (payload.channel_datum)
-     this.update_element(payload.channel_datum)
-    else if (payload.channel_data)
-     for (let datum of payload.channel_data)
-      this.update_element(datum)
-   }
+  this.api = window.vac.api
+  this.api.register_ws_message_event(payload =>
+  {
+   if (payload.channel_datum)
+    this.update_element(payload.channel_datum)
+   else if (payload.channel_data)
+    for (let datum of payload.channel_data)
+     this.update_element(datum)
   })
  }
 
@@ -230,4 +221,8 @@ class VacOutput
 
 }
 
-document.addEventListener('DOMContentLoaded', () => new VacOutput().run())
+window.VacOutput = VacOutput
+if (!window.vac)
+ window.vac = {}
+window.vac.output = new VacOutput()
+console.log('VacOutput loaded')

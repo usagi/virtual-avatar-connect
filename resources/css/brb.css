@@ -1,0 +1,63 @@
+@import url("/resources/css/common/background-mask.css");
+@import url("/resources/css/common/danger-zone.css");
+
+:root {
+ --background-mask-color: #000c;
+}
+
+.brb {
+ font-size: 5vh;
+}
+
+/* tate のアウトライン用の下地 */
+.tape-outline {
+ position: fixed;
+ top: 40vh;
+ left: 0;
+ width: 110vw;
+ height: 30vh;
+ background-color: pink;
+ rotate: 2deg;
+ display: flex;
+ flex-direction: column;
+ justify-content: center;
+ align-items: center;
+}
+
+/* tape-outline の上で帯状のやつ */
+.tape {
+ top: 0;
+ left: 0;
+ width: 100%;
+ height: 90%;
+ background-color: #fff;
+ /* 親要素の中央へ */
+ /* transform: translateY(-50%); */
+ /* --danger-zone-scaling: 1.5; */
+ /* 中身を上下中央、左右中央 */
+ display: flex;
+ flex-direction: column;
+ justify-content: center;
+ align-items: center;
+}
+
+.tape .danger-zone {
+ transform: translate(0px, -73%);
+ height: 37%;
+ position: absolute;
+ width: 100%;
+ text-align: center;
+}
+
+.tape p {
+ font-size: 100%;
+ display: inline-block;
+ height: 100%;
+}
+
+/* 画面中央に太く真横方向の帯 */
+.tape-outline.main {
+}
+
+.tape.main {
+}

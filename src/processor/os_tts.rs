@@ -1,4 +1,4 @@
-use super::Processor;
+use super::{CompletedAnd, Processor};
 use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedState};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
@@ -24,7 +24,7 @@ impl std::fmt::Debug for OsTts {
 impl Processor for OsTts {
  const FEATURE: &'static str = "os-tts";
 
- async fn process(&self, id: u64) -> Result<()> {
+ async fn process(&self, id: u64) -> Result<CompletedAnd> {
   log::debug!("OsTts::process() が呼び出されました。");
 
   let channel_data = self.channel_data.clone();
@@ -60,7 +60,7 @@ impl Processor for OsTts {
 
   log::trace!("OsTts::process() は非同期処理を開始しました。");
 
-  Ok(())
+  Ok(CompletedAnd::Next)
  }
 
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {

@@ -1,0 +1,50 @@
+/* 標準採用フォントの全要素デフォルト化 */
+* {
+ font-family: "Chivo", "Kiwi Maru", sans-serif;
+}
+
+/* 標準採用フォント */
+/* 汎用的に通常のテキスト全般に適用 */
+.font-std {
+ /* ALNUM は Chivo で読みやすさ重視 */
+ /* ほかは Kiwi で読みやすくもかわいらしく */
+ font-family: "Chivo", "Kiwi Maru", sans-serif;
+}
+
+/* ここから下はアクセント、人名表示、URLなどで必要に応じて局所的に使用 */
+
+/* https://fonts.google.com/specimen/Kiwi+Maru */
+/* 柔らか、かわいい、少しだけ崩し気味 */
+.font-kiwi {
+ font-family: "Kiwi Maru", serif;
+}
+
+/* https://fonts.google.com/specimen/Chivo */
+/* 硬め、かっこよ、読みやすい */
+.font-chivo {
+ font-family: "Chivo", serif;
+}
+
+/* https://fonts.google.com/specimen/Dosis */
+/* 少し固め、少しかわいげ */
+.font-dosis {
+ font-family: "Dosis", serif;
+}
+
+/* https://fonts.google.com/specimen/Dorsa */
+/* 少し固め、ほっそりオサレ */
+.font-dorsa {
+ font-family: "Dorsa", serif;
+}
+
+/* https://fonts.google.com/specimen/Odibee+Sans */
+/* 太め、かっこよ、硬すぎない */
+.font-odibee {
+ font-family: "Odibee Sans", serif;
+}
+
+/* https://fonts.google.com/specimen/Pompiere */
+/* チョットオサレ、手書き風 */
+.font-pompiere {
+ font-family: "Pompiere", serif;
+}

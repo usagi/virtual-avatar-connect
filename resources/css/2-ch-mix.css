@@ -1,0 +1,89 @@
+@import url("/resources/css/common/reset.css");
+@import url("/resources/css/common/font.css");
+@import url("/resources/css/common/moco-moji.css");
+@import url("/resources/css/common/flex-stack-from-bottom.css");
+
+:root {
+ /* 配色に困ったらどうぞ👀 */
+ --a-main: hsl(0, 33%, 66%);
+ --a-acc1: hsl(-15, 40%, 60%);
+ --a-acc2: hsl(+15, 40%, 60%);
+
+ --b-main: hsl(90, 20%, 66%);
+ --b-acc1: hsl(75, 25%, 60%);
+ --b-acc2: hsl(105, 25%, 60%);
+
+ --c-main: hsl(210, 50%, 66%);
+ --c-acc1: hsl(195, 66%, 60%);
+ --c-acc2: hsl(225, 66%, 60%);
+
+ --d-main: hsl(270, 45%25, 66%25);
+ --d-acc1: hsl(255, 50%, 60%);
+ --d-acc2: hsl(285, 50%, 60%);
+
+ --ch1-color: var(--a-main);
+ --ch1-prefix-color: var(--a-acc1);
+ --ch1-suffix-color: var(--a-acc2);
+
+ --ch2-color: var(--b-main);
+ --ch2-prefix-color: var(--b-acc1);
+ --ch2-suffix-color: var(--b-acc2);
+
+ --ch1-prefix: "";
+ --ch2-prefix: "";
+ --ch1-suffix: "";
+ --ch2-suffix: "";
+}
+
+body {
+ font-size: 20vh;
+ text-align: center;
+}
+
+div:has(.ch1) {
+ display: inline-block;
+ position: fixed;
+ bottom: 0;
+ margin: 0 1em;
+}
+
+* > ::before,
+* > ::after {
+ display: block;
+}
+
+* > ::before {
+ font-size: 0.6em;
+}
+
+* > ::after {
+ font-size: 0.4em;
+}
+
+.ch1 > *:nth-child(2) {
+ color: var(--ch1-color);
+}
+
+.ch2 > *:nth-child(2) {
+ color: var(--ch2-color);
+}
+
+.ch1 > ::before {
+ content: var(--ch1-prefix);
+ color: var(--ch1-prefix-color);
+}
+
+.ch1 > ::after {
+ content: var(--ch1-suffix);
+ color: var(--ch1-suffix-color);
+}
+
+.ch2 > ::before {
+ content: var(--ch2-prefix);
+ color: var(--ch2-prefix-color);
+}
+
+.ch2 > ::after {
+ content: var(--ch2-suffix);
+ color: var(--ch2-suffix-color);
+}

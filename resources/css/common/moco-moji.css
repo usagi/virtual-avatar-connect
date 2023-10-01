@@ -1,0 +1,61 @@
+/* モコ文字
+ * =======
+ * .moco-moji は内包する２つの要素をぴったり重ねて、下側を膨らませ、下側と上側で別の色を付けてもこっとした文字背景をつけるCSSです。
+ * 主に字幕のようにどのような背景の場合も文字が読みやすくなるようなところで使う想定のCSSです。
+ * -----
+ * 使い方
+ * -----
+ * <link rel="stylesheet" href="/resouces/css/moco-moji.css">
+ * -----
+ * <style>
+ *  .aaaa>*:before{ content: "表示したいテキスト。必要に応じて font-size, font-color, text-align なども一緒に使うとよいです。" }
+ * </style>
+ * -----
+ * <div class="moco-moji aaaa">
+ *  <div></div>
+ *  <div></div>
+ * </div>
+ * -----
+ * 空の div も含めて必要です。
+ * CSS の content ではなく div の中にテキストを書く場合は2つの div に同じ内容を書きます。
+ */
+
+:root {
+ --text-color: hsl(0, 33%, 66%);
+ --text-shadow-width: 0.33em;
+ --text-shadow-color: white;
+ --dialogue-border: 3px pink dashed;
+ --dialogue-opacity-transition: 1.333s;
+ --font-size-transition: 0.333s;
+}
+
+.moco-moji {
+ display: grid;
+ transition: opacity var(--dialogue-opacity-transition);
+ overflow: hidden;
+ padding: --text-shadow-width;
+ transition-property: opacity, font-size;
+ transition-duration: var(--dialogue-opacity-transition), var(--font-size-transition);
+ transition-timing-function: ease-out, ease-out;
+}
+
+.moco-moji > *:first-child,
+.moco-moji > *:nth-child(2) {
+ display: block;
+ width: 100%;
+ height: 100%;
+ grid-column: 1;
+ grid-row: 1;
+ overflow: hidden;
+ transition-property: opacity, font-size;
+ transition-duration: var(--dialogue-opacity-transition), var(--font-size-transition);
+ transition-timing-function: ease-out, ease-out;
+}
+
+.moco-moji > *:first-child {
+ -webkit-text-stroke: var(--text-shadow-width) var(--text-shadow-color);
+}
+
+.moco-moji > *:nth-child(2) {
+ color: var(--text-color);
+}

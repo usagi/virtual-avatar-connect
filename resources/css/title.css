@@ -1,0 +1,46 @@
+@import url("./common/font-kiwi.css");
+@import url("./common/moco-moji.css");
+
+:root {
+ --main-color: hsl(120, 20%, 56%);
+}
+
+body {
+ display: grid;
+ grid-template-rows: 70vh 30vh;
+ color: var(--main-color);
+ background-color: #333;
+}
+
+.line1 {
+ font-size: 39vh;
+}
+
+.line2 {
+ font-size: 20vh;
+}
+
+.line1,
+.line2 {
+ white-space: nowrap;
+}
+
+.line1 p::before {
+ content: "//// 新型配信支援アプリ Virtual Avatar Connect; VAC 動作試験中 ////";
+}
+
+.line2 p::before {
+ content: "― AI疑似人格共演者、VRM制御、音声認識、画像認識、字幕、翻訳、読み上げなどなど、近日リリース予定です👀 ―";
+}
+
+.line1 > p:nth-child(2) {
+ color: hsl(40, 33%, 46%);
+}
+
+.line2 > p:nth-child(2) {
+ color: hsl(40, 33%, 16%);
+}
+
+.moco-moji {
+ text-align: center;
+}

@@ -1,8 +1,15 @@
+use crate::{utility::bool_true, Arc, RwLock};
 use serde::{Deserialize, Serialize};
+
+pub type SharedProcessorConf = Arc<RwLock<ProcessorConf>>;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct ProcessorConf {
  // Common
+ #[serde(default = "bool_true")]
+ pub is_enabled: bool,
+ #[serde(default)]
+ pub group: Vec<String>,
  pub channel_from: Option<String>,
  pub channel_to: Option<String>,
  pub feature: Option<String>,
@@ -10,6 +17,40 @@ pub struct ProcessorConf {
  pub pre_replace_regex_patterns: Vec<Vec<String>>,
  #[serde(default)]
  pub post_replace_regex_patterns: Vec<Vec<String>>,
+
+ // command
+ pub through_if_not_command: Option<bool>,
+
+ // screenshot
+ pub title: Option<String>,
+ pub title_regex: Option<String>,
+ #[serde(default)]
+ pub crops: Vec<Vec<Option<i32>>>,
+ #[serde(default)]
+ pub paths: Vec<String>,
+ #[serde(default)]
+ pub client_only: bool,
+ #[serde(default)]
+ pub bitblt: bool,
+ pub to_data_urls: Option<bool>,
+
+ // ocr
+ pub lang: Option<String>,
+ #[serde(default)]
+ pub load_from: Vec<String>,
+ pub load_from_content: Option<bool>,
+ pub lines: Option<bool>,
+ pub auto_delete_processed_file: Option<bool>,
+ pub check_result_lang: Option<bool>,
+
+ // modify
+ pub modify: Option<bool>,
+ #[serde(default)]
+ pub dictionary_files: Vec<String>,
+ #[serde(default)]
+ pub regex_files: Vec<String>,
+ pub sort_dictionary: Option<String>,
+ pub alkana: Option<bool>,
 
  // OpenAI Chat
  pub api_key: Option<String>,
@@ -44,6 +85,7 @@ pub struct ProcessorConf {
  pub post_phoneme_length: Option<f64>,
  pub output_sampling_rate: Option<u32>,
  pub audio_file_store_path: Option<String>,
+ pub split_regex_pattern: Option<String>,
 
  // BouyomiChan
  pub remote_talk_path: Option<String>,

@@ -1,4 +1,6 @@
-class VacInput
+import VacApi from './api.js'
+
+export default class VacInput
 {
  static TAG_ERROR = 'error'
 
@@ -11,7 +13,7 @@ class VacInput
 
  init_ws()
  {
-  this.ws = new Api({
+  this.ws = new VacApi({
    ws_message_event: payload =>
    {
     let data = payload.channel_data || [payload.channel_datum]
@@ -36,7 +38,7 @@ class VacInput
  to_payload(element, is_final)
  {
   let channel = element.dataset.vacInput
-  console.log(element)
+
   let content = element.value
   let payload = { channel_datum: { channel, content } }
   if (is_final)
@@ -74,7 +76,14 @@ class VacInput
 
  update_status_element(v, is_error)
  {
-  this.status_element.value = JSON.stringify(v, null, 1)
+  // v.content が 512 byte を超えるときは、省略する
+  if (v.content.length > 512)
+   v.content = v.content.slice(0, 512) + '...'
+
+  this.status_element.value += JSON.stringify(v) + '\n'
+  // scroll to bottom
+  this.status_element.scrollTop = this.status_element.scrollHeight
+
   if (is_error)
    this.status_element.classList.add(VacInput.TAG_ERROR)
   else
@@ -83,4 +92,8 @@ class VacInput
 
 }
 
-document.addEventListener('DOMContentLoaded', () => window.vi = new VacInput())
+window.VacInput = VacInput
+if (!window.vac)
+ window.vac = {}
+window.vac.input = new VacInput()
+console.log('VacInput loaded')

@@ -1,7 +1,3 @@
-<!DOCTYPE html>
-<meta charset="utf-8">
-<title>VAC/output</title>
-
 <!--
  １つの出力を配信画面と同じ縦横比で作って、各要素の位置調整などはこちら側で行う場合は、
  このファイルで作り込んで OBS Studio などのブラウザーソースでは配信画面とぴったり同じになるように
@@ -17,35 +13,91 @@
 
  index.html は /output でアクセスできます。他に追加の出力画面を用意したい場合は、任意の名前で
  ファイルを作成し、例えば chat.html なら /output/chat でアクセスして使用できます。ファイルを作成するだけで
- VACは再起動などしなくても自動的に認識します。楽しい画面作りを！
+ VACは再起動などしなくても自動的に認識します。楽しい画面作りができるといいですね💞
+
+ 以下の例ではこの /output は配信画面全体にオーバーレイするように作成し、
+ VAC から title と description の2つのチャンネルを受信して表示しています。
+
+ また、 scene チャンネルは受信した内容が直接画面に表示されるわけではありませんが、
+ 簡単な CSS による配信画面の場面切り替えを行えるコマンドチャンネル的な使い方をしています。
+ scene チャンネルに次の内容を送りつけるとそれぞれシーンチェンジが動作します。
+  /loading ... 開始前などのいわゆる「ロード中」シーンへ移ります。
+  /play    ... 通常の配信中のシーンへ移ります。
+  /brb     ... "be right back" シーンへ以降します。(OBS等の制御ではなくCSSでこのページだけで切り替えています。)
  -->
 
-<link rel="stylesheet" href="/resources/output.css">
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>VAC/output</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:ital,wght@0,500;1,900&family=Kiwi+Maru:wght@500&display=swap"
+ rel="stylesheet">
+<link rel="stylesheet" href="/resources/css/output.css">
 
 <script
  src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"></script>
-<script src="/resources/api.js"></script>
-<script src="/resources/output.js"></script>
+<script type="module" src="/resources/js/output.js"></script>
+<script type="module" src="/resources/js/scene.js"></script>
+<script type="module" src="/resources/js/brb.js"></script>
+<script>
+ const DEFAULT_TITLE = '新型配信支援アプリ Virtual Avatar Connect; VAC 動作試験中'
+ const DEFAULT_DESCRIPTION = '― AI疑似人格共演者、VRM制御、音声認識、画像認識、字幕、翻訳、読み上げなどなど、近日リリース予定です👀 ―'
+ document.addEventListener('DOMContentLoaded', () =>
+ {
+  vac.scene.start()
+  window.title_elements = [...document.querySelectorAll('[data-vac-output="title"]')]
+  window.description_elements = [...document.querySelectorAll('[data-vac-output="description"]')]
+  // タイトルと説明が空になることがあればデフォルト値を入れて寂しくならないようにしておく
+  setInterval(() =>
+  {
+   if (title_elements[0].innerText === '')
+    for (let e of title_elements)
+     e.innerText = DEFAULT_TITLE
+   if (description_elements[0].innerText === '')
+    for (let e of description_elements)
+     e.innerText = DEFAULT_DESCRIPTION
+  }, 200)
+  // 画面をクリックするとBRBをオーバーラップするおまけ機能。OBSでも「対話(操作)」で使えます。
+  document.body.onclick = () => vac.scene.overlap('brb')
+ });
+</script>
 
-<article class="text-container">
- <p data-vac-output="user"></p>
- <p data-vac-output="user"></p>
-</article>
+<div data-vac-scene-stage></div>
 
-<article class="text-container">
- <p data-vac-output="user-en"></p>
- <p data-vac-output="user-en"></p>
-</article>
+<div data-vac-scene-wing>
 
-<article class="text-container">
- <p data-vac-output="ai"></p>
- <p data-vac-output="ai"></p>
-</article>
+ <section data-vac-scene="play" class="play">
 
-<article class="text-container">
- <p data-vac-output="ai-fr"></p>
- <p data-vac-output="ai-fr"></p>
-</article>
+  <h1 class="title moco-moji">
+   <span data-vac-output="title"></span>
+   <span data-vac-output="title"></span>
+  </h1>
+
+  <h2 class="description moco-moji">
+   <span data-vac-output="description"></span>
+   <span data-vac-output="description"></span>
+  </h2>
+
+ </section>
+
+ <section data-vac-scene="loading" class="loading">
+
+  <p>Loading</p>
+
+ </section>
+
+ <section data-vac-scene="brb" class="brb background-mask">
+  <div class="background"></div>
+  <div class="tape-outline main">
+   <div class="tape">
+    <div class=" danger-zone">
+     <p>B.R.B.</p>
+     <p data-vac-output="brb"></p>
+    </div>
+   </div>
+  </div>
+ </section>
+
+</div>

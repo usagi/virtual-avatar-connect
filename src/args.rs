@@ -14,6 +14,8 @@ pub struct Args {
  pub coeiroink_speakers: bool,
  #[arg(long)]
  pub test_os_tts: bool,
+ #[arg(long)]
+ pub experimental: bool,
 }
 
 impl Args {
@@ -109,9 +111,22 @@ impl Args {
    }
 
    while tts.is_speaking()? {
+    log::warn!("OS-TTS がまだ話しています。");
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
    }
+   log::error!("OS-TTS のテストが完了しました。");
 
+   std::process::exit(0);
+  }
+
+  if args.experimental {
+   log::warn!("実験的な機能が有効になっています。");
+   {
+    // println!("img1.png --> {}", win_ocr::ocr_with_lang("img1.png", "ja").unwrap());
+    // println!("img2.png --> {}", win_ocr::ocr_with_lang("img2.png", "ja").unwrap());
+    // println!("img3.png --> {}", win_ocr::ocr_with_lang("img3.png", "ja").unwrap());
+    // println!("img4.png --> {}", win_ocr::ocr_with_lang("img4.png", "ja").unwrap());
+   }
    std::process::exit(0);
   }
 

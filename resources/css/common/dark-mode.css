@@ -1,0 +1,75 @@
+:root {
+ --text-color-light: hsl(0deg 42.87% 56.03%);
+ --background-color-light: lightgoldenrodyellow;
+ --input-background-color-light: hsl(0deg 100% 91.55%);
+ --input-color-light: hsl(0deg 23.99% 26.94%);
+ --visited-color-light: hsl(0, 33%, 33%);
+ --hover-color-light: hsl(0, 33%, 66%);
+ --active-color-light: hsl(0, 33%, 66%);
+}
+
+body {
+ background-color: var(--background-color-light);
+ color: var(--text-color-light);
+}
+
+input,
+textarea,
+select {
+ background-color: var(--input-background-color-light);
+ color: var(--input-color-light);
+}
+
+a {
+ color: var(--text-color-light);
+}
+
+a:visited {
+ color: var(--visited-color-light);
+}
+
+a:hover {
+ color: var(--hover-color-light);
+}
+
+a:active {
+ color: var(--active-color-light);
+}
+
+@media (prefers-color-scheme: dark) {
+ :root {
+  --text-color-dark: hsl(0deg 89.56% 75.58%);
+  --background-color-dark: hsl(0deg 2.11% 14.21%);
+  --visited-color-dark: hsl(0, 33%, 66%);
+  --hover-color-dark: hsl(0, 33%, 33%);
+  --active-color-dark: hsl(0, 33%, 33%);
+ }
+
+ body {
+  background-color: var(--background-color-dark);
+  color: var(--text-color-dark);
+ }
+
+ input,
+ textarea,
+ select {
+  background-color: var(--background-color-dark);
+  color: var(--text-color-dark);
+ }
+
+ a {
+  color: var(--text-color-dark);
+ }
+
+ a:visited {
+  color: var(--visited-color-dark);
+ }
+
+ a:hover {
+  color: var(--hover-color-dark);
+ }
+
+ a:active {
+  color: var(--active-color-dark);
+ }
+}

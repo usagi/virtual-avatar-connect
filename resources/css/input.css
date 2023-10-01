@@ -1,6 +1,8 @@
+@import url("./common/dark-mode.css");
+@import url("./common/font.css");
+
 * {
  font-size: 20px;
- font-family: "Kiwi Maru", serif;
  font-weight: 900;
  border-radius: 0.4em;
  grid-gap: 0.1em;
@@ -12,7 +14,6 @@
 }
 
 body {
- background: lightgoldenrodyellow;
  font-size: 20px;
 }
 
@@ -80,6 +81,7 @@ textarea {
  width: 97vw;
  height: 7rem;
  font-size: 0.98em;
+ text-wrap: nowrap;
 }
 
 textarea.error {

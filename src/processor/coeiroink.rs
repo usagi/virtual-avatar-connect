@@ -1,8 +1,9 @@
-use super::Processor;
-use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedState};
+use super::{CompletedAnd, Processor};
+use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedAudioSink, SharedChannelData, SharedState};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
-use rodio::{Decoder, OutputStream, Sink};
+use regex::Regex;
+use rodio::Decoder;
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 use std::path::PathBuf;
@@ -14,19 +15,23 @@ pub struct CoeiroInk {
  synthesis_or_predict_request_url: String,
  synthesis_or_predict_request_template: SynthesisOrPredictRequest,
  audio_file_store_path: Option<String>,
+ split_regex: Option<Regex>,
+ audio_sink: SharedAudioSink,
 }
 
 #[async_trait]
 impl Processor for CoeiroInk {
  const FEATURE: &'static str = "coeiroink";
 
- async fn process(&self, id: u64) -> Result<()> {
+ async fn process(&self, id: u64) -> Result<CompletedAnd> {
   log::debug!("CoeiroInk::process() が呼び出されました。");
 
   let channel_data = self.channel_data.clone();
   let synthesis_or_predict_request_template = self.synthesis_or_predict_request_template.clone();
   let synthesis_or_predict_request_url = self.synthesis_or_predict_request_url.clone();
   let audio_file_store_path = self.audio_file_store_path.clone();
+  let split_regex = self.split_regex.clone();
+  let audio_sink = self.audio_sink.clone();
 
   tokio::spawn(async move {
    // 入力を取得
@@ -42,52 +47,85 @@ impl Processor for CoeiroInk {
     }
    };
 
-   // CoeiroInk に音声合成をリクエスト -> WAV ペイロードを取得
-   log::debug!("CoeiroInk に音声合成をリクエストします。");
-   let request_payload = synthesis_or_predict_request_template.build_with_text(source);
-   let response = reqwest::Client::new()
-    .post(&synthesis_or_predict_request_url)
-    .json(&request_payload)
-    .send()
-    .await?;
+   // split_sentence による分割
+   let sources = match split_regex {
+    // 正規表現で分割
+    Some(split_regex) => split_regex
+     .split(&source)
+     .map(|s| s.trim().to_string())
+     .filter(|s| !s.is_empty())
+     .collect::<Vec<String>>(),
+    // 分割しない
+    _ => vec![source],
+   };
+   let sources_len = sources.len();
 
-   let audio_data = response.bytes().await?;
-   log::debug!("CoeiroInk からの音声合成データの取得に成功しました。");
+   for (num, source) in sources.into_iter().enumerate() {
+    let path = audio_file_store_path
+     .as_ref()
+     .map(|p| format!("{}_{}_{}.wav", &p, num, sources_len));
 
-   if let Some(path) = audio_file_store_path {
-    // path に {T} が含まれていたら ISO8601 日時文字列から : と - を除去して置換
-    let path = match path.contains("{T}") {
-     true => {
-      let t = chrono::Utc::now().to_rfc3339().replace(":", "").replace("-", "");
-      let path = std::path::Path::new(&path.replace("{T}", &t)).to_path_buf();
-      path
+    // CoeiroInk に音声合成をリクエスト -> WAV ペイロードを取得
+    log::debug!("CoeiroInk に音声合成をリクエストします。 {} / {}", num + 1, sources_len);
+    let request_payload = synthesis_or_predict_request_template.build_with_text(source);
+    let response = reqwest::Client::new()
+     .post(&synthesis_or_predict_request_url)
+     .json(&request_payload)
+     .send()
+     .await;
+
+    let response = match response
+    {
+     Ok(response) => response,
+     Err(e) => {
+      log::error!("CoeiroInk への音声合成リクエストに失敗しました: {:?}", e);
+      continue;
      },
-     false => PathBuf::from(path),
     };
 
-    log::debug!("CoeiroInk からの音声合成データを {} に保存します。", path.display());
-    tokio::fs::write(path, audio_data.clone()).await?;
-    log::trace!("CoeiroInk からの音声合成データを保存しました。");
+    let audio_data = response.bytes().await?;
+    log::debug!("CoeiroInk からの音声合成データの取得に成功しました。");
+
+    if let Some(path) = path {
+     // path に {T} が含まれていたら ISO8601 日時文字列から : と - を除去して置換
+     let path = match path.contains("{T}") {
+      true => {
+       let t = chrono::Utc::now().to_rfc3339().replace(":", "").replace("-", "");
+       let path = std::path::Path::new(&path.replace("{T}", &t)).to_path_buf();
+       path
+      },
+      false => PathBuf::from(path),
+     };
+
+     log::debug!("CoeiroInk からの音声合成データを {} に保存します。", path.display());
+     tokio::fs::write(path, audio_data.clone()).await?;
+     log::trace!("CoeiroInk からの音声合成データを保存しました。");
+    }
+
+    // ペイロードを WAV として再生
+    let cursor = Cursor::new(audio_data);
+    let source = Decoder::new(cursor)?;
+
+    // let (_stream, stream_handle) = OutputStream::try_default()?;
+    // let sink = Sink::try_new(&stream_handle)?;
+
+    let locked_audio_sink = audio_sink.lock().await;
+    locked_audio_sink.0.append(source);
+    // sink.sleep_until_end();
+
+    log::debug!(
+     "CoeiroInk からの音声合成データを再生シンクへ送出しました。 {} / {}",
+     num + 1,
+     sources_len
+    );
    }
-
-   // ペイロードを WAV として再生
-   let cursor = Cursor::new(audio_data);
-   let source = Decoder::new(cursor)?;
-
-   let (_stream, stream_handle) = OutputStream::try_default()?;
-   let sink = Sink::try_new(&stream_handle)?;
-
-   sink.append(source);
-   sink.sleep_until_end();
-
-   log::debug!("CoeiroInk からの音声合成データを再生シンクへ送出しました。");
 
    Ok(())
   });
 
   log::trace!("CoeiroInk::process() は非同期処理を開始しました。");
 
-  Ok(())
+  Ok(CompletedAnd::Next)
  }
 
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {
@@ -97,6 +135,8 @@ impl Processor for CoeiroInk {
    synthesis_or_predict_request_url: String::new(),
    synthesis_or_predict_request_template: SynthesisOrPredictRequest::default(),
    audio_file_store_path: pc.audio_file_store_path.clone(),
+   split_regex: pc.split_regex_pattern.as_ref().map(|s| Regex::new(s).unwrap()),
+   audio_sink: state.read().await.audio_sink.clone(),
   };
 
   if !p.is_established().await {

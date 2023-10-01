@@ -1,4 +1,7 @@
-class Api
+const DEFAULT_WEB_SOCKET_DEBUG = false
+const DEFAULT_WEB_SOCKET_RECONNECT_INTERVAL = 2000
+const DEFAULT_WEB_SOCKET_ADDR = 'ws://127.0.0.1:57000/'
+export default class VacApi
 {
  /// arg:                  default:                 note:
  ///  ws_message_event      undefined                ハンドラーを設定すると WebSocket 接続が有効化されイベントが流れます
@@ -20,20 +23,25 @@ class Api
  ///  rest_output_interval  100                      REST API による出力の間隔 (ms)
  constructor(arg)
  {
-  if (arg.ws_message_event)
+  // 引数なしで呼ばれたら ws 接続をデフォルトで開始させる
+  if (arg === undefined)
+   arg = { ws_url: DEFAULT_WEB_SOCKET_ADDR }
+
+  if (arg?.ws_message_event || arg?.ws_url)
   {
    let ws_message_event = arg.ws_message_event
-   let ws_url = arg.ws_url || 'ws://127.0.0.1:57000/'
+   let ws_url = arg.ws_url || DEFAULT_WEB_SOCKET_ADDR
    let ws_error_event = arg.ws_error_event || (() => { })
    let ws_open_event = arg.ws_open_event || (() => { })
    let ws_close_event = arg.ws_close_event || (() => { })
-   let ws_reconnect_interval = arg.ws_reconnect_interval || 2000
+   let ws_reconnect_interval = arg.ws_reconnect_interval || DEFAULT_WEB_SOCKET_RECONNECT_INTERVAL
    let ws_reconnect_max = arg.ws_reconnect_max || 10
    let ws_reconnect_delay = arg.ws_reconnect_delay || 100
-   this.init_ws(ws_message_event, ws_url, ws_error_event, ws_open_event, ws_close_event, ws_reconnect_interval, ws_reconnect_max, ws_reconnect_delay)
+   let ws_debug = arg.ws_debug || DEFAULT_WEB_SOCKET_DEBUG
+   this.init_ws(ws_message_event, ws_url, ws_error_event, ws_open_event, ws_close_event, ws_reconnect_interval, ws_reconnect_max, ws_reconnect_delay, ws_debug)
   }
 
-  if (arg.rest_input_event)
+  if (arg?.rest_input_event)
   {
    let rest_input_event = arg.rest_input_event
    let rest_input_url = arg.rest_input_url || '/input'
@@ -41,7 +49,7 @@ class Api
    this.init_rest_input(rest_input_event, rest_input_url, rest_input_method)
   }
 
-  if (arg.rest_output_event)
+  if (arg?.rest_output_event)
   {
    let rest_output_event = arg.rest_output_event
    let rest_output_url = arg.rest_output_url || '/output'
@@ -51,17 +59,66 @@ class Api
   }
  }
 
- init_ws(ws_message_event, ws_url, ws_error_event, ws_open_event, ws_close_event, ws_reconnect_interval, ws_reconnect_max, ws_reconnect_delay)
+ init_ws(ws_message_event, ws_url, ws_error_event, ws_open_event, ws_close_event, ws_reconnect_interval, ws_reconnect_max, ws_reconnect_delay, ws_debug)
  {
-  this.ws = new ReconnectingWebSocket(ws_url, null, { debug: true, reconnectInterval: 2000 })
-  this.ws.onmessage = m => ws_message_event(JSON.parse(m.data))
-  this.ws.onerror = ws_error_event
-  this.ws.onclose = ws_close_event
-  this.ws.onopen = ws_open_event
+  ws_url = ws_url || DEFAULT_WEB_SOCKET_ADDR
+
+  this.ws = new ReconnectingWebSocket(ws_url, null, {
+   debug: ws_debug,
+   reconnectInterval: ws_reconnect_interval,
+   maxReconnectAttempts: ws_reconnect_max,
+   reconnectDecay: ws_reconnect_delay
+  })
+
+  if (ws_message_event)
+   this.register_ws_message_event(ws_message_event)
+  this.ws.onmessage = m =>
+  {
+   let j = JSON.parse(m.data)
+   for (let ws_message_event of this.ws_message_events)
+    ws_message_event(j)
+  }
+
+  if (ws_error_event)
+   this.register_ws_error_event(ws_error_event)
+  this.ws.onerror = e =>
+  {
+   for (let ws_error_event of this.ws_error_events)
+    ws_error_event(e)
+  }
+
+  if (ws_close_event)
+   this.register_ws_close_event(ws_close_event)
+  this.ws.onclose = e =>
+  {
+   for (let ws_close_event of this.ws_close_events)
+    ws_close_event(e)
+  }
+
+  if (ws_open_event)
+   this.register_ws_open_event(ws_open_event)
+  this.ws.onopen = e =>
+  {
+   for (let ws_open_event of this.ws_open_events)
+    ws_open_event(e)
+  }
+
   this.ws.reconnectInterval = ws_reconnect_interval
   this.ws.reconnectMax = ws_reconnect_max
   this.ws.reconnectDelay = ws_reconnect_delay
  }
+
+ ws_message_events = new Set()
+ register_ws_message_event(ws_message_event) { this.ws_message_events.add(ws_message_event) }
+
+ ws_error_events = new Set()
+ register_ws_error_event(ws_error_event) { this.ws_error_events.add(ws_error_event) }
+
+ ws_close_events = new Set()
+ register_ws_close_event(ws_close_event) { this.ws_close_events.add(ws_close_event) }
+
+ ws_open_events = new Set()
+ register_ws_open_event(ws_open_event) { this.ws_open_events.add(ws_open_event) }
 
  ws_send(payload) { this.ws.send(JSON.stringify(payload)) }
 
@@ -120,3 +177,9 @@ class Api
 
  stop_rest_output() { this.rest_output_continuous = false }
 }
+
+window.VacApi = VacApi
+if (!window.vac)
+ window.vac = {}
+window.vac.api = new VacApi()
+console.log('VacApi loaded')

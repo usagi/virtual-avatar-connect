@@ -1,0 +1,32 @@
+.play {
+ font-size: 5vh;
+}
+
+.play .title {
+ text-align: center;
+ font-size: 1em;
+}
+
+.play h1.title.moco-moji > * {
+ display: inline;
+ --text-color: hsl(220deg 73% 64%);
+}
+
+.play .title > *::before,
+.play .title > *::after {
+ content: "////";
+ margin: 0 0.7em;
+}
+
+.play .description {
+ text-align: center;
+ font-size: 0.6em;
+}
+
+.play .decription > h2 {
+ text-align: center;
+}
+
+.play h2.description.moco-moji > * {
+ display: inline;
+}

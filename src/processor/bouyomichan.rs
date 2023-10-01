@@ -1,4 +1,4 @@
-use super::Processor;
+use super::{CompletedAnd, Processor};
 use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedState};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
@@ -15,7 +15,7 @@ pub struct Bouyomichan {
 impl Processor for Bouyomichan {
  const FEATURE: &'static str = "bouyomichan";
 
- async fn process(&self, id: u64) -> Result<()> {
+ async fn process(&self, id: u64) -> Result<CompletedAnd> {
   log::debug!("Bouyomichan::process() が呼び出されました。");
   // channel_data.read ロック
   let content = {
@@ -28,7 +28,7 @@ impl Processor for Bouyomichan {
    // 未確定の入力なら何もしない
    if !source.has_flag(ChannelDatum::FLAG_IS_FINAL) {
     log::trace!("未確定の入力なので、処理をスキップします。");
-    return Ok(());
+    return Ok(CompletedAnd::Next);
    }
    source.content.clone()
   };
@@ -51,7 +51,7 @@ impl Processor for Bouyomichan {
   log::debug!("棒読みちゃんにリクエストを送信します。command = {:?}, args = {:?}", command, args);
   Command::new(command).args(args).spawn()?;
 
-  Ok(())
+  Ok(CompletedAnd::Next)
  }
 
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {
