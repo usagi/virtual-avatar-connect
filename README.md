@@ -1,27 +1,20 @@
-## 各種連携の設定方法
+# Virtual Avatar Creator
 
-### COEIROINK
+配信支援アプリ Virtual Avatar Connect; VAC
 
-1. API の docs を確認: <http://127.0.0.1:50032/docs#/default/speakers_v1_speakers_get>
-2. 使用したいキャラクターのUUIDを確認: <http://127.0.0.1:50032/docs#/default/speakers_v1_speakers_get>
-   - VACの補助機能: `virtual-avatar-creator --coeiroink-speakers`
-3. VACの設定を行います:
+AI疑似人格共演者、VRM制御、音声認識、画像認識、字幕、翻訳、読み上げなどなど
 
-```toml
-[api.coeiroink]
-# 設定すると連携が有効になります。未設定の場合は連携が無効になります。
-#  v1/predict または v1/synthesis に対応しています。
-url = "http://localhost:50032/v1/predict"
-# 以下のパラメーターは省略するとデフォルト値が使用されます。
-# v1/predict のパラメーター
-speaker_uuid = "3c37646f-3881-5374-2a83-149267990abc"
-style_id = 0
-speedScale = 1
-# v1/synthesis のパラメーター
-volumeScale = 1
-pitchScale = 0.5
-intonationScale = 1
-prePhonemeLength = 0.1
-postPhonemeLength = 0.1
-outputSamplingRate = 48000
-```
+- ここは開発プロジェクトとしての公式ウェブサイトです。
+  - ご要望や不具合の報告、OSSとしてのプロジェクトへのご参加はこちらからどうぞ。🙇🏼‍♀️
+- 通常の閲覧用の公式ウェブサイトは <https://usagi.github.io/virtual-avatar-connect/> です。
+  - 通常はこちらへアクセスして下さい。🙏
+
+## ご注意: VAC は現在開発途中のα版となっております🙏
+
+- 基本機能は動作しますが、まだたくさんの不具合があるかもしれません。🙇🏼‍♀️
+  - 不具合を見つけたら [Issues] へご報告ください。
+    - 「1. 動作環境」、「2. 再現手順」、「3. 期待した動作」の3点をご報告下さい。
+    - 設定やスクショを貼る場合は API-KEY などの漏らしたくない情報が含まれないようご注意下さい。
+  - ご要望も [Issues] へどうぞ！
+
+[Issues]:https://github.com/usagi/virtual-avatar-connect/issues
