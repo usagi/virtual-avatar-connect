@@ -8,6 +8,8 @@
  rel="stylesheet">
 <link rel="stylesheet" href="index.css">
 
+<script type="module" src="dark-mode.js"></script>
+
 <h1>Virtual Avatar Connect 公式サイト</h1>
 <h2>配信支援アプリ、AI疑似人格共演者、VRM制御、音声認識、画像認識、字幕、翻訳、読み上げなどなど</h2>
 
@@ -34,7 +36,7 @@
  <li>「シーン切り替えもできなくはないです。」（Play/BRB/Loadingの切り替え機能サンプルは作ってみた。）</li>
 </ul>
 
-<h4>今後の機能追加の予定</h4>
+<h4>📅今後の機能追加の予定</h4>
 
 <ul>
  <li>入力に応じて画面にエモートを乱舞させたり、チャットをかっこよくシュッと表示したりなどの絵作りテンプレートの充実</li>
@@ -56,7 +58,7 @@
 
 <ul>
  <!-- <a href="#download-and-install">  -->
-  <li>1. ダウンロードとインストール (ただいま文書作成中です🙇🏼‍♀️)</li>
+ <li>1. ダウンロードとインストール (ただいま文書作成中です🙇🏼‍♀️)</li>
  <!-- </a> -->
  <li>2. お試し起動と動作確認 (ただいま文書作成中です🙇🏼‍♀️)</li>
  <li>3. (ただいま文書作成中です🙇🏼‍♀️)</li>
@@ -81,3 +83,10 @@
 <section id="download-and-install">
 
 </section>
+
+<div class="dark-mode-switch" title="ライトモード/ダークモード">
+ <div class="toggle-switch" onclick="force_dark_mode(!this.querySelector('input').checked)">
+  <input type="checkbox" class="force-dark-mode">
+  <label></label>
+ </div>
+</div>

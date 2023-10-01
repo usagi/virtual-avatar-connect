@@ -1,3 +1,12 @@
+@import url("dark-mode.css");
+@import url("toggle.css");
+
 * {
  font-family: "Chivo", "Kiwi Maru", sans-serif;
+}
+
+.dark-mode-switch {
+ position: fixed;
+ right: 1em;
+ top: 1em;
 }

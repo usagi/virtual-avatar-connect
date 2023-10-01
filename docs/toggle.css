@@ -1,0 +1,41 @@
+:root,
+:root:has(.force-dark-mode-false) {
+ --toggle-switch-background-color: #ccc;
+}
+
+@media (prefers-color-scheme: dark) {
+ :root,
+ :root:has(.force-dark-mode-true) {
+  --toggle-switch-background-color: #333;
+ }
+}
+
+.toggle-switch {
+ width: 2em;
+ height: 1em;
+ background-color: var(--toggle-switch-background-color);
+ border-radius: 0.625em;
+ position: relative;
+ cursor: pointer;
+}
+
+.toggle-switch input {
+ display: none;
+}
+
+.toggle-switch label {
+ width: 1em;
+ height: 1em;
+ background-color: #fff;
+ border-radius: 50%;
+ position: absolute;
+ top: 50%;
+ left: 0em;
+ transform: translateY(-50%);
+ transition: all 0.3s ease;
+}
+
+.toggle-switch:has(input:checked) label {
+ left: 1em;
+ background-color: #2196f3;
+}
