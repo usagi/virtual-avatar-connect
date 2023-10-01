@@ -20,13 +20,29 @@
  <li>Virtual Avatar Connect は「配信支援アプリ」です。おもに Twitch などのライブ配信向けに OBS Studio や Twitch Studio
   などの配信アプリでの字幕や画作りを支援するためのアプリです。</li>
  <li>もしかしなくてもデスクトップに常駐するイマジナリーふれんず/わいふ/はずばんど/etc.召喚アプリとしても使えるかもしれません。少なくとも開発者さんには想定外の用法でしたが楽しまれて下さい。</li>
- <li>「AI疑似人格による共演者の召喚」を行えます。会話したり解説してもらったり。（※<a href="https://platform.openai.com/" target="openai">OpenAI API</a>連携）</li>
+ <li>「AI疑似人格による共演者の召喚」を行えます。会話したり解説してもらったり。（※<a href="https://platform.openai.com/" target="openai">OpenAI API</a>連携）
+ </li>
  <li>「音声認識からの文字起こしによるテキスト入力」を行えます。</li>
  <li>「画像認識からの文字起こしによるテキスト入力」を行えます。</li>
- <li>「音声合成によるテキストの読み上げ」を行えます。（※<a href="https://coeiroink.com/" target="coeiroink">CoeiroInk</a>、<a href="http://chi.usamimi.info/" target="bouyomichan">棒読みちゃん</a>、<a href="https://support.microsoft.com/ja-jp/office/-%E8%AA%AD%E3%81%BF%E4%B8%8A%E3%81%92-%E9%9F%B3%E5%A3%B0%E5%90%88%E6%88%90%E6%A9%9F%E8%83%BD%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%97%E3%81%A6%E3%83%86%E3%82%AD%E3%82%B9%E3%83%88%E3%82%92%E8%AA%AD%E3%81%BF%E4%B8%8A%E3%81%92%E3%82%8B-459e7704-a76d-4fe2-ab48-189d6b83333c" target="windows-tts">OSのTTS機能</a>との連携）</li>
+ <li>「音声合成によるテキストの読み上げ」を行えます。（※<a href="https://coeiroink.com/" target="coeiroink">CoeiroInk</a>、<a
+   href="http://chi.usamimi.info/" target="bouyomichan">棒読みちゃん</a>、<a
+   href="https://support.microsoft.com/ja-jp/office/-%E8%AA%AD%E3%81%BF%E4%B8%8A%E3%81%92-%E9%9F%B3%E5%A3%B0%E5%90%88%E6%88%90%E6%A9%9F%E8%83%BD%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%97%E3%81%A6%E3%83%86%E3%82%AD%E3%82%B9%E3%83%88%E3%82%92%E8%AA%AD%E3%81%BF%E4%B8%8A%E3%81%92%E3%82%8B-459e7704-a76d-4fe2-ab48-189d6b83333c"
+   target="windows-tts">OSのTTS機能</a>との連携）</li>
  <li>「言語の翻訳」を行えます。（※<a href="https://script.google.com/" target="gas">Google Apps Script</a>連携）</li>
  <li>「字幕の表示」を行えます。</li>
  <li>「OBS Studio などの配信画面作りのソースとしての画作り」を行えます。(ブラウザーソース)</li>
+ <li>「シーン切り替えもできなくはないです。」（Play/BRB/Loadingの切り替え機能サンプルは作ってみた。）</li>
+</ul>
+
+<h4>今後の機能追加の予定</h4>
+
+<ul>
+ <li>入力に応じて画面にエモートを乱舞させたり、チャットをかっこよくシュッと表示したりなどの絵作りテンプレートの充実</li>
+ <li>入力画面のきれい、かわいい、かっこいい、あるいは機能的で便利なスキンの充実</li>
+ <li>コメントリーダーアプリとの連携、またはアプリ内蔵機能としてTwitchのチャット取り込みに対応。</li>
+ <li>VMCプロトコルに対応しVRM表示アプリへ姿勢や表情を送信可能に。（疑似人格共演者に動きをつけたり、複数のVMCアプリの入力をうまい具合に合成して自分のアバターへ出力したり。）</li>
+ <li>OpenAI API に頼らない疑似人格バックエンドの対応。（GPT4かせめてGPT3.5なみのPCのGPUで動かせる何かがあれば…）</li>
+ <li>外部アプリ、サービス、OS機能との自由度の高い連携の仕組みの追加。（任意のコマンドを音声から実行させるとか）</li>
 </ul>
 
 <h3>📂ダウンロード</h3>
@@ -36,10 +52,12 @@
 
 <h3>📖使い方</h3>
 
-<p>とりあえず簡易版の使い方ガイドを掲載します。</p>
+<p>とりあえず簡易版の使い方ガイドを掲載します。きれいでかっこいいやつは数日…お待ち下さい。🙏</p>
 
 <ul>
- <li>1. ダウンロードとインストール (ただいま文書作成中です🙇🏼‍♀️)</li>
+ <!-- <a href="#download-and-install">  -->
+  <li>1. ダウンロードとインストール (ただいま文書作成中です🙇🏼‍♀️)</li>
+ <!-- </a> -->
  <li>2. お試し起動と動作確認 (ただいま文書作成中です🙇🏼‍♀️)</li>
  <li>3. (ただいま文書作成中です🙇🏼‍♀️)</li>
 </ul>
@@ -48,7 +66,8 @@
 
 <h3>🎨スクショ</h3>
 
-<p>ただいま撮影準備中です🙇🏼‍♀️（雰囲気は<a href="https://www.twitch.tv/usaginetwork" target="twitch">開発のなかのひとの Twitch 配信</a>で見られるかもしれません👀）</p>
+<p>ただいま撮影準備中です🙇🏼‍♀️（雰囲気は<a href="https://www.twitch.tv/usaginetwork" target="twitch">開発のなかのひとの Twitch
+  配信</a>で見られるかもしれません👀）</p>
 
 <hr>
 
@@ -56,3 +75,9 @@
  <p>⚙開発プロジェクトとしての公式ページは GitHub ( https://github.com/usagi/virtual-avatar-connect ) へどうぞ</p>
 </a>
 <p>※不具合報告やご要望は GitHub の Issues へ頂ければ幸いです！</p>
+
+<hr>
+
+<section id="download-and-install">
+
+</section>
