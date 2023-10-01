@@ -1,4 +1,4 @@
-# Virtual Avatar Creator
+# Virtual Avatar Connect
 
 配信支援アプリ Virtual Avatar Connect; VAC
 
