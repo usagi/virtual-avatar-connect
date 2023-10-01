@@ -1,5 +1,5 @@
 use super::{CompletedAnd, Processor};
-use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedState};
+use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedProcessorConf, SharedState};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use std::path::Path;
@@ -7,7 +7,7 @@ use tokio::process::Command;
 
 #[derive(Debug, Clone)]
 pub struct Bouyomichan {
- conf: ProcessorConf,
+ conf: SharedProcessorConf,
  channel_data: SharedChannelData,
 }
 
@@ -33,20 +33,22 @@ impl Processor for Bouyomichan {
    source.content.clone()
   };
 
+  let conf = self.conf.read().await;
+
   let mut args = vec![
    "/T".to_string(),
    content,
-   self.conf.speed.unwrap_or(-1).to_string(),
-   self.conf.tone.unwrap_or(-1).to_string(),
-   self.conf.volume.unwrap_or(-1).to_string(),
-   self.conf.voice.unwrap_or(0).to_string(),
+   conf.speed.unwrap_or(-1).to_string(),
+   conf.tone.unwrap_or(-1).to_string(),
+   conf.volume.unwrap_or(-1).to_string(),
+   conf.voice.unwrap_or(0).to_string(),
   ];
-  match (&self.conf.address, self.conf.port) {
+  match (&conf.address, conf.port) {
    (Some(ip), Some(port)) => args.extend(vec![ip.clone(), port.to_string()]),
    _ => (),
   }
 
-  let command = self.conf.remote_talk_path.as_ref().unwrap();
+  let command = conf.remote_talk_path.as_ref().unwrap();
 
   log::debug!("棒読みちゃんにリクエストを送信します。command = {:?}, args = {:?}", command, args);
   Command::new(command).args(args).spawn()?;
@@ -54,9 +56,13 @@ impl Processor for Bouyomichan {
   Ok(CompletedAnd::Next)
  }
 
+ fn conf(&self) -> SharedProcessorConf {
+  self.conf.clone()
+ }
+
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {
   let mut p = Bouyomichan {
-   conf: pc.clone(),
+   conf: pc.as_shared(),
    channel_data: state.read().await.channel_data.clone(),
   };
 
@@ -67,16 +73,19 @@ impl Processor for Bouyomichan {
   Ok(ProcessorKind::Bouyomichan(p))
  }
 
- fn is_channel_from(&self, channel_from: &str) -> bool {
-  self.conf.channel_from.as_ref().unwrap() == channel_from
+ async fn is_channel_from(&self, channel_from: &str) -> bool {
+  let conf = self.conf.read().await;
+  conf.channel_from.as_ref().unwrap() == channel_from
  }
 
  async fn is_established(&mut self) -> bool {
-  if self.conf.channel_from.is_none() {
+  let conf = self.conf.read().await;
+
+  if conf.channel_from.is_none() {
    log::error!("channel_from が設定されていません。");
    return false;
   }
-  match self.conf.remote_talk_path {
+  match conf.remote_talk_path {
    Some(ref path) if !Path::new(path).exists() => {
     log::error!("指定されたコマンドが存在しません: {}", path);
     return false;
@@ -89,11 +98,11 @@ impl Processor for Bouyomichan {
   }
   log::info!(
    "Bouyomichan は正常に設定されています: channel: {:?} speed: {:?} tone: {:?} volume: {:?} voice: {:?}",
-   self.conf.channel_from,
-   self.conf.speed,
-   self.conf.tone,
-   self.conf.volume,
-   self.conf.voice,
+   conf.channel_from,
+   conf.speed,
+   conf.tone,
+   conf.volume,
+   conf.voice,
   );
   true
  }

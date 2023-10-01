@@ -25,7 +25,7 @@ mod ops;
 mod windows;
 
 use super::{CompletedAnd, Processor};
-use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedState};
+use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedProcessorConf, SharedState};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use base64::{engine::general_purpose, Engine as _};
@@ -41,7 +41,7 @@ use screenshots::Screen;
 
 #[derive(Clone)]
 pub struct Screenshot {
- conf: ProcessorConf,
+ conf: SharedProcessorConf,
  state: SharedState,
 
  #[cfg(target_os = "windows")]
@@ -97,16 +97,15 @@ impl Processor for Screenshot {
  async fn process(&self, _id: u64) -> Result<CompletedAnd> {
   log::debug!("Screenshot::process() が呼び出されました。");
 
-  let conf = self.conf.clone();
+  let conf = self.conf.read().await.clone();
   let state = self.state.clone();
-  let channel_to = self.conf.channel_to.as_ref().cloned();
-  let paths = self.conf.paths.clone();
+  let channel_to = conf.channel_to.as_ref().cloned();
+  let paths = conf.paths.clone();
   let using = self.using.clone();
   let area = self.area.clone();
 
   // 4要素ではない子要素があれば4要素になるまで None で埋めつつ複製を製造
-  let crops = self
-   .conf
+  let crops = conf
    .crops
    .iter()
    .map(|v| {
@@ -234,6 +233,10 @@ impl Processor for Screenshot {
   Ok(CompletedAnd::Next)
  }
 
+ fn conf(&self) -> SharedProcessorConf {
+  self.conf.clone()
+ }
+
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {
   #[cfg(target_os = "windows")]
   let target = match (&pc.title, &pc.title_regex) {
@@ -257,7 +260,7 @@ impl Processor for Screenshot {
   };
 
   let mut p = Screenshot {
-   conf: pc.clone(),
+   conf: pc.as_shared(),
    state: state.clone(),
 
    #[cfg(target_os = "windows")]
@@ -277,23 +280,26 @@ impl Processor for Screenshot {
   Ok(ProcessorKind::Screenshot(p))
  }
 
- fn is_channel_from(&self, channel_from: &str) -> bool {
-  self.conf.channel_from.as_ref().unwrap() == channel_from
+ async fn is_channel_from(&self, channel_from: &str) -> bool {
+  let conf = self.conf.read().await;
+  conf.channel_from.as_ref().unwrap() == channel_from
  }
 
  async fn is_established(&mut self) -> bool {
-  if self.conf.channel_from.is_none() {
+  let conf = self.conf.read().await;
+
+  if conf.channel_from.is_none() {
    log::error!("channel_from が設定されていません。");
    return false;
   }
 
-  let m_channel_to = match &self.conf.channel_to {
+  let m_channel_to = match &conf.channel_to {
    Some(v) => format!(" channel_to={:?}", v),
    None => String::new(),
   };
 
   #[cfg(target_os = "windows")]
-  let m_target = match (&self.conf.title, &self.conf.title_regex) {
+  let m_target = match (&conf.title, &conf.title_regex) {
    (Some(t), _) => format!("{:?} (ウィンドウタイトル完全一致)", t),
    (_, Some(r)) => format!("{:?} (ウィンドウタイトル正規表現)", r),
    _ => "(デスクトップ全体)".to_string(),
@@ -308,19 +314,19 @@ impl Processor for Screenshot {
 
   // client_only が true の場合はウィンドウの枠を除いたクライアント領域のみが対象となる
   #[cfg(target_os = "windows")]
-  let m_client_only = match self.conf.client_only {
+  let m_client_only = match conf.client_only {
    true => "有効",
    _ => "無効",
   }
   .to_string();
 
   #[cfg(not(target_os = "windows"))]
-  if self.conf.client_only.is_some() {
+  if conf.client_only.is_some() {
    log::warn!("client_only は Windows でのみ有効です。無視されます。");
   }
 
   #[cfg(target_os = "windows")]
-  let m_bitblt = match self.conf.bitblt {
+  let m_bitblt = match conf.bitblt {
    true => {
     log::warn!("BitBlt モードが設定されています。対象のウィンドウによっては BitBlt モードではキャプチャーできない場合があります。キャプチャーに失敗する場合は bitblt = false を設定してください。");
     "有効"
@@ -328,29 +334,29 @@ impl Processor for Screenshot {
    _ => "無効",
   }.to_string();
   #[cfg(not(target_os = "windows"))]
-  if self.conf.bitblt.is_some() {
+  if conf.bitblt.is_some() {
    log::warn!("bitblt は Windows でのみ有効です。");
   }
 
   #[cfg(target_os = "windows")]
   log::info!(
    "Screenshot は正常に設定されています: channel_from={:?}{} target={} client_only={} bitblt={} crops={:?} image_file_store_path={:?}",
-   self.conf.channel_from,
+   conf.channel_from,
    m_channel_to,
    m_target,
    m_client_only,
    m_bitblt,
-   self.conf.crops,
-   self.conf.paths
+   conf.crops,
+   conf.paths
   );
   #[cfg(not(target_os = "windows"))]
   log::info!(
    "Screenshot は正常に設定されています: channel_from={:?}{} target={} crops={:?} image_file_store_path={:?}",
-   self.conf.channel_from,
+   conf.channel_from,
    m_channel_to,
    m_target,
-   self.conf.crops,
-   self.conf.image_file_store_path
+   conf.crops,
+   conf.image_file_store_path
   );
 
   true

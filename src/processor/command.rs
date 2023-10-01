@@ -1,12 +1,13 @@
 use super::{CompletedAnd, Processor};
-use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedState};
+use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedProcessorConf, SharedState};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use std::collections::VecDeque;
 
 #[derive(Clone, Debug)]
 pub struct Command {
- conf: ProcessorConf,
+ conf: SharedProcessorConf,
+ state: SharedState,
  channel_data: SharedChannelData,
  if_not_command: CompletedAnd,
 }
@@ -17,6 +18,8 @@ impl Processor for Command {
 
  async fn process(&self, id: u64) -> Result<CompletedAnd> {
   log::debug!("Command::process() が呼び出されました。");
+
+  let conf = self.conf.read().await.clone();
 
   // 入力を取得
   let content = {
@@ -44,26 +47,58 @@ impl Processor for Command {
     log::info!("quit がコマンドされたので Virtual Avatar Connect は終了します。");
     std::process::exit(0);
    },
-   "disable" => {
+   "disable" if args.len() >= 1 => {
     log::info!("disable がコマンドされたので group = {} の Processor を無効化します。", args[0]);
+    response1(
+     conf,
+     self.state.clone(),
+     "disable",
+     "group = {A} の Processor を無効化しました。",
+     args[0].clone(),
+    )
+    .await;
    },
    "enable" => {
-    log::info!("enable がコマンドされたので group = {} の Processor を有効化します。", args[0]);
+    if args.len() >= 1 {
+     log::info!("enable がコマンドされたので group = {} の Processor を有効化します。", args[0]);
+     response1(
+      conf,
+      self.state.clone(),
+      "enable",
+      "group = {A} の Processor を有効化しました。",
+      args[0].clone(),
+     )
+     .await;
+    }
    },
    "reload" => {
     log::info!("reload がコマンドされたので Virtual Avatar Connect は設定を再読み込みします。");
+    response1(
+     conf,
+     self.state.clone(),
+     "reload",
+     "group = {A} の Processor の設定を再読み込みしました。",
+     args[0].clone(),
+    )
+    .await;
    },
    _ => {
     log::info!("コマンドまたは何かが違うようです。");
+    response0(conf, self.state.clone(), "_", "コマンドまたは何かが違うようです。").await;
    },
   }
 
   Ok(CompletedAnd::Break)
  }
 
+ fn conf(&self) -> SharedProcessorConf {
+  self.conf.clone()
+ }
+
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {
   let mut p = Command {
-   conf: pc.clone(),
+   conf: pc.as_shared(),
+   state: state.clone(),
    channel_data: state.read().await.channel_data.clone(),
    if_not_command: match pc.through_if_not_command {
     Some(true) => CompletedAnd::Next,
@@ -78,33 +113,63 @@ impl Processor for Command {
   Ok(ProcessorKind::Command(p))
  }
 
- fn is_channel_from(&self, channel_from: &str) -> bool {
-  self.conf.channel_from.as_ref().unwrap() == channel_from
+ async fn is_channel_from(&self, channel_from: &str) -> bool {
+  let conf = self.conf.read().await;
+  conf.channel_from.as_ref().unwrap() == channel_from
  }
 
  async fn is_established(&mut self) -> bool {
-  if self.conf.channel_from.is_none() {
+  let conf = self.conf.read().await;
+
+  if conf.channel_from.is_none() {
    log::error!("channel_from が設定されていません。");
    return false;
   }
 
-  if self.conf.channel_to.is_some() {
+  if conf.channel_to.is_some() {
    log::info!(
     "channel_to が設定されているため、コマンドの処理結果が channel_to へ送信されます: channel_to={:?}",
-    self.conf.channel_to,
+    conf.channel_to,
    );
   }
 
-  if let Some(true) = self.conf.through_if_not_command {
+  if let Some(true) = conf.through_if_not_command {
    log::info!("through_if_not_command が設定されているため、コマンドではない入力はそのまま後続の Processor 群へ流れます。");
   }
 
   log::info!(
    "Command は正常に設定されています: channel_from={:?} channel_to={:?}",
-   self.conf.channel_from,
-   self.conf.channel_to
+   conf.channel_from,
+   conf.channel_to
   );
 
   true
  }
+}
+
+// 0 変数版
+async fn response0(conf: ProcessorConf, state: SharedState, command: &str, default_message: &str) {
+ let content = conf
+  .response_mod
+  .iter()
+  .find_map(|v| if v[0] == command { Some(v[1].clone()) } else { None })
+  .unwrap_or_else(|| default_message.to_string());
+ let cd = ChannelDatum::new(conf.channel_to.unwrap(), content).with_flag(ChannelDatum::FLAG_IS_FINAL);
+
+ let state = state.read().await;
+ state.push_channel_datum(cd).await;
+}
+
+// 1 変数版
+async fn response1(conf: ProcessorConf, state: SharedState, command: &str, default_message: &str, a: &str) {
+ let content = conf
+  .response_mod
+  .iter()
+  .find_map(|v| if v[0] == command { Some(v[1].clone()) } else { None })
+  .unwrap_or_else(|| default_message.to_string())
+  .replace("{A}", a);
+ let cd = ChannelDatum::new(conf.channel_to.unwrap(), content).with_flag(ChannelDatum::FLAG_IS_FINAL);
+
+ let state = state.read().await;
+ state.push_channel_datum(cd).await;
 }

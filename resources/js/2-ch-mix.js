@@ -115,7 +115,7 @@ export default class VacOutputDisplayFor2ChMix
 
   for (let index of [0, 1])
   {
-   console.log(`--- channel ${index+1} initialized ---`)
+   console.log(`--- channel ${index + 1} initialized ---`)
    console.log('name: ', this.chs[index])
    console.log('color: ', this.colors.chs[index] ?? '(default)')
    console.log('suffix: ', this.suffixies[index] ?? '(none)')
@@ -178,6 +178,7 @@ export default class VacOutputDisplayFor2ChMix
    return
   }
   this.height_limit = h
+  document.body.style.fontSize = `${this.height_limit * 0.2}px`
  }
 
  prev_factor = 1.0

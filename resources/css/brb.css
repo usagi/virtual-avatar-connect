@@ -42,17 +42,29 @@
 }
 
 .tape .danger-zone {
- transform: translate(0px, -73%);
- height: 37%;
+ transform: translate(0px, -43%);
+ height: 50%;
  position: absolute;
  width: 100%;
  text-align: center;
 }
 
-.tape p {
- font-size: 100%;
+.tape p:first-child {
+ font-size: 17.8vh;
  display: inline-block;
  height: 100%;
+}
+
+.tape p:nth-child(2) {
+ font-size: 4vh;
+ display: inline-block;
+ height: 17vh;
+ width: 53vh;
+ position: absolute;
+ overflow: hidden;
+ color: #440;
+ right: 19vh;
+ top: 5vh;
 }
 
 /* 画面中央に太く真横方向の帯 */

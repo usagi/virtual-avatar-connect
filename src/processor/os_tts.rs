@@ -1,11 +1,11 @@
 use super::{CompletedAnd, Processor};
-use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedState};
+use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedProcessorConf, SharedState};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 
 #[derive(Clone)]
 pub struct OsTts {
- conf: ProcessorConf,
+ conf: SharedProcessorConf,
  channel_data: SharedChannelData,
  tts: tts::Tts,
 }
@@ -63,9 +63,13 @@ impl Processor for OsTts {
   Ok(CompletedAnd::Next)
  }
 
+ fn conf(&self) -> SharedProcessorConf {
+  self.conf.clone()
+ }
+
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {
   let mut p = OsTts {
-   conf: pc.clone(),
+   conf: pc.as_shared(),
    channel_data: state.read().await.channel_data.clone(),
    tts: tts::Tts::default()?,
   };
@@ -77,12 +81,15 @@ impl Processor for OsTts {
   Ok(ProcessorKind::OsTts(p))
  }
 
- fn is_channel_from(&self, channel_from: &str) -> bool {
-  self.conf.channel_from.as_ref().unwrap() == channel_from
+ async fn is_channel_from(&self, channel_from: &str) -> bool {
+  let conf = self.conf.read().await;
+  conf.channel_from.as_ref().unwrap() == channel_from
  }
 
  async fn is_established(&mut self) -> bool {
-  if self.conf.channel_from.is_none() {
+  let conf = self.conf.read().await;
+
+  if conf.channel_from.is_none() {
    log::error!("channel_from が設定されていません。");
    return false;
   }
@@ -95,7 +102,7 @@ impl Processor for OsTts {
 
   let mut is_voice_set = false;
 
-  if let Some(ref id) = self.conf.voice_id {
+  if let Some(ref id) = conf.voice_id {
    if let Some(voice) = voices.iter().find(|v| v.id().eq(id)) {
     if let Some(e) = self.tts.set_voice(voice).err() {
      log::error!("voice_id の設定に失敗しました: {:?}", e);
@@ -107,7 +114,7 @@ impl Processor for OsTts {
 
   // voice_name の場合は voice に部分一致すればよい
   if is_voice_set == false {
-   if let Some(name) = &self.conf.voice_name {
+   if let Some(name) = &conf.voice_name {
     if let Some(voice) = voices.iter().find(|v| v.name().contains(name)) {
      if let Some(e) = self.tts.set_voice(voice).err() {
       log::error!("voice_name の設定に失敗しました: {:?}", e);
@@ -122,7 +129,7 @@ impl Processor for OsTts {
    log::warn!("voice_name も voice_id も設定されていないため OS のデフォルトの音声を使用します。")
   }
 
-  if let Some(mut rate) = self.conf.tts_rate {
+  if let Some(mut rate) = conf.tts_rate {
    let min = self.tts.min_rate();
    let max = self.tts.max_rate();
    if rate < min || rate > max {
@@ -140,7 +147,7 @@ impl Processor for OsTts {
    log::trace!("tts_rate を設定しました: {}", rate);
   }
 
-  if let Some(mut pitch) = self.conf.tts_pitch {
+  if let Some(mut pitch) = conf.tts_pitch {
    let min = self.tts.min_pitch();
    let max = self.tts.max_pitch();
    if pitch < min || pitch > max {
@@ -158,7 +165,7 @@ impl Processor for OsTts {
    log::trace!("tts_pitch を設定しました: {}", pitch);
   }
 
-  if let Some(mut volume) = self.conf.tts_volume {
+  if let Some(mut volume) = conf.tts_volume {
    let min = self.tts.min_volume();
    let max = self.tts.max_volume();
    if volume < min || volume > max {
@@ -178,7 +185,7 @@ impl Processor for OsTts {
 
   log::info!(
    "OsTts は正常に設定されています: channel: {:?} voice: {:?} rate: {:?} pitch: {:?} volume: {:?}",
-   self.conf.channel_from,
+   conf.channel_from,
    self.tts.voice().unwrap().unwrap(),
    self.tts.get_rate(),
    self.tts.get_pitch(),

@@ -86,7 +86,7 @@ impl State {
   // Processor の実行
   for (i, p) in self.processors.iter().enumerate() {
    log::trace!("Processor を実行します: {:?} / {:?}", i + 1, self.processors.len());
-   if p.is_channel_from(&channel_from) {
+   if p.is_channel_from(&channel_from).await {
     match p.process(id).await {
      Ok(ca) => {
       log::trace!("Processor の実行が完了しました。(非同期処理部分が継続して実行中の可能性があります。)");
@@ -138,6 +138,7 @@ async fn init_processors(conf: &Conf, state: &SharedState) -> Result<Vec<Process
   let feature = pc.feature.as_ref().unwrap();
   log::info!("Processor を初期化します: {:?}", feature);
   let pk = match feature.to_lowercase().as_str() {
+   Command::FEATURE => Command::new(&pc, state).await?,
    Modify::FEATURE => Modify::new(&pc, state).await?,
    Screenshot::FEATURE => Screenshot::new(&pc, state).await?,
    Ocr::FEATURE => Ocr::new(&pc, state).await?,

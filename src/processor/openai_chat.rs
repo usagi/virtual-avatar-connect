@@ -1,5 +1,5 @@
 use super::{CompletedAnd, Processor};
-use crate::{Arc, ChannelDatum, Mutex, ProcessorConf, ProcessorKind, SharedChannelData, SharedState};
+use crate::{Arc, ChannelDatum, Mutex, ProcessorConf, ProcessorKind, SharedChannelData, SharedProcessorConf, SharedState};
 use anyhow::{bail, Context, Result};
 use async_openai::{
  config::OpenAIConfig,
@@ -12,7 +12,7 @@ use std::time::SystemTime;
 
 #[derive(Debug, Clone)]
 pub struct OpenAiChat {
- conf: ProcessorConf,
+ conf: SharedProcessorConf,
  state: SharedState,
  channel_data: SharedChannelData,
  client: Client<OpenAIConfig>,
@@ -31,16 +31,18 @@ impl Processor for OpenAiChat {
  async fn process(&self, id: u64) -> Result<CompletedAnd> {
   log::debug!("OpenAIChat::process() が呼び出されました。");
 
+  let conf = self.conf.read().await;
+
   let last_activated = self.last_activated.clone();
   let state = self.state.clone();
   let channel_data = self.channel_data.clone();
   let request_template = self.request_template.clone();
-  let memory_capacity = self.conf.memory_capacity.unwrap_or(DEFAULT_MEMORY_CAPACITY);
+  let memory_capacity = conf.memory_capacity.unwrap_or(DEFAULT_MEMORY_CAPACITY);
   let force_activate_regex = self.force_activate_regex.clone();
   let ignore_regex = self.ignore_regex.clone();
-  let min_interval_in_secs = self.conf.min_interval_in_secs;
-  let channel_from = self.conf.channel_from.as_ref().unwrap().clone();
-  let channel_to = self.conf.channel_to.as_ref().unwrap().clone();
+  let min_interval_in_secs = conf.min_interval_in_secs;
+  let channel_from = conf.channel_from.as_ref().unwrap().clone();
+  let channel_to = conf.channel_to.as_ref().unwrap().clone();
   let client = self.client.clone();
 
   tokio::spawn(async move {
@@ -198,9 +200,13 @@ impl Processor for OpenAiChat {
   Ok(CompletedAnd::Next)
  }
 
+ fn conf(&self) -> SharedProcessorConf {
+  self.conf.clone()
+ }
+
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {
   let mut p = OpenAiChat {
-   conf: pc.clone(),
+   conf: pc.as_shared(),
    state: state.clone(),
    channel_data: state.read().await.channel_data.clone(),
    client: make_client(pc)?,
@@ -214,34 +220,41 @@ impl Processor for OpenAiChat {
    bail!("OpenAIChat が正常に設定されていません: {:?}", pc);
   }
 
-  p.force_activate_regex = p.conf.force_activate_regex_pattern.as_ref().map(|s| Regex::new(s).unwrap());
-  p.ignore_regex = p.conf.ignore_regex_pattern.as_ref().map(|s| Regex::new(s).unwrap());
+  {
+   let conf = p.conf.read().await;
+
+   p.force_activate_regex = conf.force_activate_regex_pattern.as_ref().map(|s| Regex::new(s).unwrap());
+   p.ignore_regex = conf.ignore_regex_pattern.as_ref().map(|s| Regex::new(s).unwrap());
+  }
 
   Ok(ProcessorKind::OpenAiChat(p))
  }
 
- fn is_channel_from(&self, channel_from: &str) -> bool {
-  self.conf.channel_from.as_ref().unwrap() == channel_from
+ async fn is_channel_from(&self, channel_from: &str) -> bool {
+  let conf = self.conf.read().await;
+  conf.channel_from.as_ref().unwrap() == channel_from
  }
 
  async fn is_established(&mut self) -> bool {
-  if self.conf.channel_from.is_none() {
+  let conf = self.conf.read().await;
+
+  if conf.channel_from.is_none() {
    log::error!("channel_from が設定されていません。");
    return false;
   }
-  if self.conf.channel_to.is_none() {
+  if conf.channel_to.is_none() {
    log::error!("channel_to が設定されていません。");
    return false;
   }
-  if self.conf.api_key.is_none() {
+  if conf.api_key.is_none() {
    log::error!("api_key が設定されていません。");
    return false;
   }
 
   log::info!(
    "OpenAIChat は正常に設定されています: channel_from: {:?} channel_to: {:?}",
-   self.conf.channel_from,
-   self.conf.channel_to
+   conf.channel_from,
+   conf.channel_to
   );
   true
  }

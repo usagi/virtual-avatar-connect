@@ -30,8 +30,8 @@ pub trait Processor {
  async fn process(&self, id: u64) -> Result<CompletedAnd>;
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind>;
  async fn is_established(&mut self) -> bool;
- fn is_channel_from(&self, channel_from: &str) -> bool;
- // fn conf(&self) -> SharedProcessorConf;
+ async fn is_channel_from(&self, channel_from: &str) -> bool;
+ fn conf(&self) -> SharedProcessorConf;
 }
 
 // Note: 追加/削除する場合は
@@ -67,7 +67,7 @@ pub enum CompletedAnd {
 }
 
 impl ProcessorKind {
- pub fn is_channel_from(&self, channel_from: &str) -> bool {
+ pub async fn is_channel_from(&self, channel_from: &str) -> bool {
   match self {
    Self::Command(p) => p.is_channel_from(channel_from),
    Self::Modify(p) => p.is_channel_from(channel_from),
@@ -78,7 +78,7 @@ impl ProcessorKind {
    Self::Bouyomichan(p) => p.is_channel_from(channel_from),
    Self::CoeiroInk(p) => p.is_channel_from(channel_from),
    Self::OsTts(p) => p.is_channel_from(channel_from),
-  }
+  }.await
  }
 
  pub async fn process(&self, id: u64) -> Result<CompletedAnd> {

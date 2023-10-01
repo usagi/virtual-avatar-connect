@@ -1,5 +1,5 @@
 use super::{CompletedAnd, Processor};
-use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedAudioSink, SharedChannelData, SharedState};
+use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedAudioSink, SharedChannelData, SharedProcessorConf, SharedState};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use regex::Regex;
@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct CoeiroInk {
- conf: ProcessorConf,
+ conf: SharedProcessorConf,
  channel_data: SharedChannelData,
  synthesis_or_predict_request_url: String,
  synthesis_or_predict_request_template: SynthesisOrPredictRequest,
@@ -74,8 +74,7 @@ impl Processor for CoeiroInk {
      .send()
      .await;
 
-    let response = match response
-    {
+    let response = match response {
      Ok(response) => response,
      Err(e) => {
       log::error!("CoeiroInk への音声合成リクエストに失敗しました: {:?}", e);
@@ -128,135 +127,146 @@ impl Processor for CoeiroInk {
   Ok(CompletedAnd::Next)
  }
 
+ fn conf(&self) -> SharedProcessorConf {
+  self.conf.clone()
+ }
+
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {
+  let pc = fix_conf(pc).await?;
+
   let mut p = CoeiroInk {
-   conf: pc.clone(),
+   conf: pc.as_shared(),
    channel_data: state.read().await.channel_data.clone(),
-   synthesis_or_predict_request_url: String::new(),
+   synthesis_or_predict_request_url: pc.api_url.clone().unwrap(),
    synthesis_or_predict_request_template: SynthesisOrPredictRequest::default(),
    audio_file_store_path: pc.audio_file_store_path.clone(),
    split_regex: pc.split_regex_pattern.as_ref().map(|s| Regex::new(s).unwrap()),
    audio_sink: state.read().await.audio_sink.clone(),
   };
 
+  p.update_template().await;
+
   if !p.is_established().await {
    bail!("CoeiroInk が正常に設定されていません: {:?}", pc);
   }
 
-  p.synthesis_or_predict_request_url = p.conf.api_url.clone().unwrap();
-  p.update_template();
-
   Ok(ProcessorKind::CoeiroInk(p))
  }
 
- fn is_channel_from(&self, channel_from: &str) -> bool {
-  self.conf.channel_from.as_ref().unwrap() == channel_from
+ async fn is_channel_from(&self, channel_from: &str) -> bool {
+  let conf = self.conf.read().await;
+  conf.channel_from.as_ref().unwrap() == channel_from
  }
 
  async fn is_established(&mut self) -> bool {
-  if self.conf.channel_from.is_none() {
+  let conf = self.conf.read().await;
+
+  if conf.channel_from.is_none() {
    log::error!("channel_from が設定されていません。");
    return false;
   }
-  if self.conf.api_url.is_none() {
-   log::warn!("api_url が設定されていないため、 http://localhost:50032/v1/predict にデフォルトします。");
-   self.conf.api_url = Some("http://localhost:50032/v1/predict".to_string());
-  }
-  if self.conf.speaker_uuid.is_none() {
-   log::warn!("speaker_uuid が設定されていません。 API でデフォルトロードを試みます。");
-   match Self::get_speakers().await {
-    Ok(speakers) if !speakers.is_empty() => {
-     log::warn!(
-      "speaker_uuid を {} ( {} ) にデフォルトします。",
-      speakers[0].speakerUuid,
-      speakers[0].speakerName
-     );
-     self.conf.speaker_uuid = Some(speakers[0].speakerUuid.clone());
-    },
-    _ => {
-     log::error!("CoeiroInk と API 通信できなかったためデフォルトロードに失敗しました。CoeiroInk の動作状態を確認してください。");
-     return false;
-    },
-   }
-  }
-  if self.conf.style_id.is_none() {
-   log::warn!("style_id が設定されていません。 API でデフォルトロードを試みます。");
-   match Self::get_speakers().await {
-    Ok(speakers) if !speakers.is_empty() => {
-     let speaker = speakers
-      .into_iter()
-      .find(|s| s.speakerUuid.eq(self.conf.speaker_uuid.as_ref().unwrap()));
-     if speaker.is_none() {
-      log::error!("speaker_uuid の Speaker が CoeiroInk の応答に含まれませんでした。");
-      return false;
-     }
-     let style_id = speaker.unwrap().styles.iter().next().cloned();
-     if style_id.is_none() {
-      log::error!("speaker_uuid の Speaker に Style 情報が存在しませんでした。");
-      return false;
-     }
-     let style = style_id.unwrap();
-     log::warn!("style_id を {}: {} にデフォルトします。", style.styleId, style.styleName);
-     self.conf.style_id = Some(style.styleId);
-    },
-    _ => {
-     log::error!("CoeiroInk と API 通信できなかったためデフォルトロードに失敗しました。CoeiroInk の動作状態を確認してください。");
-     return false;
-    },
-   }
-  }
-  if self.conf.speed_scale.is_none() {
-   log::warn!("speed_scale が設定されていないため 1.00 にデフォルトします。");
-   self.conf.speed_scale = Some(1.00);
-  }
-  // api_url が synthesis で終わっているか、 synthesis 向けの何れかが設定されている場合は predict ではなく synthesis と推定
-  if self.conf.api_url.as_ref().unwrap().ends_with("synthesis")
-   || self.conf.volume_scale.is_some()
-   || self.conf.pitch_scale.is_some()
-   || self.conf.intonation_scale.is_some()
-   || self.conf.pre_phoneme_length.is_some()
-   || self.conf.post_phoneme_length.is_some()
-   || self.conf.output_sampling_rate.is_some()
-  {
-   // api_url が predict で終わっていれば警告
-   if self.conf.api_url.as_ref().unwrap().ends_with("predict") {
-    log::warn!("api_url として predict が設定されていますが、volume_scale, pitch_scale, intonation_scale, pre_phoneme_length, post_phoneme_length, output_sampling_rate は synthesis でのみ有効です。 volume_scale: {:?}, pitch_scale: {:?}, intonation_scale: {:?}, pre_phoneme_length: {:?}, post_phoneme_length: {:?}, output_sampling_rate: {:?}", self.conf.volume_scale, self.conf.pitch_scale, self.conf.intonation_scale, self.conf.pre_phoneme_length, self.conf.post_phoneme_length, self.conf.output_sampling_rate);
-   }
-   if self.conf.volume_scale.is_none() {
-    log::warn!("synthesis API モードが設定されましたが volume_scale が設定されていないため 1.00 にデフォルトします。");
-    self.conf.volume_scale = Some(1.00);
-   }
-   if self.conf.pitch_scale.is_none() {
-    log::warn!("synthesis API モードが設定されましたが pitch_scale が設定されていないため 0.00 にデフォルトします。");
-    self.conf.pitch_scale = Some(0.00);
-   }
-   if self.conf.intonation_scale.is_none() {
-    log::warn!("synthesis API モードが設定されましたが intonation_scale が設定されていないため 1.00 にデフォルトします。");
-    self.conf.intonation_scale = Some(1.00);
-   }
-   if self.conf.pre_phoneme_length.is_none() {
-    log::warn!("synthesis API モードが設定されましたが pre_phoneme_length が設定されていないため 0.10 にデフォルトします。");
-    self.conf.pre_phoneme_length = Some(0.10);
-   }
-   if self.conf.post_phoneme_length.is_none() {
-    log::warn!("synthesis API モードが設定されましたが post_phoneme_length が設定されていないため 0.1 にデフォルトします。");
-    self.conf.post_phoneme_length = Some(0.10);
-   }
-   if self.conf.output_sampling_rate.is_none() {
-    log::warn!("synthesis API モードが設定されましたが output_sampling_rate が設定されていないため 48000 にデフォルトします。");
-    self.conf.output_sampling_rate = Some(48000);
-   }
-  }
+
   log::info!(
    "CoeiroInk は正常に設定されています: channel: {:?} speed: {:?} tone: {:?} volume: {:?} voice: {:?}",
-   self.conf.channel_from,
-   self.conf.speed,
-   self.conf.tone,
-   self.conf.volume,
-   self.conf.voice,
+   conf.channel_from,
+   conf.speed,
+   conf.tone,
+   conf.volume,
+   conf.voice,
   );
   true
  }
+}
+
+async fn fix_conf(original: &ProcessorConf) -> Result<ProcessorConf> {
+ let mut fixed = original.clone();
+
+ if fixed.api_url.is_none() {
+  log::warn!("api_url が設定されていないため、 http://localhost:50032/v1/predict にデフォルトします。");
+  fixed.api_url = Some("http://localhost:50032/v1/predict".to_string());
+ }
+
+ if fixed.speaker_uuid.is_none() {
+  log::warn!("speaker_uuid が設定されていません。 API でデフォルトロードを試みます。");
+  match CoeiroInk::get_speakers().await {
+   Ok(speakers) if !speakers.is_empty() => {
+    log::warn!(
+     "speaker_uuid を {} ( {} ) にデフォルトします。",
+     speakers[0].speakerUuid,
+     speakers[0].speakerName
+    );
+    fixed.speaker_uuid = Some(speakers[0].speakerUuid.clone());
+   },
+   _ => bail!("CoeiroInk と API 通信できなかったためデフォルトロードに失敗しました。CoeiroInk の動作状態を確認してください。"),
+  }
+ }
+
+ if fixed.style_id.is_none() {
+  log::warn!("style_id が設定されていません。 API でデフォルトロードを試みます。");
+  match CoeiroInk::get_speakers().await {
+   Ok(speakers) if !speakers.is_empty() => {
+    let speaker = speakers
+     .into_iter()
+     .find(|s| s.speakerUuid.eq(fixed.speaker_uuid.as_ref().unwrap()));
+    if speaker.is_none() {
+     bail!("speaker_uuid の Speaker が CoeiroInk の応答に含まれませんでした。");
+    }
+    let style_id = speaker.unwrap().styles.iter().next().cloned();
+    if style_id.is_none() {
+     bail!("speaker_uuid の Speaker に Style 情報が存在しませんでした。");
+    }
+    let style = style_id.unwrap();
+    log::warn!("style_id を {}: {} にデフォルトします。", style.styleId, style.styleName);
+    fixed.style_id = Some(style.styleId);
+   },
+   _ => bail!("CoeiroInk と API 通信できなかったためデフォルトロードに失敗しました。CoeiroInk の動作状態を確認してください。"),
+  }
+ }
+ if fixed.speed_scale.is_none() {
+  log::warn!("speed_scale が設定されていないため 1.00 にデフォルトします。");
+  fixed.speed_scale = Some(1.00);
+ }
+
+ // api_url が synthesis で終わっているか、 synthesis 向けの何れかが設定されている場合は predict ではなく synthesis と推定
+ if fixed.api_url.as_ref().unwrap().ends_with("synthesis")
+  || fixed.volume_scale.is_some()
+  || fixed.pitch_scale.is_some()
+  || fixed.intonation_scale.is_some()
+  || fixed.pre_phoneme_length.is_some()
+  || fixed.post_phoneme_length.is_some()
+  || fixed.output_sampling_rate.is_some()
+ {
+  // api_url が predict で終わっていれば警告
+  if fixed.api_url.as_ref().unwrap().ends_with("predict") {
+   log::warn!("api_url として predict が設定されていますが、volume_scale, pitch_scale, intonation_scale, pre_phoneme_length, post_phoneme_length, output_sampling_rate は synthesis でのみ有効です。 volume_scale: {:?}, pitch_scale: {:?}, intonation_scale: {:?}, pre_phoneme_length: {:?}, post_phoneme_length: {:?}, output_sampling_rate: {:?}", fixed.volume_scale, fixed.pitch_scale, fixed.intonation_scale, fixed.pre_phoneme_length, fixed.post_phoneme_length, fixed.output_sampling_rate);
+  }
+  if fixed.volume_scale.is_none() {
+   log::warn!("synthesis API モードが設定されましたが volume_scale が設定されていないため 1.00 にデフォルトします。");
+   fixed.volume_scale = Some(1.00);
+  }
+  if fixed.pitch_scale.is_none() {
+   log::warn!("synthesis API モードが設定されましたが pitch_scale が設定されていないため 0.00 にデフォルトします。");
+   fixed.pitch_scale = Some(0.00);
+  }
+  if fixed.intonation_scale.is_none() {
+   log::warn!("synthesis API モードが設定されましたが intonation_scale が設定されていないため 1.00 にデフォルトします。");
+   fixed.intonation_scale = Some(1.00);
+  }
+  if fixed.pre_phoneme_length.is_none() {
+   log::warn!("synthesis API モードが設定されましたが pre_phoneme_length が設定されていないため 0.10 にデフォルトします。");
+   fixed.pre_phoneme_length = Some(0.10);
+  }
+  if fixed.post_phoneme_length.is_none() {
+   log::warn!("synthesis API モードが設定されましたが post_phoneme_length が設定されていないため 0.1 にデフォルトします。");
+   fixed.post_phoneme_length = Some(0.10);
+  }
+  if fixed.output_sampling_rate.is_none() {
+   log::warn!("synthesis API モードが設定されましたが output_sampling_rate が設定されていないため 48000 にデフォルトします。");
+   fixed.output_sampling_rate = Some(48000);
+  }
+ }
+
+ Ok(fixed)
 }
 
 #[allow(dead_code)]
@@ -316,15 +326,17 @@ impl SynthesisOrPredictRequest {
 }
 
 impl CoeiroInk {
- fn update_template(&mut self) {
-  self.synthesis_or_predict_request_template.speakerUuid = self.conf.speaker_uuid.clone().unwrap();
-  self.synthesis_or_predict_request_template.styleId = self.conf.style_id.unwrap();
-  self.synthesis_or_predict_request_template.speedScale = self.conf.speed_scale.unwrap();
-  self.synthesis_or_predict_request_template.volumeScale = self.conf.volume_scale.unwrap();
-  self.synthesis_or_predict_request_template.pitchScale = self.conf.pitch_scale.unwrap();
-  self.synthesis_or_predict_request_template.intonationScale = self.conf.intonation_scale.unwrap();
-  self.synthesis_or_predict_request_template.prePhonemeLength = self.conf.pre_phoneme_length.unwrap();
-  self.synthesis_or_predict_request_template.postPhonemeLength = self.conf.post_phoneme_length.unwrap();
-  self.synthesis_or_predict_request_template.outputSamplingRate = self.conf.output_sampling_rate.unwrap();
+ async fn update_template(&mut self) {
+  let conf = self.conf.read().await;
+
+  self.synthesis_or_predict_request_template.speakerUuid = conf.speaker_uuid.clone().unwrap();
+  self.synthesis_or_predict_request_template.styleId = conf.style_id.unwrap();
+  self.synthesis_or_predict_request_template.speedScale = conf.speed_scale.unwrap();
+  self.synthesis_or_predict_request_template.volumeScale = conf.volume_scale.unwrap();
+  self.synthesis_or_predict_request_template.pitchScale = conf.pitch_scale.unwrap();
+  self.synthesis_or_predict_request_template.intonationScale = conf.intonation_scale.unwrap();
+  self.synthesis_or_predict_request_template.prePhonemeLength = conf.pre_phoneme_length.unwrap();
+  self.synthesis_or_predict_request_template.postPhonemeLength = conf.post_phoneme_length.unwrap();
+  self.synthesis_or_predict_request_template.outputSamplingRate = conf.output_sampling_rate.unwrap();
  }
 }

@@ -1,11 +1,11 @@
 use super::{CompletedAnd, Processor};
-use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedState};
+use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedProcessorConf, SharedState};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 
 #[derive(Debug, Clone)]
 pub struct GasTranslation {
- conf: ProcessorConf,
+ conf: SharedProcessorConf,
  state: SharedState,
  channel_data: SharedChannelData,
  url_base: String,
@@ -21,12 +21,12 @@ impl Processor for GasTranslation {
  async fn process(&self, id: u64) -> Result<CompletedAnd> {
   log::debug!("GasTranslation::process() が呼び出されました。");
 
-  let conf = self.conf.clone();
+  let conf = self.conf.read().await.clone();
   let state = self.state.clone();
   let channel_data = self.channel_data.clone();
   let url_base = self.url_base.clone();
-  let channel_to = self.conf.channel_to.as_ref().unwrap().clone();
-  let translate_to = self.conf.translate_to.as_ref().unwrap().clone();
+  let channel_to = conf.channel_to.as_ref().unwrap().clone();
+  let translate_to = conf.translate_to.as_ref().unwrap().clone();
 
   tokio::spawn(async move {
    // 翻訳元を取得
@@ -101,62 +101,73 @@ impl Processor for GasTranslation {
   Ok(CompletedAnd::Next)
  }
 
+ fn conf(&self) -> SharedProcessorConf {
+  self.conf.clone()
+ }
+
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {
   let mut p = GasTranslation {
-   conf: pc.clone(),
+   conf: pc.as_shared(),
    state: state.clone(),
    channel_data: state.read().await.channel_data.clone(),
    url_base: String::new(),
   };
+
   if !p.is_established().await {
    bail!("GasTranslation が正常に設定されていません: {:?}", pc);
   }
 
-  p.url_base = GOOGLE_APPS_SCRIPT_URL_TEMPLATE
-   .replace("{script_id}", p.conf.script_id.as_ref().unwrap())
-   .replace("{translate_to}", p.conf.translate_to.as_ref().unwrap());
+  {
+   let conf = p.conf.read().await;
+   p.url_base = GOOGLE_APPS_SCRIPT_URL_TEMPLATE
+    .replace("{script_id}", conf.script_id.as_ref().unwrap())
+    .replace("{translate_to}", conf.translate_to.as_ref().unwrap());
+  }
 
   Ok(ProcessorKind::GasTranslation(p))
  }
 
- fn is_channel_from(&self, channel_from: &str) -> bool {
-  self.conf.channel_from.as_ref().unwrap() == channel_from
+ async fn is_channel_from(&self, channel_from: &str) -> bool {
+  let conf = self.conf.read().await;
+  conf.channel_from.as_ref().unwrap() == channel_from
  }
 
  async fn is_established(&mut self) -> bool {
-  if self.conf.channel_from.is_none() {
+  let conf = self.conf.read().await;
+
+  if conf.channel_from.is_none() {
    log::error!("channel_from が設定されていません。");
    return false;
   }
-  if self.conf.channel_to.is_none() {
+  if conf.channel_to.is_none() {
    log::error!("channel_to が設定されていません。");
    return false;
   }
-  if self.conf.script_id.is_none() {
+  if conf.script_id.is_none() {
    log::error!("script_id が設定されていません。");
    return false;
   }
-  if self.conf.channel_from.is_none() {
+  if conf.channel_from.is_none() {
    log::error!("channel_from が設定されていません。");
    return false;
   }
-  if self.conf.channel_to.is_none() {
+  if conf.channel_to.is_none() {
    log::error!("channel_to が設定されていません。");
    return false;
   }
-  if self.conf.translate_from.is_none() {
+  if conf.translate_from.is_none() {
    log::info!("translation_from が設定さていないため、入力ごとに自動推定を行います。多言語の入力に対応する必要が無い場合は明示的に言語を設定すると処理効率が向上します。");
   }
-  if self.conf.translate_to.is_none() {
+  if conf.translate_to.is_none() {
    log::error!("translation_to が設定されていません。");
    return false;
   }
   log::info!(
    "GasTranslation は正常に設定されています: channel: {:?} -> {:?} lang: {:?} -> {:?}",
-   self.conf.channel_from,
-   self.conf.channel_to,
-   self.conf.translate_from,
-   self.conf.translate_to
+   conf.channel_from,
+   conf.channel_to,
+   conf.translate_from,
+   conf.translate_to
   );
   true
  }

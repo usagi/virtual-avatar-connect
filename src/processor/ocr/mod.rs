@@ -3,7 +3,7 @@ mod local;
 mod web;
 
 use super::{CompletedAnd, Processor};
-use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedState};
+use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedProcessorConf, SharedState};
 use anyhow::{bail, ensure, Result};
 use async_tempfile::TempFile;
 use async_trait::async_trait;
@@ -12,7 +12,7 @@ use unic_langid::LanguageIdentifier;
 
 #[derive(Debug, Clone)]
 pub struct Ocr {
- conf: ProcessorConf,
+ conf: SharedProcessorConf,
  state: SharedState,
  channel_data: SharedChannelData,
  lang: String,
@@ -30,13 +30,13 @@ impl Processor for Ocr {
  async fn process(&self, id: u64) -> Result<CompletedAnd> {
   log::debug!("Ocr::process() が呼び出されました。");
 
-  let conf = self.conf.clone();
+  let conf = self.conf.read().await.clone();
   let state = self.state.clone();
   let channel_data = self.channel_data.clone();
-  let channel_to = self.conf.channel_to.as_ref().unwrap().clone();
+  let channel_to = conf.channel_to.as_ref().unwrap().clone();
   let lang = self.lang.to_lowercase();
-  let lines = self.conf.lines.unwrap_or_default();
-  let auto_delete_processed_file = self.conf.auto_delete_processed_file.unwrap_or_default();
+  let lines = conf.lines.unwrap_or_default();
+  let auto_delete_processed_file = conf.auto_delete_processed_file.unwrap_or_default();
 
   tokio::spawn(async move {
    // conf と contents に応じて画像ファイルをローカルに生成ないしパスを保持
@@ -215,6 +215,10 @@ impl Processor for Ocr {
   Ok(CompletedAnd::Next)
  }
 
+ fn conf(&self) -> SharedProcessorConf {
+  self.conf.clone()
+ }
+
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {
   // TODO: Windows 以外のサポート
   #[cfg(not(target_os = "windows"))]
@@ -229,7 +233,7 @@ impl Processor for Ocr {
   };
 
   let mut p = Ocr {
-   conf: pc.clone(),
+   conf: pc.as_shared(),
    state: state.clone(),
    channel_data: state.read().await.channel_data.clone(),
    lang,
@@ -242,22 +246,25 @@ impl Processor for Ocr {
   Ok(ProcessorKind::Ocr(p))
  }
 
- fn is_channel_from(&self, channel_from: &str) -> bool {
-  self.conf.channel_from.as_ref().unwrap() == channel_from
+ async fn is_channel_from(&self, channel_from: &str) -> bool {
+  let conf = self.conf.read().await;
+  conf.channel_from.as_ref().unwrap() == channel_from
  }
 
  async fn is_established(&mut self) -> bool {
-  if self.conf.channel_from.is_none() {
+  let conf = self.conf.read().await;
+
+  if conf.channel_from.is_none() {
    log::error!("channel_from が設定されていません。");
    return false;
   }
 
-  if self.conf.channel_to.is_none() {
+  if conf.channel_to.is_none() {
    log::error!("channel_to が設定されていません。");
    return false;
   }
 
-  if self.conf.channel_from == self.conf.channel_to {
+  if conf.channel_from == conf.channel_to {
    log::error!(
     "この Processor ({:?}) では不慮の短絡的な無限ループの発生を防ぐ目的と比較的重い処理時間で同期ブロックを行わないように工夫するため channel_from と channel_to は同一に設定できません。",
     Self::FEATURE
@@ -265,15 +272,15 @@ impl Processor for Ocr {
    return false;
   }
 
-  if self.conf.lang.is_none() {
+  if conf.lang.is_none() {
    log::error!("lang が設定されていません。");
    return false;
   }
 
   log::info!(
    "Ocr は正常に設定されています: channel: {:?} -> {:?} lang: {:?}",
-   self.conf.channel_from,
-   self.conf.channel_to,
+   conf.channel_from,
+   conf.channel_to,
    self.lang
   );
   true

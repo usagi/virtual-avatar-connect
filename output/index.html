@@ -46,6 +46,7 @@
  const DEFAULT_DESCRIPTION = '― AI疑似人格共演者、VRM制御、音声認識、画像認識、字幕、翻訳、読み上げなどなど、近日リリース予定です👀 ―'
  document.addEventListener('DOMContentLoaded', () =>
  {
+  vac.output.run()
   vac.scene.start()
   window.title_elements = [...document.querySelectorAll('[data-vac-output="title"]')]
   window.description_elements = [...document.querySelectorAll('[data-vac-output="description"]')]
@@ -82,8 +83,8 @@
 
  </section>
 
- <section data-vac-scene="loading" class="loading">
-
+ <section data-vac-scene="loading" class="loading background-mask">
+  <div class="background"></div>
   <p>Loading</p>
 
  </section>

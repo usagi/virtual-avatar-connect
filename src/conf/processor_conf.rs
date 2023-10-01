@@ -20,6 +20,8 @@ pub struct ProcessorConf {
 
  // command
  pub through_if_not_command: Option<bool>,
+ #[serde(default)]
+ pub response_mod: Vec<Vec<String>>,
 
  // screenshot
  pub title: Option<String>,
@@ -102,4 +104,10 @@ pub struct ProcessorConf {
  pub tts_pitch: Option<f32>,
  pub tts_rate: Option<f32>,
  pub tts_volume: Option<f32>,
+}
+
+impl ProcessorConf {
+ pub fn as_shared(&self) -> SharedProcessorConf {
+  Arc::new(RwLock::new(self.clone()))
+ }
 }

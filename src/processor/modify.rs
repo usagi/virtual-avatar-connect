@@ -1,5 +1,5 @@
 use super::{CompletedAnd, Processor};
-use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedState};
+use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedProcessorConf, SharedState};
 use alkana_rs::ALKANA;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
@@ -7,7 +7,7 @@ use std::io::BufRead;
 
 #[derive(Clone, Debug)]
 pub struct Modify {
- conf: ProcessorConf,
+ conf: SharedProcessorConf,
  state: SharedState,
 
  channel_from: String,
@@ -27,6 +27,8 @@ impl Processor for Modify {
  async fn process(&self, id: u64) -> Result<CompletedAnd> {
   log::debug!("Modify::process() が呼び出されました。");
 
+  let conf = self.conf.read().await;
+
   // このProcessorの処理完了までにデータが変更されない事を保証するため write ロックを通す
   let mut channel_data = self.channel_data.write().await;
 
@@ -41,7 +43,7 @@ impl Processor for Modify {
   let mut content = channel_data[index].content.clone();
 
   // alkana 変換
-  if let Some(true) = self.conf.alkana {
+  if let Some(true) = conf.alkana {
    // 先に . , : ; などの ASCII 記号文字の前後に空白文字を挿入
    for c in content.clone().chars() {
     if c.is_ascii_punctuation() {
@@ -102,9 +104,13 @@ impl Processor for Modify {
   Ok(CompletedAnd::Next)
  }
 
+ fn conf(&self) -> SharedProcessorConf {
+  self.conf.clone()
+ }
+
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {
   let mut p = Modify {
-   conf: pc.clone(),
+   conf: pc.as_shared(),
    state: state.clone(),
    channel_from: "".to_string(),
    channel_to: "".to_string(),
@@ -182,36 +188,39 @@ impl Processor for Modify {
   Ok(ProcessorKind::Modify(p))
  }
 
- fn is_channel_from(&self, channel_from: &str) -> bool {
-  self.conf.channel_from.as_ref().unwrap() == channel_from
+ async fn is_channel_from(&self, channel_from: &str) -> bool {
+  let conf = self.conf.read().await;
+  conf.channel_from.as_ref().unwrap() == channel_from
  }
 
  async fn is_established(&mut self) -> bool {
-  if self.conf.channel_from.is_none() {
+  let conf = self.conf.read().await;
+
+  if conf.channel_from.is_none() {
    log::error!("channel_from が設定されていません。");
    return false;
   }
-  if self.conf.channel_to.is_none() {
+  if conf.channel_to.is_none() {
    log::error!("channel_to が設定されていません。");
    return false;
   }
 
   // dictionary_files に指定されたファイルが存在するか確認
-  for file in self.conf.dictionary_files.iter() {
+  for file in conf.dictionary_files.iter() {
    if !std::path::Path::new(file).exists() {
     log::error!("dictionary_files に指定されたファイルが存在しません: {}", file);
     return false;
    }
   }
 
-  for file in self.conf.regex_files.iter() {
+  for file in conf.regex_files.iter() {
    if !std::path::Path::new(file).exists() {
     log::error!("regex_files に指定されたファイルが存在しません: {}", file);
     return false;
    }
   }
 
-  match &self.conf.sort_dictionary {
+  match &conf.sort_dictionary {
    Some(v) if v.to_lowercase().eq("length") => (),
    Some(_) => log::warn!("sort_dictionary に指定された値が不正です。現在は未指定または length 以外の有効な値はありません。"),
    _ => (),
@@ -219,11 +228,11 @@ impl Processor for Modify {
 
   log::info!(
    "Modify は正常に設定されています: {:?} -> {:?} (modify: {:?}, dictionary_files: {:?}, regex_files: {:?})",
-   self.conf.channel_from,
-   self.conf.channel_to,
-   self.conf.modify,
-   self.conf.dictionary_files,
-   self.conf.regex_files
+   conf.channel_from,
+   conf.channel_to,
+   conf.modify,
+   conf.dictionary_files,
+   conf.regex_files
   );
   true
  }
