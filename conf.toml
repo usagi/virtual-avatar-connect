@@ -12,7 +12,7 @@
 # 16: とてもたくさんの Processor を同時に動かしたい Heavy User さんならこれくらいでもアリかもしれません。
 # 32: 一体 VAC に何をさせる気かわかりませんが、いっそライブ配信中専用の公開ウェブサイトでも動かしますか？
 # 未指定だとお使いの環境の CPU コア数にあわせて自動的に設定します。でもそれは最近の PC では多すぎるかもしれません。
-workers = 4
+workers = 8
 
 # ここで設定したアドレスに http (sつけないでね👀)でアクセスすると VAC の Web UI が表示されます。
 #  例: http://127.0.0.1:57000/input
@@ -97,6 +97,100 @@ state_data_auto_save = true
 #  ※OBS Studioは用意していなくても問題ありません。Chromeなどのブラウザーで /output を直接開いて動作確認できます。
 
 [[processors]]
+feature = "modify"
+channel_from = "user"
+channel_to = "system"
+regex_files = ["regex.pre-command.txt"]
+
+[[processors]]
+feature = "command"
+channel_from = "system"
+channel_to = "ai"
+response_mod = [
+ [
+  "disable",
+  "システムコマンドにより{A}モジュールは無効化された。",
+ ],
+ [
+  "enable",
+  "システムコマンドにより{A}モジュールは有効化された。",
+ ],
+ [
+  "reload",
+  "システムコマンドにより{A}モジュールは再読み込みされた。",
+ ],
+ [
+  "_",
+  "コマンドまたは何かが違うようだ。",
+ ],
+]
+
+[[processors]]
+feature = "modify"
+channel_from = "ai"
+channel_to = "ai-synth"
+# channel_from と channel_to を同じに設定した場合に、
+# 新たな入力を生成するのではなく、受け取った入力情報を改変して流したい場合は true にします。
+# channel_from と channel_to が異なる場合は何も起こりません。
+# modify = true
+# Google IME の辞書エクスポートと同じ形式を読み込めます。
+# ↓のように2列でスペース区切りのUTF-8のテキストファイルになっていればOK
+# 変換先1(例:よみ) 変換元1(例:記述)
+# 変換先2(例:よみ) 変換元2(例:記述)
+# 変換先3(例:よみ) 変換元3(例:記述)
+# 音声合成エンジンの前処理や、禁止ワードの *SLANG* のような伏せ字化などに使えます。
+# ほかにも「です」「ます」→「ですにゃ」「ますにゃ」のような使い方もわりと実用性が高いかもしれません。
+# 設定は配列なので複数のファイルを指定できます。もちろん1つから使えます。
+# 先に指定してあるほど優先度が高くなります。
+dictionary_files = [
+ "dictionary.arknights.txt",
+ "dictionary.pre-coeiroink.txt",
+]
+
+# true にすると英語の単語をカタカナに変換します。
+alkana = true
+
+# 変換元を正規表現でマッチさせ、変換先へ置換できる高機能版の辞書ファイル群を指定できます。
+# 単純な置き換えだけでは実現しにくい、より複雑な変換を行いたい場合に使えます。
+# 厳密にはdictionary で置換後に regex の置換となります。重複設定された読みなどにはご注意下さい。
+regex_files = []
+# tru にすると辞書の読み込み時に変換元の文字数が長い順序で並べ替えます。
+# Google IME の辞書ファイルに、「龍門」と「龍門幣」のような登録がある場合に、先に龍門を「ろんめん」に
+# 処理してしまうと龍門幣が「ろんめん幣」になってしまうため、長い文字列を先に処理すると嬉しい場合があります。
+#  未指定: なにもしない
+#  Length: 変換元の文字数が長い順序に並べ替える
+sort_dictionary = "Length"
+
+
+# Arknights 会話中の発言者部分
+[[processors]]
+channel_from = "ss"
+channel_to = "ocr"
+feature = "screenshot"
+title_regex = "UN-IPAD"
+# 1. 画面中央に出る状況解説などのパターン
+# 2. 人名のパターン
+# 3. 会話内容のパターン
+crops = [[100, 600, -100, -500], [30, 1220, 580, 120], [620, 1220, -200, -120]]
+paths = [
+ "tmp.local/ss-test/{T}-1-situ.png",
+ "tmp.local/ss-test/{T}-2-name.png",
+ "tmp.local/ss-test/{T}-3-talk.png",
+]
+output_contents = ["image_file_store_path", "title_captured"]
+client_only = true
+
+[[processors]]
+channel_from = "ocr"
+channel_to = "ai"
+# channel_to = "ocr-ja"
+feature = "ocr"
+lang = "ja_JP"
+load_from_content = true
+auto_delete_processed_file = true
+check_result_lang = true
+
+[[processors]]
 channel_from = "user"
 channel_to = "ai"
 feature = "openai-chat"
@@ -109,14 +203,19 @@ model = "gpt-4"
 # 基本的には思いつくままに AI にどのように振る舞って欲しいかを書くだけで十分です。
 # 「疑似人格」を形成したい場合は、自分の好きなキャラクターの設定を書いたり、設定が定義された URL を参照させる指示を書いたりすると良いでしょう。
 custom_instructions = """
-あなたは次に定義する疑似人格として振る舞う:
-https://arknights.wikiru.jp/index.php?%E3%82%B1%E3%83%AB%E3%82%B7%E3%83%BC で定義される「ケルシー」と自認している。特に「ボイス」の項目や「ケルシー構文」の喋り方を参考とする
-人々からは「ケルシー」または「ケルシー先生」と呼ばれる
-あなたは通常の人からすれば数百年を生きる人外の化け物だが、それを知る人はごく僅かであるし、知っている者も多くはあなたの慈悲と正義について理解している事が多い
-あなたは人間の女性の姿に猫耳や尻尾が付いたフェリーンという種族の一人である
-あなたはあたなと会話するユーザーを「ドクター」と呼ぶ。ドクターは医者の意味ではなく研究者としての意味である
-あたなは表現は落ち着いており丁寧だが、「ですます調」は使わず、断言的な言い切りや疑問の述べ方や推量の表現を好む
+language:日本語, English (only when  directed by Dr.USAGI)
+base character:Kal'tsit (ケルシー) of Arknights
+一人称:私 (わたし),
+使用を好む表現の例:"だ","だろう","さ","か？","か","ない","だな","たい","しろ","やれ","なる",形容詞止め,体言止め,ぶっきらぼうな言い方
+使わない表現の例:"なさい","ください","です","ます","でしょうか","かな","かなぁ","だね","だよ",謙譲語,尊敬語,丁寧語,敬語,敬語調
+性格:深く広い知識と慈悲,女性らしさ,通常は冷静,他意は無いが一般的には回りくどくも合理的で有無を言わせない納得感の高い状況説明的な会話を好む
+話し方の例:テスト？いや、これはテストなんかじゃない。あるいは、そうだとしても、私がテストを課しているのではなく、直面している状況が彼女を試しているのさ。それが彼女の本心の選択なら、私はそれを支持するだけだ……何もかも手助けできるわけではないが、できる限りスムーズに事を進めてやりたい。これはあくまで、彼女自身の選択だからな。
+user:"Dr.USAGI" (ドクターウサギ);女性,通常は"ドクター"と呼ぶ,文脈によっては"キミは"と呼びかける場合もある,彼女は医者ではなく広範な科学と工学を修める博士である。
+userとの関係:戦友,運命共同体,友好的,医者(Kal'tsit)と患者(Dr.USAGI)
+共通の指向:戦略性や戦術性の高いシミュレーションゲームやRTSを好む,計画は慎重だが行動は大胆
+現在の状況:Twitchでゲームプレイ配信を行うDr.USAGIにつきあわされて一緒にゲームをプレイしながら出演している
 """
+
 max_tokens = 256
 user = "Dr.USAGI"
 memory_capacity = 4
@@ -124,10 +223,17 @@ memory_capacity = 4
 # 正規表現にマッチした場合は force_activate_regex_pattern より優先して入力を無視します。
 # 絶対に応答させたくない言葉があれば指定すると良いです。
 # ignore_regex_pattern = ""
+
 # 正規表現にマッチした場合は min_interval_in_secs を無視して応答します。
-# force_activate_regex_pattern = ""
+# 音声入力を使う場合は音声認識でありがちな誤認識パターンも登録してしまうとはかどります。
+force_activate_regex_pattern = "^(ケルシー|Kal'tsit|けるしー|けるしぃ|けるしい|ケルシイ|ヘルシー|へるしー|ヘルシィ|へるしぃ)"
+# ignore_regex_pattern = ""
+
 # あまり高頻度に応答されたくない場合は、前回の入力からここで設定した時間だけ入力が無視されるようになります。
-# min_interval_in_secs = 0
+# GPT4を使う場合はAPI利用料金がGPT3より桁違いにお互いので、この値に大きめ(180あるいは540など)を設定することをおすすめします。
+# 通常の使用では爆死するほどのAPI利用料金になることはありませんが、控えめから始めて様子を見ることをおすすめします。
+# ※OpenAIのAPI利用は先に一定金額(1000円分など)を課金し、使い切ったら再課金するまで使えないタイプなのでそうそう爆死することはありません。たぶん。
+min_interval_in_secs = 180
 
 # 例: user チャンネルへ入力があったら → GAS Translation で JA/EN 変換して → user-en チャンネルへ出力する
 [[processors]]
@@ -144,53 +250,57 @@ translate_to = "en_US"
 # 例: ai チャンネルへ入力があったら → GAS Translation で JA/FR 変換して → ai-fr チャンネルへ出力する
 [[processors]]
 channel_from = "ai"
-channel_to = "ai-fr"
+channel_to = "ai-en"
 feature = "gas-translation"
 script_id = "ここにあなたの Google Apps Script の ID を設定します（他人に公開しないようにご注意下さい）"
 translate_from = "ja_JP"
-translate_to = "fr_FR"
+translate_to = "en_US"
 
 # 例: user チャンネルへ入力があったら → GAS Translation で JA/FR 変換して → user-fr チャンネルへ出力する
 # voice の名前の一部を指定すると、その名前を含む最初に見つかった音声を使います。
 # voice_name と voice_id の一覧は VAC を --test-os-tts 引数付きで起動すると表示されます。
 # voice_id が指定されている場合は voice_name は無視されます。
-[[processors]]
-channel_from = "user"
-feature = "os-tts"
-voice_name = "Haruka"
-# voice_id = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\MSTTS_V110_jaJP_HarukaM'
-tts_pitch = 1.0
-tts_rate = 1.0
-tts_volume = 1.0
+# [[processors]]
+# channel_from = "user"
+# feature = "os-tts"
+# voice_name = "Haruka"
+# # voice_id = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\MSTTS_V110_jaJP_HarukaM'
+# tts_pitch = 1.0
+# tts_rate = 1.0
+# tts_volume = 1.0
 
-[[processors]]
-channel_from = "ai"
-feature = "os-tts"
-voice_name = "Ayumi"
-# voice_id = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\MSTTS_V110_jaJP_HarukaM'
-tts_pitch = 1.0
-tts_rate = 1.0
-tts_volume = 1.0
-
-# 例: ai チャンネルへ入力があったら → CoeiroInk API で音声合成して → 再生する
 # [[processors]]
 # channel_from = "ai"
-# feature = "coeiroink"
-# api_url = "http://localhost:50032/v1/synthesis"
-# # default
-# # speaker_uuid = "3c37646f-3881-5374-2a83-149267990abc"
-# # アルマちゃん
-# speaker_uuid = "c97966b1-d80c-04f5-aba5-d30a92843b59"
-# # アルマちゃん 4:表-v1
-# style_id = 4
-# speed_scale = 1.15
-# # v1/synthesis のパラメーター
-# volume_scale = 1
-# pitch_scale = 0.15
-# intonation_scale = 0.65
-# pre_phoneme_length = 0.05
-# post_phoneme_length = 0.05
-# output_sampling_rate = 48000
+# feature = "os-tts"
+# voice_name = "Ayumi"
+# # voice_id = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\MSTTS_V110_jaJP_HarukaM'
+# tts_pitch = 1.0
+# tts_rate = 1.0
+# tts_volume = 1.0
+
+# 例: ai チャンネルへ入力があったら → CoeiroInk API で音声合成して → 再生する
+[[processors]]
+channel_from = "ai-synth"
+feature = "coeiroink"
+api_url = "http://localhost:50032/v1/synthesis"
+# true: 句読点単位で分割して音声合成＆再生する
+split_regex_pattern = "[、。！？]"
+# default
+# speaker_uuid = "3c37646f-3881-5374-2a83-149267990abc"
+# アルマちゃん
+speaker_uuid = "c97966b1-d80c-04f5-aba5-d30a92843b59"
+# アルマちゃん 4:表-v1
+style_id = 4
+speed_scale = 1.15
+# v1/synthesis のパラメーター
+volume_scale = 1.0
+pitch_scale = 0.15
+intonation_scale = 0.65
+pre_phoneme_length = 0.05
+# split_regex_pattern で句読点区切りを設定する場合は少し眺めに設定すると自然に聞こえやすくなります。
+post_phoneme_length = 0.65
+output_sampling_rate = 48000
+
 # パスを設定しておくと出力された音声をファイルとして保存できます。
 # {T} で日時を表す文字列を挿入できます。連続で出力したい場合にファイル名の重複を防止できます。
 # audio_file_store_path = "vac-coeiroink-{T}.wav"
@@ -213,6 +323,7 @@ tts_volume = 1.0
 # volume = 100
 
 # [[processors]]
-# channel_from = "user"
+# channel_from = "system"
 # feature = "coeiroink"
 # api_url = "http://localhost:50032/v1/synthesis"
+# split_regex_pattern = "[、。！？：；]"
