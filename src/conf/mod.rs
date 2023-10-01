@@ -28,6 +28,7 @@ pub struct Conf {
 
  pub log_level: Option<String>,
 
+ #[serde(default)]
  pub processors: Vec<ProcessorConf>,
 }
 

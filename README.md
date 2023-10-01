@@ -4,7 +4,7 @@
 
 AI疑似人格共演者、VRM制御、音声認識、画像認識、字幕、翻訳、読み上げなどなど
 
-- ここは開発プロジェクトとしての公式ウェブサイトです。
+- ここは開発プロジェクトとしての公式ウェブサイト <https://github.com/usagi/virtual-avatar-connect> です。
   - ご要望や不具合の報告、OSSとしてのプロジェクトへのご参加はこちらからどうぞ。🙇🏼‍♀️
 - 通常の閲覧用の公式ウェブサイトは <https://usagi.github.io/virtual-avatar-connect/> です。
   - 通常はこちらへアクセスして下さい。🙏
@@ -18,3 +18,16 @@ AI疑似人格共演者、VRM制御、音声認識、画像認識、字幕、翻
   - ご要望も [Issues] へどうぞ！
 
 [Issues]:https://github.com/usagi/virtual-avatar-connect/issues
+
+## LICENSE
+
+Virtual Avatar Connect は MIT ライセンスのオープンソースソフトウェアです。
+
+- [MIT License](LICENSE)
+
+## Author
+
+- Usagi Ito / USAGI.NETWORK
+  - [Twitch](https://www.twitch.tv/usaginetwork)
+  - [X(Twitter)](https://twitter.com/usagi_network)
+  - [BOOTH](https://usagi-network.booth.pm/)
