@@ -4,11 +4,10 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chivo:ital,wght@0,500;1,900&family=Kiwi+Maru:wght@500&display=swap"
- rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="index.css">
 
-<script type="module" src="dark-mode.js"></script>
+<script type="module" src="index.js"></script>
 
 <h1>Virtual Avatar Connect 公式サイト</h1>
 <h2>配信支援アプリ、AI疑似人格共演者、VRM制御、音声認識、画像認識、字幕、翻訳、読み上げなどなど</h2>
@@ -48,45 +47,224 @@
 </ul>
 
 <h3>📂ダウンロード</h3>
-<a href="https://github.com/usagi/virtual-avatar-connect/releases/tag/0.0.0-alpha.0" target="vac_download">
- <p>version 0.0.0-alpha.0</p>
-</a>
 
-<h3>📖使い方</h3>
+<ul>
+ <a href="https://github.com/usagi/virtual-avatar-connect/releases/tag/0.0.0-alpha.0" target="vac_download">
+  <li>version 0.0.0-alpha.0</li>
+ </a>
+</ul>
+
+<h3 id="usage">📖使い方</h3>
 
 <p>とりあえず簡易版の使い方ガイドを掲載します。きれいでかっこいいやつは数日…お待ち下さい。🙏</p>
 
 <ul>
- <!-- <a href="#download-and-install">  -->
- <li>1. ダウンロードとインストール (ただいま文書作成中です🙇🏼‍♀️)</li>
- <!-- </a> -->
- <li>2. お試し起動と動作確認 (ただいま文書作成中です🙇🏼‍♀️)</li>
- <li>3. (ただいま文書作成中です🙇🏼‍♀️)</li>
+ <a data-scroll-to="#download-and-install">
+  <li>1. ダウンロードとインストール</li>
+ </a>
+ <a data-scroll-to="#first-run">
+  <li>2. お試し起動と動作確認</li>
+ </a>
+ <li>3. 「音声認識」→（テキスト）→「テキスト表示」 (ただいま文書作成中です🙇🏼‍♀️)</li>
+ <li>4. 「画像認識」→（テキスト）→「テキスト表示」 // 入力画面でお手軽編 (ただいま文書作成中です🙇🏼‍♀️)</li>
+ <li>5. 「画像認識」→（テキスト）→「テキスト表示」 // プロセッサー編 (ただいま文書作成中です🙇🏼‍♀️)</li>
+ <li>6. （テキスト）→「音声合成」 // OS-TTS編 (ただいま文書作成中です🙇🏼‍♀️)</li>
+ <li>7. （テキスト）→「音声合成」 // CoeiroInk編 (ただいま文書作成中です🙇🏼‍♀️)</li>
+ <li>8. （テキスト）→「音声合成」 // 棒読みちゃん編 (ただいま文書作成中です🙇🏼‍♀️)</li>
+ <li>9. （テキスト）→「言語翻訳」→「テキスト表示」 // GAS編 (ただいま文書作成中です🙇🏼‍♀️)</li>
+ <li>10. （テキスト）→「AI疑似人格」→「テキスト表示」 // OpenAI編 (ただいま文書作成中です🙇🏼‍♀️)</li>
+ <li>11. （テキスト）→「MODify」→（テキスト） // 内容の加工や変換を行います</li>
+ <li>12. 「出力画面」の作り込み // 複数の出力画面をお好みでカスタムできます</li>
+ <li>13. 「入力画面」をお好みに // 複数の入力画面をお好みでカスタムできます</li>
+ <li>X. ふろく: VAC の仕組みと用語</li>
 </ul>
-
-<hr>
 
 <h3>🎨スクショ</h3>
 
 <p>ただいま撮影準備中です🙇🏼‍♀️（雰囲気は<a href="https://www.twitch.tv/usaginetwork" target="twitch">開発のなかのひとの Twitch
   配信</a>で見られるかもしれません👀）</p>
 
-<hr>
+<div class="show-case"></div>
 
-<a href="https://github.com/usagi/virtual-avatar-connect" target="vac_dev">
- <p>⚙開発プロジェクトとしての公式ページは GitHub ( https://github.com/usagi/virtual-avatar-connect ) へどうぞ</p>
-</a>
-<p>※不具合報告やご要望は GitHub の Issues へ頂ければ幸いです！</p>
+<h3>🚧開発プロジェクト</h3>
+
+<p>VACはMITライセンスのオープンソースソフトウェアです。開発にご協力頂ける方は <a href="https://github.com/usagi/virtual-avatar-connect"
+  target="vac_dev">GitHub ( https://github.com/usagi/virtual-avatar-connect )</a> へどうぞ！</p>
+<p>※不具合報告やご要望は GitHub の Issues へ頂ければ幸いです。🙇🏼‍♀️</p>
 
 <hr>
 
 <section id="download-and-install">
+ <h1>
+  <a><span data-scroll-to="#usage">▲</span></a>
+  <a><span data-scroll-to="#first-run">▼</span></a>
+  使い方 1. ダウンロードとインストール
+ </h1>
+
+ <h2>手順</h2>
+
+ <ul>
+  <li>1-1. リリース一覧ページへアクセス: <a href="https://github.com/usagi/virtual-avatar-connect/releases"
+    target="vac_download">https://github.com/usagi/virtual-avatar-connect/releases</a></li>
+  <li>1-2. その時点で最新っぽいものの「バージョン名」または「Assets」をクリックして添付されたファイルの一覧が表示された状態にします。†1</li>
+  <li>1-3. "virtual-avatar-connect-x.x.x(-alphaやbetaが付く場合もあり).zip"をクリックしてダウンロードします。†2</li>
+  <li>1-4. .zipの中身をお好みの場所へ展開します。†3</li>
+ </ul>
+
+ <p>†1: 例えばこういうファイルです: <img src="image/m01/dl-file.png"></p>
+ <p>†2:
+  お使いのブラウザによっては「ブロック・一般的ではないファイル」または他の警告が表示され、ファイルのダウンロードに追加の操作が必要な場合があります。以下はChromeの警告の例です: <img
+   src="image/m01/dl-blocking.png"> 右上の方にある小さな▶をクリックすると「ダウンロードを続行」できます: <img src="image/m01/dl-continue.png">
+ </p>
+ <p>†3:
+  デスクトップやマイドキュメントでも構いませんし、"C:\Virtual-Avatar-Connect"や"D:\ProgramData\Virtual-Avatar-Connect"でも構いません。よくわからない場合はとりあえずデスクトップにでも展開して使ってみて下さい。展開されたファイル中の
+  "virtual-avatar-connect.exe" が VAC の実行ファイルです。お好みでショートカットを作成してお使い下さい:
+  <img src="image/m01/decompressed.png">
+  お使いの環境によっては .exe が表示されていないかもしれません。「ファイルの拡張子を表示する方法」などで検索してお使いの環境でのファイル操作についてお調べ下さい。🙏）
+ </p>
 
 </section>
 
-<div class="dark-mode-switch" title="ライトモード/ダークモード">
+<section id="first-run">
+ <h1>
+  <a><span data-scroll-to="#download-and-install">▲</span></a>
+  <!-- <a><span data-scroll-to="#speech-recognition">▼</span></a> -->
+  使い方 2. お試し起動と動作確認
+ </h1>
+
+ <h2>手順</h2>
+
+ <ul>
+  <li>2-1. "virtual-avatar-connect.exe" を直接、またはお好みで作成したショートカットなどから起動します。† 1</li>
+  <li>2-2. ブラウザーで標準の入力画面 <a href="http://127.0.0.1:57000/input">http://127.0.0.1:57000/input</a> または標準の出力画面 <a
+    href="http://127.0.0.1:57000/output">http://127.0.0.1:57000/output</a> にアクセスします。</li>
+  <li>2-3. それらしい画面が表示されていれば動作確認は成功です。</li>
+  <li>2-4. 初期状態の設定ファイルでは《コマンド》プロセッサーを含むすべてのプロセッサーが無効化されているため、何か素敵な方法でVACを終了させる手段はありません。VAC本体が動作している"クロイガメン"で CTRL + C
+   キーを押すか、それが動作しているウィンドウの閉じるボタンを押して VAC を終了させましょう。</li>
+  <li>2-5. (2-2.)で表示した入力画面または出力画面をリロードして、表示されなくなっていれば VAC は終了できています。</li>
+ </ul>
+
+ <p>†1: 設定ファイルや必須フォルダーの構成に問題がなく無事に起動するとこのような "クロイガメン" が表示されます:
+  <img src="image/m02/first-run.png">
+  環境によってはウィンドウの枠などの様子が異なるかもしれません。初期配布に付属の設定では前回までの動作状態の一部が保存される設定になっていますが、初回起動時はまだファイルが存在しないため "WARN"
+  （警告）が表示されますが、問題ありません。
+ </p>
+
+</section>
+
+<section id="speech-recognition" class="not-written-yet">
+ <h1>
+  <a><span data-scroll-to="#first-run">▲</span></a>
+  <a><span data-scroll-to="#image-recognition">▼</span></a>
+  使い方 3. 「音声認識」→（テキスト）→「テキスト表示」
+ </h1>
+
+ <h2>手順</h2>
+
+ <ul>
+  <li>3-1. VAC を起動します。 </li>
+  <li>3-2. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input">http://127.0.0.1:57000/input</a> を開きます。</li>
+  <li>3-3. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a href="http://127.0.0.1:57000/output">http://127.0.0.1:57000/output</a> を開きます。</li>
+  <li>3-4. 入力画面の上部</li>
+ </ul>
+</section>
+
+<section id="image-recognition" class="not-written-yet">
+ <h1>
+  <a><span data-scroll-to="#speech-recognition">▲</span></a>
+  <a><span data-scroll-to="#image-recognition-processor">▼</span></a>
+  使い方 4. 「画像認識」→（テキスト）→「テキスト表示」 // 入力画面でお手軽編
+ </h1>
+</section>
+
+<section id="image-recognition-processor" class="not-written-yet">
+ <h1>
+  <a><span data-scroll-to="#image-recognition">▲</span></a>
+  <a><span data-scroll-to="#text-to-speech-os-tts">▼</span></a>
+  使い方 5. 「画像認識」→（テキスト）→「テキスト表示」 // プロセッサー編
+ </h1>
+</section>
+
+<section id="text-to-speech-os-tts" class="not-written-yet">
+ <h1>
+  <a><span data-scroll-to="#text-to-speech-os-tts">▲</span></a>
+  <a><span data-scroll-to="#text-to-speech-coeiroink">▼</span></a>
+  使い方 6. （テキスト）→「音声合成」 // OS-TTS編
+ </h1>
+</section>
+
+<section id="text-to-speech-coeiroink" class="not-written-yet">
+ <h1>
+  <a><span data-scroll-to="#text-to-speech-os-tts">▲</span></a>
+  <a><span data-scroll-to="#text-to-speech-bouyomichan">▼</span></a>
+  使い方 7. （テキスト）→「音声合成」 // CoeiroInk編
+ </h1>
+</section>
+
+<section id="text-to-speech-bouyomichan" class="not-written-yet">
+ <h1>
+  <a><span data-scroll-to="#text-to-speech-coeiroink">▲</span></a>
+  <a><span data-scroll-to="#language-translation-gas">▼</span></a>
+  使い方 8. （テキスト）→「音声合成」 // 棒読みちゃん編
+ </h1>
+</section>
+
+<section id="language-translation-gas" class="not-written-yet">
+ <h1>
+  <a><span data-scroll-to="#text-to-speech-bouyomichan">▲</span></a>
+  <a><span data-scroll-to="#ai-pseudo-personality-openai">▼</span></a>
+  使い方 9. （テキスト）→「言語翻訳」→「テキスト表示」 // GAS編
+ </h1>
+</section>
+
+<section id="ai-pseudo-personality-openai" class="not-written-yet">
+ <h1>
+  <a><span data-scroll-to="#language-translation-gas">▲</span></a>
+  <a><span data-scroll-to="#modify">▼</span></a>
+  使い方 10. （テキスト）→「AI疑似人格」→「テキスト表示」 // OpenAI編
+ </h1>
+</section>
+
+<section id="modify" class="not-written-yet">
+ <h1>
+  <a><span data-scroll-to="#ai-pseudo-personality-openai">▲</span></a>
+  <a><span data-scroll-to="#output-screen">▼</span></a>
+  使い方 11. （テキスト）→「MODify」→（テキスト） // 内容の加工や変換を行います
+ </h1>
+</section>
+
+<section id="output-screen" class="not-written-yet">
+ <h1>
+  <a><span data-scroll-to="#modify">▲</span></a>
+  <a><span data-scroll-to="#input-screen">▼</span></a>
+  使い方 12. 「出力画面」の作り込み // 複数の出力画面をお好みでカスタムできます
+ </h1>
+</section>
+
+<section id="input-screen" class="not-written-yet">
+ <h1>
+  <a><span data-scroll-to="#output-screen">▲</span></a>
+  <a><span data-scroll-to="#system-and-keywords">▼</span></a>
+  使い方 13. 「入力画面」をお好みに // 複数の入力画面をお好みでカスタムできます
+ </h1>
+</section>
+
+<section id="system-and-keywords" class="not-written-yet">
+ <h1>
+  <a><span data-scroll-to="#input-screen">▲</span></a>
+  <!-- <a><span data-scroll-to="#">▼</span></a> -->
+  使い方 X. ふろく: VAC の仕組みと用語
+ </h1>
+</section>
+
+<div class="dark-mode-switch hud" title="ライトモード/ダークモード">
  <div class="toggle-switch" onclick="force_dark_mode(!this.querySelector('input').checked)">
   <input type="checkbox" class="force-dark-mode">
   <label></label>
  </div>
+</div>
+
+<div class="scroll-to hud" title="目的地へスクロール">
+ <div data-scroll-to="body">▲トップ</div>
+ <div data-scroll-to="#usage">◀使い方</div>
 </div>

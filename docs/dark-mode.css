@@ -5,8 +5,8 @@
  --input-background-color: hsl(0deg 100% 91.55%);
  --input-color: hsl(248.83deg 23.99% 26.94%);
  --visited-color: hsl(12.12deg, 33%, 33%);
- --hover-color: hsl(12.12deg, 33%, 66%);
- --active-color: hsl(12.12deg, 33%, 66%);
+ --hover-color: hsl(12.12deg, 33%, 44%);
+ --active-color: hsl(12.12deg, 33%, 55%);
 }
 
 body {
@@ -41,11 +41,11 @@ a:active {
  :root,
  /* :root:not(:has(.force-dark-mode-false)), */
  :root:has(.force-dark-mode-true) {
-  --text-color: hsl(123.29deg 31.63% 61.45%);
-  --background-color: hsl(123.29deg 2.11% 14.21%);
+  --text-color: hsl(224.83deg 41.34% 74.76%);
+  --background-color: hsl(224.83deg 2.11% 14.21%);
   --visited-color: hsl(0, 33%, 66%);
-  --hover-color: hsl(0, 33%, 33%);
-  --active-color: hsl(0, 33%, 33%);
+  --hover-color: hsl(0, 33%, 77%);
+  --active-color: hsl(0, 33%, 88%);
  }
 
  body {
@@ -61,7 +61,9 @@ a:active {
  }
 
  a {
-  color: var(--text-color);
+  color: var(--visited-color);
+  text-decoration: underline;
+  cursor: pointer;
  }
 
  a:visited {

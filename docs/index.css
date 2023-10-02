@@ -2,11 +2,64 @@
 @import url("toggle.css");
 
 * {
- font-family: "Chivo", "Kiwi Maru", sans-serif;
+ font-family: "M PLUS Rounded 1c", sans-serif;
+}
+
+.hud {
+ background: #000c;
+ padding: 1em;
+ border-radius: 1em;
+ color: #fff;
 }
 
 .dark-mode-switch {
  position: fixed;
  right: 1em;
  top: 1em;
+}
+
+.scroll-to {
+ position: fixed;
+ right: 1em;
+ bottom: 1em;
+}
+
+.scroll-to > * {
+ color: #ccc;
+}
+
+.scroll-to > *:hover {
+ color: #fff;
+ cursor: pointer;
+ text-decoration: underline;
+}
+
+.show-case {
+ display: flex;
+ flex-wrap: wrap;
+ justify-content: center;
+}
+
+/* aside {
+ height: 100vh;
+ color: transparent;
+ background: transparent;
+} */
+
+body > h3 {
+ margin-top: 2em;
+}
+
+img {
+ display: block;
+}
+
+body > section {
+ margin: 100vh 0;
+}
+
+.not-written-yet {
+ color: transparent;
+ background: transparent;
+ display: none;
 }
