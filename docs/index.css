@@ -1,8 +1,25 @@
 @import url("dark-mode.css");
 @import url("toggle.css");
+@import url("img-show.css");
 
 * {
  font-family: "M PLUS Rounded 1c", sans-serif;
+}
+
+.top-container {
+ text-align: center;
+}
+
+body {
+ max-width: calc(100vw - 16em);
+ margin: 0 auto;
+}
+
+img.catch {
+ display: block;
+ max-width: 50%;
+ max-height: 50%;
+ margin: 0 auto;
 }
 
 .hud {
@@ -13,16 +30,23 @@
 }
 
 .dark-mode-switch {
- position: fixed;
- right: 1em;
  top: 1em;
 }
 
 .scroll-to {
- position: fixed;
- right: 1em;
  bottom: 1em;
 }
+
+.dark-mode-switch,
+.scroll-to {
+ position: fixed;
+ right: 1em;
+}
+
+/* body:has(.img-show-case.show) .dark-mode-switch,
+body:has(.img-show-case.show) .scroll-to {
+ right: calc(1em + var(--img-show-scrollbar-width));
+} */
 
 .scroll-to > * {
  color: #ccc;
@@ -40,26 +64,83 @@
  justify-content: center;
 }
 
-/* aside {
- height: 100vh;
- color: transparent;
- background: transparent;
-} */
-
 body > h3 {
  margin-top: 2em;
 }
 
 img {
  display: block;
+ max-width: 20vw;
+ max-height: 20vh;
+ border-radius: 1em;
 }
 
 body > section {
  margin: 100vh 0;
 }
 
+body > section > h1 > a:has([data-scroll-to]) {
+ position: absolute;
+ text-decoration: none;
+}
+
+body > section > h1 > a:has([data-scroll-to]):first-child {
+ left: 2.25em;
+}
+
+body > section > h1 > a:has([data-scroll-to]):nth-child(2) {
+ left: 3.5em;
+}
+
 .not-written-yet {
  color: transparent;
  background: transparent;
  display: none;
+}
+
+.note:before {
+ content: "⚠️";
+ font-weight: bold;
+}
+
+.info:before {
+ content: "💡";
+ font-weight: bold;
+}
+
+.left-to-right-flex {
+ display: flex;
+ flex-direction: row;
+ flex-wrap: wrap;
+ justify-content: flex-start;
+ align-items: center;
+ align-content: center;
+}
+
+.gap-1em {
+ gap: 1em;
+}
+
+a.search::before {
+ content: "〈";
+}
+
+a.search::after {
+ content: "〉🔍";
+}
+
+a:has(.preparing) {
+ color: gray;
+ text-decoration: none;
+}
+
+.preparing::after {
+ content: "(ただいま文書作成中です🙇🏼‍♀️)";
+ margin-left: 0.5em;
+}
+
+li.hr {
+ list-style-type: none;
+ border-bottom: 1px solid #ccc;
+ margin: 1em 0;
 }

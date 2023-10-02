@@ -1,0 +1,66 @@
+:root {
+ --img-show-transition-duration: 0.5s;
+ --img-show-accent-color-opacity-40: color-mix(in srgb, var(--accent-color) 40%, transparent);
+ --img-show-accent-color-opacity-80: color-mix(in srgb, var(--accent-color) 80%, transparent);
+}
+
+/* .show の間は body がホイールなどでスクロールしないようにする */
+body:has(.img-show-case.show) {
+ pointer-events: none;
+ /* overflow: hidden; */
+ /* --img-show-scrollbar-width は img-show.js により :root に設定される */
+ /* max-width: calc(100vw - var(--img-show-scrollbar-width)); */
+}
+
+img.img-show {
+ border-radius: 0.5em;
+ border: 0.1em dashed var(--img-show-accent-color-opacity-40);
+ transition: border 0.2s ease;
+}
+
+img.img-show:hover {
+ cursor: pointer;
+ border: 0.1em dashed var(--img-show-accent-color-opacity-80);
+}
+
+.img-show-case {
+ position: fixed;
+ top: 0;
+ left: 0;
+ /* left: var(--img-show-scrollbar-width); */
+ width: 100vw;
+ height: 100vh;
+ overflow: hidden;
+ background: #000c;
+ opacity: 0;
+ display: flex;
+ flex-wrap: wrap;
+ justify-content: center;
+ align-items: center;
+ transition: opacity var(--img-show-transition-duration) ease;
+ visibility: hidden;
+}
+
+.img-show-case.show {
+ pointer-events: auto;
+ z-index: 100;
+ opacity: 100;
+}
+
+.img-show-case > div {
+ max-width: calc(100vw - 1em);
+ max-height: calc(100vh - 1em);
+ padding: 0.5em;
+ /* flex を使わないで画面中央へ配置 */
+ position: fixed;
+ top: 50%;
+ left: 50%;
+ transform: translate(-50%, -50%);
+ border-radius: 1em;
+ background: var(--img-show-accent-color-opacity-80);
+}
+
+.img-show-case > div > img {
+ max-width: 96vw;
+ max-height: 96vh;
+}
