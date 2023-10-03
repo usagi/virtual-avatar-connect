@@ -77,7 +77,7 @@
  </a>
 
  <a data-scroll-to="#image-recognition">
-  <li class="preparing">4. 「🖼️画像認識」→（テキスト）→「テキスト表示」 // 入力画面でお手軽編</li>
+  <li>4. 「🖼️画像認識」→（テキスト）→「テキスト表示」 // 入力画面でお手軽編</li>
  </a>
 
  <a data-scroll-to="#image-recognition-processor">
@@ -136,6 +136,13 @@
 
 <hr>
 
+
+
+
+
+
+
+
 <section id="download-and-install">
  <h1>
   <a><span data-scroll-to="#usage">🔼</span></a>
@@ -153,17 +160,17 @@
   <li>1-4. .zipの中身をお好みの場所へ展開します。†3</li>
  </ul>
 
- <p>†1: 例えばこういうファイルです: <img src="image/m01/dl-file.png" loading="lazy" class="img-show"></p>
+ <p>†1: 例えばこういうファイルです: <img src="image/m01/dl-file.png" class="img-show"></p>
  <p>†2: お使いのブラウザによっては「ブロック・一般的ではないファイル」または他の警告が表示され、ファイルのダウンロードに追加の操作が必要な場合があります。右上の方にある小さな▶をクリックすると「ダウンロードを続行」できます。</p>
  <div class="left-to-right-flex gap-1em">
-  <img src="image/m01/dl-blocking.png" loading="lazy" class="img-show">
+  <img src="image/m01/dl-blocking.png" class="img-show">
   <span>⇨</span>
-  <img src="image/m01/dl-continue.png" loading="lazy" class="img-show">
+  <img src="image/m01/dl-continue.png" class="img-show">
  </div>
  <p>†3:
   デスクトップやマイドキュメントでも構いませんし、"C:\Virtual-Avatar-Connect"や"D:\ProgramData\Virtual-Avatar-Connect"でも構いません。よくわからない場合はとりあえずデスクトップにでも展開して使ってみて下さい。展開されたファイル中の
   "virtual-avatar-connect.exe" が VAC の実行ファイルです。お好みでショートカットも作成してお使いになると便利かもしれません。
-  <img src="image/m01/decompressed.png" loading="lazy" class="img-show">
+  <img src="image/m01/decompressed.png" class="img-show">
  <p class="note">お使いの環境によっては .exe の部分が表示されていないかもしれません。<a
    class="search">ファイルの拡張子を表示する方法</a>などで検索してお使いの環境でのファイル操作についてお調べ下さい。🙏）</p>
  </p>
@@ -190,7 +197,7 @@
  </ul>
 
  <div>参考:
-  <img src="image/m02/overview.jpg" loading="lazy" class="img-show">
+  <img src="image/m02/overview.jpg" class="img-show">
   <p>設定ファイルや必須フォルダーの構成に問題がなく無事に起動に成功すると、②のような "クロイガメン" が表示されます。
   <p class="note">環境によってはウィンドウの枠などの様子が異なるかもしれません。</p>
   <p class="note">初期配布に付属の設定では前回までの動作状態の一部が保存される設定になっていますが、初回起動時はまだファイルが存在しないため "WARN"
@@ -198,6 +205,13 @@
  </div>
 
 </section>
+
+
+
+
+
+
+
 
 <section id="speech-recognition">
  <h1>
@@ -216,19 +230,19 @@
   <li class="hr"></li>
   <li>3-4. 入力画面の上部の「音声認識(１回)」のチェックを ON にします。†1†2</li>
   <li>3-5. マイクなどから音声を認識すると認識されたテキストが1回だけ表示されます。</li>
-  <li>3-6. 「POST」ボタンを押すとテキストを VAC へ入力できます。†3†4</li>
+  <li>3-6. 認識されたテキストが表示された入力欄の右側にある「POST」ボタンを押すとテキストを VAC へ入力できます。†3†4</li>
  </ul>
 
  <p>†1: 「音声認識(1回)」は ON にすると1回(1文)だけ音声認識が動作します。音声から認識されたテキストは横長の部分に表示されます。
-  <img src="image/m03/input-voice.png" loading="lazy" class="img-show" style="max-width: 100%">
+  <img src="image/m03/input-voice.png" class="img-show" style="max-width: 100%">
  </p>
 
  <p class="note">†2: 初めて音声入力へアクセスする際にブラウザーがマイクの使用許可を表示する場合があります。許可すると音声入力が可能になります。 </p>
 
  <div class="left-to-right-flex gap-1em">
-  <img src="image/m03/allow-mic.png" loading="lazy" class="img-show">
+  <img src="image/m03/allow-mic.png" class="img-show">
   <span>⇨</span>
-  <img src="image/m03/rec.png" loading="lazy" class="img-show">
+  <img src="image/m03/rec.png" class="img-show">
  </div>
 
  <p class="info">音声入力を行う言語を変更したい場合は「認識言語」の入力欄を "ja-JP" から "en-US" や "fr-FR" に変更します。（言語と地域のコードは<a
@@ -251,17 +265,75 @@
   入力画面の POST ボタンの左側の送信先チャンネル設定を title あるいは description に変更した状態でテキストを送信してみましょう。👀
  </p>
 
- <img src="image/m03/title-and-description.jpg" loading="lazy" class="img-show" style="max-width: 100%">
+ <img src="image/m03/title-and-description.jpg" class="img-show" style="max-width: 100%">
 
 </section>
 
-<section id="image-recognition" class="not-written-yet">
+
+
+
+
+
+
+
+<section id="image-recognition">
  <h1>
   <a><span data-scroll-to="#speech-recognition">🔼</span></a>
   <a><span data-scroll-to="#image-recognition-processor">🔽</span></a>
   使い方 4. 「画像認識」→（テキスト）→「テキスト表示」 // 入力画面でお手軽編
  </h1>
+
+ <h2>手順</h2>
+
+ <ul>
+  <li>4-1. VAC を起動します。 </li>
+  <li>4-2. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input">http://127.0.0.1:57000/input</a> を開きます。</li>
+  <li>4-3. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a href="http://127.0.0.1:57000/output">http://127.0.0.1:57000/output</a> を開きます。
+  </li>
+  <li class="hr"></li>
+  <li>4-4. 入力画面の下部の「画像認識(１回)」のチェックを ON にします。†1</li>
+  <li>4-5. 文字が写るスクショをクリップボードへ撮影し（Windows:<a class="search">Win+Shift+S</a>）、
+   入力画面の "Paste or Drop image here -> Recognize the Text" と書かれたあたりへ貼り付け（Windows:<a class="search">CTRL+V</a>） します。
+   認識されたテキストが1回だけ表示されます。†2</li>
+  <li>4-6. 認識されたテキストが表示された入力欄の右側にある「POST」ボタンを押すとテキストを VAC へ入力できます。</li>
+ </ul>
+
+ <p>†1:「画像認識(１回)」のチェックを ON にした状態の入力画面の画面下部の画像認識機能の様子。
+  <img src="image/m04/input-voice.png" class="img-show" style="max-width: 100%">
+ </p>
+
+ <p>†2: 画像認識でテキストが認識完了した状態の様子。(この例で使ったのは <a href="https://www.arknights.jp/" target="arknights">Arknights</a>
+  というゲームのとあるイベントの会話の一節です。)
+  <img src="image/m04/image-recognized.jpg" class="img-show" style="max-width: 100%">
+ </p>
+
+ <p class="info">
+  VACの標準の入力画面でのお手軽ばーじょんの画像認識機能では、画像の「クリップボードからの貼り付け」と「ファイルのドラッグ・アンド・ドロップによる貼り付け」に対応しています。
+ </p>
+
+ <p class="info">
+  プレイ中のゲーム画面からスクショをさっとクリップボードへ撮影し、クリップボードからそのまま VAC へ貼り付けられるようになっています。
+  読み方のわからない漢字やことばをテキスト化して検索しやすくしたり、VAC へ入力して AI 疑似人格に調べて貰ったり、音声合成で読み上げて貰ったり、とっさに使えて便利かもしれません。
+ </p>
+
+ <p class="note">
+  あらかじめ認識させたい「ウィンドウのタイトル」や「会話などで繰り返し表示される文字がでてくる領域」がある場合は、
+  次の【使い方 5. 「画像認識」→（テキスト）→「テキスト表示」 // プロセッサー編】で紹介する「プロセッサー版」の画像認識機能を使うと便利な場合もあります。
+ </p>
+
+ <p class="note">
+  もし、画像認識の結果が悪い場合は、認識させたい文字の言語が「認識言語」の入力欄に設定されているか確認して見て下さい。
+  日本語なら "jpn" 英語なら "eng" フランス語なら "fra" のように設定します。この機能の言語コードの一覧は「lang code」と書かれたリンクをクリックすると表示できます。
+ </p>
+
 </section>
+
+
+
+
+
+
+
 
 <section id="image-recognition-processor" class="not-written-yet">
  <h1>
@@ -271,6 +343,13 @@
  </h1>
 </section>
 
+
+
+
+
+
+
+
 <section id="text-to-speech-os-tts" class="not-written-yet">
  <h1>
   <a><span data-scroll-to="#text-to-speech-os-tts">🔼</span></a>
@@ -278,6 +357,13 @@
   使い方 6. （テキスト）→「音声合成」 // OS-TTS編
  </h1>
 </section>
+
+
+
+
+
+
+
 
 <section id="text-to-speech-coeiroink" class="not-written-yet">
  <h1>
@@ -287,6 +373,13 @@
  </h1>
 </section>
 
+
+
+
+
+
+
+
 <section id="text-to-speech-bouyomichan" class="not-written-yet">
  <h1>
   <a><span data-scroll-to="#text-to-speech-coeiroink">🔼</span></a>
@@ -294,6 +387,13 @@
   使い方 8. （テキスト）→「音声合成」 // 棒読みちゃん編
  </h1>
 </section>
+
+
+
+
+
+
+
 
 <section id="language-translation-gas" class="not-written-yet">
  <h1>
@@ -303,6 +403,13 @@
  </h1>
 </section>
 
+
+
+
+
+
+
+
 <section id="ai-pseudo-personality-openai" class="not-written-yet">
  <h1>
   <a><span data-scroll-to="#language-translation-gas">🔼</span></a>
@@ -310,6 +417,13 @@
   使い方 10. （テキスト）→「AI疑似人格」→「テキスト表示」 // OpenAI編
  </h1>
 </section>
+
+
+
+
+
+
+
 
 <section id="modify" class="not-written-yet">
  <h1>
@@ -319,6 +433,13 @@
  </h1>
 </section>
 
+
+
+
+
+
+
+
 <section id="output-screen" class="not-written-yet">
  <h1>
   <a><span data-scroll-to="#modify">🔼</span></a>
@@ -326,6 +447,13 @@
   使い方 12. 「出力画面」の作り込み // 複数の出力画面をお好みでカスタムできます
  </h1>
 </section>
+
+
+
+
+
+
+
 
 <section id="input-screen" class="not-written-yet">
  <h1>
@@ -335,6 +463,13 @@
  </h1>
 </section>
 
+
+
+
+
+
+
+
 <section id="system-and-keywords" class="not-written-yet">
  <h1>
   <a><span data-scroll-to="#input-screen">🔼</span></a>
@@ -343,12 +478,26 @@
  </h1>
 </section>
 
+
+
+
+
+
+
+
 <div class="dark-mode-switch hud" title="ライトモード/ダークモード">
  <div class="toggle-switch" onclick="force_dark_mode(!this.querySelector('input').checked)">
   <input type="checkbox" class="force-dark-mode">
   <label></label>
  </div>
 </div>
+
+
+
+
+
+
+
 
 <div class="scroll-to hud" title="目的地へスクロール">
  <div data-scroll-to="body">⏫トップ</div>
