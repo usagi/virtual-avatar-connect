@@ -340,7 +340,7 @@ impl Processor for Screenshot {
 
   #[cfg(target_os = "windows")]
   log::info!(
-   "Screenshot は正常に設定されています: channel_from={:?}{} target={} client_only={} bitblt={} crops={:?} image_file_store_path={:?}",
+   "Screenshot は正常に設定されています: channel_from={:?}{} target={} client_only={} bitblt={} crops={:?} paths={:?}",
    conf.channel_from,
    m_channel_to,
    m_target,
@@ -351,12 +351,12 @@ impl Processor for Screenshot {
   );
   #[cfg(not(target_os = "windows"))]
   log::info!(
-   "Screenshot は正常に設定されています: channel_from={:?}{} target={} crops={:?} image_file_store_path={:?}",
+   "Screenshot は正常に設定されています: channel_from={:?}{} target={} crops={:?} paths={:?}",
    conf.channel_from,
    m_channel_to,
    m_target,
    conf.crops,
-   conf.image_file_store_path
+   conf.paths
   );
 
   true

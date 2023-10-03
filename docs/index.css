@@ -98,6 +98,50 @@ body > section > h1 > a:has([data-scroll-to]):nth-child(2) {
  display: none;
 }
 
+.info,
+.note,
+.flow {
+ padding: 0.5em;
+ border-radius: 1em;
+ border-width: 0.2em;
+ border-style: solid;
+}
+
+.flow {
+ margin-top: 3em;
+ border-color: color-mix(in srgb, var(--text-color) 40%, transparent);
+ position: relative;
+}
+
+.flow h2 {
+ padding: 0 0.5em;
+ background-color: var(--background-color);
+ border-radius: 1em;
+ border: 0.15em solid color-mix(in srgb, var(--text-color) 40%, transparent);
+ position: absolute;
+ top: -2em;
+ left: -1em;
+}
+
+.flow textarea {
+ width: calc(100% - 3em);
+ height: 10em;
+ resize: vertical;
+ padding: 1em;
+ border-radius: 1em;
+ border: 0.15em dashed color-mix(in srgb, var(--text-color) 40%, transparent);
+ background-color: color-mix(in srgb, var(--background-color) 90%, gray);
+ margin: 1em 0;
+}
+
+.note {
+ border-color: hsl(60 100% 50% / 0.5);
+}
+
+.info {
+ border-color: hsl(200 100% 50% / 0.5);
+}
+
 .note:before {
  content: "⚠️";
  font-weight: bold;

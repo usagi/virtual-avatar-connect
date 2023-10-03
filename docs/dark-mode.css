@@ -2,6 +2,7 @@
 :root:has(.force-dark-mode-false) {
  --text-color: hsl(248.83deg 34.42% 41.51%);
  --background-color: #fff;
+ --inverted-background-color: #000;
  --input-background-color: hsl(0deg 100% 91.55%);
  --input-color: hsl(248.83deg 23.99% 26.94%);
  --visited-color: hsl(12.12deg 33% 33%);
@@ -44,6 +45,7 @@ a:active {
  :root:has(.force-dark-mode-true) {
   --text-color: hsl(224.83deg 41.34% 74.76%);
   --background-color: hsl(224.83deg 2.11% 14.21%);
+  --inverted-background-color: #fff;
   --visited-color: hsl(0 33% 66%);
   --hover-color: hsl(0 33% 77%);
   --active-color: hsl(0 33% 88%);

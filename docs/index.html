@@ -81,7 +81,7 @@
  </a>
 
  <a data-scroll-to="#image-recognition-processor">
-  <li class="preparing">5. 「🖼️画像認識」→（テキスト）→「テキスト表示」 // プロセッサー編</li>
+  <li>5. 「🖼️画像認識」→（テキスト）→「テキスト表示」 // プロセッサー編</li>
  </a>
 
  <a data-scroll-to="#text-to-speech-os-tts">
@@ -150,15 +150,17 @@
   使い方 1. ダウンロードとインストール
  </h1>
 
- <h2>手順</h2>
+ <div class="flow">
+  <h2>手順</h2>
 
- <ul>
-  <li>1-1. リリース一覧ページへアクセス: <a href="https://github.com/usagi/virtual-avatar-connect/releases"
-    target="vac_download">https://github.com/usagi/virtual-avatar-connect/releases</a></li>
-  <li>1-2. その時点で最新っぽいものの「バージョン名」または「Assets」をクリックして添付されたファイルの一覧が表示された状態にします。†1</li>
-  <li>1-3. "virtual-avatar-connect-x.x.x(-alphaやbetaが付く場合もあり).zip"をクリックしてダウンロードします。†2</li>
-  <li>1-4. .zipの中身をお好みの場所へ展開します。†3</li>
- </ul>
+  <ul>
+   <li>1-1. リリース一覧ページへアクセス: <a href="https://github.com/usagi/virtual-avatar-connect/releases"
+     target="vac_download">https://github.com/usagi/virtual-avatar-connect/releases</a></li>
+   <li>1-2. その時点で最新っぽいものの「バージョン名」または「Assets」をクリックして添付されたファイルの一覧が表示された状態にします。†1</li>
+   <li>1-3. "virtual-avatar-connect-x.x.x(-alphaやbetaが付く場合もあり).zip"をクリックしてダウンロードします。†2</li>
+   <li>1-4. .zipの中身をお好みの場所へ展開します。†3</li>
+  </ul>
+ </div>
 
  <p>†1: 例えばこういうファイルです: <img src="image/m01/dl-file.png" class="img-show"></p>
  <p>†2: お使いのブラウザによっては「ブロック・一般的ではないファイル」または他の警告が表示され、ファイルのダウンロードに追加の操作が必要な場合があります。右上の方にある小さな▶をクリックすると「ダウンロードを続行」できます。</p>
@@ -184,17 +186,18 @@
   使い方 2. お試し起動と動作確認
  </h1>
 
- <h2>手順</h2>
-
- <ul>
-  <li>2-1. "virtual-avatar-connect.exe" を直接、またはお好みで作成したショートカットなどから起動します。</li>
-  <li>2-2. ブラウザーで標準の入力画面 <a href="http://127.0.0.1:57000/input">http://127.0.0.1:57000/input</a> または標準の出力画面 <a
-    href="http://127.0.0.1:57000/output">http://127.0.0.1:57000/output</a> にアクセスします。</li>
-  <li>2-3. それらしい画面が表示されていれば動作確認は成功です。</li>
-  <li>2-4. 初期状態の設定ファイルでは《コマンド》プロセッサーを含むすべてのプロセッサーが無効化されているため、何か素敵な方法でVACを終了させる手段はありません。VAC本体が動作している"クロイガメン"で CTRL + C
-   キーを押すか、それが動作しているウィンドウの閉じるボタンを押して VAC を終了させましょう。</li>
-  <li>2-5. (2-2.)で表示した入力画面または出力画面をリロードして、表示されなくなっていれば VAC は終了できています。</li>
- </ul>
+ <div class="flow">
+  <h2>手順</h2>
+  <ul>
+   <li>2-1. "virtual-avatar-connect.exe" を直接、またはお好みで作成したショートカットなどから起動します。</li>
+   <li>2-2. ブラウザーで標準の入力画面 <a href="http://127.0.0.1:57000/input">http://127.0.0.1:57000/input</a> または標準の出力画面 <a
+     href="http://127.0.0.1:57000/output">http://127.0.0.1:57000/output</a> にアクセスします。</li>
+   <li>2-3. それらしい画面が表示されていれば動作確認は成功です。</li>
+   <li>2-4. 初期状態の設定ファイルでは《コマンド》プロセッサーを含むすべてのプロセッサーが無効化されているため、何か素敵な方法でVACを終了させる手段はありません。VAC本体が動作している"クロイガメン"で CTRL + C
+    キーを押すか、それが動作しているウィンドウの閉じるボタンを押して VAC を終了させましょう。</li>
+   <li>2-5. (2-2.)で表示した入力画面または出力画面をリロードして、表示されなくなっていれば VAC は終了できています。</li>
+  </ul>
+ </div>
 
  <div>参考:
   <img src="image/m02/overview.jpg" class="img-show">
@@ -220,21 +223,22 @@
   使い方 3. 「音声認識」→（テキスト）→「テキスト表示」
  </h1>
 
- <h2>手順</h2>
-
- <ul>
-  <li>3-1. VAC を起動します。 </li>
-  <li>3-2. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input">http://127.0.0.1:57000/input</a> を開きます。</li>
-  <li>3-3. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a href="http://127.0.0.1:57000/output">http://127.0.0.1:57000/output</a> を開きます。
-  </li>
-  <li class="hr"></li>
-  <li>3-4. 入力画面の上部の「音声認識(１回)」のチェックを ON にします。†1†2</li>
-  <li>3-5. マイクなどから音声を認識すると認識されたテキストが1回だけ表示されます。</li>
-  <li>3-6. 認識されたテキストが表示された入力欄の右側にある「POST」ボタンを押すとテキストを VAC へ入力できます。†3†4</li>
- </ul>
+ <div class="flow">
+  <h2>手順</h2>
+  <ul>
+   <li>3-1. VAC を起動します。 </li>
+   <li>3-2. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input">http://127.0.0.1:57000/input</a> を開きます。</li>
+   <li>3-3. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a href="http://127.0.0.1:57000/output">http://127.0.0.1:57000/output</a> を開きます。
+   </li>
+   <li class="hr"></li>
+   <li>3-4. 入力画面の上部の「音声認識(１回)」のチェックを ON にします。†1†2</li>
+   <li>3-5. マイクなどから音声を認識すると認識されたテキストが1回だけ表示されます。</li>
+   <li>3-6. 認識されたテキストが表示された入力欄の右側にある「POST」ボタンを押すとテキストを VAC へ入力できます。†3†4</li>
+  </ul>
+ </div>
 
  <p>†1: 「音声認識(1回)」は ON にすると1回(1文)だけ音声認識が動作します。音声から認識されたテキストは横長の部分に表示されます。
-  <img src="image/m03/input-voice.png" class="img-show" style="max-width: 100%">
+  <img src="image/m03/input-voice.png" class="img-show" style="max-width: 40%">
  </p>
 
  <p class="note">†2: 初めて音声入力へアクセスする際にブラウザーがマイクの使用許可を表示する場合があります。許可すると音声入力が可能になります。 </p>
@@ -283,20 +287,21 @@
   使い方 4. 「画像認識」→（テキスト）→「テキスト表示」 // 入力画面でお手軽編
  </h1>
 
- <h2>手順</h2>
-
- <ul>
-  <li>4-1. VAC を起動します。 </li>
-  <li>4-2. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input">http://127.0.0.1:57000/input</a> を開きます。</li>
-  <li>4-3. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a href="http://127.0.0.1:57000/output">http://127.0.0.1:57000/output</a> を開きます。
-  </li>
-  <li class="hr"></li>
-  <li>4-4. 入力画面の下部の「画像認識(１回)」のチェックを ON にします。†1</li>
-  <li>4-5. 文字が写るスクショをクリップボードへ撮影し（Windows:<a class="search">Win+Shift+S</a>）、
-   入力画面の "Paste or Drop image here -> Recognize the Text" と書かれたあたりへ貼り付け（Windows:<a class="search">CTRL+V</a>） します。
-   認識されたテキストが1回だけ表示されます。†2</li>
-  <li>4-6. 認識されたテキストが表示された入力欄の右側にある「POST」ボタンを押すとテキストを VAC へ入力できます。</li>
- </ul>
+ <div class="flow">
+  <h2>手順</h2>
+  <ul>
+   <li>4-1. VAC を起動します。 </li>
+   <li>4-2. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input">http://127.0.0.1:57000/input</a> を開きます。</li>
+   <li>4-3. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a href="http://127.0.0.1:57000/output">http://127.0.0.1:57000/output</a> を開きます。
+   </li>
+   <li class="hr"></li>
+   <li>4-4. 入力画面の下部の「画像認識(１回)」のチェックを ON にします。†1</li>
+   <li>4-5. 文字が写るスクショをクリップボードへ撮影し（Windows:<a class="search">Win+Shift+S</a>）、
+    入力画面の "Paste or Drop image here -> Recognize the Text" と書かれたあたりへ貼り付け（Windows:<a class="search">CTRL+V</a>） します。
+    認識されたテキストが1回だけ表示されます。†2</li>
+   <li>4-6. 認識されたテキストが表示された入力欄の右側にある「POST」ボタンを押すとテキストを VAC へ入力できます。</li>
+  </ul>
+ </div>
 
  <p>†1:「画像認識(１回)」のチェックを ON にした状態の入力画面の画面下部の画像認識機能の様子。
   <img src="image/m04/input-voice.png" class="img-show" style="max-width: 100%">
@@ -335,12 +340,86 @@
 
 
 
-<section id="image-recognition-processor" class="not-written-yet">
+<section id="image-recognition-processor">
  <h1>
   <a><span data-scroll-to="#image-recognition">🔼</span></a>
   <a><span data-scroll-to="#text-to-speech-os-tts">🔽</span></a>
   使い方 5. 「画像認識」→（テキスト）→「テキスト表示」 // プロセッサー編
  </h1>
+
+ <p class="info">
+  今回から Processor を使用します。Processor は VAC に内蔵された入力と出力の間で流れる内容を変換したり、調整したりする主要な仕組みです。
+  Processor を自由に組み合わせることでお好みのカスタム設定でVACを楽しめます。
+ </p>
+
+ <div class="flow">
+  <h2>手順</h2>
+  <ul>
+   <li>4-1. 設定ファイル "conf.toml" を編集し、《Screenshot》プロセッサーと《OCR》プロセッサーを設定します。
+    <p>とりあえずコピペで設定ファイルの一番下に追加してみましょう。👀†1</p>
+    <textarea class="code" readonly style="height:44em">
+# ← これを書いた行は「コメント」になります。設定ファイルの中にメモを書き残したいときに使うと便利です。
+# スクリーンショット(ウィンドウのスクショを撮影→ファイルに保存してファイルパスを送信)
+
+# ↓ これを書くと「ここから特定のプロセッサーの設定をはじめるよ」という意味になります。
+[[processors]]
+# 「今回は "screenshot" タイプのプロセッサーを使うよ」という意味になります。
+feature = "screenshot"
+# 着信を受け取るチャンネル名
+channel_from = "ss"
+# 結果を出力するチャンネル名
+channel_to = "ocr"
+# スクショを撮影したいウィンドウのタイトルに含まれる文字列を記入します
+# とりあえずシンプルな「メモ帳」などで試してみましょう。
+# この設定項目では . ? * ( ) \ $ ^ などの文字は特別な用途(正規表現)で使われるので、よくわからなければ今はそうした文字が入らない設定を試してみましょう。
+title_regex = "ここにキャプチャーしたいウィンドウのタイトルに含まれる文字列を記入します"
+# スクショの保存先を指定します。
+paths = [ "ss.png" ]
+
+# OCR(画像認識→テキスト)
+[[processors]]
+channel_from = "ocr"
+channel_to = "description"
+feature = "ocr"
+# 日本語の文字を読み取りたい場合は "ja_JP" 、USA英語なら "en_US" のように設定します。
+lang = "ja_JP"
+# 入力として Screenshot などチャンネルの前段階のプロセッサーが出力した内容を受け取りたい場合は true にします。
+load_from_content = true
+    </textarea>
+   </li>
+   <li class="hr"></li>
+   <li>4-2. VAC を起動します。 </li>
+   <li>4-3. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input">http://127.0.0.1:57000/input</a> を開きます。</li>
+   <li>4-4. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a href="http://127.0.0.1:57000/output">http://127.0.0.1:57000/output</a> を開きます。
+   </li>
+   <li class="hr"></li>
+   <li>4-5. 入力画面の上または下、今回はどちらでもよいので送信先のチャンネルを ss に設定します。</li>
+   <li>4-6. 送信チャンネルを設定した隣にある POST ボタンを押します。†2</li>
+  </ul>
+ </div>
+
+ <p class="info">†1: テキストエディターを使います。特に普段使っているテキストエディターが無い場合は、<a class="search">Windows の「メモ帳」</a>でファイルを編集できれば十分です。</p>
+
+ <div>
+  <p>†2: 成功するとウィンドウから撮影されたスクショが "ss.png" として保存され、この画像から認識されたテキストが標準の出力画面のサブタイトル的な部分に表示されます。</p>
+  <div class="left-to-right-flex gap-1em">
+   <img src="image/m05/ss-post.png" class="img-show">
+   <span>⇨</span>
+   <img src="image/m05/ss-ocr-result.png" class="img-show">
+  </div>
+  <p>少し惜しい感じになる場合もありますが、画像からの文字列認識は必ず人間が読めるように読み取れるとは限りません。いまのところ「だいたいうまくが」くらいには成功しますので、便利な使い所を見つけてみて下さい。</p>
+ </div>
+
+ <p class="info preparing">
+  《Screenshot》 Processor にはウィンドウ内の特定の領域だけをスクショする設定、1度の実行で複数の領域のスクショを撮影する設定などがあります。
+  詳しくは「使い方 X. ふろく: VAC の仕組みと用語」の Processor の 《Screenshot》 の項目をご覧下さい。
+ </p>
+
+ <p class="info preparing">
+  《OCR》 Processor にはウィンドウ内の特定の領域だけをスクショする設定、1度の実行で複数の領域のスクショを撮影する設定などがあります。
+  詳しくは「使い方 X. ふろく: VAC の仕組みと用語」の Processor の 《OCR》 の項目をご覧下さい。
+ </p>
+
 </section>
 
 
@@ -476,6 +555,32 @@
   <!-- <a><span data-scroll-to="#">🔽</span></a> -->
   使い方 X. ふろく: VAC の仕組みと用語
  </h1>
+
+ <section>
+
+  <h2>Processor</h2>
+
+  <ul>
+   <li>Processor （プロセッサー）は VAC のチャンネルに流れる内容を受け取り、連携アプリと情報をやり取りしたり、内容を加工したり、別のチャンネルへ出力したりする仕組みです。</li>
+   <li>Processor はチャンネルごとにお好みの順序で、お好みの設定で繋げて使用できます。</li>
+   <li>同じ種類の Processor を1度だけ使うことも、繰り返し繋いで使うことももできます。</li>
+  </ul>
+
+  <p class="info">VACの使い方の解説ではプロセッサーを《Screenshot》のように表記します。設定ファイルで feature = "screenshot" と書く部分はこの名前を使います。</p>
+
+  <section>
+   <h3>《Screenshot》</h3>
+   <ul>
+    <li>設定したチャンネルにスクリーンショットを撮影する機能を追加できます。</li>
+   </ul>
+  </section>
+
+  <section>
+   <h3>《OCR》</h3>
+  </section>
+
+ </section>
+
 </section>
 
 
