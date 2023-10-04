@@ -8,7 +8,7 @@
  --visited-color: hsl(12.12deg 33% 33%);
  --hover-color: hsl(12.12deg 33% 44%);
  --active-color: hsl(12.12deg 33% 55%);
- --accent-color: hsl(60deg 100% 50%);
+ --accent-color: hsl(60deg 100% 35%);
 }
 
 body {
