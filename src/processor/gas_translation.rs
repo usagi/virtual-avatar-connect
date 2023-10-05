@@ -11,6 +11,7 @@ pub struct GasTranslation {
  url_base: String,
 }
 
+const ENV_GAS_TRANSLATION_SCRIPT_ID: &str = "VAC_GAS_TRANSLATION_SCRIPT_ID";
 const GOOGLE_APPS_SCRIPT_URL_TEMPLATE: &str =
  "https://script.google.com/macros/s/{script_id}/exec?trans_sourcelang={translate_from}&target={translate_to}&text=";
 
@@ -106,22 +107,34 @@ impl Processor for GasTranslation {
  }
 
  async fn new(pc: &ProcessorConf, state: &SharedState) -> Result<ProcessorKind> {
+  let url_base = {
+   let script_id = match crate::utility::load_from_env_or_conf(ENV_GAS_TRANSLATION_SCRIPT_ID, &pc.script_id) {
+    Some(v) => v,
+    None => bail!(
+     "環境変数 {} または設定ファイルの script_id が設定されていません。",
+     ENV_GAS_TRANSLATION_SCRIPT_ID
+    ),
+   };
+
+   let translate_to = match &pc.translate_to {
+    Some(v) => v,
+    None => bail!("設定ファイルの translate_to が設定されていません。"),
+   };
+
+   GOOGLE_APPS_SCRIPT_URL_TEMPLATE
+    .replace("{script_id}", &script_id)
+    .replace("{translate_to}", translate_to)
+  };
+
   let mut p = GasTranslation {
    conf: pc.as_shared(),
    state: state.clone(),
    channel_data: state.read().await.channel_data.clone(),
-   url_base: String::new(),
+   url_base,
   };
 
   if !p.is_established().await {
    bail!("GasTranslation が正常に設定されていません: {:?}", pc);
-  }
-
-  {
-   let conf = p.conf.read().await;
-   p.url_base = GOOGLE_APPS_SCRIPT_URL_TEMPLATE
-    .replace("{script_id}", conf.script_id.as_ref().unwrap())
-    .replace("{translate_to}", conf.translate_to.as_ref().unwrap());
   }
 
   Ok(ProcessorKind::GasTranslation(p))
@@ -143,9 +156,10 @@ impl Processor for GasTranslation {
    log::error!("channel_to が設定されていません。");
    return false;
   }
-  if conf.script_id.is_none() {
-   log::error!("script_id が設定されていません。");
-   return false;
+  if conf.script_id.is_some() {
+   log::warn!("================================================================");
+   log::warn!("script_id が設定ファイルで直接設定されています。設定ファイルを共有したり一般に公開する際は不慮の漏出に十分に注意して下さい。または環境変数 {} での設定も検討して下さい。", ENV_GAS_TRANSLATION_SCRIPT_ID);
+   log::warn!("================================================================");
   }
   if conf.channel_from.is_none() {
    log::error!("channel_from が設定されていません。");

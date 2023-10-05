@@ -19,3 +19,11 @@ pub fn iso_3166_to_lang_code(iso_3166: &str) -> Result<String> {
 pub fn bool_true() -> bool {
  true
 }
+
+/// 環境変数 env_var または or_else から値を読み込む、どちらにもなかったら None が返る
+pub fn load_from_env_or_conf<A: AsRef<str>>(env_var: A, or_else: &Option<String>) -> Option<String> {
+ match std::env::var(env_var.as_ref()) {
+  Ok(s) => Some(s),
+  Err(_) => or_else.clone(),
+ }
+}
