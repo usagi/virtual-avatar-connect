@@ -1,0 +1,25 @@
+{
+ "version": "2.0.0",
+ "tasks": [
+  {
+   "label": "docs: start httpd",
+   "type": "shell",
+   "command": "http-server",
+   "args": [
+    "docs",
+    "-l",
+    "-p",
+    "57080"
+   ],
+   "group": {
+    "kind": "build",
+    "isDefault": true
+   },
+   "presentation": {
+    "reveal": "always",
+    "panel": "dedicated"
+   },
+   "problemMatcher": []
+  }
+ ]
+}
