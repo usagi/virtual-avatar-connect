@@ -22,6 +22,7 @@ pub struct OpenAiChat {
  ignore_regex: Option<Regex>,
 }
 
+const ENV_OPENAI_API_KEY: &str = "VAC_OPENAI_API_KEY";
 const DEFAULT_MEMORY_CAPACITY: usize = 4;
 
 #[async_trait]
@@ -246,9 +247,11 @@ impl Processor for OpenAiChat {
    log::error!("channel_to が設定されていません。");
    return false;
   }
-  if conf.api_key.is_none() {
-   log::error!("api_key が設定されていません。");
-   return false;
+
+  if conf.api_key.is_some() {
+   log::warn!("================================================================");
+   log::warn!("api_key が設定ファイルで直接設定されています。設定ファイルを共有したり一般に公開する際は不慮の漏出に十分に注意して下さい。または環境変数 {} での設定も検討して下さい。", ENV_OPENAI_API_KEY);
+   log::warn!("================================================================");
   }
 
   log::info!(
@@ -261,11 +264,13 @@ impl Processor for OpenAiChat {
 }
 
 fn make_client(conf: &ProcessorConf) -> Result<Client<OpenAIConfig>> {
- let client = match conf.api_key.as_ref() {
-  Some(api_key) => Client::with_config(OpenAIConfig::default().with_api_key(api_key.clone())),
-  _ => Client::new(),
- };
- Ok(client)
+ // 環境変数から読めたら読む、読めなかったら conf から読む
+ let api_key = crate::utility::load_from_env_or_conf(ENV_OPENAI_API_KEY, &conf.api_key);
+ if let Some(api_key) = api_key {
+  Ok(Client::with_config(OpenAIConfig::default().with_api_key(api_key)))
+ } else {
+  bail!("OpenAI の API KEY が設定されていません。環境変数 VAC_OPENAI_API_KEY を設定するか、設定ファイルに api_key を設定して下さい。");
+ }
 }
 
 fn make_request_template(conf: &ProcessorConf) -> Result<CreateChatCompletionRequest> {
