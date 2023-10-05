@@ -135,7 +135,7 @@ body > section > h1 > a:has([data-scroll-to]):nth-child(2) {
 }
 
 .note {
- border-color:  color-mix(in srgb, var(--accent-color) 50%, transparent);;
+ border-color: color-mix(in srgb, var(--accent-color) 50%, transparent);
 }
 
 .info {
@@ -187,4 +187,21 @@ li.hr {
  list-style-type: none;
  border-bottom: 1px solid #ccc;
  margin: 1em 0;
+}
+
+.example::before {
+ content: "例:";
+ margin-right: 0.5em;
+}
+
+dt > p {
+ margin: 0;
+}
+
+dt > *:nth-child(2)::before {
+ content: "（";
+}
+
+dt > *:nth-child(2)::after {
+ content: "）";
 }
