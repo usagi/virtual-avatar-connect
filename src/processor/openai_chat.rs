@@ -135,7 +135,8 @@ impl Processor for OpenAiChat {
 
    // リクエストを生成
    let mut request = request_template;
-   log::trace!("ai req: {:?}", request);
+   // api_key が表示される可能性があるためソースレベルで一時的な変更を行わない限り request の内容は出力しないよう変更
+   // log::trace!("ai req: {:?}", request);
    request.messages.extend(reversed_sources.into_iter().rev().filter_map(|cd| {
     ChatCompletionRequestMessageArgs::default()
      .role(match cd.channel.as_str() {
@@ -149,7 +150,8 @@ impl Processor for OpenAiChat {
    }));
 
    // OpenAIChat に応答をリクエスト
-   log::trace!("request = {:?}", request);
+   // api_key が表示される可能性があるためソースレベルで一時的な変更を行わない限り request の内容は出力しないよう変更
+   // log::trace!("request = {:?}", request);
    log::debug!("OpenAIChat に応答をリクエストします。");
    let response = match client.chat().create(request).await {
     Ok(response) => response,
