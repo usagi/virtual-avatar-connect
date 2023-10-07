@@ -6,7 +6,7 @@ const DEFAULT_CONF_PATH: &str = "conf.toml";
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Args {
- #[arg(short, long, default_value = DEFAULT_CONF_PATH)]
+ #[arg(name = "CONF", default_value = DEFAULT_CONF_PATH)]
  pub conf: String,
  #[arg(short = 'D', long)]
  pub debug: bool,
