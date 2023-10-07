@@ -19,6 +19,13 @@ pub struct CoeiroInk {
  audio_sink: SharedAudioSink,
 }
 
+const DEFAULT_VOLUME_SCALE: f64 = 1.00;
+const DEFAULT_PITCH_SCALE: f64 = 0.00;
+const DEFAULT_INTONATION_SCALE: f64 = 1.00;
+const DEFAULT_PRE_PHONEME_LENGTH: f64 = 0.10;
+const DEFAULT_POST_PHONEME_LENGTH: f64 = 0.10;
+const DEFAULT_OUTPUT_SAMPLING_RATE: u32 = 48000;
+
 #[async_trait]
 impl Processor for CoeiroInk {
  const FEATURE: &'static str = "coeiroink";
@@ -242,27 +249,27 @@ async fn fix_conf(original: &ProcessorConf) -> Result<ProcessorConf> {
   }
   if fixed.volume_scale.is_none() {
    log::warn!("synthesis API モードが設定されましたが volume_scale が設定されていないため 1.00 にデフォルトします。");
-   fixed.volume_scale = Some(1.00);
+   fixed.volume_scale = Some(DEFAULT_VOLUME_SCALE);
   }
   if fixed.pitch_scale.is_none() {
    log::warn!("synthesis API モードが設定されましたが pitch_scale が設定されていないため 0.00 にデフォルトします。");
-   fixed.pitch_scale = Some(0.00);
+   fixed.pitch_scale = Some(DEFAULT_PITCH_SCALE);
   }
   if fixed.intonation_scale.is_none() {
    log::warn!("synthesis API モードが設定されましたが intonation_scale が設定されていないため 1.00 にデフォルトします。");
-   fixed.intonation_scale = Some(1.00);
+   fixed.intonation_scale = Some(DEFAULT_INTONATION_SCALE);
   }
   if fixed.pre_phoneme_length.is_none() {
    log::warn!("synthesis API モードが設定されましたが pre_phoneme_length が設定されていないため 0.10 にデフォルトします。");
-   fixed.pre_phoneme_length = Some(0.10);
+   fixed.pre_phoneme_length = Some(DEFAULT_PRE_PHONEME_LENGTH);
   }
   if fixed.post_phoneme_length.is_none() {
    log::warn!("synthesis API モードが設定されましたが post_phoneme_length が設定されていないため 0.1 にデフォルトします。");
-   fixed.post_phoneme_length = Some(0.10);
+   fixed.post_phoneme_length = Some(DEFAULT_POST_PHONEME_LENGTH);
   }
   if fixed.output_sampling_rate.is_none() {
    log::warn!("synthesis API モードが設定されましたが output_sampling_rate が設定されていないため 48000 にデフォルトします。");
-   fixed.output_sampling_rate = Some(48000);
+   fixed.output_sampling_rate = Some(DEFAULT_OUTPUT_SAMPLING_RATE);
   }
  }
 
@@ -328,15 +335,16 @@ impl SynthesisOrPredictRequest {
 impl CoeiroInk {
  async fn update_template(&mut self) {
   let conf = self.conf.read().await;
-
+  // for predict & synthesis
   self.synthesis_or_predict_request_template.speakerUuid = conf.speaker_uuid.clone().unwrap();
   self.synthesis_or_predict_request_template.styleId = conf.style_id.unwrap();
   self.synthesis_or_predict_request_template.speedScale = conf.speed_scale.unwrap();
-  self.synthesis_or_predict_request_template.volumeScale = conf.volume_scale.unwrap();
-  self.synthesis_or_predict_request_template.pitchScale = conf.pitch_scale.unwrap();
-  self.synthesis_or_predict_request_template.intonationScale = conf.intonation_scale.unwrap();
-  self.synthesis_or_predict_request_template.prePhonemeLength = conf.pre_phoneme_length.unwrap();
-  self.synthesis_or_predict_request_template.postPhonemeLength = conf.post_phoneme_length.unwrap();
-  self.synthesis_or_predict_request_template.outputSamplingRate = conf.output_sampling_rate.unwrap();
+  // for synthesis
+  self.synthesis_or_predict_request_template.volumeScale = conf.volume_scale.unwrap_or(DEFAULT_VOLUME_SCALE);
+  self.synthesis_or_predict_request_template.pitchScale = conf.pitch_scale.unwrap_or(DEFAULT_PITCH_SCALE);
+  self.synthesis_or_predict_request_template.intonationScale = conf.intonation_scale.unwrap_or(DEFAULT_INTONATION_SCALE);
+  self.synthesis_or_predict_request_template.prePhonemeLength = conf.pre_phoneme_length.unwrap_or(DEFAULT_PRE_PHONEME_LENGTH);
+  self.synthesis_or_predict_request_template.postPhonemeLength = conf.post_phoneme_length.unwrap_or(DEFAULT_POST_PHONEME_LENGTH);
+  self.synthesis_or_predict_request_template.outputSamplingRate = conf.output_sampling_rate.unwrap_or(DEFAULT_OUTPUT_SAMPLING_RATE);
  }
 }
