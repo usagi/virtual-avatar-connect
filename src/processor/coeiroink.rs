@@ -67,6 +67,8 @@ impl Processor for CoeiroInk {
    };
    let sources_len = sources.len();
 
+   let locked_audio_sink = audio_sink.lock().await;
+
    for (num, source) in sources.into_iter().enumerate() {
     let path = audio_file_store_path
      .as_ref()
@@ -112,12 +114,7 @@ impl Processor for CoeiroInk {
     let cursor = Cursor::new(audio_data);
     let source = Decoder::new(cursor)?;
 
-    // let (_stream, stream_handle) = OutputStream::try_default()?;
-    // let sink = Sink::try_new(&stream_handle)?;
-
-    let locked_audio_sink = audio_sink.lock().await;
     locked_audio_sink.0.append(source);
-    // sink.sleep_until_end();
 
     log::debug!(
      "CoeiroInk からの音声合成データを再生シンクへ送出しました。 {} / {}",
