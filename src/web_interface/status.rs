@@ -27,8 +27,8 @@ async fn get() -> Result<impl Responder> {
  match make_coeiroink_section().await {
   Ok(section) => content.push_str(&section),
   Err(e) => {
-   log::error!("OS-TTS の情報を取得できませんでした。: {}", e);
-   content.push_str("<section><h2>OS-TTS</h2><p>OS-TTS の情報を取得できませんでした。</p></section>");
+   log::error!("CoeiroInk の情報を取得できませんでした。: {}", e);
+   content.push_str("<section><h2>OS-TTS</h2><p>CoriroInk の情報を取得できませんでした。</p></section>");
   },
  }
 
