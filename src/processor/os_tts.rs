@@ -1,5 +1,5 @@
 use super::{CompletedAnd, Processor};
-use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedProcessorConf, SharedState};
+use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedAudioSink, SharedChannelData, SharedProcessorConf, SharedState};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 
@@ -8,6 +8,7 @@ pub struct OsTts {
  conf: SharedProcessorConf,
  channel_data: SharedChannelData,
  tts: tts::Tts,
+ audio_sink: SharedAudioSink,
 }
 
 // Debug を手動実装
@@ -29,6 +30,7 @@ impl Processor for OsTts {
 
   let channel_data = self.channel_data.clone();
   let mut tts = self.tts.clone();
+  let audio_sink = self.audio_sink.clone();
 
   tokio::spawn(async move {
    // 入力を取得
@@ -45,12 +47,26 @@ impl Processor for OsTts {
    };
 
    log::debug!("OsTts に音声合成をリクエストします。");
+   #[cfg(not(target_os = "windows"))]
    if let Some(e) = tts.speak(source, false).err() {
     log::error!("音声合成に失敗しました: {:?}", e);
     return Ok(());
    }
+   #[cfg(target_os = "windows")]
+   match tts.synthesize(source) {
+    Ok(wav) => {
+     let cursor = std::io::Cursor::new(wav);
+     let source = rodio::Decoder::new(cursor).unwrap();
+     audio_sink.lock().await.0.append(source)
+    },
+    Err(e) => {
+     log::error!("音声合成に失敗しました: {:?}", e);
+     return Ok(());
+    },
+   }
 
    // tts の処理が終わるまで待機
+   #[cfg(not(target_os = "windows"))]
    while tts.is_speaking().unwrap() {
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
    }
@@ -72,6 +88,7 @@ impl Processor for OsTts {
    conf: pc.as_shared(),
    channel_data: state.read().await.channel_data.clone(),
    tts: tts::Tts::default()?,
+   audio_sink: state.read().await.audio_sink.clone(),
   };
 
   if !p.is_established().await {

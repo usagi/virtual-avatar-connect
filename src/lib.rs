@@ -43,7 +43,7 @@ pub async fn run() -> Result<()> {
  let audio_sink = Arc::new(Mutex::new(AudioSink(audio_sink)));
 
  // コマンドライン引数をパースし、ログレベルを更新
- let args = Args::init().await?;
+ let args = Args::init(audio_sink.clone()).await?;
  // 設定を読み込みし、ログレベルを更新
  let conf = Conf::new(&args)?;
  // 共有ステートを作成

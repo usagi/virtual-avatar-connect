@@ -1,0 +1,15 @@
+[[processors]]
+channel_from = "user-ja"
+feature = "OS-TTS"
+voice_name = "Haruka"
+tts_pitch = 1.0
+tts_rate = 1.0
+tts_volume = 1.0
+
+[[processors]]
+channel_from = "user-en"
+feature = "OS-TTS"
+voice_name = "Ayumi"
+tts_pitch = 1.0
+tts_rate = 1.0
+tts_volume = 1.0
