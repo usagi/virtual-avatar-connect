@@ -16,6 +16,16 @@ async fn get() -> Result<impl Responder> {
 
  let mut content = CONTENT_HEAD.to_string();
 
+ {
+  content.push_str("<h1>Virtual Avatar Connect</h1>\n<ul>\n");
+  let vac_version = env!("CARGO_PKG_VERSION");
+  content.push_str(&format!("<li>VAC Version: {}</li>\n", vac_version));
+  // 実行環境のOS情報を取得
+  let os_info = os_info::get();
+  content.push_str(&format!("<li>OS: {}</li>\n", os_info));
+  content.push_str("</ul>\n<hr>\n");
+ }
+
  match make_os_tts_section().await {
   Ok(section) => content.push_str(&section),
   Err(e) => {
