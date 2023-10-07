@@ -1,0 +1,14 @@
+# CoeiroInk デフォルト状態で音声合成
+[[processors]]
+feature = "coeiroink"
+channel_from = "default"
+
+# 話者とスタイルを指定して音声合成
+[[processors]]
+feature = "coeiroink"
+channel_from = "genki"
+# uuid や style_id は --coeiroink-speakers で表示できます。
+speaker_uuid = "3c37646f-3881-5374-2a83-149267990abc"
+style_id = 6
+# 長い文章を受け取った場合にもできるだけリアルタイム性を維持して読ませたい場合に区切りを設定できます。
+split_regex_pattern = "[、。！？]"
