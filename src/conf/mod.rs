@@ -16,6 +16,8 @@ pub struct Conf {
  pub workers: Option<usize>,
 
  pub web_ui_address: Option<String>,
+ // デフォルト値を Some("resources".to_string()) に指定
+ #[serde(default = "default_web_ui_resources_path")]
  pub web_ui_resources_path: Option<String>,
 
  pub state_data_auto_save: Option<bool>,
@@ -86,4 +88,8 @@ impl Conf {
    None => DEFAULT_WEB_UI_ADDRESS,
   }
  }
+}
+
+fn default_web_ui_resources_path() -> Option<String> {
+ Some("resources".to_string())
 }
