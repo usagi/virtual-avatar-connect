@@ -107,8 +107,14 @@ body > section > h1 > a:has([data-scroll-to]):nth-child(2) {
  border-style: solid;
 }
 
+.info ul,
+.note ul {
+ margin: 0 0 0 1em;
+}
+
 .flow {
  margin-top: 3em;
+ margin-bottom: 2em;
  border-color: color-mix(in srgb, var(--text-color) 40%, transparent);
  position: relative;
 }
@@ -204,4 +210,9 @@ dt > *:nth-child(2)::before {
 
 dt > *:nth-child(2)::after {
  content: "）";
+}
+
+iframe {
+ max-width: 33vw;
+ max-height: 33vh;
 }

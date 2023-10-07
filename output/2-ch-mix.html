@@ -7,21 +7,21 @@
  ソース側は複製や修正なしで複数のソースを作成できる汎用便利タイプのソースの例です。
 
  ## 例1: シンプルな使い方
-  ブラウザーソースのURL: /output/2-ch-mix#user,user-en
+  ブラウザーソースのURL: /output/2-ch-mix#user`user-en
 
-  例のように URL のフラグメント部分 ( # 以降の部分) に user,user-en と指定すると、
+  例のように URL のフラグメント部分 ( # 以降の部分) に user`user-en と指定すると、
   user と user-en の2つのチャンネルを上下に並べて表示します。
 
   日本語と英語翻訳のような字幕の汎用表示を想定しています。
 
  ## 例2: 字幕の後ろにC.V.等のライセンス表示を付けたい場合
-  ブラウザーソースのURL: /output/2-ch-mix#user;C.V. Nyanko,user-en;C.V. Wanko
+  ブラウザーソースのURL: /output/2-ch-mix#user;C.V. Nyanko`user-en;C.V. Wanko
    ※URLにしたときに空白文字が%20に変わりますが、問題なく認識できます。
 
   セミコロンで区切った後ろの部分がコンテントの下に本文よりはやや小さめですがしっかり表示されるようになります。
 
  ## 例3: 字幕の前の表示を変えたい場合
-  ブラウザーソースのURL: /output/2-ch-mix#user;C.V. Nyanko;[Dr.USAGI(ja)],user-en;C.V. Wanko;[Dr.USAGI(transEN)]
+  ブラウザーソースのURL: /output/2-ch-mix#user;C.V. Nyanko;[Dr.USAGI(ja)]`user-en;C.V. Wanko;[Dr.USAGI(transEN)]
 
   channel;suffix;prefix のように指定できます。 prefix が前に出る方で、 suffix が後ろに出る方です。
   「suffix は無いけど prefix は変えたい」場合は channel;;suffix のようにも指定できます。
