@@ -31,6 +31,9 @@ pub enum Error {
 
  #[error("正規表現エラーが発生しました: {0}")]
  RegexError(#[from] regex::Error),
+
+ #[error("OS-TTS エラーが発生しました: {0}")]
+ OsTtsError(#[from] tts::Error),
 }
 
 impl ResponseError for Error {
@@ -46,6 +49,7 @@ impl ResponseError for Error {
    Self::IOError(_) => StatusCode::INTERNAL_SERVER_ERROR,
    Self::SystemTimeError(_) => StatusCode::INTERNAL_SERVER_ERROR,
    Self::RegexError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+   Self::OsTtsError(_) => StatusCode::INTERNAL_SERVER_ERROR,
   }
  }
 

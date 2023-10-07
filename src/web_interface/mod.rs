@@ -1,5 +1,6 @@
 pub mod input;
 pub mod output;
+pub mod status;
 mod ws;
 
 use actix_web::{get, HttpResponse};
