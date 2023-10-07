@@ -89,7 +89,7 @@
  </a>
 
  <a data-scroll-to="#text-to-speech-coeiroink">
-  <li class="preparing">7. （テキスト）→「音声合成🗣️」 // CoeiroInk編</li>
+  <li>7. （テキスト）→「音声合成🗣️」 // CoeiroInk編</li>
  </a>
 
  <a data-scroll-to="#text-to-speech-bouyomichan">
@@ -227,10 +227,8 @@
   <h2>手順</h2>
   <ul>
    <li>3-1. VAC を起動します。 </li>
-   <li>3-2. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input"
-     target="_blank">http://127.0.0.1:57000/input</a> を開きます。</li>
-   <li>3-3. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a href="http://127.0.0.1:57000/output"
-     target="_blank">http://127.0.0.1:57000/output</a> を開きます。
+   <li>3-2. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a class="url">http://127.0.0.1:57000/input</a> を開きます。</li>
+   <li>3-3. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a class="url">http://127.0.0.1:57000/output</a> を開きます。
    </li>
    <li class="hr"></li>
    <li>3-4. 入力画面の上部の「音声認識(１回)」のチェックを ON にします。†1†2</li>
@@ -293,10 +291,8 @@
   <h2>手順</h2>
   <ul>
    <li>4-1. VAC を起動します。 </li>
-   <li>4-2. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input"
-     target="_blank">http://127.0.0.1:57000/input</a> を開きます。</li>
-   <li>4-3. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a href="http://127.0.0.1:57000/output"
-     target="_blank">http://127.0.0.1:57000/output</a> を開きます。
+   <li>4-2. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a class="url">http://127.0.0.1:57000/input</a> を開きます。</li>
+   <li>4-3. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a class="url">http://127.0.0.1:57000/output</a> を開きます。
    </li>
    <li class="hr"></li>
    <li>4-4. 入力画面の下部の「画像認識(１回)」のチェックを ON にします。†1</li>
@@ -365,8 +361,7 @@
      コマンドラインでは `./virtual-avatar-connect conf.example-ss-ocr.toml` です。コマンドラインでの使い方は `--help` で確認できます。
     </p>
     <p>この設定ファイル "conf.example-ss-ocr.toml" の中身はこうなっています。👀</p>
-    <textarea class="code" readonly style="height:44em">
-# ← これを書いた行は「コメント」になります。設定ファイルの中にメモを書き残したいときに使うと便利です。
+    <textarea class="code" readonly style="height:41em"># ← これを書いた行は「コメント」になります。設定ファイルの中にメモを書き残したいときに使うと便利です。
 # スクリーンショット(ウィンドウのスクショを撮影→ファイルに保存してファイルパスを送信)
 
 # ↓ これを書くと「ここから特定のプロセッサーの設定をはじめるよ」という意味になります。
@@ -392,15 +387,12 @@ feature = "ocr"
 # 日本語の文字を読み取りたい場合は "ja_JP" 、USA英語なら "en_US" のように設定します。
 lang = "ja_JP"
 # 入力として Screenshot などチャンネルの前段階のプロセッサーが出力した内容を受け取りたい場合は true にします。
-load_from_content = true
-    </textarea>
+load_from_content = true</textarea>
    </li>
    <li class="hr"></li>
    <li>5-2. VAC を起動します。 </li>
-   <li>5-3. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input"
-     target="_blank">http://127.0.0.1:57000/input</a> を開きます。</li>
-   <li>5-4. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a href="http://127.0.0.1:57000/output"
-     target="_blank">http://127.0.0.1:57000/output</a> を開きます。
+   <li>5-3. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a class="url">http://127.0.0.1:57000/input</a> を開きます。</li>
+   <li>5-4. ブラウザーの別のウィンドウまたはタブへ標準の出力画面 <a class="url">http://127.0.0.1:57000/output</a> を開きます。
    </li>
    <li class="hr"></li>
    <li>5-5. 入力画面の上または下、今回はどちらでもよいので送信先のチャンネルを ss に設定します。</li>
@@ -467,8 +459,7 @@ load_from_content = true
      コマンドラインでは `./virtual-avatar-connect conf.example-os-tts.toml` です。コマンドラインでの使い方は `--help` で確認できます。
     </p>
     <p>この設定ファイル "conf.example-os-tts.toml" の中身はこうなっています。👀</p>
-    <textarea class="code" readonly style="height:23em">
-[[processors]]
+    <textarea class="code" readonly style="height:23em">[[processors]]
 channel_from = "user-ja"
 feature = "OS-TTS"
 voice_name = "Haruka"
@@ -482,14 +473,12 @@ feature = "OS-TTS"
 voice_name = "Ayumi"
 tts_pitch = 1.0
 tts_rate = 1.0
-tts_volume = 1.0
-    </textarea>
+tts_volume = 1.0</textarea>
    </li>
    <li class="hr"></li>
-   <li>6-2. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input"
-     target="_blank">http://127.0.0.1:57000/input</a> を開きます。</li>
-   <li>6-3. ブラウザーの別のウィンドウまたはタブへ 2-ch-mix 出力画面 <a href="http://127.0.0.1:57000/output/2-ch-mix#user-ja`user-en"
-     target="_blank">http://127.0.0.1:57000/output/2-ch-mix#user-ja`user-en</a> を開きます。
+   <li>6-2. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a class="url">http://127.0.0.1:57000/input</a> を開きます。</li>
+   <li>6-3. ブラウザーの別のウィンドウまたはタブへ 2-ch-mix 出力画面 <a class="url">http://127.0.0.1:57000/output/2-ch-mix#user-ja`user-en</a>
+    を開きます。
     <p class="info"> 2-ch-mix など出力画面についてもっと知りたい場合は<a data-scrill-to="#output-screen">「使い方 12.
       「出力画面」の作り込み」</a>で紹介するので御覧ください。</p>
    </li>
@@ -505,9 +494,9 @@ tts_volume = 1.0
  </div>
 
  <div class="info">
-  <p>お使いの環境で《OS-TTS》から使用できる音声合成の一覧を確認したい場合は、コマンドラインで `./virtual-avatar-connect --test-os-tts`
+  <span>お使いの環境で《OS-TTS》から使用できる音声合成の一覧を確認したい場合は、コマンドラインで `./virtual-avatar-connect --test-os-tts`
    を実行すると表示とサンプル音声の再生が行われます。
-  </p>
+  </span>
   <p>Windows 11の場合は<a class="search">設定 時刻と言語 > 音声認識</a>から音声合成エンジンの管理を行えます。使いたい言語の音声パッケージを導入しましょう。</p>
   <div>
    <iframe width="560" height="315" src="https://www.youtube.com/embed/1t-7SzkCCxk?si=_sNyDWdmnJf5bRT7"
@@ -526,12 +515,84 @@ tts_volume = 1.0
 
 
 
-<section id="text-to-speech-coeiroink" class="not-written-yet">
+<section id="text-to-speech-coeiroink">
  <h1>
   <a><span data-scroll-to="#text-to-speech-os-tts">🔼</span></a>
   <a><span data-scroll-to="#text-to-speech-bouyomichan">🔽</span></a>
   使い方 7. （テキスト）→「音声合成」 // CoeiroInk編
  </h1>
+
+ <p class="info">
+  今回は 《CoeiroInk》 Processor を使用します。Processor は VAC に内蔵された入力と出力の間で流れる内容を変換したり、調整したりする主要な仕組みです。
+  Processor を自由に組み合わせることでお好みのカスタム設定でVACを楽しめます。
+ </p>
+
+ <div class="info">《CoeiroInk》は <a class="url">https://coeiroink.com/</a> で公開されている「無料で使えるAIトークソフト」です。
+  <ul>
+   <li>日本語の音声合成が得意でとてもなめらかな音声をたくさんのキャラクターをベースに調整して利用できます。</li>
+   <li>《OpenAI-Chat》プロセッサーでAI擬似人格共演者を実現したい場合におすすめの音声合成エンジンです。</li>
+   <li>《MODify》プロセッサーでよみがな化すれば英語のコンテントも一応対応可能になります。</li>
+  </ul>
+ </div>
+
+ <div class="flow">
+  <h2>手順</h2>
+  <ul>
+   <li>7-1. CoeiroInk の準備 (導入済みの場合は飛ばして次へどうぞ)
+    <p><a class="url">https://coeiroink.com/</a>の「ダウンロード」から CoeiroInk をダウンロードしてお使いの環境に導入します。</p>
+    <p class="info">できるだけリアルタイムに応答を得たい方は「GPU版」を使うとよいです。</p>
+   </li>
+   <li>7-2. CoeiroInk を起動した状態で CoeiroInk の API が使用可能な状態か確認する <a class="url">http://127.0.0.1:50032/</a> にアクセスして
+    {"status":"start"} と表示される状態を確認します。</li>
+   <li class="hr"></li>
+   <li>7-3. 《CoeiroInk》のシンプルな設定例の設定ファイル "conf.example-coeiroink.toml" を "virtual-avatar-connect.exe" へドロップして VAC
+    を起動してみましょう。
+    <p class="info">
+     コマンドラインでは `./virtual-avatar-connect conf.example-coeiroink.toml` です。コマンドラインでの使い方は `--help` で確認できます。
+    </p>
+    <p>この設定ファイル "conf.example-coeiroink.toml" の中身はこうなっています。👀</p>
+    <textarea class="code" readonly style="height:21em"># CoeiroInk デフォルト状態で音声合成
+[[processors]]
+feature = "coeiroink"
+channel_from = "default"
+
+# 話者とスタイルを指定して音声合成
+[[processors]]
+feature = "coeiroink"
+channel_from = "genki"
+# uuid や style_id は --coeiroink-speakers で表示できます。
+speaker_uuid = "3c37646f-3881-5374-2a83-149267990abc"
+style_id = 6
+# 長い文章を受け取った場合にもできるだけリアルタイム性を維持して読ませたい場合に区切りを設定できます。
+split_regex_pattern = "[、。！？]"</textarea>
+   </li>
+   <li class="hr"></li>
+   <li>7-4. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input"
+     target="_blank">http://127.0.0.1:57000/input</a> を開きます。</li>
+   <li>7-5. ブラウザーの別のウィンドウまたはタブへ 2-ch-mix 出力画面 <a class="url">http://127.0.0.1:57000/output/2-ch-mix#default`genki</a>
+    を開きます。
+    <p class="info"> 2-ch-mix など出力画面についてもっと知りたい場合は<a data-scrill-to="#output-screen">「使い方 12.
+      「出力画面」の作り込み」</a>で紹介するので御覧ください。</p>
+   </li>
+   <li class="hr"></li>
+   <li>7-6. 入力画面の上または下、今回はどちらでもよいので送信先のチャンネルを default に設定します。</li>
+   <li>7-7. 入力内容に「こんばんは、こちらはデフォルトの音声です。」のように適当なメッセージを書きます。</li>
+   <li>7-8. 送信チャンネルを設定した隣にある POST ボタンを押します。音声合成と再生が行われ、ついでに出力画面にも表示されます。 </li>
+   <li class="hr"></li>
+   <li>7-9. 入力画面の上または下、今回はどちらでもよいので送信先のチャンネルを user-en に設定します。</li>
+   <li>7-10. 入力内容に「元気スタイルです。もし長い文章が入力されても、短い単位に区切って合成し、読み上げながら逐次並行して次の単位を合成することでリアルタイム性をある程度維持できます。」のように適当なメッセージを書きます。
+   </li>
+   <li>7-11. 送信チャンネルを設定した隣にある POST ボタンを押します。音声合成と再生が行われ、ついでに出力画面にも表示されます。</li>
+  </ul>
+ </div>
+
+ <div class="info">
+  <span>お使いの環境で《CoeiroInk》で使用できる音声合成の話者やスタイルの一覧を確認したい場合は、コマンドラインで `./virtual-avatar-connect --coeiroink-speakers`
+   を実行すると確認できます。
+  </span>
+  <img src="image/m07/coeiroink-speakers.png" class="img-show">
+ </div>
+
 </section>
 
 
