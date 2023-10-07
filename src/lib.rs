@@ -70,6 +70,7 @@ async fn run_services(conf: Conf, state: SharedState) -> Result<()> {
    .service(web_interface::output::post)
    .service(web_interface::output::get_index)
    .service(web_interface::output::get_subfile)
+   .service(web_interface::status::get)
    .service(web_interface::favicon);
   if let Some(web_ui_resources_path) = conf.web_ui_resources_path {
    app.service(Files::new("/resources", web_ui_resources_path))
