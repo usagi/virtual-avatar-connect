@@ -97,7 +97,7 @@
  </a>
 
  <a data-scroll-to="#language-translation-gas">
-  <li class="preparing">9. （テキスト）→「言語翻訳🗺️」→「テキスト表示」 // GAS編</li>
+  <li>9. （テキスト）→「言語翻訳🗺️」→「テキスト表示」 // GAS編</li>
  </a>
 
  <a data-scroll-to="#ai-pseudo-personality-openai">
@@ -690,12 +690,97 @@ volume = 100
 
 
 
-<section id="language-translation-gas" class="not-written-yet">
+<section id="language-translation-gas">
  <h1>
   <a><span data-scroll-to="#text-to-speech-bouyomichan">🔼</span></a>
   <a><span data-scroll-to="#ai-pseudo-personality-openai">🔽</span></a>
   使い方 9. （テキスト）→「言語翻訳」→「テキスト表示」 // GAS編
  </h1>
+
+ <p class="info">
+  今回は 《GAS-Translation》 Processor を使用します。Processor は VAC に内蔵された入力と出力の間で流れる内容を変換したり、調整したりする主要な仕組みです。
+  Processor を自由に組み合わせることでお好みのカスタム設定でVACを楽しめます。
+ </p>
+
+ <div class="info">《GAS-Translation》は <a class="search">Google Apps Script で翻訳</a> のように個人で使う程度なら誰でもおおむね実質無料枠だけで十分に使える<a
+   href="">Google Apps Script</a>を使用した翻訳サービスをVAC連携で使用可能にするプロセッサーです。
+  <ul>
+   <li>非情に多くの言語のわりと通じる翻訳を高速に提供できます。</li>
+   <li><a href="http://www.sayonari.com/trans_asr/asr.html"
+     target="jimakuchan">「音声認識字幕ちゃん」</a>と同じバックエンド方式を採用しています。翻訳用のGASが既にある場合は同じ Script ID をVACでもそのまま使用できます。</li>
+  </ul>
+ </div>
+
+ <div class="flow">
+  <h2>手順</h2>
+  <ul>
+   <li>9-1. Google Apps Script の準備 (翻訳用のGASを作成済みの場合は飛ばして次へどうぞ)
+    <p>9-1-1. <a class="url">https://script.google.com/</a>にアクセスして「新しいプロジェクト」を作成します。</p>
+    <p>9-1-2. 以下のコードを貼り付けて「プロジェクトを保存」(💾謎の古代の保存媒体のアイコンを押します)</p>
+    <textarea class="code" readonly style="height:8em">function doGet(e) {
+ const params = e.parameter
+ var translatedText = LanguageApp.translate(params.text, params.source, params.target);
+ const output = ContentService.createTextOutput();
+ output.setMimeType(ContentService.MimeType.JSON);
+ output.setContent(translatedText);
+ return output;
+}
+</textarea>
+    <p>9-1-3. 「デプロイ」→「新しいデプロイ」</p>
+    <p>9-1-4. 「種類の選択 ⚙」（この⚙のところをクリック）→「ウェブアプリ」</p>
+    <p>9-1-5. 「次のユーザーとして実行」が「自分」になっている事を確認</p>
+    <p>9-1-5. 「アクセスできるユーザー」を「全員」に変更</p>
+    <p>9-1-6. 「デプロイ」→「デプロイID」（= Script ID）をコピーして取得</p>
+    <p class="info">以上のGAS翻訳サービスの作り方は<a href="http://www.sayonari.com/trans_asr/asr.html"
+      target="jimakuchan">「音声認識字幕ちゃん」</a>を100%参考にさせて頂いています。先人に感謝いたします。🙏</p>
+   </li>
+   <li class="hr"></li>
+   <li>9-2. 《GAS-Translation》のシンプルな設定例の設定ファイル "conf.example-gas-translation.toml" の remote_talk_path に (9-1.) で取得した
+    GAS の Script ID を設定します。または、 Script ID の不慮の漏出に注意したい場合は環境変数 VAC_GAS_TRANSLATION_SCRIPT_ID に GAS の
+    Script ID を設定しても動作します。お好みの方法で Script ID を設定して下さい。
+    <p class="note">version 0.2.0 以前のダウンロード用パッケージには "conf.example-gas-translation.toml" は同梱されていません。必要に応じて作成または、<a
+      class="url">https://github.com/usagi/virtual-avatar-connect/blob/main/conf.example-gas-translation.toml</a>からダウンロードしてご用意下さい。
+    </p>
+   </li>
+   <li>9-3. 《GAS-Translation》のシンプルな設定例の設定ファイル "conf.example-gas-translation.toml" を "virtual-avatar-connect.exe" へドロップして
+    VAC を起動してみましょう。
+    <p class="info">
+     コマンドラインでは `./virtual-avatar-connect conf.example-gas-translation.toml` です。コマンドラインでの使い方は `--help` で確認できます。
+    </p>
+    <p>この設定ファイル "conf.example-gas-translation.toml" の中身はこうなっています。👀</p>
+    <textarea class="code" readonly style="height:17em">[[processors]]
+channel_from = "user"
+channel_to = "user-en"
+feature = "gas-translation"
+# Google Apps Script の Script ID
+# 以下の script_id に GAS の Script ID を設定するか、環境変数 VAC_GAS_TRANSLATION_SCRIPT_ID に設定して下さい。
+# script_id = "ここにあなたの Google Apps Script の ID を設定します（他人に公開しないようにご注意下さい）"
+# 翻訳元の言語; 指定しないと自動推定になります。推定は万能ではないので、できるだけ指定することをおすすめします。
+translate_from = "ja_JP"
+# 翻訳先の言語
+translate_to = "en_US"
+</textarea>
+   </li>
+   <li class="hr"></li>
+   <li>9-4. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input"
+     target="_blank">http://127.0.0.1:57000/input</a> を開きます。</li>
+   <li>9-5. ブラウザーの別のウィンドウまたはタブへ 2-ch-mix 出力画面 <a
+     class="url">http://127.0.0.1:57000/output/2-ch-mix#user;;[日本語]`user-en;;[English]</a>
+    を開きます。
+    <p class="info"> 2-ch-mix など出力画面についてもっと知りたい場合は<a data-scrill-to="#output-screen">「使い方 12.
+      「出力画面」の作り込み」</a>で紹介するので御覧ください。</p>
+   </li>
+   <li class="hr"></li>
+   <li>9-6. 入力画面の上または下、今回はどちらでもよいので送信先のチャンネルを user に設定します。</li>
+   <li>9-7. 入力内容に「この入力内容は日本語から英語に自動的に翻訳されます。」のように適当なメッセージを書きます。</li>
+   <li>9-8. 送信チャンネルを設定した隣にある POST ボタンを押します。音声合成と再生が行われ、ついでに出力画面にも表示されます。 </li>
+  </ul>
+ </div>
+
+ <div class="info"><span>成功すると 2-ch-mix 出力画面は以下のような字幕が出力されます。</span>
+  <img src="image/m09/ja-en.png" class="img-show" style="max-width: 40vw">
+ </div>
+
 </section>
 
 

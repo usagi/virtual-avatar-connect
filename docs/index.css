@@ -101,6 +101,7 @@ body > section > h1 > a:has([data-scroll-to]):nth-child(2) {
 .info,
 .note,
 .flow {
+ margin: 0.5em 0;
  padding: 0.5em;
  border-radius: 1em;
  border-width: 0.2em;
@@ -215,4 +216,8 @@ dt > *:nth-child(2)::after {
 iframe {
  max-width: 33vw;
  max-height: 33vh;
+}
+
+li > p {
+ margin: 0 0 0 1em;
 }
