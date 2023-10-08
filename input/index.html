@@ -15,7 +15,8 @@
 <script type="module" src="/resources/js/input.image.js"></script>
 
 <div class="text">
- <input data-vac-input="user" name="content" autocomplete="off" class="content" placeholder=" -> Virtual Avatar Connect">
+ <input data-vac-input="user" name="content" autocomplete="off" class="content"
+  placeholder=" -> Virtual Avatar Connect">
  <div></div>
  <input autocomplete="off" class="channel" placeholder="user" value="user">
  <button></button>
@@ -43,14 +44,16 @@
  <label><input autocomplete="off" class="lang" placeholder="jpn" value="jpn"></label>
  <a href="https://tesseract-ocr.github.io/tessdoc/Data-Files#data-files-for-version-400-november-29-2016"
   target="tesseract/lang-code">🔗lang code</button></a>
- <select>
-  <option value="">(preprocessor:none)</option>
-  <option value="arknights-story-text">Arknights Story Text</option>
- </select>
+ <div>
+  <label><input autocomplete="off" class="color-filter" type="checkbox"></label>
+  <div class="color"></div>
+  <label><input autocomplete="off" class="tolerance" type="number" min="0" max="255" value="144"></label>
+ </div>
 </div>
 
 <div class="image-result">
- <input data-vac-input="user" name="content" autocomplete="off" placeholder="(recognized text here if paste or drop the image.)">
+ <input data-vac-input="user" name="content" autocomplete="off"
+  placeholder="(recognized text here if paste or drop the image.)">
  <div></div>
  <input autocomplete="off" class="channel" placeholder="user" value="user">
  <button></button>
