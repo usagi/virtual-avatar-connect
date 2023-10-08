@@ -17,13 +17,34 @@ export function trim_colors(canvas, colors)
  ctx.putImageData(image_data, 0, 0);
 }
 
+export function pick_color(img, click_event)
+{
+ let click_x = click_event.clientX - img.getBoundingClientRect().left
+ let click_y = click_event.clientY - img.getBoundingClientRect().top
+
+ let pixel_x = Math.floor((click_x / img.clientWidth) * img.naturalWidth)
+ let pixel_y = Math.floor((click_y / img.clientHeight) * img.naturalHeight)
+
+ let canvas = document.createElement('canvas')
+ canvas.width = img.naturalWidth
+ canvas.height = img.naturalHeight
+
+ let ctx = canvas.getContext('2d')
+ ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight)
+
+ window.c = canvas
+ let data = ctx.getImageData(pixel_x, pixel_y, 1, 1).data
+
+ return [...data]
+}
+
 // img を編集する:
 //  - 効果1: colors で与えられた色のピクセルだけを残して、他のピクセルを透明にする
 //  - 効果2: colors で与えられた色のピクセルの範囲を検出して、その範囲でクロップする
 // args:
 //  img   : <img>
 //  colors: [[r,g,b,d], ...]]
-export function extract_colors(img, colors = [[255, 255, 255]])
+export function extract_colors(img, colors = [[255, 255, 255, 144]])
 {
  let canvas = document.createElement('canvas')
  canvas.width = img.naturalWidth
@@ -47,7 +68,6 @@ export function extract_colors(img, colors = [[255, 255, 255]])
   Math.abs(data[data_index] - color[0]) <= color[3]
   && Math.abs(data[data_index + 1] - color[1]) <= color[3]
   && Math.abs(data[data_index + 2] - color[2]) <= color[3]
- // && data[data_index + 3] === 255
 
  // 上から下へ検索
  for (let y = 0; y < height; y++)

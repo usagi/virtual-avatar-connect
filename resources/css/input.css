@@ -149,6 +149,29 @@ div.image label:has(.lang)::before {
  content: "認識言語";
 }
 
+div.image label:has(.color-filter)::after {
+ content: "色フィルター";
+}
+
+div.image label:has(.tolerance)::before {
+ content: "±";
+ margin: 0 0.2em;
+}
+
+div.image .color {
+ width: 2em;
+ height: 1em;
+ border: 0.1em solid gray;
+ background: #fff;
+ display: inline-block;
+ vertical-align: sub;
+}
+
+div.image .tolerance {
+ width: 3em;
+ text-align: center;
+}
+
 div.image input.lang {
  width: 4em;
  text-align: center;

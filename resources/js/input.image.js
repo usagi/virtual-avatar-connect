@@ -1,12 +1,9 @@
 import VacApi from './api.js'
 import { ISO639_ALPHA3 } from './common/lang_code.js'
 import { unorm_to_percent } from './common/number.js'
-import { extract_colors } from './common/image.js'
+import { extract_colors, pick_color } from './common/image.js'
 
-// v: value of color element, d: delta of color element
-let c = (v, d) => [v, v, v, d]
-
-export const ARKNIGHTS_SENARIO_TEXT = { colors: [c(255, 2), c(146, 2)], min_length: 2, confidence_filter: 80 }
+const DEFAULT_FILTER_COLOR = [255, 255, 255, 144]
 
 export default class VacInputImage
 {
@@ -22,6 +19,9 @@ export default class VacInputImage
  {
   this.elements = {}
   this.elements.img = root_element.querySelector('img')
+  this.elements.color_filter = root_element.querySelector('.image .color-filter')
+  this.elements.color = root_element.querySelector('.image .color')
+  this.elements.tolerance = root_element.querySelector('.image .tolerance')
   this.elements.auto_input = root_element.querySelector('.image .auto-input')
   this.elements.continuous = root_element.querySelector('.image .continuous')
   this.elements.one_shot = root_element.querySelector('.image .one-shot')
@@ -38,6 +38,11 @@ export default class VacInputImage
   this.elements.lang.addEventListener('input', () => this.lang_changed())
   this.elements.lang.addEventListener('change', () => this.lang_changed())
   this.elements.lang.addEventListener('keydown', () => this.lang_changed())
+
+  this.elements.img.addEventListener('click', e => this.pick_color(e))
+  this.elements.color_filter.addEventListener('change', () => this.save())
+  this.elements.color.addEventListener('click', () => this.activate_pick_color())
+  this.elements.tolerance.addEventListener('change', () => this.input_tolerance())
 
   // paste したら画像を読み込み
   document.onpaste = e =>
@@ -83,8 +88,6 @@ export default class VacInputImage
     this.image_recognizer()
    }
   })
-
-  this.elements.preprocessor.addEventListener('input', () => this.save())
  }
 
  lang_changed()
@@ -107,7 +110,9 @@ export default class VacInputImage
    continuous: this.elements.continuous.checked,
    lang: this.elements.lang.value,
 
-   preprocessor: this.elements.preprocessor.value
+   is_enabled_color_filter: this.elements.color_filter.checked,
+
+   filter_color: this.filter_color,
   }))
  }
 
@@ -122,8 +127,11 @@ export default class VacInputImage
    this.elements.continuous.checked = s.continuous
    this.elements.lang.value = s.lang
 
-   if (s.preprocessor)
-    this.elements.preprocessor.value = s.preprocessor
+   this.elements.color_filter.checked = s.is_enabled_color_filter || false
+
+   this.filter_color = s.filter_color || DEFAULT_FILTER_COLOR
+   this.elements.color.style.backgroundColor = `rgb(${this.filter_color[0]},${this.filter_color[1]},${this.filter_color[2]})`
+   this.elements.tolerance.value = this.filter_color[3]
   }
  }
 
@@ -139,10 +147,8 @@ export default class VacInputImage
   let l = this.elements.lang.value
 
   // pre process
-  switch (this.elements.preprocessor.value.toLowerCase())
-  {
-   case 'arknights-story-text': extract_colors(this.elements.img, ARKNIGHTS_SENARIO_TEXT.colors); break
-  }
+  if (this.elements.color_filter.checked)
+   extract_colors(this.elements.img, [this.filter_color])
 
   // recognize
   let r = await Tesseract.recognize(
@@ -198,6 +204,41 @@ export default class VacInputImage
 
   reader.readAsDataURL(file)
  }
+
+
+ filter_color = DEFAULT_FILTER_COLOR
+ pick_color = e =>
+ {
+  if (!this.is_activated_pick_color)
+   return
+
+  this.is_activated_pick_color = false
+  this.elements.img.style.objectFit = ''
+  this.elements.img.style.cursor = ''
+  this.elements.color.style.cursor = ''
+
+  let color = pick_color(this.elements.img, e)
+  this.filter_color = [...color.slice(0, 3), this.filter_color[3]]
+  this.elements.color.style.backgroundColor = `rgb(${color[0]},${color[1]},${color[2]})`
+
+  this.save()
+ }
+
+ is_activated_pick_color = false
+ activate_pick_color = () =>
+ {
+  this.is_activated_pick_color = true
+  this.elements.img.style.objectFit = 'fill'
+  this.elements.img.style.cursor = 'crosshair'
+  this.elements.color.style.cursor = 'crosshair'
+ }
+
+ input_tolerance = () =>
+ {
+  this.filter_color[3] = this.elements.tolerance.value
+  this.save()
+ }
+
 }
 
 window.VacInputImage = VacInputImage
