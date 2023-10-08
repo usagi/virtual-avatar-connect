@@ -1,0 +1,11 @@
+[[processors]]
+channel_from = "user"
+feature = "bouyomichan"
+# 棒読みちゃんをインストールしたフォルダーの中にあるRemoteTalk.exeのパスを設定して使います
+remote_talk_path = 'C:\Users\the\Downloads\BouyomiChan_0_1_11_0_Beta21\RemoteTalk\RemoteTalk.exe'
+address = "127.0.0.1"
+port = 50001
+voice = 2
+speed = 68
+tone = 133
+volume = 100
