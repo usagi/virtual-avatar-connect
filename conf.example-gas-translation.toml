@@ -1,0 +1,11 @@
+[[processors]]
+channel_from = "user"
+channel_to = "user-en"
+feature = "gas-translation"
+# Google Apps Script の Script ID
+# 以下の script_id に GAS の Script ID を設定するか、環境変数 VAC_GAS_TRANSLATION_SCRIPT_ID に設定して下さい。
+# script_id = "ここにあなたの Google Apps Script の ID を設定します（他人に公開しないようにご注意下さい）"
+# 翻訳元の言語; 指定しないと自動推定になります。推定は万能ではないので、できるだけ指定することをおすすめします。
+translate_from = "ja_JP"
+# 翻訳先の言語
+translate_to = "en_US"
