@@ -495,14 +495,16 @@ tts_volume = 1.0</textarea>
 
  <div class="info">
   <span>お使いの環境で《OS-TTS》から使用できる音声合成の一覧を確認したい場合は、コマンドラインで `./virtual-avatar-connect --test-os-tts`
-   を実行すると表示とサンプル音声の再生が行われます。
+   を実行すると表示とサンプル音声の再生が行われます。また version 0.2.0 からは <a class="url">http://127.0.0.1:57000/status</a>
+   へアクセスすることでも《OS-TTS》の音声合成の一覧を確認できます。</span>
   </span>
   <p>Windows 11の場合は<a class="search">設定 時刻と言語 > 音声認識</a>から音声合成エンジンの管理を行えます。使いたい言語の音声パッケージを導入しましょう。</p>
-  <div>
+  <div class="left-to-right-flex gap-1em">
    <iframe width="560" height="315" src="https://www.youtube.com/embed/1t-7SzkCCxk?si=_sNyDWdmnJf5bRT7"
     title="YouTube video player" frameborder="0"
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
     allowfullscreen></iframe>
+   <img src="image/m06/status-os-tts.png" class="img-show" style="max-width: calc(80vw - 560px)">
   </div>
  </div>
 
@@ -588,9 +590,13 @@ split_regex_pattern = "[、。！？]"</textarea>
 
  <div class="info">
   <span>お使いの環境で《CoeiroInk》で使用できる音声合成の話者やスタイルの一覧を確認したい場合は、コマンドラインで `./virtual-avatar-connect --coeiroink-speakers`
-   を実行すると確認できます。
+   を実行すると確認できます。また version 0.2.0 からは <a class="url">http://127.0.0.1:57000/status</a>
+   へアクセスすることでも《CoeiroInk》の音声合成の一覧を確認できます。</span>
   </span>
-  <img src="image/m07/coeiroink-speakers.png" class="img-show">
+  <div class="left-to-right-flex gap-1em">
+   <img src="image/m07/coeiroink-speakers.png" class="img-show" style="max-width: 33vw">
+   <img src="image/m07/status-coeiroink.png" class="img-show" style="max-width: 33vw">
+  </div>
  </div>
 
 </section>
@@ -602,15 +608,82 @@ split_regex_pattern = "[、。！？]"</textarea>
 
 
 
-<section id="text-to-speech-bouyomichan" class="not-written-yet">
+<section id="text-to-speech-bouyomichan">
  <h1>
   <a><span data-scroll-to="#text-to-speech-coeiroink">🔼</span></a>
   <a><span data-scroll-to="#language-translation-gas">🔽</span></a>
   使い方 8. （テキスト）→「音声合成」 // 棒読みちゃん編
  </h1>
+
+ <p class="info">
+  今回は 《Bouyomichan》 Processor を使用します。Processor は VAC に内蔵された入力と出力の間で流れる内容を変換したり、調整したりする主要な仕組みです。
+  Processor を自由に組み合わせることでお好みのカスタム設定でVACを楽しめます。
+ </p>
+
+ <div class="info">《Bouyomichan》は <a class="url">https://chi.usamimi.info/Program/Application/BouyomiChan/</a>
+  で公開されている「漢字を含む日本語の文章を音声合成で読み上げるツール」です。
+  <ul>
+   <li>日本で一般に普及した音声合成ソフトの定番として長く愛されているソフトウェアです。</li>
+   <li>歴史が長く、活用方法についての情報も調べやすいかもしれません。</li>
+  </ul>
+ </div>
+
+ <div class="flow">
+  <h2>手順</h2>
+  <ul>
+   <li>8-1. 棒読みちゃん の準備 (導入済みの場合は飛ばして次へどうぞ)
+    <p><a class="url">https://chi.usamimi.info/Program/Application/BouyomiChan/</a>からダウンロードしてお使いの環境に導入し起動します。</p>
+   </li>
+   <li>8-2. 棒読みちゃんを配置したフォルダーの中の RemoteTalk フォルダーに入っている RemoteTalk.exe までのパスを確認します。(設定に必要になります。)
+    <p class="info">例: C:\Program Files (x86)\BouyomiChan\RemoteTalk\RemoteTalk.exe</p>
+   </li>
+   <li class="hr"></li>
+   <li>8-3. 《Bouyomichan》のシンプルな設定例の設定ファイル "conf.example-bouyomichan.toml" の remote_talk_path に (8-2.) で確認した
+    RemoteTalk.exe までのパスを設定します。
+    <p class="note">version 0.2.0 以前のダウンロード用パッケージには "conf.example-bouyomichan.toml" は同梱されていません。必要に応じて作成または、<a
+      class="url">https://github.com/usagi/virtual-avatar-connect/blob/main/conf.example-bouyomichan.toml</a>からダウンロードしてご用意下さい。
+    </p>
+   </li>
+   <li>8-4. 《Bouyomichan》のシンプルな設定例の設定ファイル "conf.example-bouyomichan.toml" を "virtual-avatar-connect.exe" へドロップして VAC
+    を起動してみましょう。
+    <p class="info">
+     コマンドラインでは `./virtual-avatar-connect conf.example-bouyomichan.toml` です。コマンドラインでの使い方は `--help` で確認できます。
+    </p>
+    <p>この設定ファイル "conf.example-bouyomichan.toml" の中身はこうなっています。👀</p>
+    <textarea class="code" readonly style="height:17em">[[processors]]
+channel_from = "user"
+feature = "bouyomichan"
+# 棒読みちゃんをインストールしたフォルダーの中にあるRemoteTalk.exeのパスを設定して使います
+remote_talk_path = 'C:\Users\the\Downloads\BouyomiChan_0_1_11_0_Beta21\RemoteTalk\RemoteTalk.exe'
+address = "127.0.0.1"
+port = 50001
+voice = 2
+speed = 68
+tone = 133
+volume = 100
+</textarea>
+   </li>
+   <li class="hr"></li>
+   <li>8-5. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input"
+     target="_blank">http://127.0.0.1:57000/input</a> を開きます。</li>
+   </li>
+   <li>8-6. 入力画面の上または下、今回はどちらでもよいので送信先のチャンネルを user に設定します。</li>
+   <li>8-7. 入力内容に「こんばんは、棒読みちゃん。」のように適当なメッセージを書きます。</li>
+   <li>8-8. 送信チャンネルを設定した隣にある POST ボタンを押します。音声合成と再生が行われ、ついでに出力画面にも表示されます。 </li>
+  </ul>
+ </div>
+
+ <div class="info">
+  <span>《Bouyomichan》で設定できる主なパラメーターは次の通りです。</span>
+  <ul>
+   <li>voice … 0:デフォルト 1:女性1 2:女性2 3:男性1 4:男性2 5:中性 6:ロボット 7:機械1 8:機械2 9以降:SAPI</li>
+   <li>speed … -1:デフォルト 50:最低 300:最高</li>
+   <li>tone … -1:デフォルト 50:最低 200:最高</li>
+   <li>volume … -1:デフォルト 0:最低 100:最高</li>
+  </ul>
+ </div>
+
 </section>
-
-
 
 
 
