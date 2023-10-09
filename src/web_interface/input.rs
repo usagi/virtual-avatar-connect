@@ -5,8 +5,11 @@ use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct InputPayload {
+ /// チャンネル名
  channel: String,
+ /// 内容
  content: String,
+ /// 入力途中なら false, 確定済みで内容が変化しないなら true
  is_final: bool,
 }
 

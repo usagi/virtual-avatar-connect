@@ -6,29 +6,39 @@ use std::path::Path;
 
 #[derive(Deserialize, Debug)]
 struct OutputRequestPayload {
+ /// 受信したいチャンネルのリスト
  channels: Vec<ChannelRequest>,
 }
 
 #[derive(Deserialize, Debug)]
 struct ChannelRequest {
+ /// 受信したいチャンネル名
  name: String,
+ /// 既に取得済みの ID を与えると、その ID 以降の内容を取得します。
  retrieved_id: Option<u64>,
+ /// 既に取得済みの iso8601 日時を与えると、その日時以降の内容を取得します。
  retrieved_timestamp: Option<String>,
+ /// 取得する最大件数を指定します。
  count: Option<usize>,
 }
 
 #[derive(Serialize, Debug)]
 struct OutputResponsePayload {
- /// name -> channel_data
+ /// チャンネル名 -> チャンネルデータ
  channel_data: HashMap<String, Vec<ChannelDatum>>,
 }
 
 #[derive(Serialize, Debug)]
 struct ChannelDatum {
+ /// Datum ID
  id: Option<u64>,
+ /// ISO8601 日時
  datetime: Option<String>,
+ /// チャンネル名
  channel: Option<String>,
+ /// 内容
  content: Option<String>,
+ /// フラグ
  #[serde(default)]
  flags: HashSet<String>,
 }
