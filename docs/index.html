@@ -101,7 +101,7 @@
  </a>
 
  <a data-scroll-to="#ai-pseudo-personality-openai">
-  <li class="preparing">10. （テキスト）→「AI疑似人格👻」→「テキスト表示」 // OpenAI編</li>
+  <li>10. （テキスト）→「AI疑似人格👻」→「テキスト表示」 // OpenAI編</li>
  </a>
 
  <a data-scroll-to="#modify">
@@ -790,12 +790,105 @@ translate_to = "en_US"
 
 
 
-<section id="ai-pseudo-personality-openai" class="not-written-yet">
+<section id="ai-pseudo-personality-openai">
  <h1>
   <a><span data-scroll-to="#language-translation-gas">🔼</span></a>
   <a><span data-scroll-to="#modify">🔽</span></a>
   使い方 10. （テキスト）→「AI疑似人格」→「テキスト表示」 // OpenAI編
  </h1>
+
+ <p class="info">
+  今回は 《OpenAI-Chat》 Processor を使用します。Processor は VAC に内蔵された入力と出力の間で流れる内容を変換したり、調整したりする主要な仕組みです。
+  Processor を自由に組み合わせることでお好みのカスタム設定でVACを楽しめます。
+ </p>
+
+ <div class="info">《OpenAI-Chat》は ChatGPT や DALL-E でお馴染みの OpenAI が提供する AI サービスをVAC連携で使用可能にするプロセッサーです。
+  <ul>
+   <li>PCに強力なGPUを搭載しても得難い超高度な AI を簡単に組み込めます。かわりに使いたい分だけ先払い制でお金がかかります。</li>
+   <li>アカウント登録時に無料で18USD分のクレジットを貰えます。《OpenAI-Chat》のお試しには十二分な量なのでぜひ試してみて下さい。</li>
+   <li>
+    <em>ですます調で丁寧な受け答えのキャラクターなら安価で高速な「GPT3.5-Turbo」モデルで十分</em>です。こちらを使う場合には毎分1回応答させながら3時間程度ゲームプレイ配信しても0.06USD程度の使用料金です。もっと長時間使った場合でも、1000円の先払いで3ヶ月前後使えるかもしれません。
+   </li>
+   <li>
+    <em>個性の強いキャラクターを作るには比較的高価な「GPT4」モデルが必要</em>です。こちらを使う場合は《OpenAI-Chat》の設定で応答を10分間隔＋キーワード応答に絞った運用で3時間程度のゲームプレイ配信で1.25USD程度の使用料金になります。こちらを使う場合は慎重に応答頻度の調整が必要です。
+   </li>
+  </ul>
+ </div>
+
+ <div class="flow">
+  <h2>手順</h2>
+  <ul>
+   <li>10-1. OpenAI API の準備 (OpenAI API に登録済みの場合は飛ばして次へどうぞ)
+    <p>10-1-1. <a class="url">https://openai.com/</a>にアクセスして "Log in↗" をクリックします。</p>
+    <p>10-1-2. "Don't have an accout? Sign up" から "Sign up" をクリックします。</p>
+    <p>10-1-3. <a class="url">https://platform.openai.com/account/usage</a> でAPI のクレジット残高を確認します。</p>
+    <p>10-1-4. もし使用可能なクレジットが無ければ <a class="url">https://platform.openai.com/account/billing/overview</a> の "Add to
+     credit balance" からクレジットを購入します。</p>
+    <p>10-1.5. <a class="url">https://platform.openai.com/account/api-keys</a> で "Create new secret key" から API KEY
+     を作成します。</p>
+    <p class="note">
+     OpenAIの"ChatGPT"と"API"は別のサービスで支払いも共有されません。OpenAIの有料サービスに初めて登録する方は気をつけて下さい。《OpenAI-Chat》に必要なサービスは"API"のみです。</p>
+   </li>
+   <li class="hr"></li>
+   <li>10-2. 《OpenAI-Chat》のシンプルな設定例の設定ファイル "conf.example-openai-chat.toml" の api_key に (10-1.) で取得した
+    OpenAI の API KEY を設定します。または、 API KEY の不慮の漏出に注意したい場合は環境変数 VAC_OPENAI_CHAT_API_KEY に OpenAI の
+    API KEY を設定しても動作します。お好みの方法で API KEY を設定して下さい。
+    <p class="note">version 0.2.0 以前のダウンロード用パッケージには "conf.example-openai-chat.toml" は同梱されていません。必要に応じて作成または、<a
+      class="url">https://github.com/usagi/virtual-avatar-connect/blob/main/conf.example-openai-chat.toml</a>からダウンロードしてご用意下さい。
+    </p>
+   </li>
+   <li>10-3. 《OpenAI-Chat》のシンプルな設定例の設定ファイル "conf.example-openai-chat.toml" を "virtual-avatar-connect.exe" へドロップして
+    VAC を起動してみましょう。
+    <p class="info">
+     コマンドラインでは `./virtual-avatar-connect conf.example-openai-chat.toml` です。コマンドラインでの使い方は `--help` で確認できます。
+    </p>
+    <p>この設定ファイル "conf.example-openai-chat.toml" の中身はこうなっています。👀</p>
+    <textarea class="code" readonly style="height:17em">[[processors]]
+channel_from = "user"
+channel_to = "ai"
+feature = "openai-chat"
+# OpenAI API の API KEY
+# 以下の api_key に OpenAI API の API KEY を設定するか、環境変数 VAC_GAS_TRANSLATION_SCRIPT_ID に設定して下さい。
+# api_key = "ここにあなたの OpenAI の API KEY を設定します（他人に公開しないようにご注意下さい）"
+
+# 参考: https://platform.openai.com/docs/models/gpt-3-5
+# 参考: https://platform.openai.com/docs/models/gpt-4
+model = "gpt-3.5-turbo"
+</textarea>
+    <p class="info">《OpenAI-Chat》にはたくさんの設定項目があります。
+     AIの広範な知識からの回答を得られる助手を召喚したいだけならサンプルの設定だけでも十分に楽しく、あるいは役立つよう動作してくれます。
+     もっと高度な設定や疑似人格形成を行いたい場合はひとまず付属の conf.toml でコメントされている設定を参考にしてみてください。
+     実際に開発のなかのひとが Twitch で配信する際に疑似人格ケルシー先生を構成するために使っている設定です。
+     特に custom_instructions に疑似人格形成のための設定を書くことで、さまざまなAIキャラクターを構成できます。
+     また、memory_capacity(応答ごとに過去何件分の記憶を擬似的に保持させるか), min_interval_in_secs(応答間隔), force_activate_regex_pattern(強制応答パターン),
+     ignore_regex_pattern(無視パターン) などを適切に設定して AI の応答頻度を調整することも特に GPT4 を使う場合には大事です。
+     他にも temperature, top_p, n, presence_penalty, frequency_penalty, max_tokens, user などの OpenAI API
+     が受け取れるパラメーターは設定可能にしてあります。
+    </p>
+   </li>
+   <li class="hr"></li>
+   <li>10-4. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a href="http://127.0.0.1:57000/input"
+     target="_blank">http://127.0.0.1:57000/input</a> を開きます。</li>
+   <li>10-5. ブラウザーの別のウィンドウまたはタブへ 2-ch-mix 出力画面 <a
+     class="url">http://127.0.0.1:57000/output/2-ch-mix#user;;[日本語]`ai;;[AI]</a>
+    を開きます。
+    <p class="info"> 2-ch-mix など出力画面についてもっと知りたい場合は<a data-scrill-to="#output-screen">「使い方 12.
+      「出力画面」の作り込み」</a>で紹介するので御覧ください。</p>
+   </li>
+   <li class="hr"></li>
+   <li>10-6. 入力画面の上または下、今回はどちらでもよいので送信先のチャンネルを user に設定します。</li>
+   <li>10-7. 入力内容に「この入力内容は日本語から英語に自動的に翻訳されます。」のように適当なメッセージを書きます。</li>
+   <li>10-8. 送信チャンネルを設定した隣にある POST ボタンを押します。音声合成と再生が行われ、ついでに出力画面にも表示されます。 </li>
+  </ul>
+ </div>
+
+ <div class="info"><span>成功すると 2-ch-mix 出力画面は以下のような字幕が出力されます。</span>
+  <img src="image/m10/user-ai.png" class="img-show" style="max-width: 40vw">
+  <p>
+   ちなみに、2-ch-mixは基本的には同じ発言者の元の内容と翻訳の字幕を出力するように作られています。実際にAI疑似人格と配信を行う際には画面の左右でそれぞれ2-ch-mixを使ったり、上下に吹き出しを出す独自の出力画面を作ったりするとよいかもしれません。
+  </p>
+ </div>
+
 </section>
 
 

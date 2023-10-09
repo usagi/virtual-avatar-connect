@@ -221,3 +221,10 @@ iframe {
 li > p {
  margin: 0 0 0 1em;
 }
+
+em {
+ color: color-mix(in srgb, var(--text-color) 40%, var(--inverted-background-color));
+ font-size: 1.2em;
+ font-style: normal;
+ text-decoration: underline;
+}
