@@ -117,7 +117,7 @@
  </a>
 
  <a data-scroll-to="#system-and-keywords">
-  <li class="preparing">X. ふろく: VAC の仕組みと用語</li>
+  <li>X. ふろく: VAC の仕組みと用語</li>
  </a>
 </ul>
 
@@ -1216,7 +1216,7 @@ struct InputPayload {
 
 
 
-<section id="system-and-keywords" class="not-written-yet">
+<section id="system-and-keywords">
  <h1>
   <a><span data-scroll-to="#input-screen">🔼</span></a>
   <!-- <a><span data-scroll-to="#">🔽</span></a> -->
@@ -1224,26 +1224,50 @@ struct InputPayload {
  </h1>
 
  <section>
+  <h2>VACの仕組み</h2>
 
-  <h2>Processor</h2>
+  <p>すごーく大雑把に描くとだいたい下図のような具合になっています。</p>
+
+  <div class="left-to-right-flex">
+   <img src="image/x/system-over.png" class="img-show" style="max-width: 33vw; max-height: none; margin-right: 1em">
+   <img src="image/x/system-inner.png" class="img-show" style="max-width: 33vw; max-height: none">
+  </div>
 
   <ul>
-   <li>Processor （プロセッサー）は VAC のチャンネルに流れる内容を受け取り、連携アプリと情報をやり取りしたり、内容を加工したり、別のチャンネルへ出力したりする仕組みです。</li>
-   <li>Processor はチャンネルごとにお好みの順序で、お好みの設定で繋げて使用できます。</li>
-   <li>同じ種類の Processor を1度だけ使うことも、繰り返し繋いで使うことももできます。</li>
+   <li>VACはWebインターフェースとしてWebSocketを含むHTTPdを内蔵していて、ユーザーからの入力画面やOBS STUDIOなどへの出力画面はWebインターフェースを通して行います。</li>
+   <li>VAC内部では設定ファイルで定義された《Processor》群を、設定で定義された分だけそれぞれ実体化して入力を待ち受けます。</li>
+   <li>チャンネルへコンテントの入力が行われると、そのチャンネルを処理対象(channel_from)とした《Processor》が設定で上の方で定義された順に入力を処理します。</li>
+   <li>《Processor》は入力を加工したり、入力に応じてバックエンドAPIを呼び出して新たなコンテントを生成したりします。</li>
+   <li>《Processor》は出力設定があれば、その出力設定に応じて加工したり生成したりしたコンテントを設定されたチャンネルへ送出します。</li>
+   <li>もとの入力は通常は次の《Processor》にも流れ、設定ファイルで定義されたすべての《Processor》が入力を同様に処理します。</li>
+   <li>
+    多くの《Processor》は入力に対する前処理が終わるとメインの処理は非同期処理ブロックへ逃がす作りになっているので、同じチャンネルに《Processor》をたくさん設定してもそこそこ大丈夫かもしれません。(お使いのPCと設定のworkersによります。)
+   </li>
   </ul>
 
-  <p class="info">VACの使い方の解説ではプロセッサーを《Screenshot》のように表記します。設定ファイルで feature = "screenshot" と書く部分はこの名前を使います。</p>
+ </section>
+
+ <section>
+
+  <h2>VACの用語</h2>
 
   <section>
-   <h3>《Screenshot》</h3>
+   <h3>Processor</h3>
    <ul>
-    <li>設定したチャンネルにスクリーンショットを撮影する機能を追加できます。</li>
+    <li>Processor （プロセッサー）は VAC のチャンネルに流れる内容を受け取り、連携アプリと情報をやり取りしたり、内容を加工したり、別のチャンネルへ出力したりする仕組みです。</li>
+    <li>Processor はチャンネルごとにお好みの順序で、お好みの設定で繋げて使用できます。</li>
+    <li>同じ種類の Processor を1度だけ使うことも、繰り返し繋いで使うことももできます。</li>
    </ul>
+   <p class="info">VACの使い方の解説ではプロセッサーを《Screenshot》のように表記します。設定ファイルで feature = "Screenshot" と書く部分はこの名前を使います。</p>
   </section>
 
   <section>
-   <h3>《OCR》</h3>
+   <h3>AI疑似人格共演者</h3>
+   <ul>
+    <li>《OpenAI-Chat》を使い、channel_from にユーザーの音声入力を割り当てるなどして、AIを擬似的な人格を持った共演者として配信などに出演して貰うことを表現しています。</li>
+    <li>特に、GPT4モデルやCoeiroInkを併用することで、わりと楽しくリアリティーもそこそこな共演者さんに登場して貰えます。但しGPT4はAPI使用料金が高めなのでそこは本当に気をつけて下さい。</li>
+   </ul>
+   <p class="info">実際に<a href="https://www.twitch.tv/usaginetwork" target="_blank">開発のなかのひとの Twitch 配信で「Dr.USAGIとケルシー先生のゲームお楽しみ配信」のような形でAI疑似人格共演者を召喚して一緒にゲームプレイ配信</a>をしています。気が向いたらご視聴下さい。👀</p>
   </section>
 
  </section>
