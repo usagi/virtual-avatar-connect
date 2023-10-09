@@ -1,0 +1,11 @@
+[[processors]]
+channel_from = "user"
+channel_to = "ai"
+feature = "openai-chat"
+# OpenAI API の API KEY
+# 以下の api_key に OpenAI API の API KEY を設定するか、環境変数 VAC_GAS_TRANSLATION_SCRIPT_ID に設定して下さい。
+# api_key = "ここにあなたの OpenAI の API KEY を設定します（他人に公開しないようにご注意下さい）"
+
+# 参考: https://platform.openai.com/docs/models/gpt-3-5
+# 参考: https://platform.openai.com/docs/models/gpt-4
+model = "gpt-3.5-turbo"
