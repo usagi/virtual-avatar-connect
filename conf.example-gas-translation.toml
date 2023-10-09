@@ -9,3 +9,6 @@ feature = "gas-translation"
 translate_from = "ja_JP"
 # 翻訳先の言語
 translate_to = "en_US"
+
+# 入力途中でも翻訳を処理したい場合は true に設定して下さい。(同時通訳のような動作になりますがAPIを多用するので注意)
+# process_incomplete_input = true

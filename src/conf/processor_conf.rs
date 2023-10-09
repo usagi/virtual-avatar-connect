@@ -74,6 +74,7 @@ pub struct ProcessorConf {
  pub script_id: Option<String>,
  pub translate_from: Option<String>,
  pub translate_to: Option<String>,
+ pub process_incomplete_input: Option<bool>,
 
  // CoeiroInk
  pub api_url: Option<String>,
