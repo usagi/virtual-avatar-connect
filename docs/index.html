@@ -105,7 +105,7 @@
  </a>
 
  <a data-scroll-to="#modify">
-  <li class="preparing">11. （テキスト）→「MODify❣️」→（テキスト） // 内容の加工や変換を行います</li>
+  <li>11. （テキスト）→「MODify❣️」→（テキスト） // 内容の加工や変換を行います</li>
  </a>
 
  <a data-scroll-to="#output-screen">
@@ -898,12 +898,74 @@ model = "gpt-3.5-turbo"
 
 
 
-<section id="modify" class="not-written-yet">
+<section id="modify">
  <h1>
   <a><span data-scroll-to="#ai-pseudo-personality-openai">🔼</span></a>
   <a><span data-scroll-to="#output-screen">🔽</span></a>
   使い方 11. （テキスト）→「MODify」→（テキスト） // 内容の加工や変換を行います
  </h1>
+
+ <p class="info">
+  今回は 《MODify》 Processor を使用します。Processor は VAC に内蔵された入力と出力の間で流れる内容を変換したり、調整したりする主要な仕組みです。
+  Processor を自由に組み合わせることでお好みのカスタム設定でVACを楽しめます。
+ </p>
+
+ <p class="info">《MODify》は音声合成エンジンの直前に from=to で挟んで使い、音声合成エンジンが読み間違えてしまう単語を読み間違えの無いようひらがなに変換する前処理や、
+  《OCR》の結果から頻出する誤認識を修正したり、配信の字幕やAIの入力に使いたくない単語を伏せ字にしたり、地味に活躍するプロセッサーです。
+ </p>
+
+ <div class="flow">
+  <h2>手順</h2>
+  <ul>
+   <li>11-1. 《MODify》のシンプルな設定例の設定ファイル "conf.example-modify.toml" を "virtual-avatar-connect.exe" へドロップして VAC
+    を起動してみましょう。
+    <p class="info">
+     コマンドラインでは `./virtual-avatar-connect conf.example-modify.toml` です。コマンドラインでの使い方は `--help` で確認できます。
+    </p>
+    <p class="note">version 0.2.0 以前のダウンロード用パッケージには "conf.example-openai-chat.toml" は同梱されていません。必要に応じて作成または、<a
+      class="url">https://github.com/usagi/virtual-avatar-connect/blob/main/conf.example-modify.toml</a>からダウンロードしてご用意下さい。
+    </p>
+    <p>この設定ファイル "conf.example-modify.toml" の中身はこうなっています。👀</p>
+    <textarea class="code" readonly style="height:41em"># MODify は内容に変更を加えるプロセッサーです。
+[[processors]]
+channel_from = "user"
+# from と to が同じ場合はこれ以降のプロセッサーへ流れる内容が完全に書き換えられます。
+# from と to が異なる場合は変更した内容を to に送るだけの動作になります。
+channel_to = "modified"
+
+# 英単語をカタカナに変換
+# 英語の文章を日本語の音声合成エンジンに読み上げさせる場合などに使うとアルファベットをそのまま読まれるよりはマシなこともあるかもしれません。
+alkana = true
+
+# この後に dictionary_files や regex_files がコメントでテンプレートとして用意されていますが
+# 「使い方」の例では直接は紹介しないので興味がある方は conf.example-modify.toml を編集して試してみて下さい。
+</textarea>
+   </li>
+   <li class="hr"></li>
+   <li>11-2. VAC を起動します。 </li>
+   <li>11-3. ブラウザーのウィンドウまたはタブへ標準の入力画面 <a class="url">http://127.0.0.1:57000/input</a> を開きます。</li>
+   <li>11-4. ブラウザーの別のウィンドウまたはタブへ 2-ch-mix 出力画面 <a
+     class="url">http://127.0.0.1:57000/output/2-ch-mix#user;;[user]`modified;;[mod]</a>
+    を開きます。
+    <p class="info"> 2-ch-mix など出力画面についてもっと知りたい場合は<a data-scrill-to="#output-screen">「使い方 12.
+      「出力画面」の作り込み」</a>で紹介するので御覧ください。</p>
+   </li>
+   <li class="hr"></li>
+   <li>11-5. 入力画面の上または下、今回はどちらでもよいので送信先のチャンネルを user に設定します。</li>
+   <li>11-6. 入力内容に「Hello, Virtual Avatar Connect!」のように適当なメッセージを書きます。</li>
+   <li>11-7. 送信チャンネルを設定した隣にある POST ボタンを押します。音声合成と再生が行われ、ついでに出力画面にも表示されます。 </li>
+  </ul>
+ </div>
+
+ <div class="info"><span>成功すると 2-ch-mix 出力画面は以下のような字幕が出力されます。</span>
+  <img src="image/m11/user-mod.png" class="img-show" style="max-width: 40vw">
+  <p>
+   《MODify》の alkana はそこそこの単語をカタカナにしてくれますが、意外と未登録の単語も多いので、もっとしっかりとカタカナにしたい場合は
+   dictionary_files に辞書ファイルを追加してみて下さい。辞書ファイルは「Google 日本語入力」の辞書をエクスポートした.txtファイルも読み込めます。
+   また、単純な辞書による置換では対応が難しい場合は regex_files に正規表現ファイルを追加してみて下さい。
+  </p>
+ </div>
+
 </section>
 
 
