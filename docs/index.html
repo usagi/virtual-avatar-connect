@@ -910,7 +910,7 @@ model = "gpt-3.5-turbo"
   Processor を自由に組み合わせることでお好みのカスタム設定でVACを楽しめます。
  </p>
 
- <p class="info">《MODify》は音声合成エンジンの直前に from=to で挟んで使い、音声合成エンジンが読み間違えてしまう単語を読み間違えの無いようひらがなに変換する前処理や、
+ <p class="info">《MODify》は音声合成エンジンの直前に入れて、音声合成エンジンが読み間違えてしまう単語を読み間違えの無いようひらがなに変換する前処理や、
   《OCR》の結果から頻出する誤認識を修正したり、配信の字幕やAIの入力に使いたくない単語を伏せ字にしたり、地味に活躍するプロセッサーです。
  </p>
 
@@ -926,7 +926,7 @@ model = "gpt-3.5-turbo"
       class="url">https://github.com/usagi/virtual-avatar-connect/blob/main/conf.example-modify.toml</a>からダウンロードしてご用意下さい。
     </p>
     <p>この設定ファイル "conf.example-modify.toml" の中身はこうなっています。👀</p>
-    <textarea class="code" readonly style="height:41em"># MODify は内容に変更を加えるプロセッサーです。
+    <textarea class="code" readonly style="height:20em"># MODify は内容に変更を加えるプロセッサーです。
 [[processors]]
 channel_from = "user"
 # from と to が同じ場合はこれ以降のプロセッサーへ流れる内容が完全に書き換えられます。
