@@ -228,3 +228,15 @@ em {
  font-style: normal;
  text-decoration: underline;
 }
+
+.nobr {
+ white-space: nowrap;
+}
+
+.top {
+ vertical-align: top;
+}
+
+td > p {
+ margin-top: 0;
+}

@@ -109,11 +109,11 @@
  </a>
 
  <a data-scroll-to="#output-screen">
-  <li class="preparing">12. 「出力画面↗️」の作り込み // 複数の出力画面をお好みでカスタムできます</li>
+  <li>12. 「出力画面↗️」の作り込み // 複数の出力画面をお好みでカスタムできます</li>
  </a>
 
  <a data-scroll-to="#input-screen">
-  <li class="preparing">13. 「↘️入力画面」をお好みに // 複数の入力画面をお好みでカスタムできます</li>
+  <li>13. 「↘️入力画面」をお好みに // 複数の入力画面をお好みでカスタムできます</li>
  </a>
 
  <a data-scroll-to="#system-and-keywords">
@@ -975,12 +975,153 @@ alkana = true
 
 
 
-<section id="output-screen" class="not-written-yet">
+<section id="output-screen">
  <h1>
   <a><span data-scroll-to="#modify">🔼</span></a>
   <a><span data-scroll-to="#input-screen">🔽</span></a>
   使い方 12. 「出力画面」の作り込み // 複数の出力画面をお好みでカスタムできます
  </h1>
+
+ <div class="info">
+  VACの「出力画面」"群"は OBS STUDIO などの配信アプリで表示することを想定した画面です。
+  <ul>
+   <li>VACの「出力画面」は「ブラウザーソース」での取り込みを想定しています。</li>
+   <li>VACの「出力画面」は複数作成できます。</li>
+   <li>VACの「出力画面」は一般的な HTML + CSS + JS や WASM でユーザーが独自に作り込めます。</li>
+   <li>これまでの使い方に登場した標準の出力画面や2-ch-mix出力画面はVACを用いた画面作りのサンプルを兼ねています。ご自由に改変して自分だけの配信画面を作って頂いて構いません。👀</li>
+  </ul>
+ </div>
+
+ <p class="note">
+  VAC本体からのチャンネル出力情報はRESTまたはWebSocketで受信でき、両方に対応した簡単なライブラリーもサンプルに含まれています。
+  おわかりになる方はその辺りから作り込んで頂いても構いませんし、 Vue.js や React などのフレームワークを使っても構いません。
+  もちろん、素のHTMLやCSS、JS、WASMでサンプルを少しずつ改造したり、コピペしてアレンジ版を作るところから始めるのもよいと思います。
+ </p>
+
+ <div>
+  <h2>配布状態の出力画面の構成</h2>
+
+  <table>
+   <tr>
+    <th>.html ソースの場所</th>
+    <th>動作中のURL</th>
+    <th>概要</th>
+   </tr>
+
+   <tr class="top">
+    <td class="nobr">output/index.html</td>
+    <td class="nobr"><a class="url">http://127.0.0.1:57000/output</a></td>
+    <td>
+     <p>標準の出力画面、サンプルでは16:9で画面いっぱいにオーバーレイされる想定でさしあたりタイトルと副題を VAC の title, description チャンネルを受信して更新できるようになっています。</p>
+     <p>また、出力画面単独でのシーン切り替えのサンプルも含まれていて、画面のクリックで BRB 画面へ切り替えられ、 BRB 画面でも brb チャンネルを受信して状況表示を更新できる仕組みになっています。</p>
+     <p>ほかに loading シーンの素っ気ないレンプレートも含まれているので、出力画面単独でシーン切り替えしたくなったら参考にして下さい。</p>
+    </td>
+   </tr>
+
+   <tr class="top">
+    <td class="nobr">output/2-ch-mix.html</td>
+    <td class="nobr"><a class="url">http://127.0.0.1:57000/output/2-ch-mix</a></td>
+    <td>
+     <p>上下に積み重なるように VAC から受信した2つのチャンネルを表示するパーツ単位の出力画面のサンプルです。</p>
+     <p>表示する際にURLフラグメントでパラメーターを指定できるように仕込んであります。
+      例えば /output/2-ch-mix#user;;[Dr.USAGI]`user-en;;[Dr.USAGI(transEN)] のようにURLフラグメントを付けて開くと、
+      user チャンネルと user-en チャンネルを [Dr.USAGI] と [Dr.USAGI(transEN)] という話者表示のプリフィックス付きで表示します。</p>
+     <p>他にも文字色の指定、C.V.表示などを行う想定のサフィックス表示にも対応しています。詳しくはソース冒頭の解説をどうぞ。</p>
+    </td>
+   </tr>
+
+   <tr class="top">
+    <td class="nobr">output/*.html</td>
+    <td class="nobr">http://127.0.0.1:57000/output/*</td>
+    <td>
+     <p>2-ch-mixと同様に、 output/ に .html ファイルがあれば VAC は出力画面として読み込めるように扱います。</p>
+     <p>例えば、 my-out1.html というファイルを作成して output/ へ配置すれば、 http://127.0.0.1:57000/my-out1 という出力画面として動作します。</p>
+     <p>少し下で紹介する「配布状態のVAC出力画面向けAPIの簡単な使い方」なども参考に、自分だけの出力画面を作り込んで下さい。</p>
+    </td>
+   </tr>
+
+   <tr class="top">
+    <td class="nobr">resources/**/*</td>
+    <td class="nobr">http://127.0.0.1:57000/resources/**/*</td>
+    <td>
+     <p>ソースのoutput/ は .html ファイルのみを扱います。他に出力画面から参照させたいファイルがある場合は resources/ へ配置します。</p>
+     <p>resource/ は出力画面、入力画面いずれからも共通でアクセスできるファイル置き場です。</p>
+     <p>主に CSS, js, wasm, 画像, 音声, 動画などのファイルを配置して使います。</p>
+    </td>
+   </tr>
+
+  </table>
+ </div>
+
+ <div class="flow">
+  <h2>配布状態のVAC出力画面向けAPIの簡単な使い方（一般的におすすめ）</h2>
+
+  <ul>
+   <li>出力画面用の .html に script 要素を追加して type="module" で src="resources/js/output.js" をロードします。</li>
+   <li>チャンネルから受信した内容を表示したいHTML要素を作り data-vac-output="title" のように受信したいチャンネルを指定します。</li>
+   <li>.html に script 要素を追加して document.addEventListener('DOMContentLoaded', () => vac.output.run()) とおまじないを書きます。</li>
+  </ul>
+
+  <textarea style="height:5em">
+   <script type="module" src="/resources/js/output.js"></script>
+   <script>document.addEventListener('DOMContentLoaded', () => vac.output.run())</script>
+   <span data-vac-output="title">受信する前にも何か表示しておきたかったら何か書いておきます。</span>
+  </textarea>
+
+  <p class="info">出力画面からもっと細かく API を使いたい場合は resources/js/output.js や resources/js/api.js を参考にするとよいかもしれません。👀</p>
+ </div>
+
+ <div class="flow">
+  <h2>VAC本体から直接チャンネル出力情報を取得する使い方（⚠️高度な応用をしたい方向け）</h2>
+  <p>WebSocket: ws://127.0.0.1:57000/ へ接続し、受信した payload を JSON デコードします。</p>
+  <p>REST: http://127.0.0.1:57000/output に POST で body に OutputRequestPayload 構造体を JSON 形式で入れて投げ、応答から JSON 化された
+   OutputResponsePayload を受け取ります。</p>
+  <div class="left-to-right-flex">
+   <textarea style="width:44%;margin-right:2em">// for REST /output POST Request
+
+#[derive(Deserialize, Debug)]
+struct OutputRequestPayload {
+ // 受信したいチャンネルのリスト
+ channels: Vec<ChannelRequest>,
+}
+
+#[derive(Deserialize, Debug)]
+struct ChannelRequest {
+ // 受信したいチャンネル名
+ name: String,
+ // 既に取得済みの ID を与えると、その ID 以降の内容を取得します。
+ retrieved_id: Option<u64>,
+ // 既に取得済みの iso8601 日時を与えると、その日時以降の内容を取得します。
+ retrieved_timestamp: Option<String>,
+ // 取得する最大件数を指定します。
+ count: Option<usize>,
+}</textarea>
+   <textarea style="width:44%">// for REST /output POST Response & WebSocket Message
+
+#[derive(Serialize, Debug)]
+struct OutputResponsePayload {
+ /// チャンネル名 -> チャンネルデータ
+ channel_data: HashMap<String, Vec<ChannelDatum>>,
+}
+
+#[derive(Serialize, Debug)]
+struct ChannelDatum {
+ /// Datum ID
+ id: Option<u64>,
+ /// ISO8601 日時
+ datetime: Option<String>,
+ /// チャンネル名
+ channel: Option<String>,
+ /// 内容
+ content: Option<String>,
+ /// フラグ
+ #[serde(default)]
+ flags: HashSet<String>,
+}</textarea>
+
+  </div>
+ </div>
+
 </section>
 
 
@@ -990,12 +1131,82 @@ alkana = true
 
 
 
-<section id="input-screen" class="not-written-yet">
+<section id="input-screen">
  <h1>
   <a><span data-scroll-to="#output-screen">🔼</span></a>
   <a><span data-scroll-to="#system-and-keywords">🔽</span></a>
   使い方 13. 「入力画面」をお好みに // 複数の入力画面をお好みでカスタムできます
  </h1>
+
+ <div class="info">
+  VACの「入力画面」"群"は音声認識や簡易版の画像認識、あるいはキーボードによるチャンネルへの入力を行うユーザーインターフェースとなる画面です。
+  <ul>
+   <li>VACの「出力画面」は複数作成できます。</li>
+   <li>VACの「入力画面」は一般的な HTML + CSS + JS や WASM でユーザーが独自に作り込めます。</li>
+   <li>出力画面のようにブラウザーソース向けにパーツや構成を複数作ることはないかもしれませんが、自分なりの使い方のモードや特定の端末やディスプレイに特化した入力画面を作るのもよいかもしれません。👀</li>
+  </ul>
+ </div>
+
+ <p class="note">VAC本体へのチャンネル入力情報はRESTまたはWebSocketで送信できます。</p>
+
+ <div>
+  <h2>配布状態の入力画面の構成</h2>
+
+  <table>
+   <tr>
+    <th>.html ソースの場所</th>
+    <th>動作中のURL</th>
+    <th>概要</th>
+   </tr>
+
+   <tr class="top">
+    <td class="nobr">input/index.html</td>
+    <td class="nobr"><a class="url">http://127.0.0.1:57000/input</a></td>
+    <td>
+     <p>標準の入力画面、上部に音声認識入力、下部に簡易版の画像認識による入力インターフェースを備えています。</p>
+    </td>
+   </tr>
+
+   <tr class="top">
+    <td class="nobr">input/*.html</td>
+    <td class="nobr">http://127.0.0.1:57000/input/*</td>
+    <td>
+     <p>input/ に .html ファイルがあれば VAC は出力画面として読み込めるように扱います。</p>
+     <p>例えば、 my-in1.html というファイルを作成して input/ へ配置すれば、 http://127.0.0.1:57000/my-in1 という入力画面として動作します。</p>
+     <p>少し下で紹介する「配布状態のVAC入力画面向けAPIの簡単な使い方」なども参考に、自分だけの出力画面を作り込んで下さい。</p>
+    </td>
+   </tr>
+
+   <tr class="top">
+    <td class="nobr">resources/**/*</td>
+    <td class="nobr">http://127.0.0.1:57000/resources/**/*</td>
+    <td>
+     <p>ソースのinput/ は .html ファイルのみを扱います。他に入力画面から参照させたいファイルがある場合は resources/ へ配置します。</p>
+     <p>resource/ は出力画面、入力画面いずれからも共通でアクセスできるファイル置き場です。</p>
+     <p>主に CSS, js, wasm, 画像, 音声, 動画などのファイルを配置して使います。</p>
+    </td>
+   </tr>
+
+  </table>
+ </div>
+
+ <div class="flow">
+  <h2>VAC本体へチャンネル入力情報を送信する方法</h2>
+  <p>WebSocket: ws://127.0.0.1:57000/ へ接続し、 InputPayload 構造体をJSON形式の文字列値として送信します。</p>
+  <p>REST: http://127.0.0.1:57000/input に POST で body に InputPayload 構造体を JSON 形式で入れて投げます。</p>
+  <textarea>// for REST /input POST Request & WebSocket Message
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct InputPayload {
+ /// チャンネル名
+ channel: String,
+ /// 内容
+ content: String,
+ /// 入力途中なら false, 確定済みで内容が変化しないなら true
+ is_final: bool,
+}</textarea>
+ </div>
+
 </section>
 
 
