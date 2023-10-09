@@ -23,6 +23,7 @@ impl Processor for GasTranslation {
   log::debug!("GasTranslation::process() が呼び出されました。");
 
   let conf = self.conf.read().await.clone();
+  let process_incomplete_input = conf.process_incomplete_input.unwrap_or_default();
   let state = self.state.clone();
   let channel_data = self.channel_data.clone();
   let url_base = self.url_base.clone();
@@ -31,20 +32,23 @@ impl Processor for GasTranslation {
 
   tokio::spawn(async move {
    // 翻訳元を取得
-   let source = {
+   let (source, has_final) = {
     let channel_data = channel_data.read().await;
     match channel_data.iter().rev().find(|cd| cd.get_id() == id) {
-     Some(source) if source.has_flag(ChannelDatum::FLAG_IS_FINAL) => {
-      // 空文字列なら処理をスキップ
+     Some(source) => {
+      let has_final = source.has_flag(ChannelDatum::FLAG_IS_FINAL);
+
+      if !has_final && !process_incomplete_input {
+       log::trace!("未確定の入力なので、処理をスキップします。");
+       return Ok(());
+      }
+
       if source.content.is_empty() {
        log::trace!("空文字列なので、処理をスキップします。");
        return Ok(());
       }
-      source.content.clone()
-     },
-     Some(_) => {
-      log::trace!("未確定の入力なので、処理をスキップします。");
-      return Ok(());
+
+      (source.content.clone(), source.has_flag(ChannelDatum::FLAG_IS_FINAL))
      },
      None => bail!("指定された id の ChannelDatum が見つかりませんでした: {}", id),
     }
@@ -79,16 +83,17 @@ impl Processor for GasTranslation {
    log::debug!("output_content = {}", output_content);
 
    // 翻訳結果を書き込み
-   let output_channel_datum = ChannelDatum::new(channel_to, output_content)
-    .with_flag(ChannelDatum::FLAG_IS_FINAL)
-    .with_flag(&format!(
-     "{}({}:{},{}/{})",
-     Self::FEATURE,
-     "gas-translation",
-     id,
-     translate_from,
-     translate_to
-    ));
+   let mut output_channel_datum = ChannelDatum::new(channel_to, output_content).with_flag(&format!(
+    "{}({}:{},{}/{})",
+    Self::FEATURE,
+    "gas-translation",
+    id,
+    translate_from,
+    translate_to
+   ));
+   if has_final {
+    output_channel_datum = output_channel_datum.with_flag(ChannelDatum::FLAG_IS_FINAL);
+   }
    log::debug!("output_channel_datum = {:?}", output_channel_datum);
 
    {
