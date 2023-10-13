@@ -177,10 +177,12 @@ impl Processor for Modify {
     if line.is_empty() {
      continue;
     }
-    let mut line = line.split_whitespace();
-    let to_replacer = line.next().unwrap().to_string();
+    // lineを最後の空白文字で分割
+    let mut line = line.rsplitn(2, ' ');
     let from_matcher = line.next().unwrap().to_string();
     let from_matcher = regex::Regex::new(&from_matcher)?;
+    let to_replacer = line.next().unwrap().to_string();
+    log::warn!("{} -> {}", from_matcher, to_replacer);
     p.regexes.push((to_replacer, from_matcher));
    }
   }
