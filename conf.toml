@@ -29,12 +29,11 @@ workers = 8
 # デフォルト: "resources"
 # web_ui_resources_path = "resources"
 
-# ここで指定したコマンドたちは VAC の起動時に自動的に実行されます。
-# 配信用に同時に使いたいアプリや、開いておきたい URL を設定しておくと便利です。
-# ※ Windows で使う場合は
-#  例: "start http://127.0.0.1:57000/input"
-# のように設定すると URL を開くのも簡単です。
-# run_with = ["start http://127.0.0.1:57000/input"]
+# run_with を設定すると VAC の起動時に他のプログラムを起動したり、URLを開いたりできます。
+# 使い方: conf.example--run_with.conf お試し設定ファイルを参考に設定してみて下さい。
+# 既に起動中なら起動しない、管理者権限で実行(UACあり)などの設定もできます。
+# 配信用の関連アプリをまとめて起動する設定などに使えます。
+# run_with = []
 
 # VAC はオープンソースソフトウェアです。基本的には開発にご協力頂ける方向けのデバッグ出力用のオプションです。
 # 通常は設定する必要はありませんが、黒い画面で文字がたくさん流れるのを眺めたい方は TRACE や DEBUG を設定してみてください。
@@ -142,10 +141,7 @@ channel_to = "ai-synth"
 # ほかにも「です」「ます」→「ですにゃ」「ますにゃ」のような使い方もわりと実用性が高いかもしれません。
 # 設定は配列なので複数のファイルを指定できます。もちろん1つから使えます。
 # 先に指定してあるほど優先度が高くなります。
-dictionary_files = [
- "dictionary.arknights.txt",
- "dictionary.pre-coeiroink.txt",
-]
+dictionary_files = ["dictionary.arknights.txt", "dictionary.pre-coeiroink.txt"]
 
 # true にすると英語の単語をカタカナに変換します。
 alkana = true

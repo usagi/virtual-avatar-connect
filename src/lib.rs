@@ -46,6 +46,8 @@ pub async fn run() -> Result<()> {
  let args = Args::init(audio_sink.clone()).await?;
  // 設定を読み込みし、ログレベルを更新
  let conf = Conf::new(&args)?;
+ // run_with の実行
+ conf.execute_run_with()?;
  // 共有ステートを作成
  let state = State::new(&conf, audio_sink).await?;
 

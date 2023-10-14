@@ -1,0 +1,27 @@
+# run_with のお試し用設定ファイルです。
+# お試し方法: virtual-avatar-connect.exe にこのファイルをドラッグ＆ドロップまたは、コマンドライン引数で指定して起動してください。
+# ※commandは実際にお試しになる環境で実行可能なコマンドに書き換えるなどしてからお試し下さい。
+# 関連Issue: https://github.com/usagi/virtual-avatar-connect/issues/37
+
+run_with = [
+ # どうあれメモ帳を起動します。
+ "notepad",
+
+ # どうあれURLを開きます。
+ "http://127.0.0.1:57000/input",
+
+ # まだ動作していない場合のみ、CoeiroInk を起動します。
+ { command = '''C:\Users\the\app\COEIROINK_WIN_GPU_v.2.1.1\COEIROINKv2.exe''', if_not_running = "COEIROINKv2" },
+
+ # まだ動作していない場合のみ、VirtualMotionCapture を起動します。
+ { command = '''C:\Users\the\app\vmc\VirtualMotionCapture.exe''', if_not_running = "VirtualMotionCapture" },
+
+ # まだ動作していない場合のみ、WebcamMotionCapture を起動します。
+ { command = '''C:\Users\the\app\WebcamMotionCapture_Win\bin\webcam_motion_capture\webcam_motion_capture.exe''', if_not_running = "webcam_motion_capture" },
+
+ # まだ動作していない場合のみ、VMagicMirror を起動します。
+ { command = '''"C:\Program Files (x86)\VMagicMirror\VMagicMirror.exe"''', if_not_running = "VMagicMirror" },
+
+ # まだ動作していない場合のみ、OBS Studio を管理者権限での実行をユーザーに求め、かつ作業ディレクトリーを指定して起動します。
+ { command = '''C:\Program Files\obs-studio\bin\64bit\obs64.exe''', if_not_running = "obs64.exe", run_as_admin = true, working_dir = '''C:\Program Files\obs-studio\bin\64bit''' },
+]

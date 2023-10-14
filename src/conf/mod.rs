@@ -12,6 +12,18 @@ pub type SharedConf = Arc<RwLock<Conf>>;
 pub const DEFAULT_WEB_UI_ADDRESS: &str = "127.0.0.1:57000";
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(untagged)]
+pub enum RunWith {
+ Command(String),
+ CommandIfProcessIsNotRunning {
+  command: String,
+  if_not_running: Option<String>,
+  run_as_admin: Option<bool>,
+  working_dir: Option<String>,
+ },
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Conf {
  pub workers: Option<usize>,
 
@@ -26,7 +38,7 @@ pub struct Conf {
  pub state_data_pretty: Option<bool>,
 
  #[serde(default)]
- pub run_with: Vec<String>,
+ pub run_with: Vec<RunWith>,
 
  pub log_level: Option<String>,
 
@@ -74,6 +86,75 @@ impl Conf {
   Ok(conf)
  }
 
+ pub fn execute_run_with(&self) -> Result<()> {
+  use sysinfo::{ProcessExt, ProcessRefreshKind, SystemExt};
+  let mut system = sysinfo::System::new();
+  system.refresh_processes_specifics(ProcessRefreshKind::everything().without_cpu());
+
+  for run_with in self.run_with.iter() {
+   let (command, if_not_running, run_as_admin, working_dir) = match run_with {
+    RunWith::Command(command) => (command, None, false, None),
+    RunWith::CommandIfProcessIsNotRunning {
+     command,
+     if_not_running,
+     run_as_admin,
+     working_dir,
+    } => (
+     command,
+     if_not_running.as_ref(),
+     run_as_admin.unwrap_or_default(),
+     working_dir.as_ref(),
+    ),
+   };
+
+   // if_not_running が指定されている場合は、プロセスが実行中か確認して実行中ならスキップ
+   if let Some(if_not_running) = if_not_running {
+    if system
+     .processes()
+     .iter()
+     .any(|(_, process)| process.name().contains(if_not_running))
+    {
+     log::info!(
+      "run_with: 既に {} を含むプロセスが実行中のため {} の実行はスキップされます。",
+      if_not_running,
+      command
+     );
+     continue;
+    }
+   }
+
+   // command (引数がある場合も考慮)を実行、またはURLを開く
+   if command.starts_with("http://") || command.starts_with("https://") {
+    use webbrowser::{Browser, BrowserOptions};
+    log::info!("run_with: {:?} を URL としてブラウザーで開きます。", command);
+    if let Err(e) = webbrowser::open_browser_with_options(Browser::Default, command, BrowserOptions::new().with_target_hint("vac")) {
+     log::error!("run_with: URL を開く際にエラーが発生しました: {:?}", e);
+    }
+   } else {
+    let original_dir = match change_working_dir(working_dir) {
+     Ok(original_dir) => original_dir.map(|p| p.to_string_lossy().to_string()),
+     Err(e) => {
+      log::error!("run_with: 作業ディレクトリーの変更に失敗しました: {:?}", e);
+      continue;
+     },
+    };
+    if run_as_admin {
+     log::warn!("run_with: {:?} を管理者権限で実行を試みます。", command);
+     if let Err(e) = runas::Command::new(command).status() {
+      log::error!("run_with: 管理者権限でコマンドを実行する際にエラーが発生しました: {:?}", e);
+     }
+    } else {
+     log::info!("run_with: {:?} をコマンドとして実行します。", command);
+     if let Err(e) = duct::cmd!(command).start() {
+      log::error!("run_with: コマンドを実行する際にエラーが発生しました: {:?}", e);
+     }
+    }
+    change_working_dir(original_dir.as_ref())?;
+   }
+  }
+  Ok(())
+ }
+
  pub fn to_shared(self) -> SharedConf {
   Arc::new(RwLock::new(self))
  }
@@ -92,4 +173,15 @@ impl Conf {
 
 fn default_web_ui_resources_path() -> Option<String> {
  Some("resources".to_string())
+}
+
+/// 現在の作業ディレクトリを変更して、変更前の作業ディレクトリを返します。
+fn change_working_dir(working_dir: Option<&String>) -> Result<Option<std::path::PathBuf>> {
+ if let Some(working_dir) = working_dir {
+  let original_dir = std::env::current_dir()?;
+  std::env::set_current_dir(working_dir)?;
+  Ok(Some(original_dir))
+ } else {
+  Ok(None)
+ }
 }

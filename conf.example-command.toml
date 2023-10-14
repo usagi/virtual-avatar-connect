@@ -1,3 +1,9 @@
+# 《Command》 のお試し用設定ファイルです。
+# お試し方法: virtual-avatar-connect.exe にこのファイルをドラッグ＆ドロップまたは、コマンドライン引数で指定して起動してください。
+# ※必要に応じて環境にあわせた設定値に変更してお試し下さい。
+# 関連Issue: https://github.com/usagi/virtual-avatar-connect/issues/14
+
+
 # 音声から「かっこよくそれっぽいコマンド」を演出します。（必須ではありませんが心躍る方は参考にして下さい。）
 [[processors]]
 feature = "modify"
