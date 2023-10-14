@@ -53,6 +53,10 @@ whatlang = "0.16.3"
 isolang = { version = "2.3.0", features = ["list_languages"] }
 os_info = "3.7.0"
 async-recursion = "1.0.5"
+sysinfo = "0.29.10"
+webbrowser = "0.8.12"
+duct = "0.13.6"
+runas = "1.1.0"
 
 # Windows Only
 [target.'cfg(windows)'.dependencies]
