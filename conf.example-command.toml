@@ -1,0 +1,83 @@
+# 音声から「かっこよくそれっぽいコマンド」を演出します。（必須ではありませんが心躍る方は参考にして下さい。）
+[[processors]]
+feature = "modify"
+channel_from = "user"
+channel_to = "system"
+regex_files = ["regex.pre-command.txt"]
+
+# コマンドプロセッサーの使用例です。
+[[processors]]
+feature = "command"
+channel_from = "system"
+# コマンド実行に対する応答を表示したり音声合成させたい場合は送信先チャンネルを設定します。
+channel_to = "ai"
+# 応答メッセージをカスタマイズしたい場合は設定します。設定しない場合はデフォルトの応答メッセージが使用されます。
+response_mod = [
+ [
+  "disable",
+  "システムコマンドにより{A}モジュールは無効化された。",
+ ],
+ [
+  "enable",
+  "システムコマンドにより{A}モジュールは有効化された。",
+ ],
+ [
+  "reload",
+  "システムコマンドにより{A}モジュールは再読み込みされた。",
+ ],
+ [
+  "set",
+  "了解した。セット{A}の実行を試みる。",
+ ],
+ [
+  "set:error",
+  "セット{A}の実行中にエラーが発生している。エラーログを確認するといい。",
+ ],
+ [
+  "_",
+  "コマンドまたは何かが違うようだ。",
+ ],
+]
+
+ # セットコマンド( /set <セット名> )を使用したい場合に設定します。
+ [[processors.set]]
+ # /set <name> で呼び出す <name> の部分を設定します。お好みのセット名を設定できます。
+ name = "init"
+ # この init セットが実行される際、直前に追加で実行したいセット群があれば設定します。
+ pre = []
+ # この init セットが実行される際、直後に追加で実行したいセット群があれば設定します。
+ post = ["clear", "preparing"]
+
+  # /set init コマンドで送出したいチャンネルとコンテントを設定します。こちらは1つめです。
+  [[processors.set.channel_contents]]
+  channel = "title"
+  content = "Dr.USAGIとKal'tsit Pseudo先生ののんびりゲームお楽しみ配信"
+  # 1つのコマンドで複数のチャンネルとコンテントへ送出できます。こちらは2つめです。
+  [[processors.set.channel_contents]]
+  channel = "description"
+  content = "配信支援アプリ Virtual Avatar Connect 一般公開中です👀 https://usagi.github.io/virtual-avatar-connect/"
+
+ # /set clear コマンド
+ [[processors.set]]
+ name = "clear"
+  [[processors.set.channel_contents]]
+  channel = "user"
+  content = ""
+  [[processors.set.channel_contents]]
+  channel = "ai"
+  content = ""
+
+ # /set preparing コマンド
+ [[processors.set]]
+ name = "preparing"
+  [[processors.set.channel_contents]]
+  channel = "brb"
+  content = "只今、配信準備中です。 now preparing for streaming."
+  [[processors.set.channel_contents]]
+  channel = "scene"
+  content = "overlay brb"
+
+# OS-TTS で ai チャンネルに出力されたコンテントを音声合成して読み上げます。
+[[processors]]
+feature = "OS-TTS"
+channel_from = "ai"

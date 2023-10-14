@@ -4,6 +4,23 @@ use serde::{Deserialize, Serialize};
 pub type SharedProcessorConf = Arc<RwLock<ProcessorConf>>;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
+pub struct ContentWithChannel {
+ pub channel: String,
+ pub content: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+pub struct CommandSet {
+ pub name: String,
+ #[serde(default)]
+ pub pre: Vec<String>,
+ #[serde(default)]
+ pub post: Vec<String>,
+ #[serde(default)]
+ pub channel_contents: Vec<ContentWithChannel>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct ProcessorConf {
  // Common
  #[serde(default = "bool_true")]
@@ -22,6 +39,8 @@ pub struct ProcessorConf {
  pub through_if_not_command: Option<bool>,
  #[serde(default)]
  pub response_mod: Vec<Vec<String>>,
+ #[serde(default)]
+ pub set: Vec<CommandSet>,
 
  // screenshot
  pub title: Option<String>,

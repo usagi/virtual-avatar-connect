@@ -1,4 +1,5 @@
 use super::{CompletedAnd, Processor};
+use crate::conf::CommandSet;
 use crate::{ChannelDatum, ProcessorConf, ProcessorKind, SharedChannelData, SharedProcessorConf, SharedState};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
@@ -82,8 +83,23 @@ impl Processor for Command {
     )
     .await;
    },
+   "set" if args.len() >= 1 => {
+    log::info!("set がコマンドされセット名 {:?} の実行が試行されます。", args[0]);
+    response1(conf.clone(), self.state.clone(), "set", "セット {A} の実行を試みます。", args[0].clone()).await;
+    if let Err(e) = activate_command_set(args[0], &conf.set, self.state.clone()).await {
+      log::error!("セットの実行中にエラーが発生しました: {:?}", e);
+      response1(
+       conf,
+       self.state.clone(),
+       "set:error",
+       "セット {A} の実行中にエラーが発生しました。",
+       args[0].clone(),
+      )
+      .await;
+    }
+   },
    _ => {
-    log::info!("コマンドまたは何かが違うようです。");
+    log::warn!("コマンドまたは何かが違うようです: command = {:?} args = {:?}", command, args);
     response0(conf, self.state.clone(), "_", "コマンドまたは何かが違うようです。").await;
    },
   }
@@ -172,4 +188,34 @@ async fn response1(conf: ProcessorConf, state: SharedState, command: &str, defau
 
  let state = state.read().await;
  state.push_channel_datum(cd).await;
+}
+
+#[async_recursion::async_recursion]
+async fn activate_command_set(set_name: &str, command_sets: &Vec<CommandSet>, state: SharedState) -> Result<()> {
+ // find
+ let command = command_sets
+  .iter()
+  .find(|&c| c.name == set_name)
+  .ok_or_else(|| anyhow::anyhow!("セット名 {:?} が見つかりませんでした。", set_name))?;
+
+ for pre in &command.pre {
+  if let Err(e) = activate_command_set(&pre, command_sets, state.clone()).await {
+   log::error!("pre 処理でエラーが発生しました: {:?}", e);
+  }
+ }
+
+ for cc in &command.channel_contents {
+  // log::warn!("channel = {:?} に content = {:?} を送信します。", cc.channel, cc.content)
+  let cd = ChannelDatum::new(cc.channel.clone(), cc.content.clone()).with_flag(ChannelDatum::FLAG_IS_FINAL);
+  let state = state.read().await;
+  state.push_channel_datum(cd).await;
+ }
+
+ for post in &command.post {
+  if let Err(e) = activate_command_set(&post, command_sets, state.clone()).await {
+   log::error!("post 処理でエラーが発生しました: {:?}", e);
+  }
+ }
+
+ Ok(())
 }
