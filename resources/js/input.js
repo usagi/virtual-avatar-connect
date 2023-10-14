@@ -74,13 +74,20 @@ export default class VacInput
   catch (e) { this.update_status_element(e, true) }
  }
 
+ // 100行分だけ保持するログ格納配列
+ logs = []
  update_status_element(v, is_error)
  {
   // v.content が 512 byte を超えるときは、省略する
   if (v.content.length > 512)
    v.content = v.content.slice(0, 512) + '...'
 
-  this.status_element.value += JSON.stringify(v) + '\n'
+  this.logs.push(JSON.stringify(v))
+  if (this.logs.length > 100)
+   this.logs.shift()
+
+  this.status_element.value = this.logs.join('\n')
+
   // scroll to bottom
   this.status_element.scrollTop = this.status_element.scrollHeight
 
