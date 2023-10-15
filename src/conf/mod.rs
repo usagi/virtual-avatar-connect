@@ -1,6 +1,6 @@
 mod processor_conf;
 
-pub use anyhow::Result;
+pub use anyhow::{bail, Result};
 pub use processor_conf::*;
 
 use crate::{Arc, Args, RwLock};
@@ -83,6 +83,21 @@ impl Conf {
     },
    }
   }
+
+  // processors に同一の id が指定されていないかチェック
+  let mut already_used_ids = std::collections::HashSet::new();
+  for processor in conf.processors.iter() {
+   if let Some(pid) = processor.id.as_ref() {
+    if !already_used_ids.insert(pid.clone()) {
+     log::error!(
+      "プロセッサーID {:?} が複数回指定されています。プロセッサーIDを定義する場合は同じIDが複数回指定されないように設定して下さい。",
+      pid
+     );
+     bail!("プロセッサーID {:?} が複数回指定されています。", pid);
+    }
+   }
+  }
+
   Ok(conf)
  }
 

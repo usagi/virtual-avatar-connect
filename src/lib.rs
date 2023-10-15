@@ -43,11 +43,17 @@ pub async fn run() -> Result<()> {
  let audio_sink = Arc::new(Mutex::new(AudioSink(audio_sink)));
 
  // コマンドライン引数をパースし、ログレベルを更新
- let args = Args::init(audio_sink.clone()).await?;
+ let args = Args::new();
+ // conf を必要としない特殊な動作モードを実行
+ args.execute_special_modes_without_conf(audio_sink.clone()).await?;
  // 設定を読み込みし、ログレベルを更新
  let conf = Conf::new(&args)?;
- // run_with の実行
+ // conf を必要とする特殊な動作モードを実行
+ args.execute_special_modes_with_conf(&conf).await?;
+
+ // run_with 機能の実行
  conf.execute_run_with()?;
+
  // 共有ステートを作成
  let state = State::new(&conf, audio_sink).await?;
 

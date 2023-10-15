@@ -26,7 +26,7 @@ rand = "0.8.5"
 actix-web = "4.4.0"
 actix = "0.13.1"
 thiserror = "1.0.48"
-reqwest = "0.11.20"
+reqwest = { version = "0.11.20", features = ["multipart"] }
 rodio = "0.17.1"
 num_cpus = "1.16.0"
 chrono = { version = "0.4.31", features = ["serde"] }
@@ -57,6 +57,8 @@ sysinfo = "0.29.10"
 webbrowser = "0.8.12"
 duct = "0.13.6"
 runas = "1.1.0"
+csv-async = { version = "1.2.6", features = ["tokio"] }
+futures = "0.3.28"
 
 # Windows Only
 [target.'cfg(windows)'.dependencies]

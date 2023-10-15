@@ -9,3 +9,8 @@ feature = "openai-chat"
 # 参考: https://platform.openai.com/docs/models/gpt-3-5
 # 参考: https://platform.openai.com/docs/models/gpt-4
 model = "gpt-3.5-turbo"
+
+# v0.4.0 からファインチューニング支援機能が搭載されました。
+# 以下のような fine_tuning 設定を有効化、ファインチューニング支援機能が有効になります。
+# 参考: https://github.com/usagi/virtual-avatar-connect/issues/41
+# fine_tuning = { train_path = "my-char.csv", suffix = "my-char" }
