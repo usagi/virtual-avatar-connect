@@ -20,9 +20,59 @@ pub struct CommandSet {
  pub channel_contents: Vec<ContentWithChannel>,
 }
 
+/// ファインチューニング関連の設定オプションです。
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(untagged)]
+pub enum OpenAiChatFinetuning {
+ /// Detail で path だけ設定した場合と同じ扱いになります。
+ Path(String),
+
+ /// すべてのオプションを設定可能な構造体タイプの設定です。
+ Detail {
+  /// message を入出力するファイルパスを指定します。(.jsonl, .csv)
+  train_path: String,
+  /// ファインチューニングに対して検証を行う場合は検証ファイルのパスを指定します。(.jsonl, .csv)
+  validation_path: Option<String>,
+  /// ベースモデルを指定します。未指定の場合は "gpt-3.5-turbo" が使用されます。
+  model: Option<String>,
+  /// ファインチューニングの結果生成されるモデル名を指定します。
+  /// 未指定の場合はファイルパスの stem が使用されます。
+  suffix: Option<String>,
+ },
+}
+
+impl OpenAiChatFinetuning {
+ /// (train_path, validation_path, model, suffix)
+ pub fn to_tuple_for_input(&self) -> (String, Option<String>, Option<String>, Option<String>) {
+  match self {
+   OpenAiChatFinetuning::Path(train_path) => (train_path.clone(), None, None, None),
+   OpenAiChatFinetuning::Detail {
+    train_path,
+    validation_path,
+    model,
+    suffix,
+    ..
+   } => (train_path.clone(), validation_path.clone(), model.clone(), suffix.clone()),
+  }
+ }
+
+ /// (train_path, max_lines)
+ pub fn train_path(&self) -> String {
+  match self {
+   OpenAiChatFinetuning::Path(train_path) => train_path.clone(),
+   OpenAiChatFinetuning::Detail { train_path, .. } => train_path.clone(),
+  }
+ }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct ProcessorConf {
  // Common
+ /// プロセッサーの定義ごとに個別に名付けを行えます。
+ /// IDを設定しなくてもたいていの機能は動作します。一部の高度な機能を使用する場合には必須となる場合があります。
+ /// IDを設定すると同じ feature のプロセッサーを複数使用する場合にログで見分けやすくなったり、
+ pub id: Option<String>,
+
  #[serde(default = "bool_true")]
  pub is_enabled: bool,
  #[serde(default)]
@@ -88,6 +138,8 @@ pub struct ProcessorConf {
  pub force_activate_regex_pattern: Option<String>,
  pub ignore_regex_pattern: Option<String>,
  pub min_interval_in_secs: Option<u64>,
+ pub remove_chars: Option<String>,
+ pub fine_tuning: Option<OpenAiChatFinetuning>,
 
  // gas-translation
  pub script_id: Option<String>,
