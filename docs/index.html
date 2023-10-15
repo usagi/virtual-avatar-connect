@@ -17,7 +17,8 @@
 </div>
 
 <p class="note">いましばらく、公式ウェブサイトの見栄えが塩辛めの状態となりますが、近日中に映えデザインにアップデートいたします。なかのひとのリソース（＆なかのひともゲーム遊びたい都合🤣）ご理解頂ければ幸いです。</p>
-<p class="note">「VRM制御」にも対応予定ですが現在は未実装で、 <a href="https://github.com/usagi/virtual-avatar-connect/issues/5" target="dev">Issue-#5</a> が関連タスクとなっています。こちらの機能にご期待頂いている皆様＆わたし自身はもう少々お待ち頂ければ幸いです。🙇🏼‍♀️</p>
+<p class="note">「VRM制御」にも対応予定ですが現在は未実装で、 <a href="https://github.com/usagi/virtual-avatar-connect/issues/5"
+  target="dev">Issue-#5</a> が関連タスクとなっています。こちらの機能にご期待頂いている皆様＆わたし自身はもう少々お待ち頂ければ幸いです。🙇🏼‍♀️</p>
 
 <h3>🤔このアプリは何？</h3>
 
@@ -26,6 +27,9 @@
   などの配信アプリでの字幕や画作りを支援するためのアプリです。</li>
  <li>もしかしなくてもデスクトップに常駐するイマジナリーふれんず/わいふ/はずばんど/etc.召喚アプリとしても使えるかもしれません。少なくとも開発者さんには想定外の用法でしたが楽しまれて下さい。</li>
  <li>「AI疑似人格による共演者の召喚」を行えます。会話したり解説してもらったり。（※<a href="https://platform.openai.com/" target="openai">OpenAI API</a>連携）
+  <ul>
+   <li>v0.4.0 から GPT-4 と GPT-3.5-Turbo を併用した<a href="https://github.com/usagi/virtual-avatar-connect/issues/41" target="issues">ファインチューニング支援システム</a>も搭載されました(≧∇≦)b</li>
+  </ul>
  </li>
  <li>「音声認識からの文字起こしによるテキスト入力」を行えます。</li>
  <li>「画像認識からの文字起こしによるテキスト入力」を行えます。</li>
@@ -1267,7 +1271,8 @@ struct InputPayload {
     <li>《OpenAI-Chat》を使い、channel_from にユーザーの音声入力を割り当てるなどして、AIを擬似的な人格を持った共演者として配信などに出演して貰うことを表現しています。</li>
     <li>特に、GPT4モデルやCoeiroInkを併用することで、わりと楽しくリアリティーもそこそこな共演者さんに登場して貰えます。但しGPT4はAPI使用料金が高めなのでそこは本当に気をつけて下さい。</li>
    </ul>
-   <p class="info">実際に<a href="https://www.twitch.tv/usaginetwork" target="_blank">開発のなかのひとの Twitch 配信で「Dr.USAGIとケルシー先生のゲームお楽しみ配信」のような形でAI疑似人格共演者を召喚して一緒にゲームプレイ配信</a>をしています。気が向いたらご視聴下さい。👀</p>
+   <p class="info">実際に<a href="https://www.twitch.tv/usaginetwork" target="_blank">開発のなかのひとの Twitch
+     配信で「Dr.USAGIとケルシー先生のゲームお楽しみ配信」のような形でAI疑似人格共演者を召喚して一緒にゲームプレイ配信</a>をしています。気が向いたらご視聴下さい。👀</p>
   </section>
 
  </section>
