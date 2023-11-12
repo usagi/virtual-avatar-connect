@@ -1,0 +1,16 @@
+# Twitch のチャットをVACのチャンネルへ流す設定例です。
+# 参考: https://github.com/usagi/virtual-avatar-connect/issues/40#issuecomment-1807097081
+twitch = { username = "usaginetwork", channel_to = "chat" }
+
+# chat チャンネルに流れてきた内容を modify で前処理して chat-synth へ流す設定例です。
+[[processors]]
+feature = "modify"
+channel_from = "chat"
+channel_to = "chat-synth"
+dictionary_files = ["dictionary.chat.txt"]
+alkana = true
+
+# chat-synth チャンネルに流れてきた内容を coeiroink で読み上げる設定例です。
+[[processors]]
+feature = "coeiroink"
+channel_from = "chat-synth"
