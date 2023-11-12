@@ -24,6 +24,12 @@ pub enum RunWith {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Twitch {
+ pub username: String,
+ pub channel_to: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Conf {
  pub workers: Option<usize>,
 
@@ -36,6 +42,8 @@ pub struct Conf {
  pub state_data_path: Option<PathBuf>,
  pub state_data_capacity: Option<usize>,
  pub state_data_pretty: Option<bool>,
+
+ pub twitch: Option<Twitch>,
 
  #[serde(default)]
  pub run_with: Vec<RunWith>,

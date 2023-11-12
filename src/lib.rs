@@ -57,8 +57,45 @@ pub async fn run() -> Result<()> {
  // 共有ステートを作成
  let state = State::new(&conf, audio_sink).await?;
 
+ // TODO: コード整理
+ use twitch_irc::login::StaticLoginCredentials;
+ use twitch_irc::TwitchIRCClient;
+ use twitch_irc::{ClientConfig, SecureTCPTransport};
+
+ let config = ClientConfig::default();
+ let (mut incoming_messages, client) = TwitchIRCClient::<SecureTCPTransport, StaticLoginCredentials>::new(config);
+
+ let state_for_message_handler = state.clone();
+ let twitch = conf.twitch.clone();
+ let join_handle = tokio::spawn(async move {
+  if twitch.is_none() {
+   return;
+  }
+  let ch = twitch.unwrap().channel_to;
+  while let Some(message) = incoming_messages.recv().await {
+   match message {
+    twitch_irc::message::ServerMessage::Privmsg(msg) => {
+     log::debug!("Received message: {:?}", msg);
+     let m = format!("{}:{}", msg.sender.name, msg.message_text);
+     state_for_message_handler
+      .read()
+      .await
+      .push_channel_datum(ChannelDatum::new(ch.clone(), m).with_flag(ChannelDatum::FLAG_IS_FINAL))
+      .await;
+    },
+    _ => (),
+   }
+  }
+ });
+
+ if let Some(twitch) = conf.twitch.clone() {
+  client.join(twitch.username).unwrap();
+ }
+
  // 通常の動作モードで実行
  run_services(conf, state).await?;
+
+ join_handle.await?;
 
  Ok(())
 }

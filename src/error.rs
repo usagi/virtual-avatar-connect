@@ -34,6 +34,9 @@ pub enum Error {
 
  #[error("OS-TTS エラーが発生しました: {0}")]
  OsTtsError(#[from] tts::Error),
+
+ #[error("スレッド終了エラーが発生しました: {0}")]
+ JoinError(#[from] tokio::task::JoinError),
 }
 
 impl ResponseError for Error {
@@ -50,6 +53,7 @@ impl ResponseError for Error {
    Self::SystemTimeError(_) => StatusCode::INTERNAL_SERVER_ERROR,
    Self::RegexError(_) => StatusCode::INTERNAL_SERVER_ERROR,
    Self::OsTtsError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+   Self::JoinError(_) => StatusCode::INTERNAL_SERVER_ERROR,
   }
  }
 
