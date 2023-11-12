@@ -59,6 +59,7 @@ duct = "0.13.6"
 runas = "1.1.0"
 csv-async = { version = "1.2.6", features = ["tokio"] }
 futures = "0.3.28"
+twitch-irc = "5.0.1"
 
 # Windows Only
 [target.'cfg(windows)'.dependencies]
