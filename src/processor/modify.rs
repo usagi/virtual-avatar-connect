@@ -42,6 +42,16 @@ impl Processor for Modify {
 
   let mut content = channel_data[index].content.clone();
 
+  // 正規表現による変換
+  for (replacer, from_regex) in &self.regexes {
+   content = from_regex.replace_all(&content, replacer).to_string();
+  }
+
+  // 辞書による変換
+  for (to, from) in &self.dictionary {
+   content = content.replace(from, to);
+  }
+
   // alkana 変換
   if let Some(true) = conf.alkana {
    // 先に . , : ; などの ASCII 記号文字の前後に空白文字を挿入
@@ -60,16 +70,6 @@ impl Processor for Modify {
 
    // 空白文字を削除
    content = content.replace(" ", "");
-  }
-
-  // 辞書による変換
-  for (to, from) in &self.dictionary {
-   content = content.replace(from, to);
-  }
-
-  // 正規表現による変換
-  for (replacer, from_regex) in &self.regexes {
-   content = from_regex.replace_all(&content, replacer).to_string();
   }
 
   if self.channel_from == self.channel_to {
@@ -168,22 +168,56 @@ impl Processor for Modify {
    } else {
     std::env::current_dir()?.join(file)
    };
-   let file = file.to_str().unwrap();
-   let file = std::fs::File::open(file)?;
-   let file = std::io::BufReader::new(file);
-   for line in file.lines() {
-    let line = line?;
-    let line = line.trim();
-    if line.is_empty() {
-     continue;
+
+   if file
+    .extension()
+    .unwrap_or_default()
+    .to_str()
+    .unwrap_or_default()
+    .to_lowercase()
+    .eq("csv")
+   {
+    // csv として処理 -> regexes
+    let file = file.to_str().unwrap();
+    // csv をロード
+    let mut rdr = csv::Reader::from_path(file)?;
+    for result in rdr.records() {
+     if let Ok(record) = result {
+      let (to_replacer, from_matcher) = match record.len() {
+       0 => continue,
+       // 特殊対応: 1列の場合はその列を from_matcher 、置換先は空文字列として処理する
+       1 => ("".to_string(), record.get(0).unwrap_or("").to_string()),
+       // 2列の場合はそのまま to_replacer と from_matcher として処理する
+       _ => (record.get(0).unwrap_or("").to_string(), record.get(1).unwrap_or("").to_string()),
+      };
+      if let Ok(from_matcher) = regex::Regex::new(&from_matcher) {
+       log::debug!("{} -> {}", from_matcher, to_replacer);
+       p.regexes.push((to_replacer, from_matcher));
+      } else {
+       log::warn!("正規表現の読み込みに失敗しました: {}", from_matcher);
+      }
+     }
     }
-    // lineを最後の空白文字で分割
-    let mut line = line.rsplitn(2, ' ');
-    let from_matcher = line.next().unwrap().to_string();
-    let from_matcher = regex::Regex::new(&from_matcher)?;
-    let to_replacer = line.next().unwrap().to_string();
-    log::warn!("{} -> {}", from_matcher, to_replacer);
-    p.regexes.push((to_replacer, from_matcher));
+   } else {
+    // txt として処理 -> word_regexes
+    let file = file.to_str().unwrap();
+    let file = std::fs::File::open(file)?;
+    let file = std::io::BufReader::new(file);
+    for line in file.lines() {
+     let line = line?;
+     let line = line.trim();
+     if line.is_empty() {
+      continue;
+     }
+     // lineを最後の空白文字で分割
+     let mut line = line.rsplitn(2, ' ');
+     log::debug!("{:?}", line);
+     let from_matcher = line.next().unwrap().to_string();
+     let from_matcher = regex::Regex::new(&from_matcher)?;
+     let to_replacer = line.next().unwrap_or(" ").to_string();
+     log::debug!("{} -> {}", from_matcher, to_replacer);
+     p.regexes.push((to_replacer, from_matcher));
+    }
    }
   }
 
