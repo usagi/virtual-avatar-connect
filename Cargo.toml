@@ -1,6 +1,6 @@
 [package]
 name = "virtual-avatar-connect"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 build = "build.rs"
 
@@ -14,7 +14,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.75"
-async-openai = "0.14.1"
+async-openai = "0.14.3"
 clap = { version = "4.4.2", features = ["derive"] }
 log = "0.4.20"
 serde = { version = "1.0.188", features = ["derive"] }
@@ -45,7 +45,7 @@ screenshots = "0.8.3"
 image = "0.24.7"
 base64 = "0.21.4"
 unic-langid = "0.9.1"
-async-tempfile = "0.4.0"
+async-tempfile = "0.5.0"
 mime = "0.3.17"
 mime_guess = "2.0.4"
 alkana-rs = "0.1.0"
