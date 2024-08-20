@@ -110,7 +110,7 @@ impl Conf {
  }
 
  pub fn execute_run_with(&self) -> Result<()> {
-  use sysinfo::{ProcessExt, ProcessRefreshKind, SystemExt};
+  use sysinfo::ProcessRefreshKind;
   let mut system = sysinfo::System::new();
   system.refresh_processes_specifics(ProcessRefreshKind::everything().without_cpu());
 

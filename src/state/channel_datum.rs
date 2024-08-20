@@ -20,8 +20,8 @@ pub type SharedChannelData = Arc<RwLock<ChannelData>>;
 static ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 impl ChannelDatum {
- pub const FLAG_IS_FINAL: &str = "is_final";
- pub const DATA_URLS: &str = "data_urls";
+ pub const FLAG_IS_FINAL: &'static str = "is_final";
+ pub const DATA_URLS: &'static str = "data_urls";
 
  pub fn reset_id_counter(id: u64) {
   ID_COUNTER.store(id, Ordering::Relaxed);

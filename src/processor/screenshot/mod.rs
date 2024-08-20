@@ -30,7 +30,7 @@ use anyhow::{bail, Result};
 use async_trait::async_trait;
 use base64::{engine::general_purpose, Engine as _};
 use core::fmt::Debug;
-use image::{ImageOutputFormat, RgbaImage};
+use image::{ImageFormat, RgbaImage};
 use regex::Regex;
 use std::io::Cursor;
 use std::path::Path;
@@ -159,7 +159,7 @@ impl Processor for Screenshot {
     // メモリー上に PNG 画像データを生成
     let mut png = Vec::new();
     let mut cur = Cursor::new(&mut png);
-    image.write_to(&mut cur, ImageOutputFormat::Png).unwrap();
+    image.write_to(&mut cur, ImageFormat::Png).unwrap();
     log::debug!(
      "Screenshot が撮影した画像データを生成しました。 ({}/{})",
      index + 1,

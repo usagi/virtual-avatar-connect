@@ -55,7 +55,7 @@ impl Processor for Command {
      self.state.clone(),
      "disable",
      "group = {A} の Processor を無効化しました。",
-     args[0].clone(),
+     args[0],
     )
     .await;
    },
@@ -67,7 +67,7 @@ impl Processor for Command {
       self.state.clone(),
       "enable",
       "group = {A} の Processor を有効化しました。",
-      args[0].clone(),
+      args[0],
      )
      .await;
     }
@@ -79,13 +79,13 @@ impl Processor for Command {
      self.state.clone(),
      "reload",
      "group = {A} の Processor の設定を再読み込みしました。",
-     args[0].clone(),
+     args[0],
     )
     .await;
    },
    "set" if args.len() >= 1 => {
     log::info!("set がコマンドされセット名 {:?} の実行が試行されます。", args[0]);
-    response1(conf.clone(), self.state.clone(), "set", "セット {A} の実行を試みます。", args[0].clone()).await;
+    response1(conf.clone(), self.state.clone(), "set", "セット {A} の実行を試みます。", args[0]).await;
     if let Err(e) = activate_command_set(args[0], &conf.set, self.state.clone()).await {
       log::error!("セットの実行中にエラーが発生しました: {:?}", e);
       response1(
@@ -93,7 +93,7 @@ impl Processor for Command {
        self.state.clone(),
        "set:error",
        "セット {A} の実行中にエラーが発生しました。",
-       args[0].clone(),
+       args[0],
       )
       .await;
     }

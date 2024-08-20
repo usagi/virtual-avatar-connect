@@ -334,9 +334,8 @@ fn ocr<P: AsRef<Path>, M: AsRef<str>>(path: P, mime: M, lang: &str, lines: bool)
   .GetSoftwareBitmapAsync()?
   .get()?;
 
- let langs = lang.clone();
- let lang = Language::CreateLanguage(&HSTRING::from(lang))?;
- let engine = OcrEngine::TryCreateFromLanguage(&lang)?;
+ let ocr_lang = Language::CreateLanguage(&HSTRING::from(lang))?;
+ let engine = OcrEngine::TryCreateFromLanguage(&ocr_lang)?;
 
  let result = engine.RecognizeAsync(&bmp)?.get()?;
  log::trace!("text = {:?}", result.Text()?);
@@ -344,11 +343,11 @@ fn ocr<P: AsRef<Path>, M: AsRef<str>>(path: P, mime: M, lang: &str, lines: bool)
   result
    .Lines()?
    .into_iter()
-   .map(|line| remove_whitespace_if_cjk(line.Text().unwrap().to_string_lossy(), &langs))
+   .map(|line| remove_whitespace_if_cjk(line.Text().unwrap().to_string_lossy(), &lang))
    .collect::<Vec<_>>()
    .join("\n")
  } else {
-  remove_whitespace_if_cjk(result.Text()?.to_string_lossy(), &langs)
+  remove_whitespace_if_cjk(result.Text()?.to_string_lossy(), &lang)
  };
  Ok(output)
 }
