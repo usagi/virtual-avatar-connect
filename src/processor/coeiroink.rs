@@ -230,6 +230,10 @@ async fn fix_conf(original: &ProcessorConf) -> Result<ProcessorConf> {
   log::warn!("speed_scale が設定されていないため 1.00 にデフォルトします。");
   fixed.speed_scale = Some(1.00);
  }
+ if fixed.processing_algorithm.is_none() {
+  log::warn!("processing_algorithm が設定されていないため COEIROINK にデフォルトします。");
+  fixed.processing_algorithm = Some("COEIROINK".to_string());
+ }
 
  // api_url が synthesis で終わっているか、 synthesis 向けの何れかが設定されている場合は predict ではなく synthesis と推定
  if fixed.api_url.as_ref().unwrap().ends_with("synthesis")
@@ -319,6 +323,7 @@ pub struct SynthesisOrPredictRequest {
  prePhonemeLength: f64,
  postPhonemeLength: f64,
  outputSamplingRate: u32,
+ processingAlgorithm: String,
 }
 
 impl SynthesisOrPredictRequest {
