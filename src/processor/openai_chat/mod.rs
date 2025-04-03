@@ -6,7 +6,10 @@ use crate::{Arc, ChannelDatum, Mutex, ProcessorConf, ProcessorKind, SharedChanne
 use anyhow::{bail, Context, Result};
 use async_openai::{
  config::OpenAIConfig,
- types::{ChatCompletionRequestMessageArgs, CreateChatCompletionRequest, CreateChatCompletionRequestArgs, Role},
+ types::{
+  ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
+  ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest, CreateChatCompletionRequestArgs,
+ },
  Client,
 };
 use async_trait::async_trait;
@@ -153,15 +156,23 @@ impl Processor for OpenAiChat {
    // api_key が表示される可能性があるためソースレベルで一時的な変更を行わない限り request の内容は出力しないよう変更
    // log::trace!("ai req: {:?}", request);
    request.messages.extend(reversed_sources.into_iter().rev().filter_map(|cd| {
-    ChatCompletionRequestMessageArgs::default()
-     .role(match cd.channel.as_str() {
-      channel if channel == &channel_from => Role::User,
-      channel if channel == &channel_to => Role::Assistant,
-      _ => Role::System,
-     })
-     .content(cd.content.clone())
-     .build()
-     .ok()
+    match cd.channel.as_str() {
+     channel if channel == &channel_from => ChatCompletionRequestUserMessageArgs::default()
+      .content(cd.content.clone())
+      .build()
+      .ok()
+      .map(ChatCompletionRequestMessage::User),
+     channel if channel == &channel_to => ChatCompletionRequestAssistantMessageArgs::default()
+      .content(cd.content.clone())
+      .build()
+      .ok()
+      .map(ChatCompletionRequestMessage::Assistant),
+     _ => ChatCompletionRequestSystemMessageArgs::default()
+      .content(cd.content.clone())
+      .build()
+      .ok()
+      .map(ChatCompletionRequestMessage::System),
+    }
    }));
 
    // OpenAIChat に応答をリクエスト
@@ -381,10 +392,15 @@ fn make_request_template(conf: &ProcessorConf) -> Result<CreateChatCompletionReq
  }
 
  if let Some(custom_instructions) = conf.custom_instructions.as_ref() {
-  builder.messages(vec![ChatCompletionRequestMessageArgs::default()
-   .role(Role::System)
-   .content(custom_instructions.clone())
-   .build()?]);
+  builder.messages(
+   vec![ChatCompletionRequestSystemMessageArgs::default()
+    .content(custom_instructions.clone())
+    .build()
+    .ok()]
+   .into_iter()
+   .filter_map(|msg| msg.map(ChatCompletionRequestMessage::System))
+   .collect::<Vec<_>>(),
+  );
  }
 
  Ok(builder.build()?)

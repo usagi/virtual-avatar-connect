@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// The fine-tuning job object
 /// ref: https://platform.openai.com/docs/api-reference/fine-tuning/object
+#[allow(dead_code)]
 #[derive(Deserialize, Debug, Default)]
 pub struct FineTuningJobObject {
  pub id: String,
@@ -73,6 +74,7 @@ pub struct FileObject {
  pub status_details: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug, Default)]
 pub struct ListFilesResponse {
  pub data: Vec<FileObject>,
@@ -100,6 +102,7 @@ pub struct ApiErrorDetail {
  pub code: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug, Default)]
 pub struct FileDeletionStatus {
  pub id: String,
