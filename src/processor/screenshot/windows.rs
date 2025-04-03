@@ -16,7 +16,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use wrappers::{CreatedHdc, Hbitmap, Hdc, Rect};
 mod wrappers {
  use windows::{
-  core::{Error, IntoParam},
+  core::Error,
   Win32::{
    Foundation::{HWND, RECT},
    Graphics::Gdi::{CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, ReleaseDC, HBITMAP, HDC},
@@ -35,7 +35,7 @@ mod wrappers {
    P0: Into<HWND>,
   {
    unsafe {
-    match GetDC(hwnd.into()) {
+    match GetDC(Some(hwnd.into())) {
      e if e.is_invalid() => Err(Error::from_win32()),
      hdc => Ok(Hdc { hdc }),
     }
@@ -46,7 +46,7 @@ mod wrappers {
  impl Drop for Hdc {
   fn drop(&mut self) {
    unsafe {
-    ReleaseDC(HWND::default(), self.hdc);
+    ReleaseDC(Some(HWND::default()), self.hdc);
    }
   }
  }
@@ -120,10 +120,7 @@ mod wrappers {
  }
 
  impl CreatedHdc {
-  pub(crate) fn create_compatible_dc<P0>(hdc: P0) -> Result<CreatedHdc, Error>
-  where
-   P0: IntoParam<HDC>,
-  {
+  pub(crate) fn create_compatible_dc(hdc: Option<HDC>) -> Result<CreatedHdc, Error> {
    unsafe {
     match CreateCompatibleDC(hdc) {
      e if e.is_invalid() => Err(Error::from_win32()),
@@ -148,7 +145,7 @@ mod wrappers {
  impl Drop for CreatedHdc {
   fn drop(&mut self) {
    unsafe {
-    DeleteDC(self.hdc);
+    let _ = DeleteDC(self.hdc);
    }
   }
  }
@@ -158,10 +155,7 @@ mod wrappers {
  }
 
  impl Hbitmap {
-  pub(crate) fn create_compatible_bitmap<P0>(hdc: P0, w: i32, h: i32) -> Result<Hbitmap, Error>
-  where
-   P0: IntoParam<HDC>,
-  {
+  pub(crate) fn create_compatible_bitmap(hdc: HDC, w: i32, h: i32) -> Result<Hbitmap, Error> {
    unsafe {
     match CreateCompatibleBitmap(hdc, w, h) {
      e if e.is_invalid() => Err(Error::from_win32()),
@@ -174,7 +168,7 @@ mod wrappers {
  impl Drop for Hbitmap {
   fn drop(&mut self) {
    unsafe {
-    DeleteObject(self.hbitmap);
+    let _ = DeleteObject(self.hbitmap.into());
    }
   }
  }
@@ -228,7 +222,7 @@ pub fn capture_window_ex(
  crop_w: Option<i32>,
  crop_h: Option<i32>,
 ) -> Result<RgbBuf, windows::core::Error> {
- let hwnd = HWND(hwnd);
+ let hwnd = HWND(hwnd as *mut core::ffi::c_void);
 
  unsafe {
   #[allow(unused_must_use)]
@@ -267,14 +261,14 @@ pub fn capture_window_ex(
 
   let crop = crop_x.is_some() || crop_y.is_some() || crop_w.is_some() || crop_h.is_some();
 
-  let hdc = CreatedHdc::create_compatible_dc(hdc_screen.hdc)?;
+  let hdc = CreatedHdc::create_compatible_dc(Some(hdc_screen.hdc))?;
 
   let hbmp = match (crop, using) {
    (true, Using::BitBlt) => Hbitmap::create_compatible_bitmap(hdc_screen.hdc, cw, ch),
    (false, Using::BitBlt) | (_, Using::PrintWindow) => Hbitmap::create_compatible_bitmap(hdc_screen.hdc, rect.width, rect.height),
   }?;
 
-  if SelectObject(hdc.hdc, hbmp.hbitmap).is_invalid() {
+  if SelectObject(hdc.hdc, hbmp.hbitmap.into()).is_invalid() {
    return Err(windows::core::Error::from_win32());
   }
 
@@ -285,7 +279,7 @@ pub fn capture_window_ex(
 
   match using {
    Using::BitBlt => {
-    BitBlt(hdc.hdc, 0, 0, cw, ch, hdc_screen.hdc, cx, cy, SRCCOPY)?;
+    BitBlt(hdc.hdc, 0, 0, cw, ch, Some(hdc_screen.hdc), cx, cy, SRCCOPY)?;
    },
    Using::PrintWindow => {
     if PrintWindow(hwnd, hdc.hdc, flags) == false {
@@ -296,13 +290,13 @@ pub fn capture_window_ex(
 
   let (w, h, hdc, hbmp) = match (crop, using) {
    (true, Using::PrintWindow) => {
-    let hdc2 = CreatedHdc::create_compatible_dc(hdc.hdc)?;
+    let hdc2 = CreatedHdc::create_compatible_dc(Some(hdc.hdc))?;
     let hbmp2 = Hbitmap::create_compatible_bitmap(hdc.hdc, cw, ch)?;
-    let so = SelectObject(hdc2.hdc, hbmp2.hbitmap);
+    let so = SelectObject(hdc2.hdc, hbmp2.hbitmap.into());
     if so.is_invalid() {
      return Err(windows::core::Error::from_win32());
     }
-    BitBlt(hdc2.hdc, 0, 0, cw, ch, hdc.hdc, cx, cy, SRCCOPY)?;
+    BitBlt(hdc2.hdc, 0, 0, cw, ch, Some(hdc.hdc), cx, cy, SRCCOPY)?;
     if SelectObject(hdc2.hdc, so).is_invalid() {
      return Err(windows::core::Error::from_win32());
     }
@@ -336,7 +330,7 @@ pub fn capture_window_ex(
    DIB_RGB_COLORS,
   );
   if gdb == 0 || gdb == ERROR_INVALID_PARAMETER.0 as i32 {
-   return Err(windows::core::Error::new(E_FAIL, "GetDIBits error".into()));
+   return Err(windows::core::Error::new(E_FAIL, "GetDIBits error"));
   }
   buf.chunks_exact_mut(4).for_each(|c| c.swap(0, 2));
   Ok(RgbBuf {
@@ -356,14 +350,14 @@ pub fn capture_display() -> Result<RgbBuf, WSError> {
   }
   // for win 10
   //SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-  let hdc_screen = GetDC(HWND::default());
+  let hdc_screen = GetDC(Some(HWND::default()));
   if hdc_screen.is_invalid() {
    return Err(WSError::GetDCIsNull);
   }
 
-  let hdc = CreateCompatibleDC(hdc_screen);
+  let hdc = CreateCompatibleDC(Some(hdc_screen));
   if hdc.is_invalid() {
-   ReleaseDC(HWND::default(), hdc_screen);
+   ReleaseDC(Some(HWND::default()), hdc_screen);
    return Err(WSError::CreateCompatibleDCIsNull);
   }
 
@@ -374,24 +368,24 @@ pub fn capture_display() -> Result<RgbBuf, WSError> {
 
   let hbmp = CreateCompatibleBitmap(hdc_screen, width, height);
   if hbmp.is_invalid() {
-   DeleteDC(hdc);
-   ReleaseDC(HWND::default(), hdc_screen);
+   let _ = DeleteDC(hdc);
+   ReleaseDC(Some(HWND::default()), hdc_screen);
    return Err(WSError::CreateCompatibleBitmapIsNull);
   }
 
-  let so = SelectObject(hdc, hbmp);
+  let so = SelectObject(hdc, hbmp.into());
   if so.is_invalid() {
-   DeleteDC(hdc);
-   DeleteObject(hbmp);
-   ReleaseDC(HWND::default(), hdc_screen);
+   let _ = DeleteDC(hdc);
+   let _ = DeleteObject(hbmp.into());
+   ReleaseDC(Some(HWND::default()), hdc_screen);
    return Err(WSError::SelectObjectError);
   }
 
-  let sb = StretchBlt(hdc, 0, 0, width, height, hdc_screen, x, y, width, height, SRCCOPY);
+  let sb = StretchBlt(hdc, 0, 0, width, height, Some(hdc_screen), x, y, width, height, SRCCOPY);
   if sb == false {
-   DeleteDC(hdc);
-   DeleteObject(hbmp);
-   ReleaseDC(HWND::default(), hdc_screen);
+   let _ = DeleteDC(hdc);
+   let _ = DeleteObject(hbmp.into());
+   ReleaseDC(Some(HWND::default()), hdc_screen);
    return Err(WSError::StretchBltIsZero);
   }
 
@@ -422,17 +416,17 @@ pub fn capture_display() -> Result<RgbBuf, WSError> {
    DIB_RGB_COLORS,
   );
   if gdb == 0 || gdb == ERROR_INVALID_PARAMETER.0 as i32 {
-   DeleteDC(hdc);
-   DeleteObject(hbmp);
-   ReleaseDC(HWND::default(), hdc_screen);
+   let _ = DeleteDC(hdc);
+   let _ = DeleteObject(hbmp.into());
+   ReleaseDC(Some(HWND::default()), hdc_screen);
    return Err(WSError::GetDIBitsError);
   }
 
   buf.chunks_exact_mut(4).for_each(|c| c.swap(0, 2));
 
-  DeleteDC(hdc);
-  DeleteObject(hbmp);
-  ReleaseDC(HWND::default(), hdc_screen);
+  let _ = DeleteDC(hdc);
+  let _ = DeleteObject(hbmp.into());
+  ReleaseDC(Some(HWND::default()), hdc_screen);
 
   Ok(RgbBuf {
    pixels: buf,

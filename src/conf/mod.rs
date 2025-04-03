@@ -6,6 +6,7 @@ pub use processor_conf::*;
 use crate::{Arc, Args, RwLock};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use clap_lex::OsStrExt;
 
 pub type SharedConf = Arc<RwLock<Conf>>;
 
@@ -110,9 +111,9 @@ impl Conf {
  }
 
  pub fn execute_run_with(&self) -> Result<()> {
-  use sysinfo::ProcessRefreshKind;
+  use sysinfo::{ProcessRefreshKind, ProcessesToUpdate};
   let mut system = sysinfo::System::new();
-  system.refresh_processes_specifics(ProcessRefreshKind::everything().without_cpu());
+  system.refresh_processes_specifics(ProcessesToUpdate::All, false, ProcessRefreshKind::everything().without_cpu());
 
   for run_with in self.run_with.iter() {
    let (command, if_not_running, run_as_admin, working_dir) = match run_with {

@@ -160,6 +160,7 @@ pub struct ProcessorConf {
  pub output_sampling_rate: Option<u32>,
  pub audio_file_store_path: Option<String>,
  pub split_regex_pattern: Option<String>,
+ pub processing_algorithm: Option<String>,
 
  // BouyomiChan
  pub remote_talk_path: Option<String>,
