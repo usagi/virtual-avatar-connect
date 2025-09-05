@@ -216,7 +216,7 @@ impl Processor for OpenAiChat {
      bail!("{e:?}");
     },
    };
-   log::debug!("response = {:?}", response);
+   log::trace!("response = {:?}", response);
 
   let mut content = {
     let mut content = response
