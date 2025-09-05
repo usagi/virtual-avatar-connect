@@ -8,7 +8,7 @@ use async_openai::{
  config::OpenAIConfig,
  types::{
   ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
-  ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest, CreateChatCompletionRequestArgs,
+  ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequest, CreateChatCompletionRequestArgs, ResponseFormat,
  },
  Client,
 };
@@ -53,6 +53,9 @@ impl Processor for OpenAiChat {
   let channel_to = conf.channel_to.as_ref().unwrap().clone();
   let client = self.client.clone();
   let custom_instructions = conf.custom_instructions.as_ref().cloned();
+  let model_for_runtime = conf.model.clone();
+  // 再試行時に元の max_tokens (gpt-4 系) または max_completion_tokens (gpt-5 系) として利用するために値だけ先に取り出しておく
+  let orig_max_tokens = conf.max_tokens;
   let remove_chars = conf
    .remove_chars
    .as_ref()
@@ -152,7 +155,19 @@ impl Processor for OpenAiChat {
    }
 
    // リクエストを生成
-   let mut request = request_template;
+  let mut request = request_template;
+  // gpt-5 系モデルで system メッセージが存在しない場合はデフォルトの system 指示を追加
+  if model_for_runtime.as_ref().map(|m| m.starts_with("gpt-5")).unwrap_or(false) {
+   let has_system = request.messages.iter().any(|m| matches!(m, ChatCompletionRequestMessage::System(_)));
+   if !has_system {
+    if let Some(sys_msg) = ChatCompletionRequestSystemMessageArgs::default()
+    .content("You are a helpful assistant. Provide a concise, direct response to the user. 日本語入力には日本語で返答して下さい。")
+    .build()
+    .ok()
+    .map(ChatCompletionRequestMessage::System)
+    { request.messages.insert(0, sys_msg); }
+   }
+  }
    // api_key が表示される可能性があるためソースレベルで一時的な変更を行わない限り request の内容は出力しないよう変更
    // log::trace!("ai req: {:?}", request);
    request.messages.extend(reversed_sources.into_iter().rev().filter_map(|cd| {
@@ -179,7 +194,7 @@ impl Processor for OpenAiChat {
    // api_key が表示される可能性があるためソースレベルで一時的な変更を行わない限り request の内容は出力しないよう変更
    // log::trace!("request = {:?}", request);
    log::debug!("OpenAIChat に応答をリクエストします。");
-   let response = match client.chat().create(request).await {
+  let response = match client.chat().create(request.clone()).await {
     Ok(response) => response,
     Err(e) => {
      log::error!("OpenAIChat へのリクエストに失敗しました: {:?}", e);
@@ -201,9 +216,9 @@ impl Processor for OpenAiChat {
      bail!("{e:?}");
     },
    };
-   log::trace!("response = {:?}", response);
+   log::debug!("response = {:?}", response);
 
-   let content = {
+  let mut content = {
     let mut content = response
      .choices
      .first()
@@ -217,8 +232,74 @@ impl Processor for OpenAiChat {
     for remove_char in remove_chars.chars() {
      content = content.replace(remove_char, "");
     }
-    content
+  content
    };
+
+   // gpt-5 系モデルで空文字応答だった場合の再試行ロジック
+   if model_for_runtime.as_ref().map(|m| m.starts_with("gpt-5")).unwrap_or(false)
+  && content.trim().is_empty()
+   {
+  log::warn!("gpt-5 系モデルから空の content が返却されました。再試行を行います。(finish_reason = {:?})", response.choices.first().and_then(|c| c.finish_reason.clone()));
+  // 再試行用の簡易リクエストを構築（最新ユーザー入力のみ + system 指示）
+  if let Some(latest_user) = Some(latest_user_content.clone()) {
+   let mut retry_builder = CreateChatCompletionRequestArgs::default();
+   if let Some(model) = model_for_runtime.clone() { retry_builder.model(model); }
+   // max_completion_tokens を控えめに（元設定より小さく）
+  if let Some(orig_max) = orig_max_tokens {
+    let reduced = std::cmp::min(orig_max, 128); // 128 以内に制限
+    if model_for_runtime.as_ref().map(|m| m.starts_with("gpt-5")).unwrap_or(false) {
+     retry_builder.max_completion_tokens(reduced);
+    } else {
+     retry_builder.max_tokens(reduced);
+    }
+   }
+   // system
+   if let Some(sys) = ChatCompletionRequestSystemMessageArgs::default()
+    .content("You are a helpful assistant. Provide a concise answer. If prior reasoning used all tokens, output a brief final answer now.")
+    .build()
+    .ok()
+    .map(ChatCompletionRequestMessage::System) { retry_builder.messages(vec![sys]); }
+   // user
+  if let Some(user_msg) = ChatCompletionRequestUserMessageArgs::default()
+   .content(latest_user)
+   .build()
+   .ok()
+   .map(ChatCompletionRequestMessage::User)
+  {
+   // builder doesn't expose current messages publicly; rebuild from scratch
+   let mut msgs: Vec<ChatCompletionRequestMessage> = Vec::new();
+   if let Some(sys) = ChatCompletionRequestSystemMessageArgs::default()
+    .content("You are a helpful assistant. Provide a concise answer.")
+    .build()
+    .ok()
+    .map(ChatCompletionRequestMessage::System) { msgs.push(sys); }
+   msgs.push(user_msg);
+   retry_builder.messages(msgs);
+  }
+  // force text response format for gpt-5 retry as well
+  if model_for_runtime.as_ref().map(|m| m.starts_with("gpt-5")).unwrap_or(false) {
+   retry_builder.response_format(async_openai::types::ResponseFormat::Text);
+  }
+  match retry_builder.build() {
+    Ok(retry_req) => {
+     match client.chat().create(retry_req.clone()).await {
+    Ok(retry_res) => {
+     log::debug!("gpt-5 系モデル再試行 response = {:?}", retry_res);
+     if let Some(retry_choice) = retry_res.choices.first() {
+      if let Some(retry_content) = retry_choice.message.content.clone() {
+       if !retry_content.trim().is_empty() { content = retry_content; }
+      }
+     }
+    },
+    Err(e) => {
+     log::warn!("gpt-5 系モデルの再試行に失敗しました: {:?}", e);
+    },
+     }
+    },
+    Err(e) => log::warn!("gpt-5 系モデル再試行用リクエストの構築に失敗しました: {:?}", e),
+   }
+  }
+   }
 
    if let Some(fine_tuning) = fine_tuning {
     use serde::Serialize;
@@ -368,9 +449,17 @@ fn make_request_template(conf: &ProcessorConf) -> Result<CreateChatCompletionReq
 
  if let Some(model) = conf.model.as_ref() {
   builder.model(model.clone());
- }
- if let Some(max_tokens) = conf.max_tokens {
-  builder.max_tokens(max_tokens);
+  if model.starts_with("gpt-5") {
+   // Workaround: force plain text output format to avoid empty content responses.
+   builder.response_format(ResponseFormat::Text);
+  }
+  if let Some(max_tokens) = conf.max_tokens {
+   if model.starts_with("gpt-5") {
+    builder.max_completion_tokens(max_tokens);
+   } else {
+    builder.max_tokens(max_tokens);
+   }
+  }
  }
  if let Some(temperature) = conf.temperature {
   builder.temperature(temperature);

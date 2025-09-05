@@ -19,7 +19,7 @@ pub use crate::{
 };
 
 use actix_files::Files;
-use rodio::{OutputStream, Sink};
+use rodio::Sink;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 
@@ -38,8 +38,9 @@ pub async fn run() -> Result<()> {
  // 音声再生用の handle を生成
  // Sink は Shared 化できるが、 steam_handle は Shared 化できないため、
  // ここで actix_web のサービスが .await を抜けるまで保持してしまう。
- let (_stream, stream_handle) = OutputStream::try_default()?;
- let audio_sink = Sink::try_new(&stream_handle)?;
+let stream = rodio::OutputStreamBuilder::open_default_stream()?;
+let mixer = stream.mixer();
+let audio_sink = Sink::connect_new(mixer);
  let audio_sink = Arc::new(Mutex::new(AudioSink(audio_sink)));
 
  // コマンドライン引数をパースし、ログレベルを更新

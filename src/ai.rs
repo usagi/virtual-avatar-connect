@@ -128,9 +128,13 @@ fn make_request_template(conf: &SharedConf) -> Result<CreateChatCompletionReques
 
  if let Some(model) = conf.ai.model.as_ref() {
   builder.model(model.clone());
- }
- if let Some(max_tokens) = conf.ai.max_tokens {
-  builder.max_tokens(max_tokens);
+  if let Some(max_tokens) = conf.ai.max_tokens {
+   if model.starts_with("gpt-5") {
+    builder.max_completion_tokens(max_tokens);
+   } else {
+    builder.max_tokens(max_tokens);
+   }
+  }
  }
  if let Some(temperature) = conf.ai.temperature {
   builder.temperature(temperature);
