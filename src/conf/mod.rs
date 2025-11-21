@@ -4,9 +4,9 @@ pub use anyhow::{bail, Result};
 pub use processor_conf::*;
 
 use crate::{Arc, Args, RwLock};
+use clap_lex::OsStrExt;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use clap_lex::OsStrExt;
 
 pub type SharedConf = Arc<RwLock<Conf>>;
 
@@ -147,12 +147,48 @@ impl Conf {
     }
    }
 
-   // command (引数がある場合も考慮)を実行、またはURLを開く
-   if command.starts_with("http://") || command.starts_with("https://") {
+   // command (引数がある場合も考慮)を実行、またはURL/URIを開く
+   let is_http_url = command.starts_with("http://") || command.starts_with("https://");
+   let is_app_scheme = command.starts_with("steam://");
+
+   if is_http_url {
+    // 通常の http(s) URL は既存どおりブラウザーに任せる
     use webbrowser::{Browser, BrowserOptions};
-    log::info!("run_with: {:?} を URL としてブラウザーで開きます。", command);
+    log::info!("run_with: {:?} を URL として既定ブラウザーで開きます。", command);
     if let Err(e) = webbrowser::open_browser_with_options(Browser::Default, command, BrowserOptions::new().with_target_hint("vac")) {
      log::error!("run_with: URL を開く際にエラーが発生しました: {:?}", e);
+    }
+   } else if is_app_scheme {
+    // steam:// などのアプリ用スキームはブラウザー経由ではなく OS の既定 URL ハンドラで開く
+    #[cfg(target_os = "windows")]
+    {
+     use windows::core::PCWSTR;
+     use windows::Win32::UI::Shell::ShellExecuteW;
+     use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+     log::info!("run_with: {:?} を OS の既定 URL ハンドラで開きます。", command);
+     let wide: Vec<u16> = command.encode_utf16().chain(std::iter::once(0)).collect();
+     unsafe {
+      let result = ShellExecuteW(
+       None,
+       PCWSTR::null(), // "open"
+       PCWSTR(wide.as_ptr()),
+       PCWSTR::null(),
+       PCWSTR::null(),
+       SW_SHOWNORMAL,
+      );
+      let hinst = result.0 as isize;
+      if hinst <= 32 {
+       log::error!("run_with: ShellExecuteW による URI オープンに失敗しました (code = {})", hinst);
+      }
+     }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+     log::warn!(
+      "run_with: {:?} はアプリ用スキームと判定されましたが、この OS では特別な処理は行われません。",
+      command
+     );
     }
    } else {
     let original_dir = match change_working_dir(working_dir) {
