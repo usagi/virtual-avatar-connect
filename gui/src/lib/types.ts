@@ -985,8 +985,15 @@ export type ZipImportOutcome = ZipImportPreview | ZipImportReport;
 
 /** `[[control_api.tables]].quick_add` のサブ設定。 */
 export type ControlTableQuickAdd = {
+	/** `dictionary.learn` ノードの fq ID（`"main::learn"` など）。 */
 	node_id: string;
+	/** 既定の `kind`（`"literal"` | `"regex"` | 省略）。 */
 	kind?: string | null;
+	/**
+	 * Phase φ-4: `dictionary.forget` ノードの fq ID。履歴の [Undo] 用。
+	 * 未設定なら GUI 側で Undo 不可として扱う。
+	 */
+	forget_node_id?: string | null;
 };
 
 /** `GET /api/v1/control/tables` の 1 エントリ。 */

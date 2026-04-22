@@ -610,18 +610,23 @@ pub struct ControlTableEntry
  pub quick_add: Option<ControlTableQuickAdd>
 }
 
-/// Phase φ-1: Quick-Add ウィジェットの対応先 `dictionary.learn` ノード指定。
+/// Phase φ-1/φ-4: Quick-Add ウィジェットの対応先ノード指定。
 ///
 /// 実際の trigger は φ-2 (`POST /control/flowgraph/.../trigger/{node_id}`) で行う。
-/// φ-1 時点ではこのメタデータを GUI に返すだけ。
+/// `forget_node_id` は φ-4 の Undo 機能で `dictionary.forget` ノードを指すために導入。
+/// 未指定時は Undo ボタンを GUI から無効化する。
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ControlTableQuickAdd
 {
- /// 対象ノードの fq ID（例 `"main::learn"`）。
+ /// 対象 `dictionary.learn` ノードの fq ID（例 `"main::learn"`）。
  pub node_id: String,
  /// 既定の `kind`（`"literal"` | `"regex"`）。
  #[serde(default)]
- pub kind: Option<String>
+ pub kind: Option<String>,
+ /// Phase φ-4: 対応する `dictionary.forget` ノードの fq ID。
+ /// 未設定なら履歴 [Undo] を無効化する（一方向 learn 運用）。
+ #[serde(default)]
+ pub forget_node_id: Option<String>
 }
 
 impl Conf {
