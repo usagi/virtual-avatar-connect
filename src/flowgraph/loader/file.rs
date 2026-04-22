@@ -711,6 +711,25 @@ mod tests {
 		}
 	}
 
+	// .local/ 配下の個人環境向け flowgraph を開発者の手元で検証するためのテスト。
+	// CI には該当ファイルが存在しないため `#[ignore]` で既定除外し、
+	// 開発者は `cargo test -- --ignored load_local_voice_to_tts` で走らせる。
+	#[test]
+	#[ignore]
+	fn load_local_voice_to_tts_flowgraph() {
+		let path = Path::new("flowgraph.local/voice-to-tts/main.flowgraph.toml");
+		if !path.exists() {
+			eprintln!("skipping: {} が存在しない（.local gitignore 下、開発者環境専用）", path.display());
+			return;
+		}
+		let report = load_file(path, None).expect("voice-to-tts example should load");
+		assert!(
+			report.diagnostics.iter().all(|d| d.severity != Severity::Error),
+			"unexpected errors: {:?}",
+			report.diagnostics,
+		);
+	}
+
 	#[test]
 	fn load_example_command_dispatch() {
 		let path = Path::new("flowgraph.example/dictionary/command-dispatch.flowgraph.toml");

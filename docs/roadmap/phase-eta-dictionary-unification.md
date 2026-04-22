@@ -471,6 +471,8 @@ virtual-avatar-connect-migrate-dict \
   `write_tsv` ノード経由で完結している。GUI から直接編集するには Flowgraph worker と別系統の
   「現在ディスク上にある Table を読む/書く」Control API が必要になり、η のスコープを超える。
   φ フェーズ以降で「管理対象 TSV ファイルレジストリ」を整備した上で着手する。
+- **φ 仕様書**: [`phase-phi-control-api-dictionary-editor.md §3 / §5 / §6`](phase-phi-control-api-dictionary-editor.md)
+  で API、allow-list、Editor Pane の設計を固定済み。
 
 ### 9.3 Live Quick-Add Widget（保留、別 PR）
 
@@ -481,6 +483,8 @@ virtual-avatar-connect-migrate-dict \
   V2 では dead code 化している。V2 で同等機能を実装するには Flowgraph の `dictionary.learn` /
   `dictionary.forget` ノードに外部 trigger を打ち込む Control API（`POST /api/v1/control/flowgraph/trigger/{node_id}`
   相当）が必要。こちらも φ 以降。
+- **φ 仕様書**: [`phase-phi-control-api-dictionary-editor.md §4 / §7 / §8`](phase-phi-control-api-dictionary-editor.md)
+  で Trigger API、Widget UI、node_id 解決 / `control_triggerable` opt-in mark を定義。
 
 ---
 

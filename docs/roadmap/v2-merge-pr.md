@@ -92,9 +92,19 @@ Flowgraph Runtime で表現される。直近の v2 マージ準備ロードマ�
 4. **η-PR4（GUI Table ポート視覚区別）**
    η-6 のうち実装済み分（`FlowgraphNodeCard.svelte` の `handleClass` / CSS 更新）。
    Dictionary Editor pane / Live Quick-Add は φ 以降別 PR。
+5. **η-PR5-ext（example flowgraph の load smoke test）**
+   η 仕様書 §10.3 を CI に固定化。`src/flowgraph/loader/file.rs` に `basic-replace` /
+   `command-dispatch` の load + build 通過を確認する test 2 本を追加。
+6. **φ-0（Control API + Dictionary Editor / Quick-Add 仕様書）**
+   η-6 で保留した 2 機能を実装するための設計固定ドキュメント
+   [`docs/roadmap/phase-phi-control-api-dictionary-editor.md`](./phase-phi-control-api-dictionary-editor.md)。
+   実装なし、markdown のみ。**本 v2 → main マージ PR には含めず、φ-1 以降の実装と
+   一緒に別 PR として main に投入する**。
 
-この 4 本は論理的に η-PR1 → η-PR2 → η-PR3 → η-PR4 の順で依存する（PR2 は PR1 の型を使い、
-PR3 は出力フォーマットが PR1 / PR2 と揃っている必要があり、PR4 は PR1 の Table 型が前提）。
+上記のうち η-PR1 〜 η-PR4 は論理的に η-PR1 → η-PR2 → η-PR3 → η-PR4 の順で依存する
+（PR2 は PR1 の型を使い、PR3 は出力フォーマットが PR1 / PR2 と揃っている必要があり、
+PR4 は PR1 の Table 型が前提）。η-PR5-ext は η-PR1〜4 全てに依存する（example ファイル
+と dictionary ノード実装が前提）。φ-0 はドキュメントのみなので独立して cherry-pick 可能。
 いずれも `v2` ブランチ上に既に commit 済みなので、main 合流後は `git cherry-pick` か
 `git log --reverse` からの個別 PR 作成でよい。
 
