@@ -975,6 +975,112 @@ export type ZipImportReport = {
 export type ZipImportOutcome = ZipImportPreview | ZipImportReport;
 
 // ---------------------------------------------------------------------------
+// Phase φ-1/φ-2/φ-3: Control Table CRUD + Flowgraph Trigger DTOs
+//
+// Rust 側:
+//   - src/web_interface/control/table.rs          (TableCatalogItem / TableFileDto 等)
+//   - src/web_interface/control/flowgraph.rs      (TriggerNodeRequest / TriggerNodeResponse)
+//   - src/conf/mod.rs                              (ControlTableQuickAdd)
+// ---------------------------------------------------------------------------
+
+/** `[[control_api.tables]].quick_add` のサブ設定。 */
+export type ControlTableQuickAdd = {
+	node_id: string;
+	kind?: string | null;
+};
+
+/** `GET /api/v1/control/tables` の 1 エントリ。 */
+export type TableCatalogItem = {
+	/** URL / allow-list 上のキー。`/api/v1/control/table/{key}`。 */
+	key: string;
+	/** ディスク上の実パス（表示用）。 */
+	path: string;
+	label?: string | null;
+	/** `"dictionary"` | `"scene-registry"` | `"generic"` | 自由文字列。 */
+	role?: string | null;
+	editable: boolean;
+	quick_add?: ControlTableQuickAdd | null;
+	/** ファイルが現在ディスクに存在するか。false でも空 Table として GET は成功する。 */
+	exists: boolean;
+};
+
+export type TableCatalogResponse = {
+	tables: TableCatalogItem[];
+	count: number;
+};
+
+/** TSV 1 行ぶん。`values` は schema の列名 → JSON 値。 */
+export type TableEntryDto = {
+	row_index: number;
+	values: Record<string, unknown>;
+};
+
+/** `GET /api/v1/control/table/{key}` のレスポンス。 */
+export type TableFileDto = {
+	key: string;
+	path: string;
+	/** 挿入順の列名。 */
+	columns: string[];
+	rows: TableEntryDto[];
+	/**
+	 * 現内容の blake3 ハッシュ（64 hex、prefix 無し）。
+	 * mutation 系で `If-Match: b3:<content_hash>` として送ると楽観ロックが効く。
+	 */
+	content_hash: string;
+	editable: boolean;
+};
+
+/** `PUT /api/v1/control/table/{key}` の body。 */
+export type PutTableRequest = {
+	/**
+	 * 列順を明示する場合に指定。未指定かつ現 Table が空でなければ現 schema 列順を踏襲する。
+	 * 現 Table が空（ファイル未存在など）の場合は必須。
+	 */
+	columns?: string[];
+	rows: Array<Record<string, unknown>>;
+};
+
+/** `POST /table/{key}/entry` および `PATCH /table/{key}/entry/{row_index}` の body。 */
+export type TableEntryRequest = {
+	values: Record<string, unknown>;
+};
+
+/** mutation 系（PUT / POST / PATCH / DELETE）共通レスポンス。 */
+export type TableMutationResponse = {
+	ok: boolean;
+	/** 書き込み後の新しい content_hash（次の If-Match に使う）。 */
+	content_hash: string;
+	row_count: number;
+	affected_row_index: number | null;
+};
+
+// --- Flowgraph Trigger Endpoint (φ-2) ---------------------------------------
+
+/**
+ * `POST /api/v1/control/flowgraph/{instance_id}/trigger/{node_id}` の body。
+ *
+ * `inputs` の value は以下いずれかを受け付ける:
+ *   - 生 JSON: `"ドクターウサギ"` / `42` / `true` / ...
+ *   - 型注釈ラッパー: `{ type: "string", value: "..." }`（サーバ側で value を取り出して coerce）
+ *
+ * `exec_port` は複数の exec 入力を持つノード向け。省略時は最初の exec 入力を自動選択（通常 `exec_in`）。
+ */
+export type TriggerNodeRequest = {
+	inputs?: Record<string, unknown>;
+	exec_port?: string;
+};
+
+export type TriggerNodeResponse = {
+	accepted: boolean;
+	instance_id: string;
+	node_id: string;
+	feature: string;
+	exec_port: string;
+	/** 実際に coerce して送った override key 名（debug 用）。 */
+	overridden_inputs: string[];
+};
+
+// ---------------------------------------------------------------------------
 // エラー型
 // ---------------------------------------------------------------------------
 

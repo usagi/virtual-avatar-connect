@@ -73,18 +73,32 @@ import {
  type FragmentPasteRequest,
  type FragmentPasteResponse,
  type ZipImportOutcome,
+ type TableCatalogResponse,
+ type TableFileDto,
+ type TableMutationResponse,
+ type PutTableRequest,
+ type TableEntryRequest,
+ type TriggerNodeRequest,
+ type TriggerNodeResponse,
 } from './types';
 
 const API_BASE = '/api/v1/control';
 
 type JsonInit = Omit<RequestInit, 'body' | 'headers'> & {
  body?: unknown;
+ /**
+  * 追加リクエストヘッダ（`If-Match`、`X-Request-Id` など）。
+  * `Accept` / `Authorization` / `Content-Type` は内部で管理するため
+  * ここで指定しても上書きされる。
+  */
+ extraHeaders?: Record<string, string>;
 };
 
 async function request<T>(path: string, init: JsonInit = {}): Promise<T> {
- const { body, ...rest } = init;
+ const { body, extraHeaders, ...rest } = init;
  const headers: Record<string, string> = {
   Accept: 'application/json',
+  ...(extraHeaders ?? {}),
   ...buildAuthHeader(),
  };
  let finalBody: BodyInit | undefined;
@@ -472,6 +486,91 @@ export const api = {
    throw new ControlApiError(res.status, res.statusText, errBody);
   }
   return (await res.json()) as ZipImportOutcome;
+ },
+
+ // ---------------------------------------------------------------------------
+ // Phase φ-1: Control Table CRUD
+ //
+ // 全ての mutation 系は `If-Match: b3:<content_hash>` で楽観ロックが効く。
+ // `ifMatch` 引数が省略された場合、GUI は「盲目上書き」になる点に注意
+ // （サーバ側は header 未指定を許容するが、GUI コンポーネントは常に直近の
+ // `content_hash` を渡すこと）。
+ // ---------------------------------------------------------------------------
+
+ listControlTables(): Promise<TableCatalogResponse> {
+  return request<TableCatalogResponse>('/tables');
+ },
+
+ getControlTable(key: string): Promise<TableFileDto> {
+  return request<TableFileDto>(`/table/${encodeURIComponent(key)}`);
+ },
+
+ putControlTable(key: string, body: PutTableRequest, ifMatch?: string): Promise<TableMutationResponse> {
+  return request<TableMutationResponse>(`/table/${encodeURIComponent(key)}`, {
+   method: 'PUT',
+   body,
+   extraHeaders: ifMatch ? { 'If-Match': `b3:${ifMatch}` } : undefined,
+  });
+ },
+
+ postControlTableEntry(
+  key: string,
+  body: TableEntryRequest,
+  ifMatch?: string,
+ ): Promise<TableMutationResponse> {
+  return request<TableMutationResponse>(`/table/${encodeURIComponent(key)}/entry`, {
+   method: 'POST',
+   body,
+   extraHeaders: ifMatch ? { 'If-Match': `b3:${ifMatch}` } : undefined,
+  });
+ },
+
+ patchControlTableEntry(
+  key: string,
+  rowIndex: number,
+  body: TableEntryRequest,
+  ifMatch?: string,
+ ): Promise<TableMutationResponse> {
+  return request<TableMutationResponse>(
+   `/table/${encodeURIComponent(key)}/entry/${rowIndex}`,
+   {
+    method: 'PATCH',
+    body,
+    extraHeaders: ifMatch ? { 'If-Match': `b3:${ifMatch}` } : undefined,
+   },
+  );
+ },
+
+ deleteControlTableEntry(
+  key: string,
+  rowIndex: number,
+  ifMatch?: string,
+ ): Promise<TableMutationResponse> {
+  return request<TableMutationResponse>(
+   `/table/${encodeURIComponent(key)}/entry/${rowIndex}`,
+   {
+    method: 'DELETE',
+    extraHeaders: ifMatch ? { 'If-Match': `b3:${ifMatch}` } : undefined,
+   },
+  );
+ },
+
+ // ---------------------------------------------------------------------------
+ // Phase φ-2: Flowgraph Trigger Endpoint
+ //
+ // V2 は単一 instance のため `instance_id` 既定 `default`。将来のマルチプロファイル
+ // 同時実行で profile 名にマップされる想定。
+ // ---------------------------------------------------------------------------
+
+ triggerFlowgraphNode(
+  nodeId: string,
+  body: TriggerNodeRequest = {},
+  instanceId: string = 'default',
+ ): Promise<TriggerNodeResponse> {
+  return request<TriggerNodeResponse>(
+   `/flowgraph/${encodeURIComponent(instanceId)}/trigger/${encodeURIComponent(nodeId)}`,
+   { method: 'POST', body },
+  );
  },
 } as const;
 
