@@ -46,6 +46,17 @@
    {#if t.detail}
     <div class="mt-0.5 whitespace-pre-wrap break-words text-xs opacity-80">{t.detail}</div>
    {/if}
+   {#if t.action}
+    <div class="mt-1.5 flex justify-end">
+     <button
+      type="button"
+      class="rounded border border-current/40 px-2 py-0.5 text-xs font-medium hover:bg-current/10"
+      onclick={() => toastStore.triggerAction(t.id)}
+     >
+      {t.action.label}
+     </button>
+    </div>
+   {/if}
   </div>
  {/each}
 </div>

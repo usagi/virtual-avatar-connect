@@ -12,6 +12,13 @@
 
 export type ToastTone = 'info' | 'success' | 'warn' | 'error';
 
+export type ToastAction = {
+ /** ボタンラベル。例: "元に戻す" */
+ label: string;
+ /** クリック時のハンドラ。完了後トーストは自動 dismiss される。 */
+ onAction: () => void | Promise<void>;
+};
+
 export type ToastMessage = {
  id: number;
  tone: ToastTone;
@@ -23,6 +30,8 @@ export type ToastMessage = {
  timeout_ms: number;
  /** 作成時刻（Date.now()）。 */
  created_at: number;
+ /** γ-4a.0: Undo 等のクリック可能なアクション。省略可。 */
+ action?: ToastAction;
 };
 
 const DEFAULT_TIMEOUT: Record<ToastTone, number> = {
@@ -43,6 +52,7 @@ class ToastStore {
   title: string;
   detail?: string;
   timeout_ms?: number;
+  action?: ToastAction;
  }): number {
   const id = this.#nextId++;
   const timeout_ms = opts.timeout_ms ?? DEFAULT_TIMEOUT[opts.tone];
@@ -53,6 +63,7 @@ class ToastStore {
    detail: opts.detail,
    timeout_ms,
    created_at: Date.now(),
+   action: opts.action,
   };
   this.items = [...this.items, msg];
   if (timeout_ms > 0) {
@@ -78,17 +89,28 @@ class ToastStore {
  }
 
  // 便利ショートカット
- info(title: string, detail?: string): number {
-  return this.push({ tone: 'info', title, detail });
+ info(title: string, detail?: string, action?: ToastAction): number {
+  return this.push({ tone: 'info', title, detail, action });
  }
- success(title: string, detail?: string): number {
-  return this.push({ tone: 'success', title, detail });
+ success(title: string, detail?: string, action?: ToastAction): number {
+  return this.push({ tone: 'success', title, detail, action });
  }
- warn(title: string, detail?: string): number {
-  return this.push({ tone: 'warn', title, detail });
+ warn(title: string, detail?: string, action?: ToastAction): number {
+  return this.push({ tone: 'warn', title, detail, action });
  }
- error(title: string, detail?: string): number {
-  return this.push({ tone: 'error', title, detail });
+ error(title: string, detail?: string, action?: ToastAction): number {
+  return this.push({ tone: 'error', title, detail, action });
+ }
+
+ /** γ-4a.0: Undo 用の即時同期 trigger。action が呼び出されたら toast を dismiss する。 */
+ async triggerAction(id: number): Promise<void> {
+  const msg = this.items.find((m) => m.id === id);
+  if (!msg?.action) return;
+  try {
+   await msg.action.onAction();
+  } finally {
+   this.dismiss(id);
+  }
  }
 }
 

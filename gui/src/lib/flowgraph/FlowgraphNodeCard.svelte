@@ -10,6 +10,8 @@
   * 接続時の型チェックは `FlowgraphCanvas` の onConnect で行なうのでここは表示のみ。
   */
  import { Handle, Position } from '@xyflow/svelte';
+ import { flowgraphStore } from '../flowgraphStore.svelte';
+ import { toastStore } from '../toasts.svelte';
  import type { FlowgraphNodeSpec, FlowgraphPortSpec } from '../types';
 
  type Data = {
@@ -39,6 +41,23 @@
   if (port.is_exec) return 'flowgraph-handle exec';
   return 'flowgraph-handle data';
  }
+
+ /** γ-4a.0: × ボタンから単一ノード削除。FlowgraphCanvas の onDelete と同じ挙動（undo toast 付き）。 */
+ function onClickDelete(event: MouseEvent) {
+  event.stopPropagation();
+  event.preventDefault();
+  const { removedNodes, removedEdges } = flowgraphStore.removeSelection([data.nodeId], []);
+  if (removedNodes === 0 && removedEdges === 0) return;
+  const parts: string[] = [];
+  if (removedNodes > 0) parts.push(`ノード ${removedNodes}`);
+  if (removedEdges > 0) parts.push(`エッジ ${removedEdges}`);
+  toastStore.info('削除しました', parts.join(' / '), {
+   label: '元に戻す',
+   onAction: () => {
+    flowgraphStore.undoLastDelete();
+   },
+  });
+ }
 </script>
 
 <div
@@ -47,6 +66,16 @@
  class:missing-spec={!spec}
  title={data.feature}
 >
+ <button
+  type="button"
+  class="close-btn"
+  aria-label="ノード削除"
+  title="このノードを削除 (Delete でも可)"
+  onclick={onClickDelete}
+  onmousedown={(e) => e.stopPropagation()}
+ >
+  ×
+ </button>
  <div class="head">
   <div class="title">{title}</div>
   <div class="feature">{shortFeature(data.feature)}</div>
@@ -118,6 +147,34 @@
  .flowgraph-node.selected {
   border-color: rgb(59 130 246);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+ }
+ /* γ-4a.0: hover 時のみ × ボタン表示。選択状態は常時表示。 */
+ .close-btn {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  line-height: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: rgb(185, 28, 28);
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease-in-out, background-color 0.12s ease-in-out;
+  z-index: 5;
+ }
+ .flowgraph-node:hover .close-btn,
+ .flowgraph-node.selected .close-btn {
+  opacity: 0.85;
+ }
+ .close-btn:hover {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.25);
  }
  .flowgraph-node.missing-spec {
   border-color: rgb(239 68 68);

@@ -192,6 +192,96 @@ class FlowgraphStore {
   if (this.selectedNodeId === id) this.selectedNodeId = null;
  }
 
+ /**
+  * γ-4a.0: Undo 可能な「まとめ削除」。複数ノード / エッジを 1 回で消して、
+  * 直前の snapshot をスタック（1 段）に保持する。UI は toast action で `undoLastDelete()` を呼べる。
+  */
+ removeSelection(nodeIds: string[], edgePairs: Array<{ from: string; to: string }>): {
+  removedNodes: number;
+  removedEdges: number;
+ } {
+  if (!this.draftNodes || !this.draftEdges) return { removedNodes: 0, removedEdges: 0 };
+  const nodeSet = new Set(nodeIds);
+  const edgeKeys = new Set(edgePairs.map((e) => `${e.from}||${e.to}`));
+
+  const removedNodes = this.draftNodes.filter((n) => nodeSet.has(n.id));
+  // ノード消滅で巻き添えになるエッジも含める。
+  const removedEdges = this.draftEdges.filter(
+   (e) => edgeKeys.has(`${e.from}||${e.to}`) || edgeMentionsAny(e, nodeSet),
+  );
+  if (removedNodes.length === 0 && removedEdges.length === 0) {
+   return { removedNodes: 0, removedEdges: 0 };
+  }
+
+  this.#lastDeletion = {
+   nodes: removedNodes.map((n) => ({
+    id: n.id,
+    feature: n.feature,
+    position: n.position ? ([n.position[0], n.position[1]] as [number, number]) : null,
+    properties: { ...n.properties },
+   })),
+   edges: removedEdges.map((e) => ({ from: e.from, to: e.to })),
+  };
+
+  this.draftNodes = this.draftNodes.filter((n) => !nodeSet.has(n.id));
+  this.draftEdges = this.draftEdges.filter(
+   (e) => !edgeKeys.has(`${e.from}||${e.to}`) && !edgeMentionsAny(e, nodeSet),
+  );
+  if (this.selectedNodeId && nodeSet.has(this.selectedNodeId)) this.selectedNodeId = null;
+
+  return { removedNodes: removedNodes.length, removedEdges: removedEdges.length };
+ }
+
+ /** γ-4a.0: 直前の `removeSelection` を取り消す。成功すれば true。 */
+ undoLastDelete(): boolean {
+  const snap = this.#lastDeletion;
+  if (!snap) return false;
+  this.#lastDeletion = null;
+  if (!this.draftNodes) this.draftNodes = [];
+  if (!this.draftEdges) this.draftEdges = [];
+  // id 衝突は想定しない（消したばかりなので）。念のため id 重複は捨てる。
+  const existingIds = new Set(this.draftNodes.map((n) => n.id));
+  const restoredNodes = snap.nodes.filter((n) => !existingIds.has(n.id));
+  this.draftNodes = [...this.draftNodes, ...restoredNodes];
+  this.draftEdges = [...this.draftEdges, ...snap.edges];
+  return true;
+ }
+
+ /** γ-4a.0: 直前の削除があるか（UI の undo ボタン表示判定に使う）。 */
+ hasPendingUndo(): boolean {
+  return this.#lastDeletion !== null;
+ }
+
+ /**
+  * γ-4a: 現在の draft と、サーバから返ってきた parsed とで差分があるか。
+  * 初回ロード直後は false、ノード追加/削除/移動/プロパティ変更で true に倒す。
+  * 「何が変わっているか」を JSON 比較で粗く判定する実装。position は整数化してから比較し、
+  * サブピクセル単位のドラッグで dirty になるのを避ける。
+  */
+ get isDirty(): boolean {
+  if (!this.currentFile?.parsed || !this.draftNodes || !this.draftEdges) return false;
+  const base = this.currentFile.parsed;
+  if (base.nodes.length !== this.draftNodes.length) return true;
+  if (base.edges.length !== this.draftEdges.length) return true;
+  const normalizeNode = (n: { id: string; feature: string; position?: [number, number] | null; properties: Record<string, unknown> }) => ({
+   id: n.id,
+   feature: n.feature,
+   position: n.position ? [Math.round(n.position[0]), Math.round(n.position[1])] : null,
+   properties: n.properties,
+  });
+  const baseNodes = JSON.stringify(base.nodes.map(normalizeNode));
+  const draftNodes = JSON.stringify(this.draftNodes.map(normalizeNode));
+  if (baseNodes !== draftNodes) return true;
+  const baseEdges = JSON.stringify(base.edges.map((e) => ({ from: e.from, to: e.to })));
+  const draftEdges = JSON.stringify(this.draftEdges.map((e) => ({ from: e.from, to: e.to })));
+  return baseEdges !== draftEdges;
+ }
+
+ #lastDeletion: {
+  nodes: FlowgraphDraftNode[];
+  edges: FlowgraphDraftEdge[];
+ } | null = null;
+
  addEdge(from: string, to: string): void {
   if (!this.draftEdges) this.draftEdges = [];
   if (this.draftEdges.some((e) => e.from === from && e.to === to)) return;
@@ -511,6 +601,11 @@ export type FlowgraphDraftEdge = {
 
 function edgeMentionsNode(edge: FlowgraphDraftEdge, nodeId: string): boolean {
  return parsePortRef(edge.from).nodeId === nodeId || parsePortRef(edge.to).nodeId === nodeId;
+}
+
+/** γ-4a.0: 複数ノード版。`removeSelection` の巻き添えエッジ計算に使う。 */
+function edgeMentionsAny(edge: FlowgraphDraftEdge, nodeIds: Set<string>): boolean {
+ return nodeIds.has(parsePortRef(edge.from).nodeId) || nodeIds.has(parsePortRef(edge.to).nodeId);
 }
 
 /**

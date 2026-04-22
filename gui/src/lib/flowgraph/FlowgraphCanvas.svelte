@@ -31,6 +31,7 @@
  } from '@xyflow/svelte';
  import '@xyflow/svelte/dist/style.css';
  import { flowgraphStore, parsePortRef } from '../flowgraphStore.svelte';
+ import { toastStore } from '../toasts.svelte';
  import type { FlowgraphNodeSpec } from '../types';
  import FlowgraphNodeCard from './FlowgraphNodeCard.svelte';
  import FlowgraphAutoFit from './FlowgraphAutoFit.svelte';
@@ -124,11 +125,26 @@
  }
 
  function onDelete(params: { nodes: Node[]; edges: Edge[] }) {
-  for (const n of params.nodes) flowgraphStore.removeNode(n.id);
-  for (const e of params.edges) {
-   const orig = (e.data as { original?: { from: string; to: string } } | undefined)?.original;
-   if (orig) flowgraphStore.removeEdge(orig.from, orig.to);
-  }
+  // γ-4a.0: まとめて削除し、直前スナップショットを store に保持して toast から undo できるようにする。
+  const nodeIds = params.nodes.map((n) => n.id);
+  const edgePairs = params.edges
+   .map((e) => (e.data as { original?: { from: string; to: string } } | undefined)?.original)
+   .filter((x): x is { from: string; to: string } => !!x);
+  const { removedNodes, removedEdges } = flowgraphStore.removeSelection(nodeIds, edgePairs);
+  if (removedNodes === 0 && removedEdges === 0) return;
+  const parts: string[] = [];
+  if (removedNodes > 0) parts.push(`ノード ${removedNodes}`);
+  if (removedEdges > 0) parts.push(`エッジ ${removedEdges}`);
+  toastStore.info(
+   '削除しました',
+   parts.join(' / '),
+   {
+    label: '元に戻す',
+    onAction: () => {
+     flowgraphStore.undoLastDelete();
+    },
+   },
+  );
  }
 
  function onSelectionChange(params: { nodes: Node[]; edges: Edge[] }) {
@@ -139,7 +155,7 @@
  const nodeTypes = { flowgraph: FlowgraphNodeCard };
 </script>
 
-<div class="h-full w-full">
+<div class="relative h-full w-full">
  {#if !flowgraphStore.currentFq}
   <div class="flex h-full items-center justify-center text-sm opacity-60">
    左からファイルを選択してください。
@@ -179,6 +195,10 @@
         $effect で後から nodes を差し込む我々の構成では明示的な再 fit が必須。 -->
    <FlowgraphAutoFit triggerKey={`${flowgraphStore.currentFq ?? ''}::${nodes.length}`} />
   </SvelteFlow>
+  <!-- γ-4a.0: 削除操作の発見性確保。編集中キャンバスの左下にキーボードヒントを固定表示。 -->
+  <div class="flowgraph-keyhint pointer-events-none absolute bottom-1 left-1 select-none">
+   <code>Delete</code> / <code>Backspace</code> : 選択削除 ・ <code>Ctrl+Click</code> : 複数選択
+  </div>
  {/if}
 </div>
 
@@ -196,5 +216,26 @@
  :global(.dark .svelte-flow__pane),
  :global([data-color-mode='dark'] .svelte-flow__pane) {
   background: transparent;
+ }
+ /* γ-4a.0: キーボードヒント。控えめな配色で、操作の邪魔にならないサイズ感。 */
+ .flowgraph-keyhint {
+  font-size: 10.5px;
+  opacity: 0.55;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+  padding: 2px 6px;
+ }
+ .flowgraph-keyhint code {
+  font-family: inherit;
+  font-weight: 600;
+  padding: 0 3px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  opacity: 0.9;
+ }
+ @media (prefers-color-scheme: dark) {
+  .flowgraph-keyhint {
+   background: rgba(255, 255, 255, 0.06);
+  }
  }
 </style>
