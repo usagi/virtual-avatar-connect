@@ -12,6 +12,11 @@ path = "src/lib.rs"
 name = "virtual-avatar-connect"
 path = "src/main.rs"
 
+# η-5: V1 dictionary / regex ファイル → η 統一 11 カラム TSV 変換 CLI
+[[bin]]
+name = "virtual-avatar-connect-migrate-dict"
+path = "src/bin/migrate_dict.rs"
+
 [dependencies]
 anyhow = "1.0.102"
 # 0.34+ はデフォルトが TLS のみ。利用する API ごとに feature を足す（`chat-completion` 単独に固定する意味はない）。

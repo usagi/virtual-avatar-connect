@@ -1,0 +1,16 @@
+source	replacement	kind	priority	is_locked	enabled	by	created_at	expires_at	tags	note
+^\\s*システムコマンド\\s*シャットダウン.*	/quit	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*リロード.*	/reload	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*ディゼ[イー]ブル.*	/disable	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*イネ[イー]ブル.*	/enable	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*セット\\s*(イニット|イニシャライズ).*	/set init	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*セット\\s*(ビ|ピ)ート\\s*セイバー\\s*マッピング.*	/set bsm	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*セット\\s*(ビ|ピ)ート\\s*セイバー\\s*ランチ.*	/set bsl	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*セット\\s*(ビ|ピ)ート\\s*セイバー.*	/set bs	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*セット\\s*(ETS|いーてぃーえす|ゆーろとらっくしみゅれーたー|イーティーエス|ユーロトラックシミュレーター)(2|２|つー).*	/set ets2	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*セット\\s*(じゃん|ジャン|雀|残|ちゃん)(たま|タマ|魂).*	/set jantama	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*セット\\s*(アークナイツ|あーくないつ).*	/set arknights	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*セット\\s*(モンスター|もんすたー)(ハンター|はんたー)(ワールド|わーるど).*	/set mhw	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*セット\\s*(ラスト|らすと).*	/set rust	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド\\s*セット\\s*クリア.*	/set clear	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
+^\\s*システムコマンド.*	/?	regex	0	true	true	pre-command	2026-04-22T18:34:26Z		regex.pre-command	migrated from regex.pre-command.txt
