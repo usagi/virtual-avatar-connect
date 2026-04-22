@@ -688,4 +688,46 @@ mod tests {
 			.any(|d| d.code == DiagnosticCode::InvalidPortRef));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
+
+	// η 仕様書 §10.3 の "Example flowgraph 実走" を smoke test として固定化する。
+	// 実データ流し込みまでは行わず、load + build が通ることで 95% の回帰を拾う想定。
+	// engine レベルの動作は `flowgraph::nodes::dictionary::tests` でカバー済み。
+	#[test]
+	fn load_example_basic_replace_dictionary() {
+		let path = Path::new("flowgraph.example/dictionary/basic-replace.flowgraph.toml");
+		let report = load_file(path, None).expect("basic-replace example should load");
+		assert!(
+			report.diagnostics.iter().all(|d| d.severity != Severity::Error),
+			"unexpected errors: {:?}",
+			report.diagnostics,
+		);
+		for id in ["dict_path", "dict_mode", "load", "in", "replace", "log_out"] {
+			let fq = format!("main::{id}");
+			assert!(
+				report.node_meta.contains_key(&fq),
+				"node `{fq}` not resolved; got keys: {:?}",
+				report.node_meta.keys().collect::<Vec<_>>(),
+			);
+		}
+	}
+
+	#[test]
+	fn load_example_command_dispatch() {
+		let path = Path::new("flowgraph.example/dictionary/command-dispatch.flowgraph.toml");
+		let report = load_file(path, None).expect("command-dispatch example should load");
+		assert!(
+			report.diagnostics.iter().all(|d| d.severity != Severity::Error),
+			"unexpected errors: {:?}",
+			report.diagnostics,
+		);
+		for id in ["in", "cmd_path", "cmd_mode", "load_cmds", "match", "log_matched", "log_plain"]
+		{
+			let fq = format!("main::{id}");
+			assert!(
+				report.node_meta.contains_key(&fq),
+				"node `{fq}` not resolved; got keys: {:?}",
+				report.node_meta.keys().collect::<Vec<_>>(),
+			);
+		}
+	}
 }
