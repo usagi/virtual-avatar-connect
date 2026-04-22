@@ -1,0 +1,107 @@
+# =========================================================================
+#  flowgraph.example/command-sets/main.flowgraph.toml
+# =========================================================================
+# V1 の `feature = "command"` scene switcher を Flowgraph-native に復活させた
+# サンプル（δ-X）。
+#
+# 使い方:
+#   POST /command            content=morning   →  `on_set`（名前一致）
+#   POST /command            content=unknown   →  `on_none`（名前不一致）
+#
+# 挙動:
+#   - web_input から届いた content 文字列をそのまま command_name として
+#     command.set へ渡す。
+#   - command.set は `sets` プロパティの配列から `name == content` の要素を
+#     検索し、見つかれば `pre` → `channel_contents` → `post` の順に
+#     ChannelDatum を push。pre/post は `pre_post_channel`（既定 "main"）へ、
+#     channel_contents は各要素の `channel` フィールドへ流れる。
+#   - 見つからなければ `on_none` が発火し、log にその旨を残す。
+#
+# より凝った入力パーサを挟みたい場合は `flowgraph.command.match` を
+# 先頭に置いて verb + args に分解し、verb でこの command.set を
+# 呼び分ける構成にできる（twitch-events の cheer/raid 分岐と同じパターン）。
+# =========================================================================
+
+[meta]
+title = "Scene switcher via flowgraph.command.set"
+description = "V1 command processor 相当の scene switcher を Flowgraph で実装した例。"
+tags = ["example", "command", "scene", "web_input"]
+
+
+[[nodes]]
+id = "web_in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 200]
+properties.path = "/command"
+properties.method = "POST"
+properties.body_format = "plain"
+
+[[nodes]]
+id = "sets"
+feature = "flowgraph.command.set"
+position = [420, 200]
+properties.pre_post_channel = "main"
+properties.source_actor = "flowgraph:command-sets"
+
+[[nodes.properties.sets]]
+name = "morning"
+pre = ["おはようございます", "今日も配信スタートです"]
+post = ["よろしくお願いします"]
+channel_contents = [
+    { channel = "obs_scene",  content = "Scene-Morning" },
+    { channel = "vmc_pose",   content = "stand_morning" },
+]
+
+[[nodes.properties.sets]]
+name = "gaming"
+pre = ["ゲームスタート！"]
+channel_contents = [
+    { channel = "obs_scene",  content = "Scene-Gaming" },
+]
+
+[[nodes.properties.sets]]
+name = "ending"
+pre = ["お疲れ様でした", "今日の配信はここまでです"]
+post = ["また次回お会いしましょう"]
+channel_contents = [
+    { channel = "obs_scene",  content = "Scene-Ending" },
+]
+
+
+[[nodes]]
+id = "log_ok"
+feature = "flowgraph.util.log"
+position = [700, 140]
+
+[[nodes]]
+id = "log_no_match"
+feature = "flowgraph.util.log"
+position = [700, 260]
+
+
+# =========================================================================
+# Edges
+# =========================================================================
+
+# web_input → command.set（exec + content を command_name に渡す）
+[[edges]]
+from = "web_in:exec_out"
+to = "sets:exec_in"
+[[edges]]
+from = "web_in:content"
+to = "sets:command_name"
+
+# 分岐ログ
+[[edges]]
+from = "sets:on_set"
+to = "log_ok:exec_in"
+[[edges]]
+from = "sets:matched_name"
+to = "log_ok:value"
+
+[[edges]]
+from = "sets:on_none"
+to = "log_no_match:exec_in"
+[[edges]]
+from = "web_in:content"
+to = "log_no_match:value"

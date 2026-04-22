@@ -16,6 +16,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.channel.emit`](#flowgraph-channel-emit) — Channel Emit
 - **command**
   - [`flowgraph.command.match`](#flowgraph-command-match) — Command Match
+  - [`flowgraph.command.set`](#flowgraph-command-set) — Command Set
 - **compare**
   - [`flowgraph.compare.eq`](#flowgraph-compare-eq) — Equal
   - [`flowgraph.compare.float_gt`](#flowgraph-compare-float-gt) — Float >
@@ -155,6 +156,28 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `command` | `string` |  |
 | `args` | `list<string>` |  |
 | `original` | `string` |  |
+
+### `flowgraph.command.set`
+
+**Command Set** — command_name に一致する set を sets プロパティから引き、pre → channel_contents → post の順でチャンネルへ push する
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `command_name` | `string` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_set` | `exec` (out) |  |
+| `on_none` | `exec` (out) |  |
+| `matched_name` | `string` |  |
+| `entry_count` | `int` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `sets` | `json` | `[]` |  | コマンドセット配列。各要素は `{ name, pre?, post?, channel_contents? }` を持つ JSON。 |
+| `pre_post_channel` | `string` | `""` |  | `pre` / `post` を流すチャンネル名。空なら pre/post を無視する。 |
+| `source_actor` | `string` | `""` |  | ChannelDatum の source_actor。空なら `flowgraph:<node_id>` を自動スタンプ。 |
 
 ## compare
 

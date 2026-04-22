@@ -180,6 +180,7 @@ pub fn default_registry() -> NodeRegistry {
 
 	// --- command / dictionary ---
 	r.register_pure(Arc::new(nodes::command::CommandMatchNode));
+	r.register_effectful(Arc::new(nodes::command::CommandSetNode));
 	r.register_pure(Arc::new(nodes::dictionary::DictionaryReplaceNode));
 	r.register_pure(Arc::new(nodes::dictionary::DictionaryCommandNode));
 
