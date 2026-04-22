@@ -320,6 +320,7 @@ fn socket_value_to_json(v: &SocketValue) -> JsonValue {
   SocketValue::Map(m) => {
    JsonValue::Object(m.iter().map(|(k, v)| (k.clone(), socket_value_to_json(v))).collect())
   }
+  SocketValue::Table(t) => t.to_json_array(),
  }
 }
 

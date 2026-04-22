@@ -74,6 +74,9 @@ fn to_json(v: &SocketValue) -> JsonValue {
   SocketValue::Json(j) => j.clone(),
   SocketValue::List(xs) => JsonValue::Array(xs.iter().map(to_json).collect()),
   SocketValue::Map(m) => JsonValue::Object(m.iter().map(|(k, v)| (k.clone(), to_json(v))).collect()),
+  // η-PR1: Table variant 追加済。旧 dictionary.command/replace は Table を受け付けないため
+  //         簡易な Null 射影に落とし込む（η-PR2 で本 node ごと書き換え予定）。
+  SocketValue::Table(_) => JsonValue::Null,
  }
 }
 

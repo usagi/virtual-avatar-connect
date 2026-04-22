@@ -226,6 +226,7 @@ fn socket_value_to_json(v: &SocketValue) -> serde_json::Value {
     m.iter().map(|(k, v)| (k.clone(), socket_value_to_json(v))).collect();
    serde_json::Value::Object(obj)
   }
+  SocketValue::Table(t) => t.to_json_array(),
  }
 }
 

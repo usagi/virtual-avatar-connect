@@ -184,6 +184,12 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::dictionary::DictionaryReplaceNode));
 	r.register_pure(Arc::new(nodes::dictionary::DictionaryCommandNode));
 
+	// --- table (η-2) ---
+	r.register_pure(Arc::new(nodes::table_ops::TableFromJsonNode));
+	r.register_pure(Arc::new(nodes::table_ops::TableToJsonNode));
+	r.register_effectful(Arc::new(nodes::table_ops::TableLoadTsvNode));
+	r.register_effectful(Arc::new(nodes::table_ops::TableWriteTsvNode));
+
 	// --- ingress (δ-3d, δ-9 Part E) ---
 	r.register_pure(Arc::new(nodes::ingress::WebInputIngressNode));
 	r.register_pure(Arc::new(nodes::ingress::VoiceIngressNode));

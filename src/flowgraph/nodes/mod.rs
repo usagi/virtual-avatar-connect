@@ -24,6 +24,11 @@
 //! - `dictionary`: dictionary.replace / dictionary.command（V1 Modify / DictionaryCommand 由来、辞書置換と学習/忘却構文）
 //! - `regex_ops`: regex.replace（V1 Modify 由来、正規表現逐次置換）
 //!
+//! η（Dictionary/Table Unification, 途中）:
+//! - `table_ops`: table.from_json / table.to_json（Pure）、table.load_tsv / table.write_tsv（Effectful）
+//!   汎用 Table 型の I/O と JSON 相互変換。辞書以外にも scene registry / credential store 等で利用可能。
+//!   （`dictionary` ノードの Table 化は η-PR2 で対応予定）
+//!
 //! δ-4b:
 //! - `screenshot`: screenshot.capture（Windows 限定、V1 Screenshot 由来の EffectfulNode）
 //! - `ocr`: ocr.recognize（Windows 限定、V1 Ocr 由来）
@@ -67,6 +72,7 @@ pub mod regex_ops;
 pub mod screenshot;
 pub mod state;
 pub mod string_ops;
+pub mod table_ops;
 pub mod translate_gas;
 pub mod translate_libre;
 pub mod tts;

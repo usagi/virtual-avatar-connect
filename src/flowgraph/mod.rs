@@ -20,6 +20,7 @@ pub mod registry;
 pub mod runtime;
 pub mod socket;
 pub mod spawn;
+pub mod table;
 pub mod tts;
 
 pub use engine::{
@@ -35,3 +36,4 @@ pub use node::{
 pub use registry::{default_registry, registry, NodeRegistry};
 pub use runtime::{shared_flowgraph_new, FlowgraphRuntime, RuntimeHandle, SharedFlowgraph};
 pub use socket::{SocketType, SocketValue, TypeParseError, ValueCastError};
+pub use table::{ColumnSpec, Row, Table, TableFromJsonError, TableSchema};

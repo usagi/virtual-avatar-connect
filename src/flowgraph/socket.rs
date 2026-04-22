@@ -5,6 +5,7 @@
 //! - 型表記のパース/整形（`"list<string>"` / `"map<json>"` など）
 //! - 暗黙変換は行わない。`as_*()` は型が一致した場合のみ値を返す。
 
+use crate::flowgraph::table::Table;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -24,6 +25,10 @@ pub enum SocketType {
  List(Box<SocketType>),
  Map(Box<SocketType>),
  Exec,
+ /// 汎用表形式データ（`Table = Columns × Rows`、η フェーズ追加）。
+ /// 辞書、scene registry、credential store、Twitch user list 等の汎用プリミティブ。
+ /// 詳細は `docs/roadmap/phase-eta-dictionary-unification.md` §5 参照。
+ Table,
 }
 
 impl SocketType {
@@ -43,6 +48,7 @@ impl SocketType {
    SocketType::List(_) => Some(SocketValue::List(Vec::new())),
    SocketType::Map(_) => Some(SocketValue::Map(BTreeMap::new())),
    SocketType::Exec => None,
+   SocketType::Table => Some(SocketValue::Table(Table::empty())),
   }
  }
 
@@ -66,6 +72,7 @@ impl fmt::Display for SocketType {
    SocketType::List(inner) => write!(f, "list<{inner}>"),
    SocketType::Map(inner) => write!(f, "map<{inner}>"),
    SocketType::Exec => f.write_str("exec"),
+   SocketType::Table => f.write_str("table"),
   }
  }
 }
@@ -117,6 +124,7 @@ fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
   "string" => return Ok(SocketType::String),
   "json" => return Ok(SocketType::Json),
   "exec" => return Ok(SocketType::Exec),
+  "table" => return Ok(SocketType::Table),
   _ => {}
  }
  // 複合型: list<T> / map<T> / map<string, T>
@@ -194,6 +202,8 @@ pub enum SocketValue {
  List(Vec<SocketValue>),
  /// key は常に String（spec §2.1）。
  Map(BTreeMap<String, SocketValue>),
+ /// 汎用表形式データ（η フェーズ追加）。Arc 共有 + COW mutation。
+ Table(Table),
  // Exec は値を持たないので variant なし。
 }
 
@@ -215,6 +225,7 @@ impl SocketValue {
     let inner = m.values().next().map(|v| v.type_of()).unwrap_or(SocketType::Json);
     SocketType::Map(Box::new(inner))
    }
+   SocketValue::Table(_) => SocketType::Table,
   }
  }
 
@@ -260,6 +271,12 @@ impl SocketValue {
    _ => Err(ValueCastError::Mismatch { expected: "map", actual: self.type_of() }),
   }
  }
+ pub fn as_table(&self) -> Result<&Table, ValueCastError> {
+  match self {
+   SocketValue::Table(t) => Ok(t),
+   _ => Err(ValueCastError::Mismatch { expected: "table", actual: self.type_of() }),
+  }
+ }
 
  /// 値の型が指定の `SocketType` に適合するかの軽量チェック。
  /// `List`/`Map` の内部型は空の場合はパスとみなす。
@@ -269,7 +286,8 @@ impl SocketValue {
    | (SocketValue::Int(_), SocketType::Int)
    | (SocketValue::Float(_), SocketType::Float)
    | (SocketValue::String(_), SocketType::String)
-   | (SocketValue::Json(_), SocketType::Json) => true,
+   | (SocketValue::Json(_), SocketType::Json)
+   | (SocketValue::Table(_), SocketType::Table) => true,
    (SocketValue::List(xs), SocketType::List(inner)) => xs.iter().all(|v| v.matches(inner)),
    (SocketValue::Map(m), SocketType::Map(inner)) => m.values().all(|v| v.matches(inner)),
    _ => false,
@@ -312,6 +330,19 @@ pub fn from_toml_value(expected: &SocketType, v: &toml::Value) -> Result<SocketV
    Ok(SocketValue::Map(out))
   }
   (SocketType::Exec, _) => Err(FromTomlError::ExecHasNoValue),
+  (SocketType::Table, toml::Value::Array(arr)) => {
+   // TOML 配列から Table を復元（スキーマは先頭 object から推論）
+   let mut rows_json = Vec::with_capacity(arr.len());
+   for elem in arr {
+    rows_json.push(toml_to_json(elem)?);
+   }
+   Table::from_json_array(&rows_json, None)
+    .map(SocketValue::Table)
+    .map_err(|e| FromTomlError::Mismatch {
+     expected: "table".into(),
+     actual: format!("{e}"),
+    })
+  }
   (expected, actual) => Err(FromTomlError::Mismatch {
    expected: expected.to_string(),
    actual: format!("{actual:?}"),
@@ -369,6 +400,24 @@ mod tests {
   assert_eq!(SocketType::parse("string").unwrap(), SocketType::String);
   assert_eq!(SocketType::parse("json").unwrap(), SocketType::Json);
   assert_eq!(SocketType::parse("exec").unwrap(), SocketType::Exec);
+  assert_eq!(SocketType::parse("table").unwrap(), SocketType::Table);
+ }
+
+ #[test]
+ fn table_type_roundtrip_and_default() {
+  // display / parse 往復
+  let t = SocketType::Table;
+  let s = t.to_string();
+  assert_eq!(s, "table");
+  assert_eq!(SocketType::parse(&s).unwrap(), SocketType::Table);
+  // default_value は空 Table
+  let dv = SocketType::Table.default_value();
+  assert!(matches!(dv, Some(SocketValue::Table(_))));
+  // serde
+  let j = serde_json::to_string(&SocketType::Table).unwrap();
+  assert_eq!(j, "\"table\"");
+  let back: SocketType = serde_json::from_str(&j).unwrap();
+  assert_eq!(back, SocketType::Table);
  }
 
  #[test]

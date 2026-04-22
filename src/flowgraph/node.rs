@@ -147,6 +147,7 @@ impl SocketValueRepr {
      m.iter().map(|(k, v)| (k.clone(), SocketValueRepr::from_value(v).0)).collect();
     serde_json::Value::Object(obj)
    }
+   SocketValue::Table(t) => t.to_json_array(),
   })
  }
 
@@ -176,6 +177,11 @@ pub(crate) fn json_to_socket_value(ty: &SocketType, v: &serde_json::Value) -> Op
     out.insert(k.clone(), json_to_socket_value(inner, v)?);
    }
    Some(SocketValue::Map(out))
+  }
+  (SocketType::Table, J::Array(arr)) => {
+   crate::flowgraph::table::Table::from_json_array(arr, None)
+    .ok()
+    .map(SocketValue::Table)
   }
   _ => None,
  }
