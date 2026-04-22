@@ -526,6 +526,20 @@ pub enum TriggerSendError {
 
 pub trait NodeDescriptor: Send + Sync {
  fn describe(&self) -> NodeSpec;
+
+ /// Phase φ-2: Control API (`POST /api/v1/control/flowgraph/{instance_id}/trigger/{node_id}`)
+ /// からの外部トリガ発火を許可するかの opt-in フラグ。既定 `false`。
+ ///
+ /// `describe()` が返す [`NodeSpec::control_triggerable`] への射影元。
+ /// trait 側で override することで、既存の `NodeSpec { ... }` リテラルを触らずに
+ /// dictionary.learn / dictionary.forget 等だけを opt-in にできる設計。
+ ///
+ /// `NodeRegistry::spec()` / `all_specs()` がこの値を `NodeSpec.control_triggerable` に
+ /// 詰め直してから返すため、GUI から見える仕様とトリガ許可判定の 1 源として振る舞う。
+ fn control_triggerable(&self) -> bool
+ {
+  false
+ }
 }
 
 // ---------------------------------------------------------------------

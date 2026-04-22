@@ -41,6 +41,14 @@ impl NodeArc {
 		}
 	}
 
+	fn control_triggerable(&self) -> bool {
+		match self {
+			NodeArc::Pure(n) => n.control_triggerable(),
+			NodeArc::Stateful(n) => n.control_triggerable(),
+			NodeArc::Effectful(n) => n.control_triggerable(),
+		}
+	}
+
 	fn make_impl(&self) -> NodeImpl {
 		match self {
 			NodeArc::Pure(n) => NodeImpl::pure(n.clone()),
@@ -83,6 +91,14 @@ impl NodeRegistry {
 	/// 登録済み feature の `NodeSpec`。
 	pub fn spec(&self, feature: &str) -> Option<NodeSpec> {
 		self.map.get(feature).map(|n| n.describe())
+	}
+
+	/// Phase φ-2: Control API の Flowgraph Trigger Endpoint が当該 feature の
+	/// 外部発火を許可するかどうか。`NodeDescriptor::control_triggerable()` の投影。
+	///
+	/// 未登録 feature は `false` を返す（知らないノードは発火不可）。
+	pub fn is_control_triggerable(&self, feature: &str) -> bool {
+		self.map.get(feature).map(|n| n.control_triggerable()).unwrap_or(false)
 	}
 
 	/// 登録済み feature から **新しい** `NodeImpl` を作る（Stateful は state slot を新規確保）。

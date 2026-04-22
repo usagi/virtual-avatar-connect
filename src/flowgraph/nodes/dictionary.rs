@@ -601,6 +601,12 @@ impl NodeDescriptor for DictionaryLearnNode {
 			properties: vec![],
 		}
 	}
+
+	// Phase φ-2: Live Quick-Add ウィジェットから 1 shot で「新しい辞書行を追加」する用途に限り
+	// 外部トリガを許可する。副作用は dictionary Table の append のみで、失敗しても Table を破壊しない。
+	fn control_triggerable(&self) -> bool {
+		true
+	}
 }
 
 #[async_trait]
@@ -760,6 +766,12 @@ impl NodeDescriptor for DictionaryForgetNode {
 			],
 			properties: vec![],
 		}
+	}
+
+	// Phase φ-2: Dictionary Editor から「1 行消す」操作のために opt-in する。
+	// is_locked な行は compute() 内で保護されるため、trigger 経由でも破壊は起きない。
+	fn control_triggerable(&self) -> bool {
+		true
 	}
 }
 
