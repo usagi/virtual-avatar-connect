@@ -1,0 +1,36 @@
+meta {
+  name: Ingress - minimal
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/ingress
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "channel": "main",
+    "content": "hello from bruno"
+  }
+}
+
+docs {
+  最小構成の ingress 送信。`channel` と `content` のみ。
+
+  - `is_final` は省略時 true 扱い。
+  - `source` は省略時 `{ kind: "control.ingress", actor: "gui" }` が backend 側で補われる。
+
+  レスポンス例:
+    {
+      "id": 1234,
+      "channel": "main",
+      "accepted": true
+    }
+
+  備考:
+    - `POST /input`（WebInput processor）と違い、`[[processors]] feature="webinput"` の設定に依存しない。
+    - Control API 全体の認証ポリシー（loopback 無認証 / LAN Bearer 必須）に従う。
+}

@@ -1,0 +1,37 @@
+meta {
+  name: ManagedApps - stop
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/managed_apps/coeiroink/stop
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "grace_ms": 3000
+  }
+}
+
+docs {
+  指定 id の Managed App を停止する（Windows 専用）。
+
+  動作:
+    1. 対象 PID の子孫 PID まで集約（Toolhelp の親子関係）。
+    2. 可視トップレベルウィンドウに WM_CLOSE を送信（graceful shutdown のお願い）。
+    3. `grace_ms` 経過後、まだ生存している PID を TerminateProcess で強制終了。
+
+  リクエスト:
+    - `grace_ms` (number, default 3000) … WM_CLOSE → TerminateProcess の間の待機時間。0 なら即強制終了。
+
+  レスポンス例 (200):
+    { "id": "coeiroink", "closed_windows": 3, "terminated_pids": 0 }
+
+  404: 不明な id
+  400: `supports_status=false` の entry（停止できない）
+  409 + error="not_running": 現在 running=false → stop は no-op で OK も返す（実装は 200 + note="not_running"）
+  501: Windows 以外の OS
+}

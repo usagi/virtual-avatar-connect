@@ -1,0 +1,110 @@
+# =========================================================================
+#  flowgraph.example/tts-coeiroink/main.flowgraph.toml
+# =========================================================================
+# CoeiroInk TTS サンプル。
+#
+# 前提:
+#   - CoeiroInk（http://127.0.0.1:50032）を起動しておく（GPU 版推奨）。
+#   - `GET /v1/speakers` で speakerUuid と styles[].styleId を確認。
+#
+# voice の指定方法:
+#   - "<speaker_uuid>"           → style は内部 0 番目がデフォルト。
+#   - "<speaker_uuid>:<style_id>" → 特定の style を明示（推奨）。
+# =========================================================================
+
+[meta]
+title = "TTS CoeiroInk"
+description = "Web Input → CoeiroInk v1/synthesis で合成再生。"
+tags = ["example", "tts", "coeiroink"]
+
+
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 200]
+
+
+[[nodes]]
+id = "engine"
+feature = "flowgraph.literal.string"
+position = [80, 380]
+properties.value = "coeiroink"
+
+# 例: アルマちゃん:4（表-v1）
+[[nodes]]
+id = "voice"
+feature = "flowgraph.literal.string"
+position = [80, 460]
+properties.value = "c97966b1-d80c-04f5-aba5-d30a92843b59:4"
+
+[[nodes]]
+id = "speed"
+feature = "flowgraph.literal.float"
+position = [80, 540]
+properties.value = 1.15
+
+[[nodes]]
+id = "pitch"
+feature = "flowgraph.literal.float"
+position = [80, 620]
+properties.value = 0.15
+
+[[nodes]]
+id = "volume"
+feature = "flowgraph.literal.float"
+position = [80, 700]
+properties.value = 1.0
+
+
+[[nodes]]
+id = "speak"
+feature = "flowgraph.tts.speak"
+position = [400, 360]
+
+
+[[nodes]]
+id = "log_ok"
+feature = "flowgraph.util.log"
+position = [720, 280]
+
+[[nodes]]
+id = "log_err"
+feature = "flowgraph.util.log"
+position = [720, 440]
+
+
+[[edges]]
+from = "in:exec_out"
+to = "speak:exec_in"
+[[edges]]
+from = "in:content"
+to = "speak:text"
+[[edges]]
+from = "engine:value"
+to = "speak:engine"
+[[edges]]
+from = "voice:value"
+to = "speak:voice"
+[[edges]]
+from = "speed:value"
+to = "speak:speed"
+[[edges]]
+from = "pitch:value"
+to = "speak:pitch"
+[[edges]]
+from = "volume:value"
+to = "speak:volume"
+
+[[edges]]
+from = "speak:on_success"
+to = "log_ok:exec_in"
+[[edges]]
+from = "speak:audio_path"
+to = "log_ok:value"
+
+[[edges]]
+from = "speak:on_error"
+to = "log_err:exec_in"
+[[edges]]
+from = "speak:error"
+to = "log_err:value"

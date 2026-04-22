@@ -1,0 +1,37 @@
+# VAC Flowgraph example: hello + log
+#
+# 最小構成の Flowgraph。文字列リテラル 1 個を Log ノードに繋ぐだけ。
+# `main.flowgraph.toml` なので fq name は `main::<node_id>`（folder shortcut: `::<node_id>`）。
+#
+# 起動時に一度だけ log に "Hello, VAC Flowgraph!" が出る。GUI の Flowgraph タブを
+# 開くと、左ツリーで `main` を選ぶことでキャンバスに可視化される。
+#
+# 使い方:
+#   - 本ファイル単体の loader 動作確認:
+#       cargo test --lib flowgraph::loader::dir::tests::examples_dir_loads
+#   - VAC 本体で読み込ませる:
+#       conf.toml に `flowgraph_dir = "flowgraph.example"` を書くか、
+#       このファイルを `./flowgraph/main.flowgraph.toml` にコピーする。
+
+[meta]
+title = "hello log"
+description = "Literal → Log の最小パイプ。"
+tags = ["example", "minimal"]
+
+[[nodes]]
+id = "hello"
+feature = "flowgraph.literal.string"
+position = [100, 100]
+properties.value = "Hello, VAC Flowgraph!"
+
+[[nodes]]
+id = "logger"
+feature = "flowgraph.util.log"
+position = [400, 100]
+
+# Literal の出力 `value` ポートを Log の入力 `value` ポートへ。
+# exec チェーンは使わない（Literal が pure node でトリガーを持たないので、
+# logger 側が lazy に値を pull する構成）。
+[[edges]]
+from = "hello:value"
+to = "logger:value"

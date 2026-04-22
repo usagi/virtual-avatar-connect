@@ -1,0 +1,23 @@
+meta {
+  name: Pause - AI by id
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/pause
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "target": "ai",
+    "id": "kaltsit"
+  }
+}
+
+docs {
+  指定 AI persona（`[[ai.personas]].id`）だけを soft pause。`id` の代わりに `"index": N` も可。
+  `id` と `index` の両方を渡した場合は **id を優先**。
+}

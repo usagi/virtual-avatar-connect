@@ -1,0 +1,21 @@
+meta {
+  name: Resume - All
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/resume
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "target": "all"
+  }
+}
+
+docs {
+  全 processor + 全 AI persona を resume。
+}

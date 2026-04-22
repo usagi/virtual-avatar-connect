@@ -1,0 +1,76 @@
+# =========================================================================
+#  conf.example-control-api.toml  (v2)
+# =========================================================================
+# Control API — ブラウザ / GUI から VAC を制御する HTTP/WS 層。
+#
+# v2 では Flowgraph 用エンドポイントも **すべてここに統合**されている:
+#   GUI（Svelte）が叩く `/api/v1/control/flowgraph/*`（tree / file / node-catalog /
+#   fragment / export.zip / import.zip / reload / ...）も本ブロックで保護される。
+#
+# =========================================================================
+#
+# ■ 役割
+#   - `/api/v1/control/*` 以下に REST/WS を集約:
+#     - GET /ping, GET /whoami            疎通と認証ポリシー診断
+#     - GET /snapshot                     現状 JSON（ai personas / twitch / flowgraph 等）
+#     - POST /pause, /resume              AI persona soft pause（id/index/全体）
+#     - POST /reload                      AI persona の system 命令 / heartbeat / decision
+#     - POST /oauth/twitch/{broadcaster|moderator}/{start|cancel},
+#       GET  /oauth/twitch/{broadcaster|moderator}/status   Device Code Flow の GUI 駆動
+#     - GET /events                        WS: ChannelDatum / pause_state / flowgraph_reloaded /
+#                                              oauth_status / heartbeat / lagged を一本化
+#     - **Flowgraph（v2）**:
+#       - GET  /flowgraph/tree               .flowgraph.toml の木構造
+#       - GET  /flowgraph/file?path=...       個別ファイル内容
+#       - POST /flowgraph/file                 新規作成
+#       - PUT  /flowgraph/file?path=...        上書き
+#       - DELETE /flowgraph/file?path=...      削除
+#       - GET  /flowgraph/node-catalog         登録ノード spec 一覧
+#       - GET  /flowgraph/diagnostics          最新ロードの error/warning
+#       - POST /flowgraph/reload               ディレクトリ再ロード
+#       - POST /flowgraph/fragment/copy        ノード/ファイル/ディレクトリを TOML fragment に
+#       - POST /flowgraph/fragment/paste       fragment を書き戻し（衝突解消・remap 付き）
+#       - POST /flowgraph/export/zip           ZIP として書き出し
+#       - POST /flowgraph/import/zip           ZIP を取り込み（dry-run 可）
+#   - 既存の `/resources/...` / `/output/...`（OBS ブラウザソース）は保護しない。
+#
+# ■ WebSocket の認証
+#   `/api/v1/control/events` は REST と同じポリシーで保護:
+#     - `Authorization: Bearer <token>`      wscat -H / fetch()
+#     - `?token=<token>` or `?access_token=<token>`  ブラウザ `new WebSocket()` 用
+#
+# ■ 責務の分離
+#   - 「どこから接続できるか」は **`web_ui_address`**（既定 127.0.0.1:57000）。
+#   - 「その接続に Bearer が要るか」は **この [control_api] ブロック**。
+#
+# ■ よく使うパターン早見
+#   (A) 同 PC のみ / Tauri GUI 前提                   ──既定で OK（本ブロックを丸ごと省略可）
+#   (B) LAN のタブレットから、フルトラスト家庭 LAN   ──`web_ui_address = "0.0.0.0:57000"` +
+#                                                      require_token_for_non_loopback = false
+#   (C) LAN 半信頼                                     ──`web_ui_address = "0.0.0.0:57000"` + 既定値
+#                                                      （LAN は Bearer 必須、loopback は無認証）
+#   (D) 強めにロック、同 PC も Bearer 必須             ──require_token_for_loopback = true
+# =========================================================================
+
+[control_api]
+
+# ─── Bearer トークン ─────────────────────────────────────────────────────────
+# 未指定、かつ環境変数 `VAC_CONTROL_API_BEARER_TOKEN` も未指定のときは、起動ごとに自動生成する。
+# 自動生成分は `<runtime_dir>/control-token.txt` に平文で書き出される:
+#   Windows: `%LOCALAPPDATA%\virtual-avatar-connect\runtime\control-token.txt`
+#   Linux/macOS: `~/.local/share/virtual-avatar-connect/runtime/control-token.txt`
+#
+# GUI クライアントは通常このファイルを読み取って Authorization ヘッダを構築すれば OK。
+# 恒久的に同じトークンを使いたい場合（複数端末で手打ち共有など）は固定値を書く:
+#
+# bearer_token = "put-your-random-64-char-string-here"
+
+# ─── ループバック (127.0.0.1 / ::1) に Bearer を要求するか ──────────────────
+# 既定 false: 同 PC からは無条件で通す。Tauri/ネイティブ GUI が最頻。
+# true にすると、同 PC でも Authorization ヘッダが必須になる（強めのロック）。
+require_token_for_loopback = false
+
+# ─── 非ループバック (LAN / 外部) に Bearer を要求するか ─────────────────────
+# 既定 true: LAN からの接続は Bearer 必須（半信頼前提のセキュア既定）。
+# フルトラストな LAN 専用機材なら false にできる。運用者の責任で。
+require_token_for_non_loopback = true

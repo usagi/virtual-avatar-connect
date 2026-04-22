@@ -1,0 +1,61 @@
+meta {
+  name: Connect (wscat)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/events
+  body: none
+  auth: inherit
+}
+
+docs {
+  WebSocket エンドポイント `GET /api/v1/control/events` のドキュメント用ダミー。
+  Bruno は WebSocket を張り続けるテストが苦手なので、この .bru は
+  「Upgrade 無しで叩くと 400 / 426 が返る」ことの確認用に置いてある。
+  実際の購読は別ツールで行うこと。
+
+  ## 受け取れるイベント (JSON lines, 1 メッセージ = 1 行)
+
+  ```jsonc
+  {"kind":"channel_datum","phase":"pushed","id":42,"channel":"ai","content":"...","flags":[],"datetime":"2026-04-17T..."}
+  {"kind":"channel_datum","phase":"pushed_quiet", ...}        // ストリーミング中間表示
+  {"kind":"channel_datum","phase":"updated", ...}             // 同一 id の content 更新
+  {"kind":"channel_datum","phase":"finalized", ...}           // is_final 付与時
+  {"kind":"pause_state","paused":true,"target":"all","processors_affected":[0,1],"ais_affected":[0]}
+  {"kind":"reloaded","target":"ai_persona","id":"kaltsit","detail":{"custom_instructions_changed":true,"rebuilt_decision_spec":false,...}}
+  {"kind":"reloaded","target":"modify_files","id":null,"detail":[{"processor_index":3,"processor_id":null,"feature":"modify","dictionary_entries":128,"regex_entries":12}]}
+  {"kind":"oauth_status","account":"broadcaster","status":"pending","view":{"account":"broadcaster","status":"pending","user_code":"AB12CD","verification_uri":"https://www.twitch.tv/activate?public=true&device-code=AB12CD","interval_secs":5,"expires_at":"2026-04-18T07:45:00+00:00","started_at":"2026-04-18T07:35:00+00:00"}}
+  {"kind":"oauth_status","account":"broadcaster","status":"authorized","view":{...}}  // DCF 完了
+  {"kind":"oauth_status","account":"moderator","status":"expired","view":{...,"last_error":"device 認可がタイムアウトしました..."}}
+  {"kind":"heartbeat","now":"2026-04-17T..."}                 // 30 秒ごと
+  {"kind":"lagged","dropped":3}                               // 受信遅延時のみ
+  ```
+
+  ## wscat で試す
+
+  ```bash
+  # 同 PC から（loopback で require_token_for_loopback=false なら認証不要）
+  wscat -c ws://127.0.0.1:57000/api/v1/control/events
+
+  # LAN から（Authorization ヘッダ）
+  wscat -c ws://192.168.0.1:57000/api/v1/control/events -H "Authorization: Bearer $VAC_CONTROL_API_BEARER_TOKEN"
+
+  # ブラウザ / Authorization 付与不可な環境では ?token= クエリでフォールバック
+  wscat -c "ws://192.168.0.1:57000/api/v1/control/events?token=$VAC_CONTROL_API_BEARER_TOKEN"
+  ```
+
+  ## ブラウザから (DevTools Console)
+
+  ```js
+  const ws = new WebSocket("ws://127.0.0.1:57000/api/v1/control/events");
+  ws.onmessage = (e) => console.log(JSON.parse(e.data));
+  ```
+
+  LAN 経由でトークンが要る場合:
+  ```js
+  const token = "YOUR_TOKEN";
+  const ws = new WebSocket(`ws://192.168.0.1:57000/api/v1/control/events?token=${encodeURIComponent(token)}`);
+  ```
+}

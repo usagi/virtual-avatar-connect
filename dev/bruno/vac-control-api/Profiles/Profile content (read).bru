@@ -1,0 +1,19 @@
+meta {
+  name: Profile content (read)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/profiles/conf.example-twitch.toml/content
+  body: none
+  auth: inherit
+}
+
+docs {
+  指定したプロファイル（`conf_source_path` の同ディレクトリ内の `*.toml` ファイル）の中身を取得する。
+
+  - パス引数はファイル名（basename）のみ。パス区切りや `..` を含むと 400。拡張子 `.toml` 必須。
+  - `is_current` が真なら GUI は「編集しても再起動まで反映されない」注意を出すこと。
+  - レスポンス: `{ filename, path, size, content, is_current }`
+}

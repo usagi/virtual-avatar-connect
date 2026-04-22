@@ -1,0 +1,21 @@
+meta {
+  name: OAuth - Twitch moderator start
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/oauth/twitch/moderator/start
+  body: none
+  auth: inherit
+}
+
+docs {
+  Twitch **moderator / bot** アカウントに対する Device Code Flow (DCF) を起動する。
+
+  broadcaster と同じ挙動だが、`[twitch.moderator]` セクションが必要。**別の Twitch アカウント**（放送主とは別のログイン）で認可することを想定しているので、
+  先にブラウザを moderator 用プロファイル／Incognito で開いておくのが定石。
+
+  `oauth_browser_command` に `chrome --incognito {url}` や `firefox -P BotProfile {url}` を設定しておけば、本エンドポイント経由で自動的にその
+  ブラウザが起動して認可画面へ進める。`conf.example-twitch.toml` に複数ブラウザのサンプルあり。
+}

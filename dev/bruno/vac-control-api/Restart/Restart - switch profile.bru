@@ -1,0 +1,29 @@
+meta {
+  name: Restart - switch profile
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/restart
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "conf": "conf.example-twitch.toml",
+    "graceful_ms": 800
+  }
+}
+
+docs {
+  別プロファイル (`conf`) を新プロセスに渡して再起動する。
+
+  検証内容:
+    - `conf` が現 conf の親ディレクトリの外を指していないこと（`..` での脱出を弾く）
+    - `.toml` 拡張子であること
+    - `Conf::new_noop_probe` で deserialize が通ること
+
+  上のいずれかに失敗すると 400 Bad Request を返し、現プロセスはそのまま動き続ける。
+}

@@ -1,0 +1,109 @@
+# =========================================================================
+#  conf.example-tts.toml  (v2)
+# =========================================================================
+# TTS（音声合成）の **リファレンス**。
+#
+# v1 と大きく異なる点:
+#   - v1 は driver ごとに `feature = "os-tts"` / `"voicevox"` / `"coeiroink"` /
+#     `"bouyomichan"` / `"aivis-speech"` の 5 種類の `[[processors]]` があった。
+#   - v2 では **単一ノード** `flowgraph.tts.speak` に統合。`engine` 入力で
+#     ドライバを動的切替する設計（`"voicepeak"` を含む 6 エンジンを同梱）。
+#
+# この conf.example は「**サービス側に書く設定は基本的に無い**」ことを示す案内です。
+# TTS のパラメーターはすべて Flowgraph 側の `flowgraph.tts.speak` ノードに供給します。
+#
+# 対応するサンプル:
+#   flowgraph.example/tts-os/         ← Windows SAPI / macOS / Linux OS 標準 TTS
+#   flowgraph.example/tts-voicevox/   ← VOICEVOX ENGINE（AivisSpeech も同形）
+#   flowgraph.example/tts-coeiroink/  ← CoeiroInk（speakerUuid + styleId 構文）
+#   flowgraph.example/tts-bouyomichan/ ← 棒読みちゃん（TCP 接続、iSpeed/iTone/iVolume）
+#   flowgraph.example/tts-voicepeak/  ← VoicePeak（付属 CLI を spawn、narrator + emotion CSV）
+# =========================================================================
+
+
+# -------------------------------------------------------------------------
+# 1. conf.toml 側に必要な設定
+# -------------------------------------------------------------------------
+# なし。**TTS 自体はサービス設定を必要としません。**
+#
+# ただし、TTS の再生音量を BGM / 効果音とミックスしたい場合は、別途
+# ブラウザソース (`[browser_source]`) とその中の `bgm-player` / `effects` を使う。
+# これは conf.example-voice.toml / conf.example-*-run-with.toml を参照。
+
+
+# -------------------------------------------------------------------------
+# 2. `flowgraph.tts.speak` ノードの使い方（参考）
+# -------------------------------------------------------------------------
+# 必須入力:
+#   - engine:  "os" / "bouyomichan" / "voicevox" / "aivis_speech" / "coeiroink" / "voicepeak"
+#   - text:    合成したいテキスト
+#
+# オプション入力（driver 依存）:
+#   - voice:     OS なら音声名（例 "Haruka"）、VOICEVOX/AivisSpeech は style_id か "uuid:N"、
+#                CoeiroInk は speaker_uuid（style_id は extra で）、Bouyomichan は "0"..."8"、
+#                VoicePeak は narrator 名（例 "Japanese Female 1"）
+#   - speed:     1.0=標準（VOICEVOX 系は speed_scale、OS は rate、bouyomichan は iSpeed、
+#                VoicePeak は CLI `--speed`（1.0 → 100, ±50%〜+100% の範囲））
+#   - pitch:     0.0=標準
+#   - volume:    1.0=標準（VoicePeak は CLI に音量オプションが無いため無視＋WARN）
+#   - endpoint:  HTTP base URL / TCP "host:port"。空で driver 既定
+#                （VOICEVOX: http://127.0.0.1:50021 / AivisSpeech: http://127.0.0.1:10101
+#                 CoeiroInk: http://127.0.0.1:50032 / Bouyomichan: 127.0.0.1:50001
+#                 VoicePeak: `voicepeak(.exe)` の絶対パス上書きに流用可能）
+#   - extra:     Map<Json>。engine 固有パラメーターの escape hatch。
+#                VOICEVOX 系:   intonation_scale / pre_phoneme_length / post_phoneme_length /
+#                               output_sampling_rate
+#                CoeiroInk:     style_id / intonation_scale / pre_phoneme_length / ...
+#                Bouyomichan:   speed_raw / tone_raw / volume_raw / voice_raw
+#                VoicePeak:     executable / narrator / emotion ("happy=50,angry=10") /
+#                               speed_raw (50..200) / pitch_raw (-300..300)
+#   - save_path: 合成 WAV の保存先。`{T}` が UTC ISO 日時に展開される。
+#
+# 出力:
+#   - on_success / on_error (Exec)
+#   - played (Bool): VAC 共有 audio_sink へ append できたか
+#   - audio_path (String): save_path に実際書き出したパス（空なら未保存）
+#   - error (String)
+
+
+# -------------------------------------------------------------------------
+# 3. 話者 / style_id の調べ方
+# -------------------------------------------------------------------------
+#
+# OS TTS（Windows SAPI など）:
+#   virtual-avatar-connect --test-os-tts        # 利用可能な voice 一覧をダンプ
+#
+# VOICEVOX / AivisSpeech:
+#   virtual-avatar-connect --voicevox-speakers  # /speakers を人間可読に整形
+#     （内部で GET /speakers を叩くだけなのでエンジンが起動している必要あり）
+#
+# CoeiroInk:
+#   GET http://localhost:50032/v1/speakers を curl / ブラウザで叩く
+#     （speakerUuid と styles[].styleId のペアを使う）
+#
+# Bouyomichan:
+#   標準 voice 番号 0 = デフォルト, 1..8 = 追加音声プリセット
+#
+# VoicePeak:
+#   voicepeak --list-narrator           # ナレーター一覧
+#   voicepeak --list-emotion <narrator> # ナレーターごとの感情キー一覧
+#   emotion は `extra.emotion` に "happy=50,angry=10" 形式の CSV で渡す
+
+
+# -------------------------------------------------------------------------
+# 4. 複数エンジン切り替え（同じチャンネルで別言語を別 TTS へ）
+# -------------------------------------------------------------------------
+# `flowgraph.flow.branch` + `flowgraph.compare.eq` で `source_actor` や
+# `source_kind` を見て engine を出し分けできる。
+# あるいは graph 自体を「channel A → engine X」「channel B → engine Y」と
+# 2 本並べるほうがシンプル。`flowgraph.example/tts-*` をそれぞれ別ファイル
+# として同じ flowgraph_dir に置けばよい。
+
+
+# -------------------------------------------------------------------------
+# 5. 発話中の重なり制御（speech_floor）
+# -------------------------------------------------------------------------
+# v1 の `respect_speech_floor` は v2 では未実装（TODO）。
+# 現状は VAC 共有 `audio_sink` が自動でキューイングするため、連打しても
+# 再生は順次行われる。同時発話の抑制や「マイク入力中は TTS 一時停止」などの
+# 高度な制御は将来の拡張予定。

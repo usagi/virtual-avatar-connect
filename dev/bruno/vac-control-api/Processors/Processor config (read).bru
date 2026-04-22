@@ -1,0 +1,26 @@
+meta {
+  name: Processor config (read)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/processors/0/config
+  body: none
+  auth: inherit
+}
+
+docs {
+  `[[processors]]` 配列の `index` 番目の entry を JSON で返す（read-only）。
+
+  - `config` フィールドに ProcessorConf を serde_json::to_value() でそのまま JSON 化したものが入る。
+  - 省略されていた値も default 値で明示される（serde が default を展開するので）。
+  - index が範囲外なら 404。
+  - `source_path` に参照した conf ファイルの絶対パスが含まれる。
+
+  ## 実装メモ
+
+  ランタイム側のスナップショットではなく **state.conf_source_path を毎回 re-parse** して返す。
+  理由は、Control API `/reload` や `/restart` で differ 可能なランタイム変数と
+  ディスク上の真を分けて管理するため。編集→書き戻しの往復はディスクが原典。
+}

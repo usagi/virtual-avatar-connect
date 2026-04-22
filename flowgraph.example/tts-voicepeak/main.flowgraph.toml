@@ -1,0 +1,136 @@
+# =========================================================================
+#  flowgraph.example/tts-voicepeak/main.flowgraph.toml
+# =========================================================================
+# VoicePeak TTS サンプル（付属 CLI `voicepeak(.exe)` を spawn）。
+#
+# 前提:
+#   - VoicePeak をインストール済み（実ライセンス必須）。
+#   - voicepeak(.exe) が PATH 上にあるか、GUI のインストール先を絶対パスで指定。
+#     Windows 既定: C:\Program Files\VOICEPEAK\voicepeak.exe
+#
+# voice（narrator）指定:
+#   `voicepeak --list-narrator` で取れるナレーター名をそのまま渡す（例: "Japanese Female 1"）。
+#   空文字なら CLI の既定（GUI 側で最後に選んでいたナレーター）が使われる。
+#
+# 正規化パラメーターの内部マップ（driver ドキュメント再掲）:
+#   - speed (1.0=標準) → CLI `--speed` = clamp((speed*100) as i32, 50, 200)
+#   - pitch (0.0=標準) → CLI `--pitch` = clamp((pitch*300) as i32, -300, 300)
+#   - volume: CLI に音量オプションは無い。volume != 1.0 は WARN 付きで無視。
+#
+# NOTE: emotion（"happy=50,angry=10" 等の CSV）や executable の絶対パス上書きは
+#   `speak:extra`（Map<Json>）経由で渡す設計だが、現状の v2 ノード群には
+#   **Map<Json> 値を直接構築できるリテラルノードが無い**（flowgraph.literal.map_json は後続 phase）。
+#   暫定対応:
+#     - GUI の Property Editor で `extra` を編集
+#     - または `flowgraph.json.parse` + 後続の map 構築ノードで組み立てる
+#   CLI 上書きをどうしても固定したいときは `endpoint` 入力に voicepeak.exe のパスを
+#   そのまま渡す（VoicePeak ドライバは endpoint を「exe パス上書き」に転用している）。
+# =========================================================================
+
+[meta]
+title = "TTS VoicePeak"
+description = "Web Input → VoicePeak CLI spawn で合成再生。"
+tags = ["example", "tts", "voicepeak"]
+
+
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 200]
+
+
+[[nodes]]
+id = "engine"
+feature = "flowgraph.literal.string"
+position = [80, 380]
+properties.value = "voicepeak"
+
+[[nodes]]
+id = "voice"
+feature = "flowgraph.literal.string"
+position = [80, 460]
+# `voicepeak --list-narrator` で手元の環境にあるナレーターから選ぶ
+properties.value = "Japanese Female 1"
+
+[[nodes]]
+id = "speed"
+feature = "flowgraph.literal.float"
+position = [80, 540]
+properties.value = 1.0
+
+[[nodes]]
+id = "pitch"
+feature = "flowgraph.literal.float"
+position = [80, 620]
+properties.value = 0.0
+
+[[nodes]]
+id = "volume"
+feature = "flowgraph.literal.float"
+position = [80, 700]
+properties.value = 1.0
+
+# 既定なら空文字で PATH 解決に任せる。
+# 絶対パス上書き例: "C:/Program Files/VOICEPEAK/voicepeak.exe"
+[[nodes]]
+id = "endpoint"
+feature = "flowgraph.literal.string"
+position = [80, 780]
+properties.value = ""
+
+
+[[nodes]]
+id = "speak"
+feature = "flowgraph.tts.speak"
+position = [400, 360]
+
+
+[[nodes]]
+id = "log_ok"
+feature = "flowgraph.util.log"
+position = [720, 280]
+
+[[nodes]]
+id = "log_err"
+feature = "flowgraph.util.log"
+position = [720, 440]
+
+
+[[edges]]
+from = "in:exec_out"
+to = "speak:exec_in"
+[[edges]]
+from = "in:content"
+to = "speak:text"
+[[edges]]
+from = "engine:value"
+to = "speak:engine"
+[[edges]]
+from = "voice:value"
+to = "speak:voice"
+[[edges]]
+from = "speed:value"
+to = "speak:speed"
+[[edges]]
+from = "pitch:value"
+to = "speak:pitch"
+[[edges]]
+from = "volume:value"
+to = "speak:volume"
+[[edges]]
+from = "endpoint:value"
+to = "speak:endpoint"
+
+[[edges]]
+from = "speak:on_success"
+to = "log_ok:exec_in"
+[[edges]]
+from = "speak:audio_path"
+to = "log_ok:value"
+
+[[edges]]
+from = "speak:on_error"
+to = "log_err:exec_in"
+[[edges]]
+from = "speak:error"
+to = "log_err:value"

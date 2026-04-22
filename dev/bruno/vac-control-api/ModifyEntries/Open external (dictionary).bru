@@ -1,0 +1,33 @@
+meta {
+  name: Open external (dictionary)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/modify/dict-for-subtitles/files/dictionary/open-external
+  body: none
+  auth: inherit
+}
+
+docs {
+  γ-9: 対象 Modify プロセッサの `writable_dictionary_file` を VAC ホスト上で OS 既定のエディタ（関連付けアプリ）で開く。
+
+  - パスは **サーバ側で processor コンフィグから解決** するので、リクエストボディでパスを指定することはできない（任意パス起動の禁止）。
+  - 起動コマンドは fire-and-forget。編集内容は別途 `reload_files` で VAC に取り込むこと。
+  - 404 `not_found` → 指定 id の modify processor が存在しない。
+  - 409 `writable_not_configured` / `file_not_found` → writable が未設定 or ファイル不在。
+  - 500 `spawn_failed` → OS へのプロセス起動自体に失敗（PATH 不備など）。
+
+  レスポンス例:
+  ```json
+  {
+    "processor_index": 3,
+    "processor_id": "dict-for-subtitles",
+    "kind": "dictionary",
+    "file": "C:\\path\\to\\writable.dictionary.txt",
+    "command": "cmd /C start \"\" \"C:\\path\\to\\writable.dictionary.txt\"",
+    "spawned": true
+  }
+  ```
+}

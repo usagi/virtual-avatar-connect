@@ -1,0 +1,20 @@
+meta {
+  name: OAuth - Twitch moderator delete tokens
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/control/oauth/twitch/moderator/tokens
+  body: none
+  auth: inherit
+}
+
+docs {
+  保存済みの moderator トークンキャッシュファイルを破棄する。
+
+  挙動・レスポンス仕様は broadcaster 版と同一。詳細はそちらの docs を参照。
+
+  注意:
+    - [twitch.moderator] 設定が無いと 400 が返る（moderator 認可の概念が無いため）。
+}

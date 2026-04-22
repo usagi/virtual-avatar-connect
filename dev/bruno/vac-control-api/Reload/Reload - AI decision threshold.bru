@@ -1,0 +1,29 @@
+meta {
+  name: Reload - AI decision threshold
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/reload
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "target": "ai_persona",
+    "id": "kaltsit",
+    "decision_threshold": 0.55
+  }
+}
+
+docs {
+  指定 AI persona の Decision Engine のしきい値（`decision.threshold`）を差し替える。
+  `DecisionSpec` は再構築されるので即座に次の観測から新しいしきい値で評価される。
+
+  前提: 設定ファイル側に `[[ai.personas.decision]]` ブロックが **存在する** こと（`base_score` や
+  `modulators` の再評価はここでは行わない。スコア計算ルール自体を変えたい場合はプロセス再起動）。
+
+  レスポンスの `ai_report.rebuilt_decision_spec` が `true` になっていれば rebuild 成功。
+}

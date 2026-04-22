@@ -1,0 +1,29 @@
+meta {
+  name: OAuth - Twitch broadcaster status
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/oauth/twitch/broadcaster/status
+  body: none
+  auth: inherit
+}
+
+docs {
+  broadcaster 用 DCF セッションの現在の状態を取得する。
+
+  レスポンス例:
+    {
+      "account": "broadcaster",
+      "status": "pending",                         // pending | authorized | expired | canceled | failed
+      "user_code": "AB12CD",
+      "verification_uri": "https://www.twitch.tv/activate?public=true&device-code=AB12CD",
+      "interval_secs": 5,
+      "expires_at": "2026-04-18T07:45:00+00:00",
+      "started_at": "2026-04-18T07:35:00+00:00",
+      "last_error": null
+    }
+
+  セッションが無ければ 404 (`{"error":"no_session"}`) を返す。
+}

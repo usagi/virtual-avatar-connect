@@ -2,7 +2,13 @@ use crate::{resource::CONTENT_TYPE_APPLICATION_JSON, Result, SharedState};
 use actix_web::{post, web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use std::path::PathBuf;
+
+/// `browser_source.document_root`（既定: `output`）。`GET /output`・`GET /browser-output/*` が参照する。
+#[derive(Clone)]
+pub struct OutputPaths {
+ pub root: PathBuf,
+}
 
 #[derive(Deserialize, Debug)]
 struct OutputRequestPayload {
@@ -109,20 +115,18 @@ async fn post(state: web::Data<SharedState>, request_paylaod: web::Json<OutputRe
 }
 
 #[actix_web::get("/output")]
-pub async fn get_index() -> Result<impl Responder> {
- // ./output/index.html を読み込む
- let path = Path::new("./output/index.html");
- match tokio::fs::read_to_string(path).await {
+pub async fn get_index(paths: web::Data<OutputPaths>) -> Result<impl Responder> {
+ let path = paths.root.join("index.html");
+ match tokio::fs::read_to_string(&path).await {
   Ok(content) => Ok(HttpResponse::Ok().content_type("text/html").body(content)),
   _ => Ok(HttpResponse::NotFound().finish()),
  }
 }
 
 #[actix_web::get("/output/{subindex}")]
-pub async fn get_subfile(subindex: web::Path<String>) -> Result<impl Responder> {
- // ./output/{subindex}.html を読み込む
- let path = Path::new("./output/").join(subindex.as_str()).with_extension("html");
- match tokio::fs::read_to_string(path).await {
+pub async fn get_subfile(paths: web::Data<OutputPaths>, subindex: web::Path<String>) -> Result<impl Responder> {
+ let path = paths.root.join(subindex.as_str()).with_extension("html");
+ match tokio::fs::read_to_string(&path).await {
   Ok(content) => Ok(HttpResponse::Ok().content_type("text/html").body(content)),
   _ => Ok(HttpResponse::NotFound().finish()),
  }

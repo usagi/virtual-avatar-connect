@@ -1,7 +1,7 @@
 {
- "rust-analyzer.linkedProjects": [
-  ".\\Cargo.toml",
-  ".\\Cargo.toml"
- ],
+ // Bundled rust-analyzer の proc-macro サーバーが古い rustc ABI のとき、async_trait 等で赤波線になる。
+ // rustup の RA を使うとアクティブな toolchain と一致する（未導入なら: rustup component add rust-analyzer）。
+ "rust-analyzer.server.path": "rust-analyzer",
+ "rust-analyzer.linkedProjects": ["Cargo.toml"],
  "rust-analyzer.showUnlinkedFileNotification": false
 }

@@ -1,0 +1,122 @@
+# =========================================================================
+#  flowgraph.example/ocr-screencap/main.flowgraph.toml
+# =========================================================================
+# 指定ウィンドウをキャプチャし、その内容を OCR で文字列化するサンプル。
+#
+# 前提（プラットフォーム）:
+#   - Windows のみ動作（`flowgraph.screenshot.capture` / `flowgraph.ocr.recognize`
+#     は Windows cfg の下でのみ実装）。
+#   - 非 Windows では両ノードが `on_error` を即発火する。
+#
+# 起動:
+#   `/input/snapshot/` などから任意文字列を投げるとキャプチャ→OCR→ログの連鎖が走る。
+#   （web_input のメッセージ本文は使わず、単に「トリガー」として使うだけ）
+#
+# 推奨テスト:
+#   メモ帳を開いて日本語を入力 → ウィンドウタイトルに「メモ帳」が含まれる状態で発火。
+# =========================================================================
+
+[meta]
+title = "Screenshot + OCR"
+description = "ウィンドウをキャプチャして OCR で文字列化する最小パイプ。"
+tags = ["example", "screenshot", "ocr", "windows"]
+
+
+# ---- トリガー ----
+[[nodes]]
+id = "trigger"
+feature = "flowgraph.ingress.web_input"
+position = [80, 200]
+
+
+# ---- キャプチャ対象（ウィンドウタイトル正規表現） ----
+[[nodes]]
+id = "title_regex"
+feature = "flowgraph.literal.string"
+position = [80, 360]
+properties.value = "メモ帳"
+
+
+# ---- SS ノード ----
+[[nodes]]
+id = "capture"
+feature = "flowgraph.screenshot.capture"
+position = [360, 200]
+
+
+# ---- OCR 言語 ----
+[[nodes]]
+id = "lang"
+feature = "flowgraph.literal.string"
+position = [360, 460]
+properties.value = "ja-JP"
+
+
+# ---- OCR ノード ----
+[[nodes]]
+id = "ocr"
+feature = "flowgraph.ocr.recognize"
+position = [680, 240]
+
+
+# ---- ログ ----
+[[nodes]]
+id = "log_text"
+feature = "flowgraph.util.log"
+position = [1000, 160]
+
+[[nodes]]
+id = "log_capture_err"
+feature = "flowgraph.util.log"
+position = [680, 440]
+
+[[nodes]]
+id = "log_ocr_err"
+feature = "flowgraph.util.log"
+position = [1000, 360]
+
+
+# ---- 配線 ----
+
+# trigger → capture
+[[edges]]
+from = "trigger:exec_out"
+to = "capture:exec_in"
+[[edges]]
+from = "title_regex:value"
+to = "capture:target_title_regex"
+
+# capture: success → ocr
+[[edges]]
+from = "capture:on_success"
+to = "ocr:exec_in"
+[[edges]]
+from = "capture:data_url"
+to = "ocr:source"
+[[edges]]
+from = "lang:value"
+to = "ocr:lang"
+
+# capture: error → log
+[[edges]]
+from = "capture:on_error"
+to = "log_capture_err:exec_in"
+[[edges]]
+from = "capture:error"
+to = "log_capture_err:value"
+
+# ocr: success → log text
+[[edges]]
+from = "ocr:on_success"
+to = "log_text:exec_in"
+[[edges]]
+from = "ocr:text"
+to = "log_text:value"
+
+# ocr: error → log
+[[edges]]
+from = "ocr:on_error"
+to = "log_ocr_err:exec_in"
+[[edges]]
+from = "ocr:error"
+to = "log_ocr_err:value"

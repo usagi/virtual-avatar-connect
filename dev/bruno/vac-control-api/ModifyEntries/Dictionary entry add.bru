@@ -1,0 +1,41 @@
+meta {
+  name: Dictionary entry add
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/modify/dict-for-subtitles/dictionary/entries
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "to": "ドクターウサギ",
+    "from": "Dr.USAGI"
+  }
+}
+
+docs {
+  対象 Modify プロセッサの `writable_dictionary_file` に 1 行追加する。
+
+  - 対象 processor は URL 末尾直前の `modify/{id}` で **id 指定**。id はその processor の `[[processors]].id` と一致している必要がある（未指定の Modify は対象にできない）。
+  - `to` / `from` に空白文字は使えない（現行フォーマットは `to<space>from` のため）。
+  - 同じ (to, from) が既にあるときは `already_present: true` で 200（冪等）。
+  - 409 `writable_dictionary_not_configured` → 対象 Modify に `writable_dictionary_file` が設定されていない。
+  - 400 `invalid_entry` → バリデーション違反。
+  - 変更があった場合のみ WS `/events` に `Reloaded { target: "modify_files", id: "<modify id>" }` が流れる。
+
+  レスポンス例:
+  ```json
+  {
+    "processor_index": 3,
+    "processor_id": "dict-for-subtitles",
+    "file": "C:\\path\\to\\writable.dictionary.txt",
+    "total_entries": 129,
+    "already_present": false,
+    "removed_lines": 0
+  }
+  ```
+}

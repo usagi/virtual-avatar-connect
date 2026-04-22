@@ -1,0 +1,132 @@
+# =========================================================================
+#  flowgraph.example/tts-voicevox/main.flowgraph.toml
+# =========================================================================
+# VOICEVOX ENGINE / AivisSpeech TTS サンプル。
+#
+# 前提:
+#   - VOICEVOX ENGINE（http://127.0.0.1:50021）または
+#     AivisSpeech Engine（http://127.0.0.1:10101）を起動しておく。
+#   - 話者・style_id の確認:  virtual-avatar-connect --voicevox-speakers
+#
+# AivisSpeech に切り替える場合は:
+#   1. `engine` リテラルを "aivis_speech" に変更
+#   2. `endpoint` リテラルを "http://127.0.0.1:10101" に変更
+#      （省略なら driver の既定 endpoint が使われる）
+#
+# extra に渡しているのは VOICEVOX 固有の細かい合成パラメーター。
+# デフォルトで良ければ Map を空にしても動く。
+# =========================================================================
+
+[meta]
+title = "TTS VOICEVOX"
+description = "Web Input → VOICEVOX ENGINE（/audio_query → /synthesis）で合成再生。"
+tags = ["example", "tts", "voicevox", "aivis_speech"]
+
+
+# ---- Web 入力 ----
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 200]
+
+
+# ---- TTS パラメーター ----
+[[nodes]]
+id = "engine"
+feature = "flowgraph.literal.string"
+position = [80, 380]
+properties.value = "voicevox"
+
+# 方法 A: グローバル style_id
+#   "2" とか数値文字列で渡す。`/speakers` の styles[].id と一致させる。
+# 方法 B: uuid:N 構文
+#   "7ffcb7ce-00ec-4bdc-82cd-45a8889e43ff:0" など。UUID + 内部インデックス。
+[[nodes]]
+id = "voice"
+feature = "flowgraph.literal.string"
+position = [80, 460]
+properties.value = "2"
+
+[[nodes]]
+id = "speed"
+feature = "flowgraph.literal.float"
+position = [80, 540]
+properties.value = 1.15
+
+[[nodes]]
+id = "pitch"
+feature = "flowgraph.literal.float"
+position = [80, 620]
+properties.value = 0.0
+
+# 空文字で driver 既定。AivisSpeech に変えるなら http://127.0.0.1:10101。
+[[nodes]]
+id = "endpoint"
+feature = "flowgraph.literal.string"
+position = [80, 700]
+properties.value = ""
+
+# NOTE: `speak:extra` (Map<Json>) には VOICEVOX 固有パラメーター
+#   intonation_scale / pre_phoneme_length / post_phoneme_length / output_sampling_rate
+# を渡せるが、現状の v2 ノード群には **Map<Json> 値を直接構築できるリテラルノードが無い**
+# ため、この例では省略して driver 既定値に任せている。代替手段:
+#   - GUI の Property Editor で `extra` を編集（Map<Json> 値編集 UI が後続 phase で整備予定）
+#   - または `flowgraph.json.parse` で JSON 文字列 → Json を作り、何らかの Map 構築ノードを介す
+# 将来的に `flowgraph.literal.map_json` / `flowgraph.map.from_json_object` などを追加予定。
+
+
+# ---- 合成ノード ----
+[[nodes]]
+id = "speak"
+feature = "flowgraph.tts.speak"
+position = [400, 400]
+
+
+# ---- 結果ログ ----
+[[nodes]]
+id = "log_ok"
+feature = "flowgraph.util.log"
+position = [720, 320]
+
+[[nodes]]
+id = "log_err"
+feature = "flowgraph.util.log"
+position = [720, 480]
+
+
+# ---- 配線 ----
+[[edges]]
+from = "in:exec_out"
+to = "speak:exec_in"
+[[edges]]
+from = "in:content"
+to = "speak:text"
+[[edges]]
+from = "engine:value"
+to = "speak:engine"
+[[edges]]
+from = "voice:value"
+to = "speak:voice"
+[[edges]]
+from = "speed:value"
+to = "speak:speed"
+[[edges]]
+from = "pitch:value"
+to = "speak:pitch"
+[[edges]]
+from = "endpoint:value"
+to = "speak:endpoint"
+
+[[edges]]
+from = "speak:on_success"
+to = "log_ok:exec_in"
+[[edges]]
+from = "speak:audio_path"
+to = "log_ok:value"
+
+[[edges]]
+from = "speak:on_error"
+to = "log_err:exec_in"
+[[edges]]
+from = "speak:error"
+to = "log_err:value"

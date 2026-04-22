@@ -14,6 +14,14 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use wrappers::{CreatedHdc, Hbitmap, Hdc, Rect};
+
+// windows crate 0.62 で `Error::from_win32()` が削除されたための代替。
+// 正確な Win32 エラー番号を追いたい場面は限定的なので、ここでは E_FAIL ベースの一律変換に落とす。
+// δ-9.3 で windows-future / GetLastError 経由のより正確な変換に差し替える予定。
+fn win_last_error() -> windows::core::Error {
+ windows::core::Error::from_hresult(windows::Win32::Foundation::E_FAIL)
+}
+
 mod wrappers {
  use windows::{
   core::Error,
@@ -36,7 +44,7 @@ mod wrappers {
   {
    unsafe {
     match GetDC(Some(hwnd.into())) {
-     e if e.is_invalid() => Err(Error::from_win32()),
+     e if e.is_invalid() => Err(super::win_last_error()),
      hdc => Ok(Hdc { hdc }),
     }
    }
@@ -123,7 +131,7 @@ mod wrappers {
   pub(crate) fn create_compatible_dc(hdc: Option<HDC>) -> Result<CreatedHdc, Error> {
    unsafe {
     match CreateCompatibleDC(hdc) {
-     e if e.is_invalid() => Err(Error::from_win32()),
+     e if e.is_invalid() => Err(super::win_last_error()),
      hdc => Ok(CreatedHdc { hdc }),
     }
    }
@@ -158,7 +166,7 @@ mod wrappers {
   pub(crate) fn create_compatible_bitmap(hdc: HDC, w: i32, h: i32) -> Result<Hbitmap, Error> {
    unsafe {
     match CreateCompatibleBitmap(hdc, w, h) {
-     e if e.is_invalid() => Err(Error::from_win32()),
+     e if e.is_invalid() => Err(super::win_last_error()),
      hbitmap => Ok(Hbitmap { hbitmap }),
     }
    }
@@ -269,7 +277,7 @@ pub fn capture_window_ex(
   }?;
 
   if SelectObject(hdc.hdc, hbmp.hbitmap.into()).is_invalid() {
-   return Err(windows::core::Error::from_win32());
+   return Err(win_last_error());
   }
 
   let flags = PRINT_WINDOW_FLAGS(match area {
@@ -283,7 +291,7 @@ pub fn capture_window_ex(
    },
    Using::PrintWindow => {
     if PrintWindow(hwnd, hdc.hdc, flags) == false {
-     return Err(windows::core::Error::from_win32());
+     return Err(win_last_error());
     }
    },
   }
@@ -294,11 +302,11 @@ pub fn capture_window_ex(
     let hbmp2 = Hbitmap::create_compatible_bitmap(hdc.hdc, cw, ch)?;
     let so = SelectObject(hdc2.hdc, hbmp2.hbitmap.into());
     if so.is_invalid() {
-     return Err(windows::core::Error::from_win32());
+     return Err(win_last_error());
     }
     BitBlt(hdc2.hdc, 0, 0, cw, ch, Some(hdc.hdc), cx, cy, SRCCOPY)?;
     if SelectObject(hdc2.hdc, so).is_invalid() {
-     return Err(windows::core::Error::from_win32());
+     return Err(win_last_error());
     }
     (cw, ch, hdc2, hbmp2)
    },

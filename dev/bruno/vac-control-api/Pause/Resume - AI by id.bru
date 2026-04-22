@@ -1,0 +1,22 @@
+meta {
+  name: Resume - AI by id
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/resume
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "target": "ai",
+    "id": "kaltsit"
+  }
+}
+
+docs {
+  指定 AI persona だけを resume。
+}

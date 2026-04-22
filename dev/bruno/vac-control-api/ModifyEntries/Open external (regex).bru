@@ -1,0 +1,17 @@
+meta {
+  name: Open external (regex)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/modify/dict-for-subtitles/files/regex/open-external
+  body: none
+  auth: inherit
+}
+
+docs {
+  γ-9: 対象 Modify プロセッサの `writable_regex_file` を VAC ホスト上で OS 既定のエディタで開く。
+
+  挙動は `Open external (dictionary)` と同じ。`writable_regex_file` が未設定なら 409。
+}

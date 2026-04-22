@@ -1,0 +1,41 @@
+meta {
+  name: Dictionary content (read)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/modify/dict-for-subtitles/dictionary/content
+  body: none
+  auth: inherit
+}
+
+docs {
+  γ-8-d: Modify プロセッサの全 `dictionary_files` をファイル別に列挙する read-only API。
+  GUI の辞書テーブル/行エディタが使う。
+
+  - `is_writable: true` のファイルは行 API（Dictionary entry add/remove）で編集可能。
+  - parse に失敗したファイルは `entries: []` かつ `error` が入る。他ファイルの読み込みは続行。
+  - 行は `to<space>from` 形式で split_whitespace した最初の 2 トークンを採用（Modify 本体のロードと同じ）。
+
+  レスポンス例:
+  ```json
+  {
+    "processor_index": 3,
+    "processor_id": "dict-for-subtitles",
+    "writable_file": "C:\\path\\to\\writable.dict.txt",
+    "files": [
+      {
+        "file": "C:\\path\\to\\ro.dict.txt",
+        "is_writable": false,
+        "entries": [{"to":"あ","from":"a"}]
+      },
+      {
+        "file": "C:\\path\\to\\writable.dict.txt",
+        "is_writable": true,
+        "entries": [{"to":"ドクターウサギ","from":"Dr.USAGI"}]
+      }
+    ]
+  }
+  ```
+}

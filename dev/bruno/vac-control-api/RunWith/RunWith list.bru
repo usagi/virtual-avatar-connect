@@ -1,0 +1,18 @@
+meta {
+  name: RunWith list
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/run_with
+  body: none
+  auth: inherit
+}
+
+docs {
+  現プロファイル（`conf_source_path`）を再パースして `run_with` 配列を GUI 向け DTO で返す。
+
+  - 各 entry には `index` / `effective_id`（明示 id or `run-with-<index>`）/ `display_label` / `supports_status`（`if_not_running` があるか）が付く。
+  - `source_path` は書き込み先 conf の絶対パス。
+}

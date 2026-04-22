@@ -1,0 +1,24 @@
+# VAC Flowgraph example: chat echo（multi-file 例）
+#
+# ingress.twitch のコメントを受けて、同じ内容を TTS で喋らせる最小構成。
+# cross-file edge で sibling の `tts.flowgraph.toml::speaker` を参照する。
+
+[meta]
+title = "Chat echo → TTS"
+description = "Twitch コメントを tts 子ファイルへ橋渡しする multi-file サンプル。"
+tags = ["example", "multi-file", "ingress", "tts"]
+
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.twitch"
+position = [100, 200]
+
+# exec: in の発火を sibling の speaker に渡す
+[[edges]]
+from = "in:exec_out"
+to = "./tts::speaker:exec_in"
+
+# data: in の content → speaker.text
+[[edges]]
+from = "in:content"
+to = "./tts::speaker:text"

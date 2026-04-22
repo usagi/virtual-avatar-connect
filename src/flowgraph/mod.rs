@@ -1,0 +1,37 @@
+//! VAC Flowgraph ランタイム（Phase δ）。
+//!
+//! 仕様は `docs/roadmap/phase-delta-spec.md` 参照。δ-1 v2 はハイブリッド骨格:
+//! - [`socket`]: `SocketType` / `SocketValue`
+//! - [`node`]: `NodeSpec` + `PureNode` / `StatefulNode` / `EffectfulNode` trait + `NodeImpl` enum
+//! - [`engine`]: `FlowgraphBuilder` / `FlowgraphProgram` + pull-demand lazy + generation
+//! - [`nodes`]: Literal / Log / Branch / Sequence（動作確認用）
+//! - [`registry`] (δ-5): 組込みノードカタログ（feature → `NodeSpec` / `NodeImpl`）。
+//! - [`loader`] (δ-5): `*.flowgraph.toml` ファイル群のパース + fq name 解決 +
+//!   `FlowgraphProgram` 構築。単一ファイル / ディレクトリ両対応。
+//! - [`runtime`] (δ-6): ロード結果を `State` から共有するためのハンドル（`FlowgraphRuntime`）。
+
+pub mod docs;
+pub mod engine;
+pub mod fragment;
+pub mod loader;
+pub mod node;
+pub mod nodes;
+pub mod registry;
+pub mod runtime;
+pub mod socket;
+pub mod spawn;
+pub mod tts;
+
+pub use engine::{
+ BuildError, Edge, FlowgraphBuilder, FlowgraphProgram, NodeId, NodeInstance, PortName, PortRef, ProgramRun,
+};
+pub use loader::{
+ load_file, load_flowgraph_dir, Diagnostic, DiagnosticCode, LoadError, LoadReport, LoadedNodeMeta, Severity,
+};
+pub use node::{
+ EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeImpl, NodeOutput, NodeSpec,
+ OutputMap, PortDirection, PortSpec, PropertySpec, PureNode, SocketValueRepr, StatefulNode,
+};
+pub use registry::{default_registry, registry, NodeRegistry};
+pub use runtime::{shared_flowgraph_new, FlowgraphRuntime, RuntimeHandle, SharedFlowgraph};
+pub use socket::{SocketType, SocketValue, TypeParseError, ValueCastError};

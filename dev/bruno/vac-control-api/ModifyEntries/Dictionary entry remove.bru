@@ -1,0 +1,27 @@
+meta {
+  name: Dictionary entry remove
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/control/modify/dict-for-subtitles/dictionary/entries
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "to": "ドクターウサギ",
+    "from": "Dr.USAGI"
+  }
+}
+
+docs {
+  対象 Modify プロセッサの `writable_dictionary_file` から (to, from) 完全一致の行を削除する。
+  同じ行が複数あれば全部消える。
+
+  - 他の `dictionary_files` に残る同一エントリは影響を受けない（writable file 限定）。
+  - 一致が無ければ `removed_lines: 0` で 200（冪等）。
+  - 削除があった場合のみ WS `/events` に `Reloaded` が流れる。
+}

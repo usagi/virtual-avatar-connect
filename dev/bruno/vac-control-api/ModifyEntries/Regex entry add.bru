@@ -1,0 +1,27 @@
+meta {
+  name: Regex entry add
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/modify/dict-for-subtitles/regex/entries
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "replacement": "ワロタ",
+    "pattern": "^\\s*lol\\s*$"
+  }
+}
+
+docs {
+  対象 Modify プロセッサの `writable_regex_file` に 1 行追加する。
+
+  - 行フォーマットは `replacement<space>pattern`（読み込みは `rsplitn(2, ' ')` なので `pattern` 側に空白不可、`replacement` は空白 OK）。
+  - `pattern` は `regex::Regex::new` で検証し、失敗なら 400 `invalid_entry`。
+  - 409 `writable_regex_not_configured` → `writable_regex_file` 未設定。
+  - CSV フォーマットの regex file は `writable_regex_file` として指定できない（起動時エラー）。
+}

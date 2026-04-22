@@ -1,16 +1,206 @@
-[[processors]]
-channel_from = "user"
-channel_to = "ai"
-feature = "openai-chat"
-# OpenAI API の API KEY
-# 以下の api_key に OpenAI API の API KEY を設定するか、環境変数 VAC_GAS_TRANSLATION_SCRIPT_ID に設定して下さい。
-# api_key = "ここにあなたの OpenAI の API KEY を設定します（他人に公開しないようにご注意下さい）"
+# =========================================================================
+#  conf.example-openai-chat.toml  (v2)
+# =========================================================================
+# OpenAI Chat ベースの AI ペルソナ（常駐 AI サービス）。
+#
+# v2 では `[[ai.personas]]` は **常駐タスク**として動作する（Flowgraph とは別ラインの
+# AI サービス）。Flowgraph の副作用ノードから呼び出すのではなく、自身で:
+#   - 指定した `observe.triggers` チャンネルを購読し
+#   - Decision Engine で応答の要否を判定し
+#   - `channel_utterance` に ChannelDatum を emit する
+# という独立したループを回す。
+#
+# 対応する Flowgraph サンプル: `flowgraph.example/openai-persona/`
+#   AI が `channel_utterance = "ai"` に書き出した発話を、TTS やブラウザソースへ
+#   分岐する最小の graph を示す（ただし「チャンネル購読 ingress」は現状 v2 に
+#   未実装なので、実際の配線は V1 runtime がまだ担当している。δ-9 で v2 完結）。
+# =========================================================================
 
-# 参考: https://platform.openai.com/docs/models/gpt-3-5
-# 参考: https://platform.openai.com/docs/models/gpt-4
-model = "gpt-3.5-turbo"
 
-# v0.4.0 からファインチューニング支援機能が搭載されました。
-# 以下のような fine_tuning 設定を有効化、ファインチューニング支援機能が有効になります。
-# 参考: https://github.com/usagi/virtual-avatar-connect/issues/41
+# -------------------------------------------------------------------------
+# 1. ペルソナ 1 つ分の最小テンプレート
+# -------------------------------------------------------------------------
+# 複数キャラクター運用したいときは `[[ai.personas]]` ブロックを増やす。
+
+[[ai.personas]]
+
+# ペルソナ識別子。ログや `--persona-id` CLI 指定で参照。
+id = "default"
+
+# 発話出力先チャンネル（Flowgraph / TTS / Twitch 送信 processor が購読）。
+channel_utterance = "ai"
+
+# 観測ルール:
+#  - triggers:          このチャンネル群を **応答判定の起点**に使う（発話ごとに Decision Engine へ）。
+#  - include_all:       true で全チャンネルの `is_final` 発話を memory window に載せる（他キャラとの対話観測）。
+#  - include_additional: include_all=false のときに追加で文脈に乗せたいチャンネル。
+#  - exclude:           上記の打ち消し。debug / ログ系は通常ここで除外。
+observe.triggers = ["user"]
+# observe.include_all = true
+# observe.include_additional = ["chat"]
+# observe.exclude = ["debug"]
+
+# `vac_emit_effect` function tool が書き出すチャンネル（省略時 "effect"）。
+# channel_effect = "effect"
+
+
+# -------------------------------------------------------------------------
+# 2. API キー（環境変数推奨）
+# -------------------------------------------------------------------------
+# `api_key = "..."` を直書きも可能だが、リポジトリや配信画面に載らないよう
+# 環境変数 `OPENAI_API_KEY` での指定を推奨。
+# api_key = "sk-..."
+
+
+# -------------------------------------------------------------------------
+# 3. モデル
+# -------------------------------------------------------------------------
+# モデル ID: https://platform.openai.com/docs/models
+model = "gpt-4o-mini"
+
+# --- 料金の目安（試算のみ・一切保証しません）---
+# 2026-04-16 時点・OpenAI API Standard 掲載単価に基づく雑な試算。
+# 前提: 1 日あたり 入力 約 192k / 出力 約 9k トークン × 30 日。$1=150 円。
+#
+# | モデル（例）   | 約 USD / 30 日 | 約円（※150 円/ドル） |
+# |----------------|----------------|----------------------|
+# | gpt-4o mini    | 約 $1.0        | 約 150 円            |
+# | GPT-5.4 nano   | 約 $1.5        | 約 220 円            |
+# | GPT-5.4 mini   | 約 $5.5        | 約 830 円            |
+# | GPT-5.4        | 約 $18.4       | 約 2,800 円          |
+
+
+# -------------------------------------------------------------------------
+# 4. 人格・長期メモ（system prompt 群）
+# -------------------------------------------------------------------------
+# メッセージ組み立て順（固定）:
+#   1. custom_instructions（system）→ 任意で system_instructions_extra（system）
+#   2. gpt-5 系で上記が 1 本も無いときだけ既定 system を先頭 insert
+#   3. memory_summary と memory_summary_path を 1 本の system に連結（ファイルが先、`---` で inline）
+#   4. openai_few_shot（user / assistant / system）
+#   5. 任意: persona_anchor（system・履歴直前）
+#   6. 短期窓（user / assistant。他チャンネルは "[名前@source] 本文" 形式の system 等）
+#
+# custom_instructions = """あなたの役割と口調の前提（必須に近い）"""
+# system_instructions_extra = """追加ルール・シーンごとの補足"""
+# memory_summary = """直近の配信の要点など（任意）"""
+# memory_summary_path = "C:/path/to/summary.txt"
+
+
+# -------------------------------------------------------------------------
+# 5. Few-shot / anchor
+# -------------------------------------------------------------------------
+# openai_few_shot = [
+#  { role = "user", content = "…" },
+#  { role = "assistant", content = "…" },
+# ]
+# persona_anchor = "この直後のユーザー発話に、上記の人格で答える"
+
+
+# -------------------------------------------------------------------------
+# 6. 短期メモリ窓
+# -------------------------------------------------------------------------
+# memory_capacity = 8
+# memory_budget_approx_tokens = 1500        # 1 token ≈ 4 chars で削る（memory_max_chars より優先）
+# memory_budget_chars_per_approx_token = 4
+# memory_max_chars = 6000
+#
+# --- あふれ要約（別 API で old turn を要約し long-term memory 先頭に連結）---
+# memory_overflow_summary_enabled = true
+# memory_overflow_summary_model = "gpt-4o-mini"   # 未指定なら上の model と同じ
+# memory_overflow_summary_max_completion_tokens = 256
+# memory_overflow_summary_max_input_chars = 16000
+# memory_overflow_summary_min_chars = 64
+# memory_overflow_summary_cooldown_secs = 45
+
+
+# -------------------------------------------------------------------------
+# 7. 応答・通信
+# -------------------------------------------------------------------------
+# n = 2                                     # 候補数（openai_stream=true なら 1 に上書き）
+# openai_max_in_flight = 2
+# openai_stream = true
+# assistant_max_chars = 500
+# assistant_strip_substrings = ["NGワード1", "NGワード2"]
+
+
+# -------------------------------------------------------------------------
+# 8. Function calling (tools)
+# -------------------------------------------------------------------------
+# 同梱 `conf.example-openai-tools.json` をコピーして使う。
+# 標準ツール:
+#   vac_ping                   疎通確認（副作用なし）
+#   vac_emit_effect            channel_effect へ ChannelDatum push（演出）
+#   vac_twitch_set_category    カテゴリ変更（要 `channel:manage:broadcast`）
+#   vac_twitch_chat_say        Helix POST /chat/messages（モデレーター/ボット口発話）
+#   vac_twitch_ban_user        BAN / timeout（duration_secs 未指定で永久）
+#   vac_twitch_unban_user      BAN / timeout 解除
+#   vac_twitch_delete_message  特定メッセージ削除
+#
+# モデレーション系は [twitch.moderator] の OAuth が必要（`conf.example-twitch.toml`）。
+#
+# openai_tools_json_path = "C:/path/to/tools.json"
+# openai_tool_choice = "auto"       # none / auto / required
+# openai_parallel_tool_calls = false
+
+
+# -------------------------------------------------------------------------
+# 9. 応答判定（シンプル legacy 記法）
+# -------------------------------------------------------------------------
+# `[ai.personas.decision]` を書かない場合はこれらが自動で Decision Engine に合成される。
+# 挙動: ignore_regex_pattern が最優先でブロック → force_activate_regex_pattern で強制応答 →
+# それ以外は常時応答 → min_interval_in_secs が hard gate。
+#
+# force_activate_regex_pattern = "(名前|ねえ|おーい)"
+# ignore_regex_pattern = "^\\s*$"
+# min_interval_in_secs = 3
+
+
+# -------------------------------------------------------------------------
+# 10. 応答判定（Decision Engine / 高度）
+# -------------------------------------------------------------------------
+# 合計スコア = base_score + Σ modulators + ±jitter。`threshold` 以上で応答。
+#
+# [ai.personas.decision]
+# threshold = 50.0
+# base_score = 0.0
+# jitter = 5.0
+# min_interval_in_secs = 3
+#
+# [[ai.personas.decision.modulators]]
+# kind = "regex_ignore"
+# pattern = "^\\s*$"
+#
+# [[ai.personas.decision.modulators]]
+# kind = "regex_match"
+# pattern = "(名前|ねえ|おーい)"
+# score = 1000.0
+#
+# [[ai.personas.decision.modulators]]
+# kind = "channel_match"
+# channels = ["user"]
+# score = 40.0
+#
+# [[ai.personas.decision.modulators]]
+# kind = "always"
+# score = 10.0
+
+
+# -------------------------------------------------------------------------
+# 11. Heartbeat（自発発話の外部トリガー）
+# -------------------------------------------------------------------------
+# [ai.personas.heartbeat]
+# enabled = true
+# interval_secs = 60
+#
+# [[ai.personas.decision.modulators]]
+# kind = "silence_since"
+# threshold_secs = 120
+# score_per_sec = 0.5
+# max_score = 80.0
+
+
+# -------------------------------------------------------------------------
+# 12. ファインチューン（学習データ経路）
+# -------------------------------------------------------------------------
 # fine_tuning = { train_path = "my-char.csv", suffix = "my-char" }

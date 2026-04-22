@@ -1,0 +1,33 @@
+meta {
+  name: OAuth - Twitch broadcaster delete tokens
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/control/oauth/twitch/broadcaster/tokens
+  body: none
+  auth: inherit
+}
+
+docs {
+  保存済みの broadcaster トークンキャッシュファイルを破棄する。
+
+  - レスポンス例:
+      {
+        "account": "broadcaster",
+        "deleted": true,            // 実際にファイルが削除されたか（元々無ければ false）
+        "path": "C:\\Users\\...\\virtual-avatar-connect\\twitch-broadcaster-token.json",
+        "session_removed": true     // 既存セッションが除去されたか（Pending なら abort 込み）
+      }
+
+  ユースケース:
+    - 別の Twitch アカウントで認可し直したい
+    - 挙動がおかしいので保存状態を強制リセットしたい
+
+  注意:
+    - 本操作は「保存ファイル」を消すだけで、すでに走っている eventsub WebSocket 接続が
+      メモリに保持しているアクセストークンは無効化されない。完全なリセットが必要なら
+      VAC を再起動すること。
+    - 設定 ([twitch] / [twitch.eventsub]) が無ければ 400 を返す。
+}

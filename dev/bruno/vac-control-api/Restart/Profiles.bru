@@ -1,0 +1,29 @@
+meta {
+  name: Profiles
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/profiles
+  body: none
+  auth: inherit
+}
+
+docs {
+  現 conf と同ディレクトリにある `*.toml` を列挙して返す。
+
+  - `current` は現在 VAC が読み込んでいる conf の絶対パス。
+  - `entries[*].is_current` が真のエントリが現行プロファイル。
+  - GUI のプロファイル切替 UI (`RestartDialog`) が `POST /restart` へ渡す `conf` を選ぶために使う。
+
+  レスポンス例:
+    {
+      "directory": "C:/Users/the/tmp/virtual-avatar-connect",
+      "entries": [
+        { "path": "...", "filename": "conf.toml", "label": "Conf", "size": 14823, "modified": "...", "is_current": true },
+        { "path": "...", "filename": "conf.example-twitch.toml", "label": "Conf Example Twitch", "size": 4096, "modified": "...", "is_current": false }
+      ],
+      "current": "C:/.../conf.toml"
+    }
+}

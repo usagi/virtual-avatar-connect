@@ -1,0 +1,34 @@
+meta {
+  name: Restart - in-place
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/restart
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "graceful_ms": 800
+  }
+}
+
+docs {
+  現 conf を引き継いで VAC を再起動する。
+
+  - `conf` を省略すると **現 conf パス** をそのまま新プロセスに渡す（= プロファイルを変えずに再起動）。
+  - `graceful_ms` は現プロセスが `exit(0)` するまでの猶予（既定 800ms, 最大 10000ms）。
+  - 成功時は `ControlEvent::Restarting` が WS に一度だけ流れ、その後現プロセスが終了する。
+    GUI 側は WS 自動再接続で新プロセスに吸い付き、最初の `Heartbeat` で「再起動完了」と判断する。
+
+  レスポンス例:
+    {
+      "new_conf_path": "C:/.../conf.toml",
+      "new_pid": 1234,
+      "graceful_ms": 800,
+      "current_pid": 5678
+    }
+}

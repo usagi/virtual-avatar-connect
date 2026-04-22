@@ -1,0 +1,19 @@
+meta {
+  name: Snapshot
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/snapshot
+  body: none
+  auth: inherit
+}
+
+docs {
+  現在の VAC のランタイム状態を read-only JSON で取得する。
+  - `processors[]`: feature / id / paused / last_invoked_at
+  - `ai_personas[]`: id / paused
+  - `twitch`: 構成スナップショット
+  - `runtime`: session_id / session_dir / inline_max_bytes
+}

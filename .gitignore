@@ -15,8 +15,24 @@ Cargo.lock
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
+# Local notes between you and your editor/agent (not for version control)
+.local.note/
+
+# Vosk Windows 配布物（build.rs が GitHub から取得・キャッシュ。リポジトリには含めない）
+.vendors/
+
 # for local test only files
 **/*.local
 **/*.local.*
 *.ron
 *.wav
+
+# Phase VI-β: Web GUI (gui/)
+gui/node_modules/
+gui/dist/
+gui/.svelte-kit/
+gui/.vite/
+gui/*.log
+gui/.env
+gui/.env.*
+!gui/.env.example

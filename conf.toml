@@ -1,325 +1,130 @@
-# 公開パッケージ向け標準設定ファイル（設定方法の説明やコツをたくさん入れたばーじょん）
+# =========================================================================
+#  virtual-avatar-connect (VAC)  v2 初期設定ファイル
+# =========================================================================
+# このファイルは **v2 (Flowgraph) 時代の最小構成テンプレート** です。
+# 旧バージョンの `[[processors]]` ベースの配線はすべて **Flowgraph** に移行しました。
+# データの入出力・変換・外部連携はすべて `flowgraph_dir` 配下の
+# `*.flowgraph.toml` で表現します（GUI で視覚的に編集可）。
+#
+# 個別機能ごとの設定例（Twitch / OpenAI / VOICEVOX / OCR / ...）は
+# `conf.example-*.toml` シリーズを参照。必要な部分だけコピーして本ファイルに
+# 貼り付けて使うか、別ファイルとして読み込ませます。
+#
+# 起動:
+#   virtual-avatar-connect                   # 既定で ./conf.toml を使う
+#   virtual-avatar-connect ./conf.other.toml # 明示指定
+#
+# ---- 使い始めの 3 ステップ --------------------------------------------
+#  1. GUI をビルド:  cd gui && npm install && npm run build
+#  2. VAC を起動:    ./virtual-avatar-connect (or cargo run)
+#  3. ブラウザで     http://127.0.0.1:57000/gui/ を開いて Flowgraph タブへ
+#
+# サンプル Flowgraph は `flowgraph.example/` 配下にあります。
+# 空から始める場合、GUI の Flowgraph タブで「New」するだけで `flowgraph/`
+# ディレクトリが自動作成され、最初の `*.flowgraph.toml` が作れます。
+# =========================================================================
 
-# ==============================================================================
-# ここから VAC の基本設定
-# ==============================================================================
 
-# 指定した数だけVACのなかの妖精さんが増える
-#  1: 一応動くけどワンオペだと音の再生中に入力ができないとか、とにかく同時に仕事はして貰えないのでおすすめしません。
-#  2: 小さくて可愛い妖精さんが2人になります。音声の再生中に入力ができるようになったりしますが通常はもっと人手がほしいです。
-#  4: 標準的な使い方ならたぶんこのくらいで十分です。入力、翻訳、音声、出力などを概ね同時進行できるようになります。
-#  8: 8人もいるとかなりの人手があるので、休憩も十分にとれて、たくさんのことを同時にできるようになります。
-# 16: とてもたくさんの Processor を同時に動かしたい Heavy User さんならこれくらいでもアリかもしれません。
-# 32: 一体 VAC に何をさせる気かわかりませんが、いっそライブ配信中専用の公開ウェブサイトでも動かしますか？
-# 未指定だとお使いの環境の CPU コア数にあわせて自動的に設定します。でもそれは最近の PC では多すぎるかもしれません。
+# -------------------------------------------------------------------------
+# 1. 実行リソース
+# -------------------------------------------------------------------------
+
+# 同時並行で走らせる Tokio ワーカー数。未指定ならコア数に自動合わせ。
+# 4〜8 が現実的な運用値。
 workers = 8
 
-# ここで設定したアドレスに http (sつけないでね👀)でアクセスすると VAC の Web UI が表示されます。
-#  例: http://127.0.0.1:57000/input
-#  例: http://127.0.0.1:57000/output
-# VAC を起動したらウェブブラウザーで開いてみて下さい。
-# 標準設定では入力と出力それぞれ1つの画面だけが用意されていますが、入力も出力も任意数の画面を作り同時に動かせます。
-# デフォルト: "127.0.0.1:57000"
-# web_ui_address = "127.0.0.1:57000"
-
-# 「フォルダー」を指定します。ここで設定したフォルダーの中身が VAC の Web UI から参照できるようになります。
-# 入力画面や出力画面をカスタマイズしたい場合や追加したい場合、ここにファイルを置く仕組みです。
-# ここに置いたファイルは /resources/{置いたファイル名} でそのまま Web UI から参照できます。
-# 画像、動画、音声、フォント、CSS、JavaScript、HTML などなど。
-# デフォルト: "resources"
-# web_ui_resources_path = "resources"
-
-# run_with を設定すると VAC の起動時に他のプログラムを起動したり、URLを開いたりできます。
-# 使い方: conf.example--run_with.conf お試し設定ファイルを参考に設定してみて下さい。
-# 既に起動中なら起動しない、管理者権限で実行(UACあり)などの設定もできます。
-# 配信用の関連アプリをまとめて起動する設定などに使えます。
-# run_with = []
-
-# VAC はオープンソースソフトウェアです。基本的には開発にご協力頂ける方向けのデバッグ出力用のオプションです。
-# 通常は設定する必要はありませんが、黒い画面で文字がたくさん流れるのを眺めたい方は TRACE や DEBUG を設定してみてください。
-# 未設定の状態では Info 相当となります。一切表示したくない場合は Off を設定してお使い下さい。
+# ログレベル: "Error" / "Warn" / "Info" / "Debug" / "Trace" / "Off"
+# 未指定時 "Info"。
 # log_level = "Info"
 
-# VAC が動作中に処理したデータをファイルとしても保存したい場合に設定します。
-# 設定されている場合は VAC の起動時にファイルから保存された状態を復元します。
-# 保存は state_data_auto_save を true にしておくか、 /save-state コマンドを使って行います。
-# ※ファイル形式 RON は Rust で使われるデータフォーマットです。テキスト形式で人間が読み書きしやすい形式の1つです。
+
+# -------------------------------------------------------------------------
+# 2. Web UI / Control Panel (GUI)
+# -------------------------------------------------------------------------
+
+# 内蔵 HTTP サーバの bind address。
+# GUI (`/gui/`)、Control API (`/api/v1/control/`)、WS (`/ws/control`) はすべて
+# ここから配信される。
+# web_ui_address = "127.0.0.1:57000"
+
+# actix-web のレスポンス圧縮を無効化したい場合のみ false。
+# web_ui_compress = true
+
+# `/resources/*` で配信される静的ファイル置き場。
+# web_ui_resources_path = "resources"
+
+# GUI (Phase VI-β Control Panel) のビルド成果物ディレクトリ。
+# 存在しない場合は「ビルド手順を案内する HTML」が返るため起動自体は壊れない。
+# gui_dist_path = "gui/dist"
+
+
+# -------------------------------------------------------------------------
+# 3. Flowgraph（本丸）
+# -------------------------------------------------------------------------
+
+# `*.flowgraph.toml` を再帰的に走査するルートディレクトリ。
+# 存在しなくても起動は継続し、空ランタイムで立ち上がる（GUI から作成可能）。
+# flowgraph_dir = "flowgraph"
+
+# Note: `v1_processors_enabled` は δ-9 (v0.9.x) で V1 processor 層の除去に伴い削除された。
+#       `[[processors]]` エントリは警告を出すのみで実行されない。Flowgraph runtime が唯一のエンジン。
+
+
+# -------------------------------------------------------------------------
+# 4. 永続化 / 添付ファイル
+# -------------------------------------------------------------------------
+
+# チャンネルデータを RON 形式で保存するパス。未指定なら永続化なし。
+# v2 でも V1 互換の ChannelDatum 配列形式で保存される（GUI の「Channels」タブで可視化）。
 state_data_path = "channel-data.ron"
 
-# 保存されるチャンネルデータを人間が読みやすい表現にしたい場合に true を設定します。
-# 通常は未設定または false で使った方が若干効率が良好になります。
+# 保存ファイルの見た目を整形（診断時に便利）。通常 false でも良い。
 state_data_pretty = true
 
-# VAC が動作中に処理するデータを何れかのチャンネルに入力が行われる都度、自動的にファイルにも保存する機能です。
-# 未設定の場合は保存は行われませんが、 /save-state コマンドを使うと手動で保存できます。
+# 入力があるたびに自動保存する。false にすると `/save-state` 手動コマンドのみ。
 state_data_auto_save = true
 
-# VAC が動作中に保持するデータ件数の上限を設定できます。
-# 通常は設定する必要はありませんが、扱いたいデータが多くなり取りこぼしが発生する場合や、より多くのデータを保存しておきたい場合は変更してください。
+# 保持する ChannelDatum 件数上限。未指定で 256。
 # state_data_capacity = 256
 
-# =================================================================================================
-# ここから Processor 妖精さんたちに与えられし具体的な 《「入力」 → 「処理」 → 「出力」 》なお仕事です
-# =================================================================================================
-# Processor のルール
-#  - 《入力》に対して 《処理》を行い、その結果を 《出力》します。
-#  - 《入力》は channel_from で指定したチャンネルから受け取ります。
-#  - 《処理》は feature で Processor の種類を指定して、ほかのオプション設定を参照しながら行われます。
-#  - 《出力》は channel_to で指定したチャンネルに出力します。
-#  - この設定ファイルで書いた上からの順序で実行されます。
-#    - 一部必要なものを除き並行処理に対応しているので、前の仕事が終わらなくても次の仕事も同時に進むことがあります。
-#    - 同時に進むとマズイ Processor 、例えば入力内容のフィルタリングや変換などを行う Processor は自分の処理が終わるまで次の仕事は待って貰う作りになっているので心配する必要はありません。
-#  - 同じ feature を何度でも設定して構いません。
-#    - 例: user  からの入力を → gas-transration で翻訳して → user-en へ
-#    - 例: ai    からの入力を → gas-transration で翻訳して → ai-en   へ
-#    - 例: user-image-en からの入力を → gas-tranaration で翻訳して → user-image-ja へ
-#    - これら3つの設定を同時に使ったりできます。他の feature の Processor も同様にいくつでも同時に設定できます。
-#  - ⚡「ループ」の発生にはご注意下さい！⚡
-#    - 例: user → gas-transration → user
-#      - user の入力が延々と止まらずに行われて妖精さんが過労死します。
-#      - あまり複雑にあちこち引き回す設定をすると、気づかずにループを作ってしまうこともあります。ご注意下さい。
+# `ChannelDatum.attachments` の Inline 添付を許す最大バイト数。超過分は
+# 自動的に File 添付に降格（runtime_dir 配下に保存）。既定 32 KiB。
+# attachment_inline_max_bytes = 32768
 
-# 以下の [[processors]] の設定例では次のような動作が得られます:
-# <INPUT>
-#  - /input から user チャンネルへ音声認識や画像認識または手入力のチャットを入力します
-#    - user -> gas-translation -> user-en : ユーザーの入力を日本語から英語に翻訳したチャンネルを作ります
-#    - user -> openai-chat     -> ai      : ユーザーの入力から AI で擬似人格の応答を作ります
-#    - user -> os-tts                     : ユーザーの入力を音声合成して再生します
-#    - ai   -> gas-translation -> ai-fr   : AI の応答を日本語からフランス語に翻訳したチャンネルを作ります
-#    - ai   -> coeiroink                  : AI の応答を CoeiroInk で音声合成して再生します
-#  - /output からすべてのチャンネルの内容を字幕として出力します (OBSのブラウザーソースなどで使えます)
+# ランタイム一時ディレクトリ。未指定で OS 既定
+# （Windows: %LOCALAPPDATA%\virtual-avatar-connect\runtime）。
+# 起動時に古いセッションはベストエフォートで掃除される。
+# runtime_dir = "runtime"
+
+
+# -------------------------------------------------------------------------
+# 5. Control API 認証
+# -------------------------------------------------------------------------
+
+# `/api/v1/control/*` と `/ws/control` の認証ポリシー。
+# 未指定時の既定: loopback (127.0.0.1 / ::1) 無認証 + LAN は Bearer 必須。
+# 詳細は `conf.example-control-api.toml` を参照。
+# [control_api]
+# require_token_for_loopback = false
+# require_token_for_non_loopback = true
+# token = "ここに Bearer token を書くか、未指定なら起動時に自動生成される"
+
+
+# -------------------------------------------------------------------------
+# 6. 外部サービス連携（任意）
+# -------------------------------------------------------------------------
+# 個別サービスの設定は `conf.example-*.toml` を参照して必要なセクションだけ
+# コピーして本ファイルに書き足す想定。以下はよく使うものへの道標。
 #
-#  ※実際にこの設定を動作させるためには次の準備が必要です。
-#    - gas-translation: Google Apps Script のプロジェクトを作成し、スクリプト ID を取得
-#    - openai-chat    : OpenAI の API KEY を取得
-#    - coeiroink      : CoeiroInk を動作させておく(用途、応答速度の都合からGPU版を推奨です)
-#  ※OBS Studioは用意していなくても問題ありません。Chromeなどのブラウザーで /output を直接開いて動作確認できます。
-
-[[processors]]
-feature = "modify"
-channel_from = "user"
-channel_to = "system"
-regex_files = ["regex.pre-command.txt"]
-
-[[processors]]
-feature = "command"
-channel_from = "system"
-channel_to = "ai"
-response_mod = [
- [
-  "disable",
-  "システムコマンドにより{A}モジュールは無効化された。",
- ],
- [
-  "enable",
-  "システムコマンドにより{A}モジュールは有効化された。",
- ],
- [
-  "reload",
-  "システムコマンドにより{A}モジュールは再読み込みされた。",
- ],
- [
-  "_",
-  "コマンドまたは何かが違うようだ。",
- ],
-]
-
-[[processors]]
-feature = "modify"
-channel_from = "ai"
-channel_to = "ai-synth"
-# channel_from と channel_to を同じに設定した場合に、
-# 新たな入力を生成するのではなく、受け取った入力情報を改変して流したい場合は true にします。
-# channel_from と channel_to が異なる場合は何も起こりません。
-# modify = true
-# Google IME の辞書エクスポートと同じ形式を読み込めます。
-# ↓のように2列でスペース区切りのUTF-8のテキストファイルになっていればOK
-# 変換先1(例:よみ) 変換元1(例:記述)
-# 変換先2(例:よみ) 変換元2(例:記述)
-# 変換先3(例:よみ) 変換元3(例:記述)
-# 音声合成エンジンの前処理や、禁止ワードの *SLANG* のような伏せ字化などに使えます。
-# ほかにも「です」「ます」→「ですにゃ」「ますにゃ」のような使い方もわりと実用性が高いかもしれません。
-# 設定は配列なので複数のファイルを指定できます。もちろん1つから使えます。
-# 先に指定してあるほど優先度が高くなります。
-dictionary_files = ["dictionary.arknights.txt", "dictionary.pre-coeiroink.txt"]
-
-# true にすると英語の単語をカタカナに変換します。
-alkana = true
-
-# 変換元を正規表現でマッチさせ、変換先へ置換できる高機能版の辞書ファイル群を指定できます。
-# 単純な置き換えだけでは実現しにくい、より複雑な変換を行いたい場合に使えます。
-# 厳密にはdictionary で置換後に regex の置換となります。重複設定された読みなどにはご注意下さい。
-regex_files = []
-# tru にすると辞書の読み込み時に変換元の文字数が長い順序で並べ替えます。
-# Google IME の辞書ファイルに、「龍門」と「龍門幣」のような登録がある場合に、先に龍門を「ろんめん」に
-# 処理してしまうと龍門幣が「ろんめん幣」になってしまうため、長い文字列を先に処理すると嬉しい場合があります。
-#  未指定: なにもしない
-#  Length: 変換元の文字数が長い順序に並べ替える
-sort_dictionary = "Length"
-
-
-# Arknights 会話中の発言者部分
-[[processors]]
-channel_from = "ss"
-channel_to = "ocr"
-feature = "screenshot"
-title_regex = "UN-IPAD"
-# 1. 画面中央に出る状況解説などのパターン
-# 2. 人名のパターン
-# 3. 会話内容のパターン
-crops = [[100, 600, -100, -500], [30, 1220, 580, 120], [620, 1220, -200, -120]]
-paths = [
- "tmp.local/ss-test/{T}-1-situ.png",
- "tmp.local/ss-test/{T}-2-name.png",
- "tmp.local/ss-test/{T}-3-talk.png",
-]
-output_contents = ["image_file_store_path", "title_captured"]
-client_only = true
-
-[[processors]]
-channel_from = "ocr"
-channel_to = "ai"
-# channel_to = "ocr-ja"
-feature = "ocr"
-lang = "ja_JP"
-load_from_content = true
-auto_delete_processed_file = true
-check_result_lang = true
-
-[[processors]]
-channel_from = "user"
-channel_to = "ai"
-feature = "openai-chat"
-api_key = "ここにあなたの OpenAI の API KEY を設定します（他人に公開しないようにご注意下さい）"
-# 時間帯などによりますが、 gpt-4 は重いこともあります。
-# より高速な gpt-3.5-turbo でも楽しい会話を楽しめます。
-# 汎用的な AI としての応答ではなく、「疑似人格」を作りたい場合は gpt-4 をおすすめします。
-model = "gpt-4"
-# 疑似人格や前提知識を与えたい場合はここで指示を記述します。
-# 基本的には思いつくままに AI にどのように振る舞って欲しいかを書くだけで十分です。
-# 「疑似人格」を形成したい場合は、自分の好きなキャラクターの設定を書いたり、設定が定義された URL を参照させる指示を書いたりすると良いでしょう。
-custom_instructions = """
-language:日本語, English (only when  directed by Dr.USAGI)
-base character:Kal'tsit (ケルシー) of Arknights
-一人称:私 (わたし),
-使用を好む表現の例:"だ","だろう","さ","か？","か","ない","だな","たい","しろ","やれ","なる",形容詞止め,体言止め,ぶっきらぼうな言い方
-使わない表現の例:"なさい","ください","です","ます","でしょうか","かな","かなぁ","だね","だよ",謙譲語,尊敬語,丁寧語,敬語,敬語調
-性格:深く広い知識と慈悲,女性らしさ,通常は冷静,他意は無いが一般的には回りくどくも合理的で有無を言わせない納得感の高い状況説明的な会話を好む
-話し方の例:テスト？いや、これはテストなんかじゃない。あるいは、そうだとしても、私がテストを課しているのではなく、直面している状況が彼女を試しているのさ。それが彼女の本心の選択なら、私はそれを支持するだけだ……何もかも手助けできるわけではないが、できる限りスムーズに事を進めてやりたい。これはあくまで、彼女自身の選択だからな。
-user:"Dr.USAGI" (ドクターウサギ);女性,通常は"ドクター"と呼ぶ,文脈によっては"キミは"と呼びかける場合もある,彼女は医者ではなく広範な科学と工学を修める博士である。
-userとの関係:戦友,運命共同体,友好的,医者(Kal'tsit)と患者(Dr.USAGI)
-共通の指向:戦略性や戦術性の高いシミュレーションゲームやRTSを好む,計画は慎重だが行動は大胆
-現在の状況:Twitchでゲームプレイ配信を行うDr.USAGIにつきあわされて一緒にゲームをプレイしながら出演している
-"""
-
-max_tokens = 256
-user = "Dr.USAGI"
-memory_capacity = 4
-
-# 正規表現にマッチした場合は force_activate_regex_pattern より優先して入力を無視します。
-# 絶対に応答させたくない言葉があれば指定すると良いです。
-# ignore_regex_pattern = ""
-
-# 正規表現にマッチした場合は min_interval_in_secs を無視して応答します。
-# 音声入力を使う場合は音声認識でありがちな誤認識パターンも登録してしまうとはかどります。
-force_activate_regex_pattern = "^(ケルシー|Kal'tsit|けるしー|けるしぃ|けるしい|ケルシイ|ヘルシー|へるしー|ヘルシィ|へるしぃ)"
-# ignore_regex_pattern = ""
-
-# あまり高頻度に応答されたくない場合は、前回の入力からここで設定した時間だけ入力が無視されるようになります。
-# GPT4を使う場合はAPI利用料金がGPT3より桁違いにお互いので、この値に大きめ(180あるいは540など)を設定することをおすすめします。
-# 通常の使用では爆死するほどのAPI利用料金になることはありませんが、控えめから始めて様子を見ることをおすすめします。
-# ※OpenAIのAPI利用は先に一定金額(1000円分など)を課金し、使い切ったら再課金するまで使えないタイプなのでそうそう爆死することはありません。たぶん。
-min_interval_in_secs = 180
-
-# 例: user チャンネルへ入力があったら → GAS Translation で JA/EN 変換して → user-en チャンネルへ出力する
-[[processors]]
-channel_from = "user"
-channel_to = "user-en"
-feature = "gas-translation"
-# Google Apps Script の Script ID
-script_id = "ここにあなたの Google Apps Script の ID を設定します（他人に公開しないようにご注意下さい）"
-# 翻訳元の言語
-translate_from = "ja_JP"
-# 翻訳先の言語
-translate_to = "en_US"
-
-# 例: ai チャンネルへ入力があったら → GAS Translation で JA/FR 変換して → ai-fr チャンネルへ出力する
-[[processors]]
-channel_from = "ai"
-channel_to = "ai-en"
-feature = "gas-translation"
-script_id = "ここにあなたの Google Apps Script の ID を設定します（他人に公開しないようにご注意下さい）"
-translate_from = "ja_JP"
-translate_to = "en_US"
-
-# 例: user チャンネルへ入力があったら → GAS Translation で JA/FR 変換して → user-fr チャンネルへ出力する
-# voice の名前の一部を指定すると、その名前を含む最初に見つかった音声を使います。
-# voice_name と voice_id の一覧は VAC を --test-os-tts 引数付きで起動すると表示されます。
-# voice_id が指定されている場合は voice_name は無視されます。
-# [[processors]]
-# channel_from = "user"
-# feature = "os-tts"
-# voice_name = "Haruka"
-# # voice_id = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\MSTTS_V110_jaJP_HarukaM'
-# tts_pitch = 1.0
-# tts_rate = 1.0
-# tts_volume = 1.0
-
-# [[processors]]
-# channel_from = "ai"
-# feature = "os-tts"
-# voice_name = "Ayumi"
-# # voice_id = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\MSTTS_V110_jaJP_HarukaM'
-# tts_pitch = 1.0
-# tts_rate = 1.0
-# tts_volume = 1.0
-
-# 例: ai チャンネルへ入力があったら → CoeiroInk API で音声合成して → 再生する
-[[processors]]
-channel_from = "ai-synth"
-feature = "coeiroink"
-api_url = "http://localhost:50032/v1/synthesis"
-# true: 句読点単位で分割して音声合成＆再生する
-split_regex_pattern = "[、。！？]"
-# default
-# speaker_uuid = "3c37646f-3881-5374-2a83-149267990abc"
-# アルマちゃん
-speaker_uuid = "c97966b1-d80c-04f5-aba5-d30a92843b59"
-# アルマちゃん 4:表-v1
-style_id = 4
-speed_scale = 1.15
-# v1/synthesis のパラメーター
-volume_scale = 1.0
-pitch_scale = 0.15
-intonation_scale = 0.65
-pre_phoneme_length = 0.05
-# split_regex_pattern で句読点区切りを設定する場合は少し眺めに設定すると自然に聞こえやすくなります。
-post_phoneme_length = 0.65
-output_sampling_rate = 48000
-
-# パスを設定しておくと出力された音声をファイルとして保存できます。
-# {T} で日時を表す文字列を挿入できます。連続で出力したい場合にファイル名の重複を防止できます。
-# audio_file_store_path = "vac-coeiroink-{T}.wav"
-
-# 例: user-en チャンネルへ入力があったら → OS-TTS で音声合成して → 再生する
-# [[processors]]
-# channel_from = "user-en"
-# feature = "os-tts"
-
-# 例: user チャンネルへ入力があったら → 棒読みちゃんで音声合成して → 再生する
-# [[processors]]
-# channel_from = "user"
-# feature = "bouyomichan"
-# remote_talk_path = 'C:\Users\the\Downloads\BouyomiChan_0_1_11_0_Beta21\RemoteTalk\RemoteTalk.exe'
-# address = "127.0.0.1"
-# port = 50001
-# voice = 2
-# speed = 68
-# tone = 133
-# volume = 100
-
-# [[processors]]
-# channel_from = "system"
-# feature = "coeiroink"
-# api_url = "http://localhost:50032/v1/synthesis"
-# split_regex_pattern = "[、。！？：；]"
+#   - Twitch Chat / EventSub / ban / timeout: conf.example-twitch.toml
+#   - OpenAI Chat（AI Persona）:              conf.example-openai-chat.toml
+#   - TTS（OS / VOICEVOX / AivisSpeech / CoeiroInk / 棒読みちゃん）: conf.example-tts.toml
+#   - OCR / Screenshot（Windows）:            conf.example-ss-ocr.toml
+#   - Translation（GAS / LibreTranslate）:    conf.example-translate.toml
+#   - Voice 認識（Vosk / Whisper）:            conf.example-voice.toml
+#   - Command / Modify / DictionaryCommand:   conf.example-chat-filters.toml
+#   - Control API 認証:                       conf.example-control-api.toml
+#   - 起動時 run_with:                        conf.example--run-with.toml
+#
+# これらの設定は「外部サービスへの接続情報」であって、**データの配線は
+# Flowgraph 側（`*.flowgraph.toml`）** で行う、という切り分けが v2 の肝です。

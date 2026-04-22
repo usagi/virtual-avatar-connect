@@ -1,0 +1,39 @@
+meta {
+  name: Ingress - full payload
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/ingress
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "channel": "main",
+    "content": "こんにちは",
+    "is_final": true,
+    "flags": ["debug"],
+    "source": {
+      "kind": "user.web",
+      "subtype": "chat",
+      "actor": "alice"
+    },
+    "meta": {
+      "lang": "ja",
+      "priority": 3
+    }
+  }
+}
+
+docs {
+  全フィールドを載せた例。
+
+  - `flags`: 追加で立てたい flag（`is_final` はここに入れず専用フィールドで制御推奨）。
+  - `source`: `{ kind, subtype, actor }`。ChannelDatum.source に載る。
+  - `meta`: 自由形式の JSON object。ChannelDatum.meta に載る（BTreeMap<String, Value>）。
+
+  このペイロードが processors を流れる様子は `/ws/control` の `channel_datum` イベントで追跡可能。
+}

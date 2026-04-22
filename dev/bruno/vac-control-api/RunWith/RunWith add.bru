@@ -1,0 +1,30 @@
+meta {
+  name: RunWith add
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/run_with
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "command": "notepad.exe",
+    "if_not_running": "notepad",
+    "id": "my-notepad",
+    "label": "テスト用メモ帳",
+    "minimized": false
+  }
+}
+
+docs {
+  `run_with` 配列の末尾に 1 エントリを追加し、conf.toml を `toml_edit` で書き戻す（コメント温存）。
+
+  - body は `RunWithDto`。文字列単体 `"notepad"` か、table 形式 `{ command, if_not_running?, run_as_admin?, working_dir?, minimized?, id?, label? }`。
+  - 書き込み前にサーバ側で `toml::from_str::<Conf>()` を通すので、不正な conf になる変更は 400 で拒否される。
+  - 書き込み後は conf.toml の `.bak-YYYYMMDD-HHmmSS` バックアップが自動生成される。
+  - ManagedAppRegistry が即時再構築され、追加エントリは直ちに `GET /managed_apps` に現れる。
+}

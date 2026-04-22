@@ -1,0 +1,30 @@
+auth {
+  mode: inherit
+}
+
+auth:bearer {
+  token: {{bearerToken}}
+}
+
+docs {
+  # VAC Control API
+
+  Virtual Avatar Connect の `/api/v1/control/*` をローカルで叩くための Bruno collection。
+
+  ## 使い方（最短）
+
+  1. VAC を起動する
+  2. Bruno 右上の environment で `Local` を選ぶ
+  3. `Local` の `baseUrl` が `http://127.0.0.1:57000` になっていることを確認
+  4. まずは `Health & Info / Ping` を実行（loopback は既定で Bearer 不要）
+  5. pause/resume を試す
+
+  ## Bearer トークンが必要になったら
+
+  `[control_api].require_token_for_loopback = true` に倒した、または LAN 側から叩く場合のみ必要。
+
+  - 自動生成トークン: `<runtime_dir>/control-token.txt` を開いてコピー
+    - Windows: `%LOCALAPPDATA%\virtual-avatar-connect\runtime\control-token.txt`
+  - Bruno 側: environment `Local` の `bearerToken` (secret) に貼り付け、各リクエストの Auth を `Bearer` に切り替え
+    - このファイルの `auth { mode: inherit }` を `mode: bearer` に変えるのが一番手早い（collection 全体に適用される）
+}

@@ -1,0 +1,21 @@
+meta {
+  name: OAuth - Twitch broadcaster cancel
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/oauth/twitch/broadcaster/cancel
+  body: none
+  auth: inherit
+}
+
+docs {
+  進行中（Pending）の broadcaster DCF セッションをキャンセルする。
+
+  - Pending 中であれば内部のポーリングタスクを abort() し、status を `canceled` に遷移させる (`canceled: true`)。
+  - 既に Authorized / Failed / Expired / Canceled のセッションに対しては no-op (`canceled: false`)。
+  - セッション自体が未作成なら 404。
+
+  キャンセル後に再度 DCF を始めたい場合は `OAuth - Twitch broadcaster start` を再度叩く。
+}

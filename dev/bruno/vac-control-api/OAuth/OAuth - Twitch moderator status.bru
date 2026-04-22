@@ -1,0 +1,15 @@
+meta {
+  name: OAuth - Twitch moderator status
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/oauth/twitch/moderator/status
+  body: none
+  auth: inherit
+}
+
+docs {
+  moderator 用 DCF セッションの現在状態を取得する。レスポンス形式は broadcaster 版と同じ。
+}

@@ -1,0 +1,18 @@
+meta {
+  name: RunWith delete
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/control/run_with/0
+  body: none
+  auth: inherit
+}
+
+docs {
+  `run_with` 配列から指定 index のエントリを削除する。
+
+  - 既に起動済みのプロセスは影響を受けない（= 削除しても勝手に止まらない）。
+  - 書き戻し時のバックアップ・妥当性検証は add と同じ。
+}

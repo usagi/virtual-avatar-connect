@@ -1,0 +1,18 @@
+meta {
+  name: AI persona config (read)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/ai_personas/0/config
+  body: none
+  auth: inherit
+}
+
+docs {
+  `[[ai.personas]]` 配列の `index` 番目の entry を JSON で返す（read-only）。
+
+  レスポンス構造は `/processors/:index/config` と同じ（`index` / `id` / `config` / `source_path`）。
+  γ-3b でここに対する PUT を追加して、プロパティ編集→conf 書き戻しができるようにする予定。
+}

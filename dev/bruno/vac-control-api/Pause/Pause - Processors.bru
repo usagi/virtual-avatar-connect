@@ -1,0 +1,21 @@
+meta {
+  name: Pause - Processors
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/pause
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "target": "processors"
+  }
+}
+
+docs {
+  全 processor のみを soft pause。AI persona は継続して喋る。
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+ <meta charset="utf-8" />
+ <title>VAC 字幕サンプル 1</title>
+ <style>
+  body { margin: 0; background: transparent; font-family: sans-serif; color: #fff; text-shadow: 1px 1px 2px #000; }
+  #line { padding: 0.5em 1em; font-size: 28px; }
+ </style>
+</head>
+<body>
+ <div id="line">（起動後、POST /output で取得する実装をここに）</div>
+ <script>
+  const ch = new URLSearchParams(location.search).get("channel") || "ai";
+  let lastId = 0;
+  async function poll() {
+   try {
+    const r = await fetch(location.origin + "/output", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({ channels: [{ name: ch, retrieved_id: lastId, count: 3 }] }),
+    });
+    const j = await r.json();
+    const arr = (j.channel_data && j.channel_data[ch]) || [];
+    if (arr.length) {
+     const last = arr[arr.length - 1];
+     if (last.id != null) lastId = last.id;
+     if (last.content) document.getElementById("line").textContent = last.content;
+    }
+   } catch (e) {}
+   setTimeout(poll, 500);
+  }
+  poll();
+ </script>
+</body>
+</html>

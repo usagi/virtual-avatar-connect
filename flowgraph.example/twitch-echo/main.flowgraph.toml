@@ -1,0 +1,47 @@
+# =========================================================================
+#  flowgraph.example/twitch-echo/main.flowgraph.toml
+# =========================================================================
+# 最小構成の Twitch ingress サンプル。チャット受信 → ログ出力だけ。
+# セットアップ不要の OAuth（Device Code Flow）で初回起動時に認可すれば動く。
+#
+# 前提:
+#   1. `conf.toml` に `[twitch]` / `[twitch.eventsub]` セクションを追加
+#      （`conf.example-twitch.toml` 参照）。
+#   2. `flowgraph_dir = "flowgraph.example/twitch-echo"` に指定する
+#      か、このファイルを `./flowgraph/main.flowgraph.toml` にコピー。
+#
+# 動作:
+#   - VAC 起動 → Twitch OAuth（DCF）→ IRC 接続 → チャット受信
+#   - 受信のたびに `flowgraph.util.log` で INFO ログが出る
+#     （GUI 起動時は「Trace」タブでも観測可）。
+# =========================================================================
+
+[meta]
+title = "Twitch Echo"
+description = "Twitch チャット受信をログに出す最小サンプル。"
+tags = ["example", "twitch", "ingress", "minimal"]
+
+# ---- Twitch ingress ----
+# Trigger source。VAC 内蔵の Twitch client が IRC / EventSub から受信した ChannelDatum
+# を自動で `__content__` / `__source_actor__` 等に詰めて発火させる。
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.twitch"
+position = [100, 100]
+
+# ---- ログ出力 ----
+[[nodes]]
+id = "log"
+feature = "flowgraph.util.log"
+position = [400, 100]
+
+# ---- 配線 ----
+# ingress の exec_out → log の exec_in で発火パス。
+# ingress の content → log の value でメッセージ本文を渡す。
+[[edges]]
+from = "in:exec_out"
+to = "log:exec_in"
+
+[[edges]]
+from = "in:content"
+to = "log:value"

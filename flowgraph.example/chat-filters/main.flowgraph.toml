@@ -1,0 +1,145 @@
+# =========================================================================
+#  flowgraph.example/chat-filters/main.flowgraph.toml
+# =========================================================================
+# v1 の Command / Modify / DictionaryCommand 系フィルターの v2 最小サンプル。
+#
+# 動作:
+#   ingress.web_input に来たテキストを `/` で始まるスラッシュコマンドと、
+#   それ以外の一般発話に分岐。
+#     - コマンドは command / args をログに出すのみ（実処理は用途に応じて配線）。
+#     - 一般発話は dictionary.replace（空辞書）を経由して os tts.speak に流す。
+#
+# 応用:
+#   - dictionary.replace の `dictionary` 入力は `List<Json{from, to}>` で、現状は
+#     外部から wire できる適切な literal ノードが未整備のため、このサンプルでは
+#     既定の空辞書を使っている。将来 `flowgraph.literal.list_json` が入れば
+#     `[{"from": "Dr.USAGI", "to": "ドクターウサギ"}]` のようにその場で指定できる予定。
+#   - `flowgraph.regex.replace` を後段に追加して、より複雑な書き換えルールを適用。
+#   - `flowgraph.dictionary.command` を別系統に入れて「学習(X:=Y)」「忘却(X)」の
+#     パース結果を別ファイルに書き出す（fs 書き出しノードは δ-9 予定）。
+# =========================================================================
+
+[meta]
+title = "Chat filters (v2)"
+description = "command.match で分岐し、一般発話は dictionary.replace 経由で os tts.speak に流す最小サンプル。"
+tags = ["example", "command", "dictionary", "tts", "filters"]
+
+
+# ---- Ingress ----
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 260]
+
+
+# ---- Command 分岐 ----
+[[nodes]]
+id = "prefix"
+feature = "flowgraph.literal.string"
+position = [80, 420]
+properties.value = "/"
+
+[[nodes]]
+id = "cmd"
+feature = "flowgraph.command.match"
+position = [320, 260]
+
+
+# ---- 一般発話経路 ----
+[[nodes]]
+id = "dict"
+feature = "flowgraph.dictionary.replace"
+position = [600, 340]
+
+[[nodes]]
+id = "engine"
+feature = "flowgraph.literal.string"
+position = [600, 480]
+properties.value = "os"
+
+[[nodes]]
+id = "voice"
+feature = "flowgraph.literal.string"
+position = [600, 540]
+properties.value = ""
+
+[[nodes]]
+id = "speak"
+feature = "flowgraph.tts.speak"
+position = [880, 340]
+
+
+# ---- コマンド経路（簡易ログ）----
+[[nodes]]
+id = "log_cmd"
+feature = "flowgraph.util.log"
+position = [600, 140]
+
+
+# ---- TTS 結果ログ ----
+[[nodes]]
+id = "log_ok"
+feature = "flowgraph.util.log"
+position = [1180, 300]
+
+[[nodes]]
+id = "log_err"
+feature = "flowgraph.util.log"
+position = [1180, 380]
+
+
+# =========================================================================
+# 配線
+# =========================================================================
+
+# ingress → command.match
+[[edges]]
+from = "in:exec_out"
+to = "cmd:exec_in"
+[[edges]]
+from = "in:content"
+to = "cmd:content"
+[[edges]]
+from = "prefix:value"
+to = "cmd:prefix"
+
+# コマンドヒット: command / args をログ
+[[edges]]
+from = "cmd:on_command"
+to = "log_cmd:exec_in"
+[[edges]]
+from = "cmd:command"
+to = "log_cmd:value"
+# 注: cmd:args は List<String>、util.log:value は String なので直接接続不可。
+# 将来 `flowgraph.list.join` 等で文字列化してからログに流す想定。
+
+# 非コマンド: dictionary.replace → tts.speak
+[[edges]]
+from = "cmd:original"
+to = "dict:content"
+[[edges]]
+from = "cmd:on_other"
+to = "speak:exec_in"
+[[edges]]
+from = "dict:result"
+to = "speak:text"
+[[edges]]
+from = "engine:value"
+to = "speak:engine"
+[[edges]]
+from = "voice:value"
+to = "speak:voice"
+
+# TTS 結果
+[[edges]]
+from = "speak:on_success"
+to = "log_ok:exec_in"
+[[edges]]
+from = "speak:audio_path"
+to = "log_ok:value"
+[[edges]]
+from = "speak:on_error"
+to = "log_err:exec_in"
+[[edges]]
+from = "speak:error"
+to = "log_err:value"

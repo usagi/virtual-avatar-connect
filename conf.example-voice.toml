@@ -1,0 +1,82 @@
+# =========================================================================
+#  conf.example-voice.toml  (v2)
+# =========================================================================
+# 音声入力（Vosk / Whisper）の **リファレンス**。
+#
+# v2 移行状況（重要）:
+#   現時点では Voice サービスは v1 時代の `[[processors]] feature = "voice"` の
+#   ままで残っており、専用の `[voice]` サービスセクションへの **刷新は δ-9 で実施予定**。
+#   voice を使いたい場合は、下の `[[processors]]` 例を conf.toml に貼って下さい。
+#   （v2 配布 `conf.toml` からは `[[processors]]` を除去していますが、voice に限っては
+#   ここだけ例外として一時的に併記が必要です。）
+#
+# v2 側には `flowgraph.ingress.voice` ノードが既に用意されており、voice サービスが
+# 認識したテキストをトリガーバス経由で受け取れます（δ-9 で完全統合予定）。
+#
+# 対応する Flowgraph サンプル:
+#   flowgraph.example/voice-input/   ← ingress.voice → TTS echo の最小サンプル
+#
+# =========================================================================
+
+
+# -------------------------------------------------------------------------
+# 1. ビルドフィーチャー
+# -------------------------------------------------------------------------
+# - Vosk（既定の Voice エンジン）: 通常の `cargo build` で有効（`default` に `voice-vosk`）
+#   - Vosk を外す: `cargo build --no-default-features`
+#   - Windows: build.rs が GitHub Releases の `vosk-win64-*.zip` を
+#     `.vendors/vosk-win64/{version}/` に展開（初回のみ DL）、`libvosk.dll` と
+#     MinGW 同梱 DLL を `target/{debug|release}/` と `deps/` にコピー
+#   - バージョン変更: 環境変数 `VOSK_WIN64_VERSION`（既定 0.3.45）
+#   - 手動配置に切り替え: `VOSK_LIB_PATH` = `libvosk.lib` があるディレクトリ
+# - Whisper（オプション）: `cargo build --features voice-whisper`（CMake・LLVM・C++）
+# - Vosk + Whisper 両方: `cargo build --features voice-whisper`（既定で Vosk も入る）
+
+
+# -------------------------------------------------------------------------
+# 2. Voice プロセッサー設定（**暫定**・v2 でも `[[processors]]` のまま）
+# -------------------------------------------------------------------------
+# [[processors]]
+# feature = "voice"
+# channel_to = "user"
+# # voice_engine = "vosk"                 # 省略時と同じ
+# voice_vosk_model_path = "vosk-model-small-ja-0.22"
+# # または手動展開したディレクトリ:
+# # voice_vosk_model_path = "C:/path/to/vosk-model-small-ja-0.22"
+# voice_language = "ja"
+#
+# --- Whisper を使う例 ---
+# # voice_engine = "whisper"
+# # voice_whisper_model_path = "small"
+# # voice_chunk_seconds = 5.0
+#
+# --- 発話中は下流の処理（AI / TTS / Twitch）を「待たせる」---
+# # speech_floor_key = "mic"
+# # 各下流側に同じ文字列を `respect_speech_floor` で指定する。
+
+
+# -------------------------------------------------------------------------
+# 3. `flowgraph.ingress.voice` ノード（v2 Flowgraph 側の受け口）
+# -------------------------------------------------------------------------
+# 特別な設定は不要。voice サービスが認識したテキスト（`is_final`）が
+# トリガーバス経由で ingress.voice に届き、`content` / `source_actor` / `source_kind`
+# ポートから下流へ流れる。
+
+
+# -------------------------------------------------------------------------
+# 4. モデル選択の参考
+# -------------------------------------------------------------------------
+# Vosk（https://alphacephei.com/vosk/models）:
+#   - `vosk-model-small-ja-0.22`   小さい、リアルタイム寄り（配信向け）
+#   - `vosk-model-ja-0.22`         精度重視（約 1 秒弱の遅延）
+#
+# Whisper（https://huggingface.co/ggerganov/whisper.cpp/tree/main）:
+#   - `tiny` / `base` / `small` / `medium` / `large-v3` ...
+#   - `voice_whisper_model_path` にプリセット名を書くと ggml-{name}.bin を自動取得。
+#   - 絶対パスで手元に置いた ggml ファイルを指すことも可能。
+
+
+# -------------------------------------------------------------------------
+# 5. OS のマイク許可
+# -------------------------------------------------------------------------
+# Windows 10/11 ではプライバシー設定でマイク使用を許可する必要があります（デスクトップアプリ枠）。

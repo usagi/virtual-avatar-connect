@@ -1,0 +1,15 @@
+meta {
+  name: Ping
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/ping
+  body: none
+  auth: inherit
+}
+
+docs {
+  疎通確認。`{ ok, service, version, now }` を返す。
+}

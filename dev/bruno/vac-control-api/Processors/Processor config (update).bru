@@ -1,0 +1,32 @@
+meta {
+  name: Processor config (update)
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/v1/control/processors/0/config
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "config": {
+      "feature": "os_tts",
+      "id": "voice1",
+      "rate": 1.0,
+      "volume": 0.8
+    }
+  }
+}
+
+docs {
+  `[[processors]]` 配列の指定 index のエントリを丸ごと差し替える（γ-3b）。
+
+  - `config` は `GET` 応答の `config` と同じ形状を送ること（null なフィールドは削除扱い）。
+  - `toml_edit::DocumentMut` で該当 ArrayOfTables のみ差し替えるため、他エントリのコメント・レイアウトは保持される。
+  - 書き込み前に `toml::from_str::<Conf>()` で妥当性検証（失敗時は 400 で、ファイルは変更されない）。
+  - `.bak-YYYYMMDD-HHmmSS` バックアップを自動生成。
+  - 応答には **再起動推奨の警告**が付く（ランタイムは再起動まで旧設定のまま動く）。
+}

@@ -17,8 +17,8 @@ pub enum Error {
  #[error("Rodio デコーダーでエラーが発生しました: {0}")]
  RodioDecoderError(#[from] rodio::decoder::DecoderError),
 
- #[error("Rodio ストリームでエラーが発生しました: {0}")]
- RodioStreamError(#[from] rodio::StreamError),
+ #[error("Rodio オーディオデバイスでエラーが発生しました: {0}")]
+ RodioDeviceSinkError(#[from] rodio::DeviceSinkError),
 
  #[error("Rodio プレイヤーでエラーが発生しました: {0}")]
  RodioPlayError(#[from] rodio::PlayError),
@@ -47,7 +47,7 @@ impl ResponseError for Error {
    Self::SerdeJsonError(_) => StatusCode::INTERNAL_SERVER_ERROR,
    Self::ReqwwestError(_) => StatusCode::INTERNAL_SERVER_ERROR,
    Self::RodioDecoderError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-   Self::RodioStreamError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+   Self::RodioDeviceSinkError(_) => StatusCode::INTERNAL_SERVER_ERROR,
    Self::RodioPlayError(_) => StatusCode::INTERNAL_SERVER_ERROR,
    Self::IOError(_) => StatusCode::INTERNAL_SERVER_ERROR,
    Self::SystemTimeError(_) => StatusCode::INTERNAL_SERVER_ERROR,

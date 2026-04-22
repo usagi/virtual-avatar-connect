@@ -1,0 +1,23 @@
+meta {
+  name: Pause - Processor by id
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/pause
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "target": "processor",
+    "id": "twitch-out"
+  }
+}
+
+docs {
+  指定 processor（`[[processors]].id`）だけを soft pause。`id` の代わりに `"index": N` も可。
+  `id` が未指定の processor を個別に止めたい場合は `index` を使うしかない（Snapshot で index 確認）。
+}

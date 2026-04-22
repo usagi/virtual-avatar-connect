@@ -1,0 +1,20 @@
+meta {
+  name: Regex content (read)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/modify/dict-for-subtitles/regex/content
+  body: none
+  auth: inherit
+}
+
+docs {
+  γ-8-d/e: Modify プロセッサの全 `regex_files` をファイル別に列挙する read-only API。
+
+  - `.csv` と `<replacement> <pattern>` 形式の両方に対応（writable 側は CSV 禁止）。
+  - 各行の `valid` は pattern を regex として parse できたかのフラグ。false の行は
+    メモリ上の置換にもロードされていない（= 実行時はスキップ）。
+  - parse 失敗行は `parse_error` に詳細を入れるので GUI 側でテスト UI に使える。
+}

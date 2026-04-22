@@ -1,0 +1,18 @@
+meta {
+  name: WhoAmI
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/whoami
+  body: none
+  auth: inherit
+}
+
+docs {
+  呼び出し元の `peer_addr` と、現在の policy に基づく `required_token` 判定、サーバー側トークン由来
+  (`env` / `config` / `generated`) と、自動生成時のトークンファイルパスを返す。
+
+  LAN から叩いて `required_token = true` と返ってくれば認証ミドルウェア配線は OK。
+}

@@ -1,0 +1,22 @@
+meta {
+  name: Pause - All
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/pause
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "target": "all"
+  }
+}
+
+docs {
+  全 processor + 全 AI persona を soft pause。既に走っている応答は中断されない（hard abort ではない）。
+  Resume には `Resume - All` を使う。
+}

@@ -1,0 +1,49 @@
+# =========================================================================
+#  conf.example-chat-filters.toml  (v2)
+# =========================================================================
+# チャット・音声入力の前処理フィルター（v1 の Command / Modify / DictionaryCommand）
+# を Flowgraph 化するリファレンス。
+#
+# v1 では 3 つの独立した `[[processors]]`:
+#   - feature = "command"             /slash コマンドを拾って応答
+#   - feature = "modify"              辞書＋正規表現で逐次置換
+#   - feature = "dictionary-command"  チャット経由で辞書の学習/忘却
+# が「チャンネル名」で緩く連鎖していた。
+#
+# v2 では次の 3 ノードに一対一対応する:
+#   flowgraph.command.match       /prefix 付きコマンドを分岐
+#   flowgraph.regex.replace       rules = List<Json{pattern, replacement}> で逐次置換
+#   flowgraph.dictionary.replace  dictionary = List<Json{from, to}> で単純置換
+#   flowgraph.dictionary.command  「学習(X:=Y)」「忘却(X)」等をパースして辞書更新
+#
+# 対応する Flowgraph サンプル:
+#   flowgraph.example/chat-filters/   ← ingress → dictionary.replace → tts.speak
+# =========================================================================
+
+
+# -------------------------------------------------------------------------
+# 1. conf.toml 側に必要な設定
+# -------------------------------------------------------------------------
+# なし。すべて Flowgraph 側のノード入力で完結する。
+#
+# v1 で `writable_dictionary_file` / `regex_files` のように**ファイル**を
+# 指していた経路は、v2 では下記のいずれかが候補（δ-9 で選定）:
+#   (a) `flowgraph.fs.load_lines` / `flowgraph.fs.save_lines` 系ノードの新設
+#   (b) Control API に `PUT /flowgraph/file` で flowgraph TOML を書き換え
+# 現状は辞書を Flowgraph ノードの `dictionary` 入力に直接渡す形のみ対応。
+
+
+# -------------------------------------------------------------------------
+# 2. 代表的な運用パターン（v1 → v2 対応表）
+# -------------------------------------------------------------------------
+#
+#  v1: channel_from="user" → Modify(writable_dictionary_file=...) → channel_to="tts"
+#  v2: ingress.web_input   → dictionary.replace(dictionary=...)    → tts.speak
+#
+#  v1: channel_from="system" → Command(prefix="/", response_mod=...) → channel_to="ai"
+#  v2: ingress → command.match(prefix="/") → on_command → ... / on_other → ...
+#
+#  v1: Twitch → DictionaryCommand → Modify(writable)
+#  v2: ingress.twitch → dictionary.command → (辞書更新) / on_parsed exec → 下流通知
+#
+# 具体的な配線例は `flowgraph.example/chat-filters/` を参照。

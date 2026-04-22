@@ -1,0 +1,22 @@
+meta {
+  name: ManagedApps - minimize
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/managed_apps/coeiroink/minimize
+  body: none
+  auth: inherit
+}
+
+docs {
+  指定 id の Managed App を最小化（Windows 専用）。
+
+  - 対象 PID の子孫 PID まで辿り、トップレベルウィンドウに対して非同期で最小化スケジュール。
+  - running=false なら 409 Conflict を返す。
+  - Windows 以外では 501 Not Implemented。
+
+  レスポンス例:
+    { "id": "coeiroink", "scheduled_pids": 1 }
+}

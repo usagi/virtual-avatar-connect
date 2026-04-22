@@ -1,0 +1,22 @@
+meta {
+  name: Resume - Processor by id
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/resume
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "target": "processor",
+    "id": "twitch-out"
+  }
+}
+
+docs {
+  指定 processor だけを resume。
+}

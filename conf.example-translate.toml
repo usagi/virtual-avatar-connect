@@ -1,0 +1,69 @@
+# =========================================================================
+#  conf.example-translate.toml  (v2)
+# =========================================================================
+# 翻訳（GAS / LibreTranslate）の **リファレンス**。
+#
+# v1 は `[[processors]] feature = "gas-translation"` / `"libre-translation"` の
+# 2 種類だったが、v2 では次の 2 ノードに統合:
+#   flowgraph.translate.gas    Google Apps Script 経由（推定精度: 高、無料枠あり）
+#   flowgraph.translate.libre  LibreTranslate（オフライン、Windows で自動 embed）
+#
+# 対応サンプル:
+#   flowgraph.example/translate-multilang/   ← 同一入力を日 → 英 / 日 → 韓へ分岐する例
+#
+# どちらを選ぶか:
+#   - オフライン / 個人情報を外に出したくない → libre
+#   - 品質重視（特に固有名詞 / 意訳） → gas
+# =========================================================================
+
+
+# -------------------------------------------------------------------------
+# 1. GAS（Google Apps Script）
+# -------------------------------------------------------------------------
+# Script ID の準備:
+#   1. Apps Script で簡易な翻訳関数を作って `doGet(e)` でデプロイ。
+#   2. デプロイ ID を取得（`/exec` 末尾の英数字）。
+#   3. この ID を環境変数 `VAC_GAS_TRANSLATION_SCRIPT_ID` にセットするか、
+#      Flowgraph ノードの `script_id` input に直接渡す。
+#
+# v2 ノード入力:
+#   text             翻訳対象テキスト
+#   translate_to     "en" / "ja" / "ko" など（BCP-47 の left-most か ISO 639-1）
+#   translate_from   空なら whatlang 自動推定
+#   script_id        空なら env VAC_GAS_TRANSLATION_SCRIPT_ID を使用
+#
+# conf.toml 側に書く設定はなし。環境変数で Script ID を供給するのが推奨。
+
+
+# -------------------------------------------------------------------------
+# 2. LibreTranslate
+# -------------------------------------------------------------------------
+# モード:
+#   A) 手動で LibreTranslate を起動 → Flowgraph の `base_url` に "http://127.0.0.1:5000" 等
+#   B) Windows のみの自動 embed → conf.toml に下記 `[libretranslate]` を書くと
+#      VAC が起動時に embeddable Python + LibreTranslate を %LOCALAPPDATA% に
+#      展開し、子プロセスとして起動する。
+#
+# 環境変数:
+#   VAC_LIBRETRANSLATE_EMBED_PYTHON_VERSION   embed する Python 版（既定 3.12.7）
+#
+# --- 自動 embed したい場合（conf.toml に追加） ---
+# [libretranslate]
+# embed_auto = true               # 省略時も true。false で auto embed を切る。
+# port = 5000                     # 子プロセスがバインドするポート
+# url = ""                        # 明示したいときのみ（空ならポートと localhost から生成）
+#
+# --- v2 ノード入力 ---
+#   text             翻訳対象
+#   translate_to     "en" 等
+#   translate_from   空で自動推定
+#   base_url         http://127.0.0.1:5000 など（自動 embed 時は `state.libretranslate_url()`
+#                    相当の値を literal で渡すか、固定値で可）
+
+
+# -------------------------------------------------------------------------
+# 3. process_incomplete_input はどうなった？
+# -------------------------------------------------------------------------
+# v1 の「入力中でも逐次翻訳する」オプションは、v2 では **Flowgraph 側の ingress**
+# から `is_final=false` も流して Flowgraph に判断させる設計に移行予定（ingress 側 TODO）。
+# 当面は `is_final=true` の確定入力のみを翻訳する構成を推奨。

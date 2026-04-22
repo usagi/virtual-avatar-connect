@@ -1,0 +1,38 @@
+meta {
+  name: Reload - Modify files
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/reload
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "target": "modify_files"
+  }
+}
+
+docs {
+  `feature = "modify"` なプロセッサすべてを対象に、`dictionary_files` / `regex_files` をファイルから再読込する。
+  ストリーム中に辞書を編集しても **プロセス再起動無し** で反映できる。
+
+  `id` を指定すれば個別の Modify プロセッサだけに限定できる:
+  ```json
+  { "target": "modify_files", "id": "dict-for-subtitles" }
+  ```
+
+  レスポンス例:
+  ```json
+  {
+    "target": "modify_files",
+    "modify_reports": [
+      { "processor_index": 3, "processor_id": "dict-a", "feature": "modify",
+        "dictionary_entries": 128, "regex_entries": 12 }
+    ]
+  }
+  ```
+}

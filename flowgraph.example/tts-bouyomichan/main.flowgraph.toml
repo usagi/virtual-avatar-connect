@@ -1,0 +1,125 @@
+# =========================================================================
+#  flowgraph.example/tts-bouyomichan/main.flowgraph.toml
+# =========================================================================
+# 棒読みちゃん TTS サンプル（TCP プロトコル）。
+#
+# 前提:
+#   - 棒読みちゃん（RemoteTalk 含む）を起動しておく。
+#   - endpoint は空なら driver の既定 "127.0.0.1:50001"。
+#
+# voice 指定:
+#   "0".."8" の数値文字列。空文字なら 0（デフォルト）。
+#
+# 正規化パラメーターの内部マップ（driver ドキュメント再掲）:
+#   - speed (1.0=標準) → iSpeed = clamp((speed*100) as i16, 50, 300)
+#   - pitch (0.0=標準) → iTone  = clamp((100 + pitch*50) as i16, 50, 200)
+#   - volume (1.0=標準) → iVolume = clamp((volume*100) as i16, 0, 100)
+# =========================================================================
+
+[meta]
+title = "TTS Bouyomichan"
+description = "Web Input → 棒読みちゃん（TCP）で合成再生。"
+tags = ["example", "tts", "bouyomichan"]
+
+
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 200]
+
+
+[[nodes]]
+id = "engine"
+feature = "flowgraph.literal.string"
+position = [80, 380]
+properties.value = "bouyomichan"
+
+[[nodes]]
+id = "voice"
+feature = "flowgraph.literal.string"
+position = [80, 460]
+properties.value = "2"
+
+# speed 0.68 → iSpeed 68（V1 互換の既定値）
+[[nodes]]
+id = "speed"
+feature = "flowgraph.literal.float"
+position = [80, 540]
+properties.value = 0.68
+
+# pitch 0.66 → iTone 133（V1 互換）
+[[nodes]]
+id = "pitch"
+feature = "flowgraph.literal.float"
+position = [80, 620]
+properties.value = 0.66
+
+[[nodes]]
+id = "volume"
+feature = "flowgraph.literal.float"
+position = [80, 700]
+properties.value = 1.0
+
+# 既定なら空文字、別マシンで動かしているなら "host:port"
+[[nodes]]
+id = "endpoint"
+feature = "flowgraph.literal.string"
+position = [80, 780]
+properties.value = ""
+
+
+[[nodes]]
+id = "speak"
+feature = "flowgraph.tts.speak"
+position = [400, 360]
+
+
+[[nodes]]
+id = "log_ok"
+feature = "flowgraph.util.log"
+position = [720, 280]
+
+[[nodes]]
+id = "log_err"
+feature = "flowgraph.util.log"
+position = [720, 440]
+
+
+[[edges]]
+from = "in:exec_out"
+to = "speak:exec_in"
+[[edges]]
+from = "in:content"
+to = "speak:text"
+[[edges]]
+from = "engine:value"
+to = "speak:engine"
+[[edges]]
+from = "voice:value"
+to = "speak:voice"
+[[edges]]
+from = "speed:value"
+to = "speak:speed"
+[[edges]]
+from = "pitch:value"
+to = "speak:pitch"
+[[edges]]
+from = "volume:value"
+to = "speak:volume"
+[[edges]]
+from = "endpoint:value"
+to = "speak:endpoint"
+
+[[edges]]
+from = "speak:on_success"
+to = "log_ok:exec_in"
+[[edges]]
+from = "speak:audio_path"
+to = "log_ok:value"
+
+[[edges]]
+from = "speak:on_error"
+to = "log_err:exec_in"
+[[edges]]
+from = "speak:error"
+to = "log_err:value"

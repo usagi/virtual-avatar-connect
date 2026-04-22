@@ -1,0 +1,28 @@
+meta {
+  name: Profile content (update)
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/v1/control/profiles/conf.example-twitch.toml/content
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "content": "# conf.toml の完全なテキスト...\n"
+  }
+}
+
+docs {
+  プロファイルの内容を書き換える。既存ファイルは `<name>.bak-YYYYMMDD-HHmmSS` に自動バックアップ。
+
+  安全策:
+  - ファイル名は basename のみ / 拡張子は `.toml`
+  - 書き込み前に `toml::from_str::<Conf>()` でパース検証。失敗すると 400 を返し、ファイルは一切変更しない。
+  - `is_current` なファイルを更新した場合は `warning` が付く（再起動しないと反映されない旨）。
+
+  レスポンス: `{ filename, path, backup, warning? }`
+}

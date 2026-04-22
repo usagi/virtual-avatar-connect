@@ -1,0 +1,36 @@
+meta {
+  name: BOS list
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/bos
+  body: none
+  auth: inherit
+}
+
+docs {
+  Broadcast Output Sources (OBS 向けブラウザソース) 一覧を返す。
+
+  - `document_root`: 走査対象の絶対パス（未設定なら null）。
+  - `url_prefix`: 公開プレフィックス (常に `/browser-output`)。
+  - `entries[*]`:
+      - `id`: サブディレクトリ名（URL にそのまま使う）
+      - `title`: 表示用タイトル
+      - `category`: "subtitles" | "bgm" | "effects" | "other"
+      - `url`: 相対 URL (`/browser-output/<id>/`)
+      - `path`: ディスク上のパス
+      - `supports_channel_param`: `?channel=...` を受けるかの簡易判定
+      - `user_defined`: 同梱 `resources/browser-output` 配下外なら true
+
+  レスポンス例:
+    {
+      "document_root": "C:/.../resources/browser-output",
+      "url_prefix": "/browser-output",
+      "entries": [
+        { "id": "subtitles-3", "title": "Subtitles 3", "category": "subtitles",
+          "url": "/browser-output/subtitles-3/", "path": "...", "supports_channel_param": true, "user_defined": false }
+      ]
+    }
+}

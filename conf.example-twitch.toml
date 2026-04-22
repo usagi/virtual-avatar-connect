@@ -1,16 +1,201 @@
-# Twitch のチャットをVACのチャンネルへ流す設定例です。
-# 参考: https://github.com/usagi/virtual-avatar-connect/issues/40#issuecomment-1807097081
-twitch = { username = "usaginetwork", channel_to = "chat" }
+# =========================================================================
+#  conf.example-twitch.toml  (v2)
+# =========================================================================
+# Twitch チャット (IRC) + EventSub WebSocket の **サービス設定**。
+# `conf.toml` に必要なセクションだけコピーして貼り付けて使う。
+#
+# v1 と大きく異なる点:
+#   - v1 の `[[processors]] feature = "twitch"` / `"twitch-out"` は **廃止**。
+#     データ配線（チャット入出力・モデレーション）は Flowgraph 側で行う:
+#       * 受信 (IRC):       flowgraph.ingress.twitch
+#       * 受信 (EventSub):  flowgraph.ingress.twitch_eventsub  (ζ-2 新設: 生 event JSON を流す)
+#       * 送信:             flowgraph.twitch.chat_send
+#       * モデレー:         flowgraph.twitch.ban / flowgraph.twitch.timeout
+#       * token:            flowgraph.twitch.get_token   (ζ-1 新設: conf.twitch.token_keys → トークン引当)
+#       * その他:           flowgraph.twitch.validate_token / user_id_by_login
+#     対応サンプル: `flowgraph.example/twitch-*/`
+#   - サービス設定（OAuth / トークン管理 / ブラウザ起動コマンド）は従来どおり
+#     この TOML に書く。VAC が OS 設定ディレクトリでトークンを永続化・refresh する。
+#   - ζ-1 以降、**任意の token_key** を定義して複数 OAuth アカウントを管理できるようになった。
+#     既定では `broadcaster` / `moderator` の 2 キーが暗黙に有効（下記 §1 / §2）。
+#     追加キーは `[twitch.tokens.<key>]` で per-key に scopes 等を指定する（§3）。
+# =========================================================================
 
-# chat チャンネルに流れてきた内容を modify で前処理して chat-synth へ流す設定例です。
-[[processors]]
-feature = "modify"
-channel_from = "chat"
-channel_to = "chat-synth"
-dictionary_files = ["dictionary.chat.txt"]
-alkana = true
 
-# chat-synth チャンネルに流れてきた内容を coeiroink で読み上げる設定例です。
-[[processors]]
-feature = "coeiroink"
-channel_from = "chat-synth"
+# -------------------------------------------------------------------------
+# 1. 配信者アカウント（EventSub 購読・IRC ingress の主体）
+# -------------------------------------------------------------------------
+
+[twitch]
+# Twitch ログイン名（URL の `twitch.tv/<ここ>`）。小文字推奨。
+username = "your_channel_login"
+
+# IRC から他 bot 等のメッセージを **ingress に流さない** 送信者 login を追加指定。
+# 通常は空で可。`[twitch.moderator].login` は自動で除外される。
+# ignore_logins = ["some_other_bot"]
+
+# （deprecated）受信発言を流し込む VAC チャンネル名。未指定時は `username` が使われる。
+# Flowgraph 経路では `flowgraph.ingress.twitch` の `fixed_channel` property で表現する。
+# V1 EventSub ループを走らせる場合の既定 channel としても参照される。
+# channel_to = "twitch"
+
+[twitch.eventsub]
+# 独自 Twitch アプリ（Client ID）を使いたい場合のみ指定。未指定で VAC 同梱 ID。
+# client_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Device Code Flow による自動 OAuth を無効化し、手動トークンのみに切り替えたい時は false。
+# oauth_auto = true
+
+# DCF のタイムアウト秒（ブラウザでユーザーがコードを入力し終えるまで）。
+# oauth_timeout_secs = 600
+
+# 要求スコープ。未指定で既定:
+#   channel:read:redemptions bits:read channel:read:subscriptions channel:read:hype_train
+#   moderator:read:followers user:read:broadcast
+# oauth_scopes = "channel:read:redemptions bits:read ..."
+
+# DCF のブラウザ起動コマンド（`{url}` が認可 URL に置換）。省略で OS 既定ブラウザ。
+# oauth_browser_command = 'msedge --profile-directory="Profile 1" {url}'
+
+# カスタム報酬（Channel Points）。未指定で **全報酬**を自動列挙して購読。
+# 1 報酬だけに絞りたい時のみ明示。
+# channel_points_reward_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# 購読したい EventSub を個別 true/false で制御（未指定の多くは既定 true）。
+# 負荷上限や purpose に応じて間引いて下さい。
+# stream_online = true
+# stream_offline = true
+# follow = true
+# subscribe = true
+# channel_subscription_message = true
+# channel_subscription_gift = true
+# raid = true
+# channel_cheer = true
+# hype_train_begin = true
+# hype_train_progress = true
+# hype_train_end = true
+# channel_points = true
+
+# ζ-2c: Flowgraph 側（`flowgraph.ingress.twitch_eventsub`）が同じ broadcaster を
+# 購読している場合、既定では V1 のこのループを自動スキップして WS を 1 本に統一する。
+# V1 経路（ChannelDatum + 既存 [[processors]]）も同時に動かしたい移行期は true に。
+# force_v1_loop = false
+
+
+# -------------------------------------------------------------------------
+# 2. モデレーター/Bot アカウント（AI 発話中継・BAN / timeout 実行用）
+# -------------------------------------------------------------------------
+# AI に「配信者とは別アカウント」でチャット送信やモデレーション操作をさせる時に使う。
+# - 保存ファイル: OS 設定ディレクトリ下の `twitch-token.moderator.json`
+# - 既定スコープ: user:write:chat user:bot
+#                moderator:manage:banned_users moderator:manage:chat_messages
+#                moderator:manage:announcements
+# - 無効化したい場合は `enabled = false` または本セクション自体を書かない。
+#
+# v2 メモ:
+#   `flowgraph.twitch.chat_send/ban/timeout` などのノードは `access_token` /
+#   `client_id` を入力ポートで受ける。ζ-1 からは **`flowgraph.twitch.get_token`
+#   ノード** に `token_key = "moderator"` を渡して動的に引当てるのが推奨ルート。
+#   `flowgraph.example/twitch-chat-send/` / `flowgraph.example/twitch-moderation/`
+#   が get_token 経由のサンプルになっている。
+
+# [twitch.moderator]
+# enabled = true
+# login = "your_bot_login"                         # 推奨（設定ミス検知用）
+# # oauth_auto = true
+# # oauth_scopes = "user:write:chat user:bot moderator:manage:banned_users moderator:manage:chat_messages"
+# # oauth_timeout_secs = 600
+#
+# # --- DCF ブラウザ起動コマンド ---
+# # 配信者アカウントとは別のアカウントで認可を通すために、ブラウザ側でアカウントを分離するのが実用的。
+# #   (a) ボット専用プロファイル:
+# #       oauth_browser_command = 'msedge --profile-directory="Profile 2" {url}'
+# #   (b) シークレットウィンドウ:
+# #       oauth_browser_command = "msedge --inprivate {url}"
+# #       oauth_browser_command = "chrome --incognito {url}"
+# #       oauth_browser_command = "firefox -private-window {url}"
+# # 配信者側 [twitch.eventsub] 側は通常 OS 既定ブラウザで可。
+
+
+# -------------------------------------------------------------------------
+# 3. 追加 token_key（任意、ζ-1 新機能）
+# -------------------------------------------------------------------------
+# 既定で `broadcaster` / `moderator` の 2 キーが使えるが、それ以外のアカウント
+# （e.g. 別 bot、別チャンネルの監視用アカウント）を持ちたい場合は
+# `[twitch].token_keys` に列挙し、`[twitch.tokens.<key>]` で per-key 設定する。
+#
+# 保存ファイル名と env var は key から自動決定（任意 key 共通）:
+#   * 保存ファイル:   twitch-token.<key>.json
+#   * FILE env:       VAC_TWITCH_TOKEN_FILE_<KEY>     （KEY は UPPER_SNAKE 化）
+#   * ACCESS_TOKEN:   `[twitch.tokens.<key>].user_access_token` に直書き（env は未用意）
+#
+# broadcaster / moderator は legacy env alias もある:
+#   * broadcaster: VAC_TWITCH_TOKEN_FILE, VAC_TWITCH_USER_ACCESS_TOKEN
+#   * moderator:   VAC_TWITCH_MODERATOR_TOKEN_FILE, VAC_TWITCH_MODERATOR_USER_ACCESS_TOKEN
+#
+# Flowgraph からは `flowgraph.twitch.get_token` ノードに `token_key = "<key>"`
+# を渡すと対応する access_token / client_id が出力される。
+
+# [twitch]
+# token_keys = ["broadcaster", "moderator", "announcer"]
+
+# [twitch.tokens.announcer]
+# # アナウンス送信 bot 用。モデレーターと scopes が違うので別キーで管理したいケース。
+# # scopes は `OAuth 2.0 Authorization` の `scope` に乗せるスペース区切り文字列。
+# scopes = "user:write:chat moderator:manage:announcements"
+# # client_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"   # 未指定で [twitch.eventsub].client_id / 同梱既定
+# # oauth_timeout_secs = 600
+# # oauth_browser_command = 'msedge --profile-directory="Profile 3" {url}'
+# # login_hint = "announcer_bot_login"                # GUI 表示用の案内（強制はしない）
+# # user_access_token = "CHANGEME"                    # 手動事前取得トークン（refresh は走らない）
+
+
+# -------------------------------------------------------------------------
+# 4. 環境変数によるトークン上書き（任意）
+# -------------------------------------------------------------------------
+#  VAC_TWITCH_CLIENT_ID                   独自 Client ID を上書き（全 token_key 共通）
+#  VAC_TWITCH_USER_ACCESS_TOKEN           broadcaster トークンを手動指定
+#  VAC_TWITCH_TOKEN_FILE                  broadcaster トークンの保存パスを変更
+#  VAC_TWITCH_MODERATOR_USER_ACCESS_TOKEN moderator トークンを手動指定
+#  VAC_TWITCH_MODERATOR_TOKEN_FILE        moderator トークン保存パスを変更
+#  VAC_TWITCH_TOKEN_FILE_<KEY>            任意 token_key の保存パスを変更（KEY は UPPER_SNAKE）
+#
+# 環境変数で指定したトークンには自動 refresh は走らない（期限切れ後は保存ファイル→ DCF にフォールバック）。
+
+
+# -------------------------------------------------------------------------
+# 5. 対応する Flowgraph サンプル
+# -------------------------------------------------------------------------
+#   flowgraph.example/twitch-echo/         ← 最小。受信をログに出すだけ
+#   flowgraph.example/twitch-chat-send/    ← 受信 → rate_limit → get_token → chat_send
+#   flowgraph.example/twitch-moderation/   ← login → get_token → user_id → ban / timeout
+#   flowgraph.example/twitch-events/       ← EventSub cheer/raid → 生 payload から bits/viewers を抽出
+
+
+# -------------------------------------------------------------------------
+# 6. EventSub Flowgraph ingress（ζ-2）
+# -------------------------------------------------------------------------
+# `flowgraph.ingress.twitch_eventsub` は独立した WebSocket を張り、Twitch
+# EventSub notification をそのまま Flowgraph に流し込む Flowgraph-native ingress。
+#
+#   - **生 event JSON** が `payload` 出力にそのまま届くので、任意フィールドを
+#     `flowgraph.json.get` で取り出せる（V1 `channel_datum` 経由では raw payload は
+#     失われていた）。
+#   - `token_key` で conf.twitch.token_keys のトークンを引当てる。V1 と同じく
+#     **ユーザーアクセストークン**（DCF で発行済）が必須。
+#   - 購読する sub_type は以下の 2 方式から選ぶ:
+#       1. プロパティ `event_types = [ "channel.cheer", ... ]` を明示
+#       2. 空のままにする ＝ `[twitch.eventsub]` の bool トグルをフォールバック
+#   - `channel.channel_points_custom_reward_redemption.add` は `channel_points_reward_id`
+#     プロパティが空なら Helix で報酬一覧を自動列挙して全部購読する。
+#
+# V1 ループとの関係（ζ-2c）:
+#   - **既定動作（force_v1_loop = false）**: 同じ broadcaster_login を扱う
+#     `flowgraph.ingress.twitch_eventsub` ノードが 1 つでも存在すれば、V1 eventsub ループは
+#     自動でスキップされる。ログに
+#       `《Twitch》: トップレベル EventSub V1 ループは Flowgraph ingress により自動スキップされました`
+#     が出る。WS は V2 の 1 本に統一される。
+#   - **V1 も並走させたい場合**: 既存 `[[processors]]` が `ChannelDatum` に依存するなど
+#     V1 経路を残したい期間は、`[twitch.eventsub].force_v1_loop = true` を設定すると
+#     V1/V2 の両方が起動する（WS 2 本）。
+#   - Flowgraph ingress が無ければ、従来どおり V1 がそのまま起動する（後方互換）。

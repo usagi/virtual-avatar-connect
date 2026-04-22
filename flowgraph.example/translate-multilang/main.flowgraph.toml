@@ -1,0 +1,161 @@
+# =========================================================================
+#  flowgraph.example/translate-multilang/main.flowgraph.toml
+# =========================================================================
+# 同一入力を 2 つの翻訳ノード（GAS / Libre）で並列に翻訳するサンプル。
+#
+# 前提:
+#   - GAS を使うなら `VAC_GAS_TRANSLATION_SCRIPT_ID` を事前にセット（または `script_id`
+#     リテラルを差し替え）。
+#   - Libre は自動 embed（Windows、conf.toml 側 `[libretranslate]` 参照）か、
+#     手動起動した LibreTranslate のベース URL を `libre_base` に設定。
+#
+# この例はあくまで「ノードの使い方」を示す配線サンプルで、実行するには対応する
+# 外部サービスが起動・利用可能である必要がある。
+# =========================================================================
+
+[meta]
+title = "Translate multi-lang"
+description = "1 つの入力を GAS (→ 英) と Libre (→ 韓) で並列翻訳する例。"
+tags = ["example", "translate", "gas", "libre"]
+
+
+# -------------------------------------------------------------------------
+# 入口
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 260]
+
+
+# -------------------------------------------------------------------------
+# GAS 翻訳（→ 英）
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "gas_to"
+feature = "flowgraph.literal.string"
+position = [400, 120]
+properties.value = "en"
+
+[[nodes]]
+id = "gas_from"
+feature = "flowgraph.literal.string"
+position = [400, 200]
+properties.value = "ja"
+
+[[nodes]]
+id = "gas"
+feature = "flowgraph.translate.gas"
+position = [680, 120]
+
+[[nodes]]
+id = "log_gas_ok"
+feature = "flowgraph.util.log"
+position = [960, 60]
+
+[[nodes]]
+id = "log_gas_err"
+feature = "flowgraph.util.log"
+position = [960, 200]
+
+
+# -------------------------------------------------------------------------
+# Libre 翻訳（→ 韓）
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "libre_to"
+feature = "flowgraph.literal.string"
+position = [400, 340]
+properties.value = "ko"
+
+[[nodes]]
+id = "libre_from"
+feature = "flowgraph.literal.string"
+position = [400, 420]
+properties.value = "ja"
+
+[[nodes]]
+id = "libre_base"
+feature = "flowgraph.literal.string"
+position = [400, 500]
+properties.value = "http://127.0.0.1:5000"
+
+[[nodes]]
+id = "libre"
+feature = "flowgraph.translate.libre"
+position = [680, 380]
+
+[[nodes]]
+id = "log_libre_ok"
+feature = "flowgraph.util.log"
+position = [960, 320]
+
+[[nodes]]
+id = "log_libre_err"
+feature = "flowgraph.util.log"
+position = [960, 460]
+
+
+# -------------------------------------------------------------------------
+# 配線
+# -------------------------------------------------------------------------
+
+# in → GAS
+[[edges]]
+from = "in:exec_out"
+to = "gas:exec_in"
+[[edges]]
+from = "in:content"
+to = "gas:text"
+[[edges]]
+from = "gas_to:value"
+to = "gas:translate_to"
+[[edges]]
+from = "gas_from:value"
+to = "gas:translate_from"
+
+[[edges]]
+from = "gas:on_success"
+to = "log_gas_ok:exec_in"
+[[edges]]
+from = "gas:translated"
+to = "log_gas_ok:value"
+
+[[edges]]
+from = "gas:on_error"
+to = "log_gas_err:exec_in"
+[[edges]]
+from = "gas:error"
+to = "log_gas_err:value"
+
+
+# in → Libre
+[[edges]]
+from = "in:exec_out"
+to = "libre:exec_in"
+[[edges]]
+from = "in:content"
+to = "libre:text"
+[[edges]]
+from = "libre_to:value"
+to = "libre:translate_to"
+[[edges]]
+from = "libre_from:value"
+to = "libre:translate_from"
+[[edges]]
+from = "libre_base:value"
+to = "libre:base_url"
+
+[[edges]]
+from = "libre:on_success"
+to = "log_libre_ok:exec_in"
+[[edges]]
+from = "libre:translated"
+to = "log_libre_ok:value"
+
+[[edges]]
+from = "libre:on_error"
+to = "log_libre_err:exec_in"
+[[edges]]
+from = "libre:error"
+to = "log_libre_err:value"

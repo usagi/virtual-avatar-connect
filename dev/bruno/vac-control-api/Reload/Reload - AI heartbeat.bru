@@ -1,0 +1,29 @@
+meta {
+  name: Reload - AI heartbeat
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/reload
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "target": "ai_persona",
+    "id": "kaltsit",
+    "heartbeat_enabled": false
+  }
+}
+
+docs {
+  指定 AI persona の heartbeat（自発発話）を無停止で ON/OFF 切り替え。
+
+  前提: 設定ファイル側に `[[ai.personas.heartbeat]]` ブロックが **存在する** こと。未定義の persona に対して
+  `heartbeat_enabled: true` を送っても無視され、レスポンスの `ai_report.warnings` に
+  「heartbeat ブロックがペルソナ設定に無いため ...」という警告が入る（= プロセス再起動が必要）。
+
+  `interval_secs` 自体の変更は現状未対応（将来拡張）。
+}

@@ -1,0 +1,237 @@
+# =========================================================================
+#  flowgraph.example/twitch-chat-send/main.flowgraph.toml
+# =========================================================================
+# チャット受信 → レートリミット → チャット送信（エコー Bot）サンプル。
+#
+# ζ-1 更新: access_token / client_id を literal で持たせるのをやめ、
+#   `flowgraph.twitch.get_token` ノードに `token_key` を渡して解決するように変更。
+#
+# 前提:
+#   1. `conf.toml` に `[twitch]` を書き、`token_keys` / `tokens` を設定
+#      （`conf.example-twitch.toml` 参照）。例:
+#
+#        [twitch]
+#        token_keys = ["broadcaster", "moderator"]
+#
+#        [twitch.tokens.moderator]
+#        scopes = ["user:write:chat", "moderator:manage:banned_users"]
+#
+#   2. 起動後 Control API (`POST /api/v1/control/oauth/twitch/moderator/start`)
+#      または GUI からモデレーター用 DCF を 1 度通してトークンを保存。
+#   3. `broadcaster_id` / `sender_user_id` は現状 literal。将来 `validate_token`
+#      + `user_id_by_login` ノードで自動解決するサンプルを追加予定。
+#
+# 配線:
+#   ingress.twitch  --content-->  [modify prefix]  -- text -->
+#     rate_limit (20/30s)  -- on_allow --> get_token -- on_success -->
+#       chat_send  -- on_success/error/skipped --> log
+#
+# rate_limit は Twitch の send rate（既定 20 msg / 30 sec、モデレーター/VIP は 100 まで）
+# を超えないよう graph-level でゲートする。
+# =========================================================================
+
+[meta]
+title = "Twitch Chat Echo Bot"
+description = "受信チャットを prefix 付きで送り返すシンプルなエコー bot（ζ-1 get_token 経由）。"
+tags = ["example", "twitch", "chat", "rate_limit", "get_token"]
+
+
+# -------------------------------------------------------------------------
+# 1. Ingress
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.twitch"
+position = [80, 200]
+
+
+# -------------------------------------------------------------------------
+# 2. 本文加工（"echo> " を先頭に付ける）
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "prefix"
+feature = "flowgraph.literal.string"
+position = [80, 360]
+properties.value = "echo> "
+
+[[nodes]]
+id = "concat"
+feature = "flowgraph.string.concat"
+position = [320, 280]
+
+
+# -------------------------------------------------------------------------
+# 3. レートリミット（Twitch: 20 msg / 30 sec）
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "gate"
+feature = "flowgraph.util.rate_limit"
+position = [560, 200]
+
+[[nodes]]
+id = "max_count"
+feature = "flowgraph.literal.int"
+position = [560, 360]
+properties.value = 20
+
+[[nodes]]
+id = "window_ms"
+feature = "flowgraph.literal.int"
+position = [560, 440]
+properties.value = 30000
+
+
+# -------------------------------------------------------------------------
+# 4. Token 解決: conf.twitch.token_keys で定義した key から取り出す
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "token_key"
+feature = "flowgraph.literal.string"
+position = [800, 360]
+# conf.toml の [twitch.tokens.moderator] で scopes:
+#   user:write:chat, moderator:manage:banned_users などを揃えておく
+properties.value = "moderator"
+
+[[nodes]]
+id = "get_token"
+feature = "flowgraph.twitch.get_token"
+position = [800, 240]
+
+
+# -------------------------------------------------------------------------
+# 5. CHANGEME: broadcaster_id / sender_user_id
+#    （将来は validate_token + user_id_by_login で動的解決する）
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "broadcaster_id"
+feature = "flowgraph.literal.string"
+position = [800, 500]
+properties.value = "CHANGEME_BROADCASTER_USER_ID"
+
+[[nodes]]
+id = "sender_user_id"
+feature = "flowgraph.literal.string"
+position = [800, 580]
+properties.value = "CHANGEME_MODERATOR_USER_ID"
+
+
+# -------------------------------------------------------------------------
+# 6. Chat Send（Helix POST /chat/messages）
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "send"
+feature = "flowgraph.twitch.chat_send"
+position = [1080, 240]
+
+
+# -------------------------------------------------------------------------
+# 7. 結果ログ（成功・失敗・スキップ・token 解決失敗いずれも観測）
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "log_ok"
+feature = "flowgraph.util.log"
+position = [1360, 160]
+
+[[nodes]]
+id = "log_err"
+feature = "flowgraph.util.log"
+position = [1360, 280]
+
+[[nodes]]
+id = "log_skip"
+feature = "flowgraph.util.log"
+position = [1360, 400]
+
+[[nodes]]
+id = "log_token_fail"
+feature = "flowgraph.util.log"
+position = [1080, 500]
+
+
+# -------------------------------------------------------------------------
+# 8. 配線
+# -------------------------------------------------------------------------
+
+# concat: "echo> " + content
+[[edges]]
+from = "prefix:value"
+to = "concat:a"
+[[edges]]
+from = "in:content"
+to = "concat:b"
+
+# in.exec_out → gate.exec_in → get_token → send
+[[edges]]
+from = "in:exec_out"
+to = "gate:exec_in"
+[[edges]]
+from = "max_count:value"
+to = "gate:max_count"
+[[edges]]
+from = "window_ms:value"
+to = "gate:window_ms"
+
+[[edges]]
+from = "gate:on_allow"
+to = "get_token:exec_in"
+[[edges]]
+from = "token_key:value"
+to = "get_token:token_key"
+
+# 成功時のみ chat_send に exec を流す
+[[edges]]
+from = "get_token:on_success"
+to = "send:exec_in"
+
+# send inputs: token と client_id は get_token から直結
+[[edges]]
+from = "concat:result"
+to = "send:text"
+[[edges]]
+from = "get_token:access_token"
+to = "send:access_token"
+[[edges]]
+from = "get_token:client_id"
+to = "send:client_id"
+[[edges]]
+from = "broadcaster_id:value"
+to = "send:broadcaster_id"
+[[edges]]
+from = "sender_user_id:value"
+to = "send:sender_user_id"
+
+# send → 各ログ
+[[edges]]
+from = "send:on_success"
+to = "log_ok:exec_in"
+[[edges]]
+from = "send:sent_text"
+to = "log_ok:value"
+
+[[edges]]
+from = "send:on_error"
+to = "log_err:exec_in"
+[[edges]]
+from = "send:error"
+to = "log_err:value"
+
+[[edges]]
+from = "send:on_skipped"
+to = "log_skip:exec_in"
+
+# token 解決失敗も観測可能にする
+[[edges]]
+from = "get_token:on_failure"
+to = "log_token_fail:exec_in"
+[[edges]]
+from = "get_token:error"
+to = "log_token_fail:value"
+
+# gate.on_deny も見たい場合（コメントアウト）
+# [[nodes]]
+# id = "log_deny"
+# feature = "flowgraph.util.log"
+# position = [1080, 440]
+# [[edges]]
+# from = "gate:on_deny"
+# to = "log_deny:exec_in"

@@ -1,0 +1,39 @@
+{
+  "name": "virtual-avatar-connect-gui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Phase VI-β: VAC 本体を制御する Svelte 5 + Vite + Svelte Flow 製 Web GUI",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@rolldown/binding-win32-x64-msvc": "^1.0.0-rc.16",
+    "@skeletonlabs/skeleton": "^4.15.2",
+    "@skeletonlabs/skeleton-svelte": "^4.15.2",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/node": "^24.12.2",
+    "eslint": "^10.2.1",
+    "eslint-plugin-svelte": "^3.17.0",
+    "globals": "^17.5.0",
+    "svelte": "^5.55.1",
+    "svelte-check": "^4.4.6",
+    "svelte-eslint-parser": "^1.6.0",
+    "tailwindcss": "^4.2.2",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.58.2",
+    "vite": "^8.0.4"
+  },
+  "dependencies": {
+    "@xyflow/svelte": "^1.5.2",
+    "melt": "^0.44.0"
+  }
+}

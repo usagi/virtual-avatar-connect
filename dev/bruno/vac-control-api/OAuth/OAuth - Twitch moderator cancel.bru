@@ -1,0 +1,15 @@
+meta {
+  name: OAuth - Twitch moderator cancel
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/oauth/twitch/moderator/cancel
+  body: none
+  auth: inherit
+}
+
+docs {
+  進行中の moderator DCF セッションをキャンセルする。broadcaster 版と同じ挙動。
+}

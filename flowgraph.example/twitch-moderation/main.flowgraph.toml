@@ -1,0 +1,212 @@
+# =========================================================================
+#  flowgraph.example/twitch-moderation/main.flowgraph.toml
+# =========================================================================
+# Twitch モデレーション（timeout）サンプル。
+# login 文字列から Helix で user_id を引き、10 分 timeout を発行する動線の見本。
+#
+# ζ-1 更新: access_token / client_id を literal で持たせるのをやめ、
+#   `flowgraph.twitch.get_token` ノードに `token_key` を渡して解決するように変更。
+#   `token_key` は `moderator`（= `conf.twitch.token_keys` の一つ）を指す想定。
+#
+# 起動パターン:
+#   本サンプルは `flowgraph.ingress.web_input` を起点にしている。VAC の
+#   `/input` ページ（例: http://127.0.0.1:57000/input/login_to_timeout/）から
+#   login 文字列を投げると一連のノードが走る想定。
+#
+#   Twitch チャットで特定 login を検出したら自動 timeout... のような自動化を
+#   組みたい場合は `flowgraph.ingress.twitch` → `flowgraph.command.match` →
+#   この graph と同じ下流にすれば良い（separate flowgraph file で fragment
+#   copy して再利用できる）。
+#
+# 前提:
+#   1. `conf.toml` の `[twitch]` で `token_keys = [..., "moderator"]` かつ
+#      `[twitch.tokens.moderator]` に必要な scopes を書いておく
+#      （`conf.example-twitch.toml` 参照）。
+#   2. 起動後に Control API / GUI から moderator DCF を 1 度通してトークン保存済み。
+#   3. CHANGEME プレースホルダ（broadcaster_id / moderator_id）は実際の値に差し替え。
+# =========================================================================
+
+[meta]
+title = "Twitch: Login を timeout"
+description = "login 入力 → get_token → user_id 解決 → 600 秒 timeout の連鎖サンプル。"
+tags = ["example", "twitch", "moderation", "timeout", "get_token"]
+
+
+# -------------------------------------------------------------------------
+# 入口: Web Input から login 文字列を受ける
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 200]
+
+
+# -------------------------------------------------------------------------
+# Token 解決: token_key を literal で指定して conf から引く
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "token_key"
+feature = "flowgraph.literal.string"
+position = [80, 320]
+properties.value = "moderator"
+
+[[nodes]]
+id = "get_token"
+feature = "flowgraph.twitch.get_token"
+position = [320, 200]
+
+
+# -------------------------------------------------------------------------
+# CHANGEME: broadcaster / moderator ID （literal）
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "broadcaster_id"
+feature = "flowgraph.literal.string"
+position = [80, 500]
+properties.value = "CHANGEME_BROADCASTER_USER_ID"
+
+[[nodes]]
+id = "moderator_id"
+feature = "flowgraph.literal.string"
+position = [80, 580]
+properties.value = "CHANGEME_MODERATOR_USER_ID"
+
+[[nodes]]
+id = "duration_secs"
+feature = "flowgraph.literal.int"
+position = [80, 660]
+properties.value = 600
+
+[[nodes]]
+id = "reason"
+feature = "flowgraph.literal.string"
+position = [80, 740]
+properties.value = "automated by VAC flowgraph (sample)"
+
+
+# -------------------------------------------------------------------------
+# 1. login → user_id 解決
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "resolve"
+feature = "flowgraph.twitch.user_id_by_login"
+position = [640, 200]
+
+
+# -------------------------------------------------------------------------
+# 2. user_id + duration で timeout 発行
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "timeout"
+feature = "flowgraph.twitch.timeout"
+position = [960, 200]
+
+
+# -------------------------------------------------------------------------
+# 3. ログ（各結果）
+# -------------------------------------------------------------------------
+[[nodes]]
+id = "log_token_fail"
+feature = "flowgraph.util.log"
+position = [320, 420]
+
+[[nodes]]
+id = "log_resolve_err"
+feature = "flowgraph.util.log"
+position = [640, 420]
+
+[[nodes]]
+id = "log_timeout_ok"
+feature = "flowgraph.util.log"
+position = [1280, 120]
+
+[[nodes]]
+id = "log_timeout_err"
+feature = "flowgraph.util.log"
+position = [1280, 280]
+
+
+# -------------------------------------------------------------------------
+# 配線
+# -------------------------------------------------------------------------
+
+# in → get_token
+[[edges]]
+from = "in:exec_out"
+to = "get_token:exec_in"
+[[edges]]
+from = "token_key:value"
+to = "get_token:token_key"
+
+# get_token: failure → log
+[[edges]]
+from = "get_token:on_failure"
+to = "log_token_fail:exec_in"
+[[edges]]
+from = "get_token:error"
+to = "log_token_fail:value"
+
+# get_token: success → resolve
+[[edges]]
+from = "get_token:on_success"
+to = "resolve:exec_in"
+[[edges]]
+from = "in:content"
+to = "resolve:login"
+[[edges]]
+from = "get_token:access_token"
+to = "resolve:access_token"
+[[edges]]
+from = "get_token:client_id"
+to = "resolve:client_id"
+
+# resolve: success → timeout
+[[edges]]
+from = "resolve:on_success"
+to = "timeout:exec_in"
+[[edges]]
+from = "resolve:user_id"
+to = "timeout:user_id"
+[[edges]]
+from = "broadcaster_id:value"
+to = "timeout:broadcaster_id"
+[[edges]]
+from = "moderator_id:value"
+to = "timeout:moderator_id"
+[[edges]]
+from = "get_token:access_token"
+to = "timeout:access_token"
+[[edges]]
+from = "get_token:client_id"
+to = "timeout:client_id"
+[[edges]]
+from = "duration_secs:value"
+to = "timeout:duration_secs"
+[[edges]]
+from = "reason:value"
+to = "timeout:reason"
+
+# resolve: error → log
+[[edges]]
+from = "resolve:on_error"
+to = "log_resolve_err:exec_in"
+[[edges]]
+from = "resolve:error"
+to = "log_resolve_err:value"
+
+# timeout: 結果 → log
+[[edges]]
+from = "timeout:on_success"
+to = "log_timeout_ok:exec_in"
+[[edges]]
+from = "timeout:end_time"
+to = "log_timeout_ok:value"
+
+[[edges]]
+from = "timeout:on_error"
+to = "log_timeout_err:exec_in"
+[[edges]]
+from = "timeout:error"
+to = "log_timeout_err:value"
+
+# 永久 BAN したい場合は `flowgraph.twitch.ban` に置き換え、`duration_secs` 接続は外す。

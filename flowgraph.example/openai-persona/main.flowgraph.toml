@@ -1,0 +1,90 @@
+# =========================================================================
+#  flowgraph.example/openai-persona/main.flowgraph.toml
+# =========================================================================
+# OpenAI AI ペルソナと Flowgraph の境界を示すサンプル。
+#
+# 前提:
+#   - `conf.toml` に `[[ai.personas]]` を 1 つ以上定義（`conf.example-openai-chat.toml`）。
+#   - AI は `channel_utterance = "ai"` に発話を emit する（常駐ループで独立稼働）。
+#
+# 注意（v2 進捗）:
+#   現状の v2 には **任意チャンネルを購読する ingress ノード**が未実装。
+#   AI が emit する `channel = "ai"` の ChannelDatum を Flowgraph 側で直接受ける仕組みは
+#   δ-9 以降で `flowgraph.ingress.channel` として追加予定。
+#
+#   そのため本サンプルは「Web UI で手入力した文字列を OS TTS に流す」最小構成の
+#   graph を示すに留める。AI とは直接接続していないが、将来 ingress.channel ノードで
+#   `in` を差し替えれば同じ下流（TTS 等）がそのまま使える想定。
+# =========================================================================
+
+[meta]
+title = "OpenAI Persona → TTS (stub)"
+description = "AI 出力を TTS に繋ぐ下流部分だけを示すスタブ。入口は将来 ingress.channel に差替え予定。"
+tags = ["example", "ai", "openai", "tts"]
+
+
+# ---- 入口（将来 ingress.channel(channel="ai") に差し替える想定） ----
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 200]
+
+
+# ---- TTS（OS 標準：追加インストール不要） ----
+[[nodes]]
+id = "engine"
+feature = "flowgraph.literal.string"
+position = [80, 380]
+properties.value = "os"
+
+[[nodes]]
+id = "voice"
+feature = "flowgraph.literal.string"
+position = [80, 460]
+properties.value = ""
+
+[[nodes]]
+id = "speak"
+feature = "flowgraph.tts.speak"
+position = [400, 260]
+
+
+# ---- ログ ----
+[[nodes]]
+id = "log_ok"
+feature = "flowgraph.util.log"
+position = [720, 180]
+
+[[nodes]]
+id = "log_err"
+feature = "flowgraph.util.log"
+position = [720, 340]
+
+
+# ---- 配線 ----
+[[edges]]
+from = "in:exec_out"
+to = "speak:exec_in"
+[[edges]]
+from = "in:content"
+to = "speak:text"
+[[edges]]
+from = "engine:value"
+to = "speak:engine"
+[[edges]]
+from = "voice:value"
+to = "speak:voice"
+
+[[edges]]
+from = "speak:on_success"
+to = "log_ok:exec_in"
+[[edges]]
+from = "speak:audio_path"
+to = "log_ok:value"
+
+[[edges]]
+from = "speak:on_error"
+to = "log_err:exec_in"
+[[edges]]
+from = "speak:error"
+to = "log_err:value"

@@ -1,0 +1,22 @@
+meta {
+  name: Pause - AIs
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/pause
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "target": "ais"
+  }
+}
+
+docs {
+  全 AI persona のみを soft pause（observation / heartbeat のどちらも止まる）。
+  TTS / translation / ingress は通常運転のまま。
+}

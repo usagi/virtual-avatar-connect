@@ -1,0 +1,22 @@
+meta {
+  name: ManagedApps - start
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/managed_apps/coeiroink/start
+  body: none
+  auth: inherit
+}
+
+docs {
+  指定 id の Managed App を起動する。
+
+  - 既に running なら 409 Conflict（{ "error": "already_running", "pids": [...] }）を返す。
+  - `supports_status=false` の entry でもこのエンドポイントは使える（running 判定がつかないので常に起動を試みる）。
+  - 起動ロジックは `conf::Conf::run_with_entry` と同じ（URL / steam:// / exe / minimized / run_as_admin を網羅）。
+  - 成功レスポンス: `{ "id": "...", "was_running": false }`
+
+  URL パス部 `coeiroink` を対象 id に書き換えて叩く。
+}

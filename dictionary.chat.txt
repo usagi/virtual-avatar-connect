@@ -6,8 +6,6 @@
 まふゆさん Mafuyu1109
 まふゆさん mafuyu1109
 アイリネさん airine_e
-インデックスさん index407
-インデックスさん 推しのギフトをばら撒く人
 フェリスさん fellys_shenya
 ルウリさん louli_vr
 ねこやまわんこさん nekoyamawanko
@@ -63,3 +61,5 @@
 リマークス remarks
 スポイラーズ spoilers
 インストラクションズ instructions
+アップタイム uptime
+オフライン offline

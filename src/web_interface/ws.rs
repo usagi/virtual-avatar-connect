@@ -5,7 +5,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use tokio::time::Duration;
 
 const DEFAULT_PUSH_INTERVAL: Duration = Duration::from_millis(100);
@@ -54,6 +54,8 @@ pub struct WebSocketServer {
  pub state: SharedState,
  pub channel_data: SharedChannelData,
  pub last_retrieved_id: Arc<RwLock<u64>>,
+ /// 同一 `ChannelDatum` id の `content` / `flags` 更新を配信する（Vosk 部分認識・OpenAI ストリーム等）
+ pub last_sent_fingerprint: Arc<RwLock<HashMap<u64, (String, HashSet<String>)>>>,
  pub client: Option<actix::Addr<WebSocketServer>>,
 }
 
@@ -75,6 +77,7 @@ impl WebSocketServer {
    state: state.clone(),
    channel_data: state.read().await.channel_data.clone(),
    last_retrieved_id: Arc::new(RwLock::new(ChannelDatum::get_last_id())),
+   last_sent_fingerprint: Arc::new(RwLock::new(HashMap::new())),
    client: None,
   }
  }
@@ -87,25 +90,41 @@ impl Actor for WebSocketServer {
   log::debug!("WebSocket が開始されました。");
   let channel_data = self.channel_data.clone();
   let last_retrieved_id = self.last_retrieved_id.clone();
+  let last_sent_fingerprint = self.last_sent_fingerprint.clone();
   let addr = ctx.address();
   ctx.spawn(actix::fut::wrap_future(async move {
-   // Server --> Client プッシュ配信
+   // Server --> Client プッシュ配信（新規 id に加え、同一 id の内容更新も送る）
    loop {
-    let channel_data = channel_data.read().await;
-    let mut last_retrieved_id = last_retrieved_id.write().await;
-    let last_retrieved_id_read_only = *last_retrieved_id;
-    let data = channel_data
-     .iter()
-     .filter_map(|cd| {
-      if cd.get_id() > last_retrieved_id_read_only {
-       Some(WsServerPayloadChannelDatum::from_channel_datum(&cd))
-      } else {
-       None
+    let last_retrieved_id_read_only = *last_retrieved_id.read().await;
+    let mut max_new_id = last_retrieved_id_read_only;
+    let mut data: VecDeque<WsServerPayloadChannelDatum> = VecDeque::new();
+
+    {
+     let channel_data = channel_data.read().await;
+     let mut fp = last_sent_fingerprint.write().await;
+     for cd in channel_data.iter() {
+      let id = cd.get_id();
+      let fingerprint = (cd.content.clone(), cd.flags.clone());
+      let is_new_id = id > last_retrieved_id_read_only;
+      let changed = fp.get(&id).map(|old| old != &fingerprint).unwrap_or(false);
+      if is_new_id {
+       data.push_back(WsServerPayloadChannelDatum::from_channel_datum(cd));
+       max_new_id = max_new_id.max(id);
+       fp.insert(id, fingerprint);
+      } else if changed {
+       data.push_back(WsServerPayloadChannelDatum::from_channel_datum(cd));
+       fp.insert(id, fingerprint);
       }
-     })
-     .collect::<VecDeque<_>>();
-    if data.len() > 0 {
-     *last_retrieved_id = data.back().map(|cd| cd.id.unwrap()).unwrap();
+     }
+     let valid_ids: HashSet<u64> = channel_data.iter().map(|c| c.get_id()).collect();
+     fp.retain(|k, _| valid_ids.contains(k));
+    }
+
+    if !data.is_empty() {
+     {
+      let mut lw = last_retrieved_id.write().await;
+      *lw = (*lw).max(max_new_id);
+     }
      let json = serde_json::to_string(&WsServerPayload {
       channel_data: Some(data),
       channel_datum: None,

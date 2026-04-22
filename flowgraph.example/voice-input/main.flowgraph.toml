@@ -1,0 +1,91 @@
+# =========================================================================
+#  flowgraph.example/voice-input/main.flowgraph.toml
+# =========================================================================
+# 音声入力 → OS TTS のエコーサンプル。
+#
+# 前提:
+#   - `conf.toml` に `[[processors]] feature = "voice"` を追加（暫定 / v2 では δ-9 で刷新）。
+#     モデルパスなどは `conf.example-voice.toml` を参照。
+#   - voice サービスが動いていれば `flowgraph.ingress.voice` にトリガーが届く。
+#
+# 動作:
+#   - マイク入力（Vosk / Whisper）で認識された is_final テキストが ingress.voice に届く。
+#   - OS TTS にそのまま流して発話させる（エコー）。
+#
+# 応用:
+#   - speak ノードを voicevox / coeiroink に差し替え
+#   - 途中に `flowgraph.regex.replace` を挟んでフィラー語（えーと等）を除去
+#   - AI ペルソナの `observe.triggers = ["user"]` と組み合わせて「声で話しかけ → AI 応答 → TTS」
+# =========================================================================
+
+[meta]
+title = "Voice Input → TTS echo"
+description = "Vosk / Whisper 認識結果を OS TTS でそのまま返す最小サンプル。"
+tags = ["example", "voice", "vosk", "whisper", "tts"]
+
+
+# ---- Voice ingress ----
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.voice"
+position = [80, 200]
+
+
+# ---- TTS ----
+[[nodes]]
+id = "engine"
+feature = "flowgraph.literal.string"
+position = [80, 380]
+properties.value = "os"
+
+[[nodes]]
+id = "voice"
+feature = "flowgraph.literal.string"
+position = [80, 460]
+properties.value = ""
+
+[[nodes]]
+id = "speak"
+feature = "flowgraph.tts.speak"
+position = [400, 260]
+
+
+# ---- ログ ----
+[[nodes]]
+id = "log_ok"
+feature = "flowgraph.util.log"
+position = [720, 180]
+
+[[nodes]]
+id = "log_err"
+feature = "flowgraph.util.log"
+position = [720, 340]
+
+
+# ---- 配線 ----
+[[edges]]
+from = "in:exec_out"
+to = "speak:exec_in"
+[[edges]]
+from = "in:content"
+to = "speak:text"
+[[edges]]
+from = "engine:value"
+to = "speak:engine"
+[[edges]]
+from = "voice:value"
+to = "speak:voice"
+
+[[edges]]
+from = "speak:on_success"
+to = "log_ok:exec_in"
+[[edges]]
+from = "speak:audio_path"
+to = "log_ok:value"
+
+[[edges]]
+from = "speak:on_error"
+to = "log_err:exec_in"
+[[edges]]
+from = "speak:error"
+to = "log_err:value"

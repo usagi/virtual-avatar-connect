@@ -1,0 +1,47 @@
+meta {
+  name: ManagedApps list
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/control/managed_apps
+  body: none
+  auth: inherit
+}
+
+docs {
+  Managed App（run_with の GUI 監視版）一覧を返す。各 entry に spec と現在 status をフラット結合。
+
+  レスポンス例:
+    {
+      "entries": [
+        {
+          "id": "coeiroink",
+          "label": "COEIROINKv2",
+          "command": "C:/.../COEIROINKv2.exe",
+          "process_marker": "COEIROINKv2",
+          "minimized": true,
+          "run_as_admin": false,
+          "working_dir": null,
+          "supports_status": true,
+          "status": { "id": "coeiroink", "running": true, "pids": [12345], "checked_at": "..." }
+        },
+        {
+          "id": "run-with-2",
+          "label": "steam://rungameid/1905180",
+          "command": "steam://rungameid/1905180",
+          "process_marker": "obs64.exe",
+          "minimized": false,
+          "run_as_admin": false,
+          "working_dir": null,
+          "supports_status": true,
+          "status": { "id": "run-with-2", "running": false, "pids": [], "checked_at": "..." }
+        }
+      ]
+    }
+
+  NOTE:
+    - `supports_status=false` (= process_marker なし) の entry は常に running=false。start のみ可能。
+    - 監視タスクが 3 秒間隔でポーリングして registry を更新する。WebSocket `managed_app_state` イベントも同じ更新で飛ぶ。
+}

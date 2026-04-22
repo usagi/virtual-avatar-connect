@@ -1,0 +1,89 @@
+# =========================================================================
+#  flowgraph.example/tts-os/main.flowgraph.toml
+# =========================================================================
+# OS 標準 TTS サンプル（Windows SAPI / macOS NSSpeech / Linux espeak 等）。
+#
+# - 追加インストール不要でそのまま動く、手元動作確認向けの最小サンプル。
+# - `/input` 経由で入力した文字を OS 標準の音声で喋らせる。
+#
+# 使い方:
+#   conf.toml で `flowgraph_dir = "flowgraph.example/tts-os"` に切り替えるか、
+#   このファイルを `./flowgraph/main.flowgraph.toml` にコピー。
+#   ブラウザで http://127.0.0.1:57000/input を開いて文字列を送信する。
+# =========================================================================
+
+[meta]
+title = "TTS OS Echo"
+description = "Web Input → OS 標準 TTS の最小構成。"
+tags = ["example", "tts", "os", "minimal"]
+
+
+# ---- Web 入力 ----
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 200]
+
+
+# ---- TTS 設定 ----
+[[nodes]]
+id = "engine"
+feature = "flowgraph.literal.string"
+position = [80, 380]
+properties.value = "os"
+
+# 未指定（空文字）なら OS デフォルト音声。
+# Windows なら "Haruka" / "Ayumi" / "Microsoft Zira" など。
+[[nodes]]
+id = "voice"
+feature = "flowgraph.literal.string"
+position = [80, 460]
+properties.value = ""
+
+
+# ---- 合成ノード ----
+[[nodes]]
+id = "speak"
+feature = "flowgraph.tts.speak"
+position = [400, 260]
+
+
+# ---- 結果ログ ----
+[[nodes]]
+id = "log_ok"
+feature = "flowgraph.util.log"
+position = [720, 180]
+
+[[nodes]]
+id = "log_err"
+feature = "flowgraph.util.log"
+position = [720, 340]
+
+
+# ---- 配線 ----
+[[edges]]
+from = "in:exec_out"
+to = "speak:exec_in"
+[[edges]]
+from = "in:content"
+to = "speak:text"
+[[edges]]
+from = "engine:value"
+to = "speak:engine"
+[[edges]]
+from = "voice:value"
+to = "speak:voice"
+
+[[edges]]
+from = "speak:on_success"
+to = "log_ok:exec_in"
+[[edges]]
+from = "speak:audio_path"
+to = "log_ok:value"
+
+[[edges]]
+from = "speak:on_error"
+to = "log_err:exec_in"
+[[edges]]
+from = "speak:error"
+to = "log_err:value"

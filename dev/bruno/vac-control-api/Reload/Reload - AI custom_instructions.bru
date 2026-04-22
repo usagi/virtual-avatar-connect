@@ -1,0 +1,30 @@
+meta {
+  name: Reload - AI custom_instructions
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/reload
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "target": "ai_persona",
+    "id": "kaltsit",
+    "custom_instructions": "あなたはクールで寡黙な医師として振る舞って下さい。"
+  }
+}
+
+docs {
+  指定 AI persona の `custom_instructions`（= system prompt の主要部分）を無停止で差し替える。
+  空文字列 `""` を渡すと「instructions 無し」に設定。フィールド自体を送らなければ現状維持。
+
+  `system_instructions_extra` も同一形式で同じボディに混ぜて送れる。
+  - 例: `"system_instructions_extra": "英語の応答には返しを控えめに"`
+
+  レスポンスに `ai_report.custom_instructions_changed = true` / `rebuilt_decision_spec` 等の
+  変更検出サマリが乗る。WS `/events` でも `kind: "reloaded"` イベントが流れる。
+}

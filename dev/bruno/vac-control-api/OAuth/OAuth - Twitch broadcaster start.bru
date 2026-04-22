@@ -1,0 +1,29 @@
+meta {
+  name: OAuth - Twitch broadcaster start
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/oauth/twitch/broadcaster/start
+  body: none
+  auth: inherit
+}
+
+docs {
+  Twitch **broadcaster** アカウントに対する Device Code Flow (DCF) を起動する。
+
+  挙動:
+    - 既存の保存トークンが **有効** なら DCF は起動せず `outcome: "already_authorized"` を返す。
+    - すでに進行中（Pending）のセッションが期限内にあれば、**同じ user_code / verification_uri** を idempotent に返す (`outcome: "already_pending"`)。
+    - どちらでも無ければ新規 DCF を開始し (`outcome: "started"`), `oauth_browser_command` に従ってブラウザを開く。
+      レスポンスには `user_code` と `verification_uri` が入るので、GUI はこれをユーザに提示するだけで OK。
+
+  レスポンス後の追跡は:
+    - GET `.../status` を叩く（このコレクションの `OAuth - Twitch broadcaster status`）
+    - もしくは WS `/api/v1/control/events` の `kind: "oauth_status"` イベントを拾う
+
+  前提:
+    - `[twitch.eventsub]` が設定されていること。
+    - `VAC_TWITCH_CLIENT_ID` 環境変数または `client_id` フィールドが設定されていること。
+}

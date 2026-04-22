@@ -1,0 +1,24 @@
+# chat-echo の TTS 下流ファイル
+#
+# engine は literal で voicevox 固定。実運用では別の state/ingress で切り替える。
+
+[meta]
+title = "TTS speaker"
+tags = ["example", "tts"]
+
+[[nodes]]
+id = "engine_literal"
+feature = "flowgraph.literal.string"
+position = [100, 400]
+properties.value = "voicevox"
+
+[[nodes]]
+id = "speaker"
+feature = "flowgraph.tts.speak"
+position = [400, 400]
+
+# text ポートは `main.flowgraph.toml` 側から cross-file で刺される前提。
+# engine は local literal から。
+[[edges]]
+from = "engine_literal:value"
+to = "speaker:engine"

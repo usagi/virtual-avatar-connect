@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+ <meta charset="utf-8" />
+ <title>VAC 字幕サンプル 2（2行想定・簡易）</title>
+ <style>
+  body { margin: 0; background: transparent; font-family: sans-serif; color: #eee; text-shadow: 1px 1px 2px #000; }
+  .row { padding: 0.25em 1em; font-size: 22px; min-height: 1.4em; }
+ </style>
+</head>
+<body>
+ <div class="row" id="a"></div>
+ <div class="row" id="b"></div>
+ <script>
+  const ch = new URLSearchParams(location.search).get("channel") || "ai";
+  let lastId = 0;
+  async function poll() {
+   try {
+    const r = await fetch(location.origin + "/output", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({ channels: [{ name: ch, retrieved_id: lastId, count: 5 }] }),
+    });
+    const j = await r.json();
+    const arr = (j.channel_data && j.channel_data[ch]) || [];
+    if (arr.length) {
+     const last = arr[arr.length - 1];
+     if (last.id != null) lastId = last.id;
+     const lines = arr.slice(-2);
+     document.getElementById("a").textContent = lines[0] && lines[0].content ? lines[0].content : "";
+     document.getElementById("b").textContent = lines[1] && lines[1].content ? lines[1].content : "";
+    }
+   } catch (e) {}
+   setTimeout(poll, 500);
+  }
+  poll();
+ </script>
+</body>
+</html>

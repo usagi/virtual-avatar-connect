@@ -1,0 +1,399 @@
+//! ディレクトリ再帰ウォーク + 複数ファイル統合 loader（spec §6.1 / §6.2 / §8）。
+//!
+//! - `flowgraph_root/` 以下を再帰的に走査。
+//! - `*.flowgraph.toml` のみ対象。`*.flowgraph.toml.disabled` は skip。
+//! - 隠しフォルダ（`.` 始まり）・アンダースコア始まりフォルダ（`_` 始まり）は skip。
+//! - 全ファイルの fq path を集め、`BuildContext` を構成して単一グラフへ統合。
+
+use crate::flowgraph::loader::diagnostic::{Diagnostic, DiagnosticCode, LoadError, LoadReport};
+use crate::flowgraph::loader::file::{parse_flowgraph_file, BuildContext, FlowgraphFile};
+use crate::flowgraph::registry::registry;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+
+/// 指定パスが `*.flowgraph.toml`（`.disabled` は除外）か。
+pub fn is_flowgraph_file(p: &Path) -> bool {
+	let name = match p.file_name().and_then(|s| s.to_str()) {
+		Some(s) => s,
+		None => return false,
+	};
+	if !name.ends_with(".flowgraph.toml") {
+		return false;
+	}
+	if name.ends_with(".disabled") {
+		return false;
+	}
+	true
+}
+
+/// `flowgraph_root` を再帰ウォークして `.flowgraph.toml` ファイル一覧を返す。
+///
+/// 走査結果はファイルパスのソート順（OS 非依存の決定論のため）。
+pub fn walk_flowgraph_dir(root: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
+	let mut out: Vec<PathBuf> = Vec::new();
+	let mut stack: Vec<PathBuf> = vec![root.to_path_buf()];
+	while let Some(dir) = stack.pop() {
+		let entries = match std::fs::read_dir(&dir) {
+			Ok(v) => v,
+			Err(e) => {
+				if dir == root {
+					return Err(e);
+				}
+				// サブディレクトリへのアクセス失敗は skip
+				continue;
+			}
+		};
+		for entry in entries.flatten() {
+			let p = entry.path();
+			let name = match p.file_name().and_then(|s| s.to_str()) {
+				Some(s) => s.to_string(),
+				None => continue,
+			};
+			let is_dir = match entry.file_type() {
+				Ok(ft) => ft.is_dir(),
+				Err(_) => continue,
+			};
+			if is_dir {
+				if name.starts_with('.') || name.starts_with('_') {
+					continue;
+				}
+				stack.push(p);
+			} else if is_flowgraph_file(&p) {
+				out.push(p);
+			}
+		}
+	}
+	out.sort();
+	Ok(out)
+}
+
+/// 絶対ファイルパスを fq path（拡張子なし root 相対、`/` 区切り）に変換。
+///
+/// - `<root>/tts/jp_routing.flowgraph.toml` → `tts/jp_routing`
+/// - `<root>/main.flowgraph.toml` → `main`
+/// - `<root>/tts/main.flowgraph.toml` → `tts/main`（main 規約解決は loader 側で吸収）
+pub fn fq_path_of_file(root: &Path, file: &Path) -> Result<String, String> {
+	let rel = file
+		.strip_prefix(root)
+		.map_err(|_| format!("ファイル '{}' が root '{}' 外", file.display(), root.display()))?;
+	let s = rel.to_string_lossy().replace('\\', "/");
+	let stripped = s
+		.strip_suffix(".flowgraph.toml")
+		.ok_or_else(|| format!("'.flowgraph.toml' で終わらない: '{s}'"))?;
+	Ok(stripped.to_string())
+}
+
+/// `flowgraph_root` を走査し、全ファイルを統合した `FlowgraphProgram` を返す。
+pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
+	if !root.exists() {
+		return Err(LoadError::from_single(
+			Diagnostic::error(
+				DiagnosticCode::Io,
+				format!("flowgraph root が存在しない: '{}'", root.display()),
+			)
+			.with_file(root.to_path_buf()),
+		));
+	}
+
+	let files = walk_flowgraph_dir(root).map_err(|e| {
+		LoadError::from_single(
+			Diagnostic::error(DiagnosticCode::Io, format!("ディレクトリ走査失敗: {e}"))
+				.with_file(root.to_path_buf()),
+		)
+	})?;
+
+	if files.is_empty() {
+		// 空は warning: プログラムは空グラフで構築可能にしておく
+		let ctx = BuildContext {
+			files: vec![],
+			known_file_fqs: HashSet::new(),
+		};
+		return ctx.build(registry());
+	}
+
+	let mut parsed: Vec<(String, PathBuf, FlowgraphFile)> = Vec::new();
+	let mut known_file_fqs: HashSet<String> = HashSet::new();
+	let mut parse_diags: Vec<Diagnostic> = Vec::new();
+
+	for file_path in files {
+		let fq = match fq_path_of_file(root, &file_path) {
+			Ok(v) => v,
+			Err(e) => {
+				parse_diags.push(
+					Diagnostic::error(DiagnosticCode::Io, e).with_file(file_path.clone()),
+				);
+				continue;
+			}
+		};
+
+		let src = match std::fs::read_to_string(&file_path) {
+			Ok(v) => v,
+			Err(e) => {
+				parse_diags.push(
+					Diagnostic::error(DiagnosticCode::Io, format!("読み込み失敗: {e}"))
+						.with_file(file_path.clone()),
+				);
+				continue;
+			}
+		};
+
+		match parse_flowgraph_file(&src, Some(&file_path)) {
+			Ok(file) => {
+				if !known_file_fqs.insert(fq.clone()) {
+					parse_diags.push(
+						Diagnostic::error(
+							DiagnosticCode::DuplicateNodeId,
+							format!("fq path 重複: '{fq}'"),
+						)
+						.with_file(file_path.clone()),
+					);
+					continue;
+				}
+				parsed.push((fq, file_path, file));
+			}
+			Err(mut e) => parse_diags.append(&mut e.diagnostics),
+		}
+	}
+
+	if parse_diags
+		.iter()
+		.any(|d| d.severity == crate::flowgraph::loader::Severity::Error)
+	{
+		return Err(LoadError::new(parse_diags));
+	}
+
+	let ctx = BuildContext {
+		files: parsed,
+		known_file_fqs,
+	};
+	let mut report = ctx.build(registry())?;
+	// パース時の warning を合流
+	let mut all = parse_diags;
+	all.append(&mut report.diagnostics);
+	report.diagnostics = all;
+	Ok(report)
+}
+
+// ---------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::flowgraph::loader::Severity;
+
+	fn tmp_root() -> PathBuf {
+		use std::time::{SystemTime, UNIX_EPOCH};
+		let ns = SystemTime::now()
+			.duration_since(UNIX_EPOCH)
+			.unwrap()
+			.as_nanos();
+		let dir = std::env::temp_dir().join(format!("vac-fg-dir-{}-{ns}", std::process::id()));
+		std::fs::create_dir_all(&dir).unwrap();
+		dir
+	}
+
+	fn write(p: &Path, s: &str) {
+		if let Some(parent) = p.parent() {
+			std::fs::create_dir_all(parent).unwrap();
+		}
+		std::fs::write(p, s).unwrap();
+	}
+
+	#[test]
+	fn walk_includes_only_flowgraph_toml() {
+		let root = tmp_root();
+		write(&root.join("a.flowgraph.toml"), "");
+		write(&root.join("README.md"), "not flowgraph");
+		write(&root.join("b.flowgraph.toml.disabled"), "skipped");
+		write(&root.join("sub/c.flowgraph.toml"), "");
+		write(&root.join(".hidden/d.flowgraph.toml"), "");
+		write(&root.join("_scratch/e.flowgraph.toml"), "");
+
+		let files = walk_flowgraph_dir(&root).unwrap();
+		let names: Vec<String> = files
+			.iter()
+			.map(|p| p.strip_prefix(&root).unwrap().to_string_lossy().replace('\\', "/"))
+			.collect();
+		assert_eq!(names, vec!["a.flowgraph.toml", "sub/c.flowgraph.toml"]);
+
+		let _ = std::fs::remove_dir_all(&root);
+	}
+
+	#[test]
+	fn fq_path_conversion() {
+		let root = Path::new("/root");
+		assert_eq!(
+			fq_path_of_file(root, Path::new("/root/main.flowgraph.toml")).unwrap(),
+			"main"
+		);
+		assert_eq!(
+			fq_path_of_file(root, Path::new("/root/tts/jp.flowgraph.toml")).unwrap(),
+			"tts/jp"
+		);
+		assert_eq!(
+			fq_path_of_file(root, Path::new("/root/tts/main.flowgraph.toml")).unwrap(),
+			"tts/main"
+		);
+		assert!(fq_path_of_file(root, Path::new("/other/a.flowgraph.toml")).is_err());
+	}
+
+	#[test]
+	fn load_dir_with_cross_file_edges() {
+		let root = tmp_root();
+		write(
+			&root.join("producer.flowgraph.toml"),
+			r#"
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "hi"
+			"#,
+		);
+		write(
+			&root.join("consumer.flowgraph.toml"),
+			r#"
+				[[nodes]]
+				id = "logger"
+				feature = "flowgraph.util.log"
+
+				[[edges]]
+				from = "/producer::lit:value"
+				to = "logger:value"
+			"#,
+		);
+
+		let report = load_flowgraph_dir(&root).expect("should load");
+		assert!(report.node_meta.contains_key("producer::lit"));
+		assert!(report.node_meta.contains_key("consumer::logger"));
+		// no errors
+		assert!(report.diagnostics.iter().all(|d| d.severity != Severity::Error));
+		let _ = std::fs::remove_dir_all(&root);
+	}
+
+	#[test]
+	fn load_dir_main_rule_resolution() {
+		let root = tmp_root();
+		write(
+			&root.join("tts/main.flowgraph.toml"),
+			r#"
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "hi"
+			"#,
+		);
+		write(
+			&root.join("consumer.flowgraph.toml"),
+			r#"
+				[[nodes]]
+				id = "logger"
+				feature = "flowgraph.util.log"
+
+				[[edges]]
+				from = "tts::lit:value"
+				to = "logger:value"
+			"#,
+		);
+
+		let report = load_flowgraph_dir(&root).expect("should load via main rule");
+		assert!(report.node_meta.contains_key("tts/main::lit"));
+		assert!(report.node_meta.contains_key("consumer::logger"));
+		let _ = std::fs::remove_dir_all(&root);
+	}
+
+	#[test]
+	fn load_dir_relative_path() {
+		let root = tmp_root();
+		write(
+			&root.join("ingress/twitch.flowgraph.toml"),
+			r#"
+				[[nodes]]
+				id = "in"
+				feature = "flowgraph.literal.string"
+				properties.value = "hi"
+			"#,
+		);
+		write(
+			&root.join("ingress/route.flowgraph.toml"),
+			r#"
+				[[nodes]]
+				id = "logger"
+				feature = "flowgraph.util.log"
+
+				[[edges]]
+				from = "./twitch::in:value"
+				to = "logger:value"
+			"#,
+		);
+
+		let report = load_flowgraph_dir(&root).expect("should load");
+		assert!(report.node_meta.contains_key("ingress/twitch::in"));
+		let _ = std::fs::remove_dir_all(&root);
+	}
+
+	#[test]
+	fn load_dir_empty_is_ok() {
+		let root = tmp_root();
+		// No files at all: loader should return an empty program without errors.
+		let report = load_flowgraph_dir(&root).expect("empty dir should be valid");
+		assert!(report.diagnostics.iter().all(|d| d.severity != Severity::Error));
+		let _ = std::fs::remove_dir_all(&root);
+	}
+
+	#[test]
+	fn load_dir_nonexistent_root_errors() {
+		let err = load_flowgraph_dir(Path::new("c:/vac-nonexistent-xyz-12345")).unwrap_err();
+		assert!(err.errors().any(|d| d.code == DiagnosticCode::Io));
+	}
+
+	/// リポジトリ同梱の `flowgraph.example/` をそのままロードできることを保証する。
+	/// 例ファイルが「常に合法な flowgraph」であることを保つ回帰テスト。
+	#[test]
+	fn examples_dir_loads_without_errors() {
+		let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("flowgraph.example");
+		let report = load_flowgraph_dir(&root).unwrap_or_else(|e| {
+			panic!(
+				"flowgraph.example の load に失敗: diagnostics={:#?}",
+				e.diagnostics
+			)
+		});
+		// エラーが無い
+		assert!(
+			report.diagnostics.iter().all(|d| d.severity != Severity::Error),
+			"flowgraph.example に error 診断が含まれる: {:#?}",
+			report.diagnostics
+		);
+		// ルートの hello サンプル
+		assert!(report.node_meta.contains_key("main::hello"));
+		assert!(report.node_meta.contains_key("main::logger"));
+		// multi-file サンプル
+		assert!(report.node_meta.contains_key("chat-echo/main::in"));
+		assert!(report.node_meta.contains_key("chat-echo/tts::speaker"));
+	}
+
+	/// 開発者用の `flowgraph.local/`（conf.local.*.toml が `flowgraph_dir` で指す）を
+	/// クリーンチェックアウトでも試せる回帰テスト。
+	/// CI やクリーンチェックアウトでは存在しないので、ファイルが無ければ silently skip する。
+	#[test]
+	fn local_dir_loads_without_errors_when_present() {
+		let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("flowgraph.local");
+		if !root.is_dir() {
+			return;
+		}
+		let report = load_flowgraph_dir(&root).unwrap_or_else(|e| {
+			panic!("flowgraph.local の load に失敗: diagnostics={:#?}", e.diagnostics)
+		});
+		let errors: Vec<_> = report
+			.diagnostics
+			.iter()
+			.filter(|d| d.severity == Severity::Error)
+			.collect();
+		assert!(
+			errors.is_empty(),
+			"flowgraph.local に error 診断が含まれる: {:#?}",
+			errors
+		);
+	}
+}

@@ -1,0 +1,336 @@
+//! Flowgraph ノードカタログ（spec §6.5 / §8.2-4）。
+//!
+//! `feature` 文字列（例 `flowgraph.literal.string`）から
+//! `NodeSpec` と `NodeImpl` を取得するためのグローバルレジストリ。
+//!
+//! Loader（δ-5）は `*.flowgraph.toml` の `[[nodes]] feature = "..."` を
+//! ここで解決する。GUI（δ-6）もパレットをここから生成する。
+//!
+//! ## 設計
+//!
+//! - 各組み込みノードは singleton Arc で一度だけ構築し、
+//!   同じ feature に属するインスタンスは Arc clone でコストゼロで複製する。
+//! - Stateful ノードも「driver は singleton、state slot は add 時に毎回 `init_state`」で扱える
+//!   （`NodeImpl::stateful` が内部で `init_state` を呼ぶ）。
+//! - `NodeSpec` はノードごとに静的（`SequenceNode` のように出力数が動的に変わるものは除外）。
+//!
+//! ## 未登録ノード
+//!
+//! - `flowgraph.flow.sequence`: 出力ポート数が instance 固有のため、現状では loader 経由で
+//!   生成不可。テスト用に `SequenceNode::new(n)` を直接使う。
+//!   δ-6 以降で properties 駆動化する予定。
+
+use crate::flowgraph::node::{EffectfulNode, NodeImpl, NodeSpec, PureNode, StatefulNode};
+use crate::flowgraph::nodes;
+use std::collections::HashMap;
+use std::sync::{Arc, LazyLock};
+
+/// 登録時に singleton として保持する Arc。
+enum NodeArc {
+	Pure(Arc<dyn PureNode>),
+	Stateful(Arc<dyn StatefulNode>),
+	Effectful(Arc<dyn EffectfulNode>),
+}
+
+impl NodeArc {
+	fn describe(&self) -> NodeSpec {
+		match self {
+			NodeArc::Pure(n) => n.describe(),
+			NodeArc::Stateful(n) => n.describe(),
+			NodeArc::Effectful(n) => n.describe(),
+		}
+	}
+
+	fn make_impl(&self) -> NodeImpl {
+		match self {
+			NodeArc::Pure(n) => NodeImpl::pure(n.clone()),
+			NodeArc::Stateful(n) => NodeImpl::stateful(n.clone()),
+			NodeArc::Effectful(n) => NodeImpl::effectful(n.clone()),
+		}
+	}
+}
+
+/// ノードカタログ。`feature` 文字列をキーに singleton を引く。
+pub struct NodeRegistry {
+	map: HashMap<String, NodeArc>,
+}
+
+impl NodeRegistry {
+	pub fn empty() -> Self {
+		Self { map: HashMap::new() }
+	}
+
+	pub fn register_pure(&mut self, node: Arc<dyn PureNode>) {
+		let feature = node.describe().feature;
+		self.map.insert(feature, NodeArc::Pure(node));
+	}
+
+	pub fn register_stateful(&mut self, node: Arc<dyn StatefulNode>) {
+		let feature = node.describe().feature;
+		self.map.insert(feature, NodeArc::Stateful(node));
+	}
+
+	pub fn register_effectful(&mut self, node: Arc<dyn EffectfulNode>) {
+		let feature = node.describe().feature;
+		self.map.insert(feature, NodeArc::Effectful(node));
+	}
+
+	/// feature が登録されているか。
+	pub fn contains(&self, feature: &str) -> bool {
+		self.map.contains_key(feature)
+	}
+
+	/// 登録済み feature の `NodeSpec`。
+	pub fn spec(&self, feature: &str) -> Option<NodeSpec> {
+		self.map.get(feature).map(|n| n.describe())
+	}
+
+	/// 登録済み feature から **新しい** `NodeImpl` を作る（Stateful は state slot を新規確保）。
+	pub fn make_impl(&self, feature: &str) -> Option<NodeImpl> {
+		self.map.get(feature).map(|n| n.make_impl())
+	}
+
+	/// 登録されている全 feature 名。ソートされた順。
+	pub fn features(&self) -> Vec<String> {
+		let mut keys: Vec<String> = self.map.keys().cloned().collect();
+		keys.sort();
+		keys
+	}
+
+	/// 登録されている全 `NodeSpec`。feature 名ソート順。
+	pub fn all_specs(&self) -> Vec<NodeSpec> {
+		self.features().into_iter().filter_map(|f| self.spec(&f)).collect()
+	}
+}
+
+/// δ-5 時点の組み込みノード一式を登録したレジストリを返す。
+pub fn default_registry() -> NodeRegistry {
+	let mut r = NodeRegistry::empty();
+
+	// --- literal (§6.5 literal) ---
+	r.register_pure(Arc::new(nodes::literal::BoolLiteralNode));
+	r.register_pure(Arc::new(nodes::literal::IntLiteralNode));
+	r.register_pure(Arc::new(nodes::literal::FloatLiteralNode));
+	r.register_pure(Arc::new(nodes::literal::StringLiteralNode));
+	r.register_pure(Arc::new(nodes::literal::JsonLiteralNode));
+
+	// --- flow ---
+	r.register_pure(Arc::new(nodes::flow::BranchNode));
+	r.register_pure(Arc::new(nodes::flow::GateNode));
+	// SequenceNode: 動的 schema のため登録しない（上記 doc 参照）。
+
+	// --- logic ---
+	r.register_pure(Arc::new(nodes::logic::AndNode));
+	r.register_pure(Arc::new(nodes::logic::OrNode));
+	r.register_pure(Arc::new(nodes::logic::XorNode));
+	r.register_pure(Arc::new(nodes::logic::NotNode));
+
+	// --- compare ---
+	r.register_pure(Arc::new(nodes::compare::EqNode));
+	r.register_pure(Arc::new(nodes::compare::NeqNode));
+	r.register_pure(Arc::new(nodes::compare::IntLtNode));
+	r.register_pure(Arc::new(nodes::compare::IntGtNode));
+	r.register_pure(Arc::new(nodes::compare::IntLeNode));
+	r.register_pure(Arc::new(nodes::compare::IntGeNode));
+	r.register_pure(Arc::new(nodes::compare::FloatLtNode));
+	r.register_pure(Arc::new(nodes::compare::FloatGtNode));
+
+	// --- math ---
+	r.register_pure(Arc::new(nodes::math::IntAddNode));
+	r.register_pure(Arc::new(nodes::math::IntSubNode));
+	r.register_pure(Arc::new(nodes::math::IntMulNode));
+	r.register_pure(Arc::new(nodes::math::IntDivNode));
+	r.register_pure(Arc::new(nodes::math::IntModNode));
+	r.register_pure(Arc::new(nodes::math::FloatAddNode));
+	r.register_pure(Arc::new(nodes::math::FloatSubNode));
+	r.register_pure(Arc::new(nodes::math::FloatMulNode));
+	r.register_pure(Arc::new(nodes::math::FloatDivNode));
+
+	// --- string_ops ---
+	r.register_pure(Arc::new(nodes::string_ops::StringConcatNode));
+	r.register_pure(Arc::new(nodes::string_ops::StringLenNode));
+	r.register_pure(Arc::new(nodes::string_ops::StringContainsNode));
+	r.register_pure(Arc::new(nodes::string_ops::StringReplaceNode));
+	r.register_pure(Arc::new(nodes::string_ops::StringSplitNode));
+	r.register_pure(Arc::new(nodes::string_ops::StringJoinNode));
+
+	// --- regex_ops ---
+	r.register_pure(Arc::new(nodes::regex_ops::RegexReplaceNode));
+
+	// --- convert ---
+	r.register_pure(Arc::new(nodes::convert::IntToStringNode));
+	r.register_pure(Arc::new(nodes::convert::StringToIntNode));
+	r.register_pure(Arc::new(nodes::convert::FloatToStringNode));
+	r.register_pure(Arc::new(nodes::convert::StringToFloatNode));
+	r.register_pure(Arc::new(nodes::convert::IntToFloatNode));
+	r.register_pure(Arc::new(nodes::convert::FloatToIntNode));
+
+	// --- json_ops ---
+	r.register_pure(Arc::new(nodes::json_ops::JsonParseNode));
+	r.register_pure(Arc::new(nodes::json_ops::JsonStringifyNode));
+	r.register_pure(Arc::new(nodes::json_ops::JsonGetNode));
+
+	// --- collection ---
+	r.register_pure(Arc::new(nodes::collection::ListLenNode));
+	r.register_pure(Arc::new(nodes::collection::ListGetNode));
+	r.register_pure(Arc::new(nodes::collection::ListIsEmptyNode));
+	r.register_pure(Arc::new(nodes::collection::MapGetNode));
+	r.register_pure(Arc::new(nodes::collection::MapKeysNode));
+	r.register_pure(Arc::new(nodes::collection::MapHasNode));
+
+	// --- command / dictionary ---
+	r.register_pure(Arc::new(nodes::command::CommandMatchNode));
+	r.register_pure(Arc::new(nodes::dictionary::DictionaryReplaceNode));
+	r.register_pure(Arc::new(nodes::dictionary::DictionaryCommandNode));
+
+	// --- ingress (δ-3d, δ-9 Part E) ---
+	r.register_pure(Arc::new(nodes::ingress::WebInputIngressNode));
+	r.register_pure(Arc::new(nodes::ingress::VoiceIngressNode));
+	r.register_pure(Arc::new(nodes::ingress::TwitchIngressNode));
+	r.register_pure(Arc::new(nodes::ingress::TwitchEventsubIngressNode));
+	r.register_pure(Arc::new(nodes::ingress::ChannelSubscribeIngressNode));
+
+	// --- state (δ-3c) ---
+	r.register_stateful(Arc::new(nodes::state::BoolStateNode));
+	r.register_stateful(Arc::new(nodes::state::IntCounterNode));
+	r.register_stateful(Arc::new(nodes::state::LatchNode));
+	r.register_stateful(Arc::new(nodes::state::AccumulatorNode));
+
+	// --- delay / rate_limit ---
+	r.register_stateful(Arc::new(nodes::delay::DelayNode));
+	r.register_stateful(Arc::new(nodes::rate_limit::RateLimitNode));
+
+	// --- log (effectful) ---
+	r.register_effectful(Arc::new(nodes::log::LogNode));
+
+	// --- translate ---
+	r.register_effectful(Arc::new(nodes::translate_gas::TranslateGasNode));
+	r.register_effectful(Arc::new(nodes::translate_libre::TranslateLibreNode));
+
+	// --- screenshot / ocr ---
+	r.register_effectful(Arc::new(nodes::screenshot::ScreenshotCaptureNode));
+	r.register_effectful(Arc::new(nodes::ocr::OcrRecognizeNode));
+
+	// --- tts ---
+	r.register_effectful(Arc::new(nodes::tts::TtsSpeakNode));
+
+	// --- twitch (δ-4d, ζ-1) ---
+	r.register_effectful(Arc::new(nodes::twitch::GetTokenNode));
+	r.register_effectful(Arc::new(nodes::twitch::ValidateTokenNode));
+	r.register_effectful(Arc::new(nodes::twitch::UserIdByLoginNode));
+	r.register_effectful(Arc::new(nodes::twitch::ChatSendNode));
+	r.register_effectful(Arc::new(nodes::twitch::BanNode));
+	r.register_effectful(Arc::new(nodes::twitch::TimeoutNode));
+
+	// δ-9 Part C: channel.emit (Flowgraph → State.channel_data 終端)
+	r.register_effectful(Arc::new(nodes::channel::ChannelEmitNode));
+
+	r
+}
+
+/// プロセス全体で共有するデフォルト registry。
+static REGISTRY: LazyLock<NodeRegistry> = LazyLock::new(default_registry);
+
+/// デフォルト registry への参照を得る（Loader / GUI 用）。
+pub fn registry() -> &'static NodeRegistry {
+	&REGISTRY
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn default_registry_contains_core_features() {
+		let r = registry();
+		for feature in [
+			"flowgraph.literal.string",
+			"flowgraph.literal.int",
+			"flowgraph.literal.bool",
+			"flowgraph.literal.float",
+			"flowgraph.literal.json",
+			"flowgraph.flow.branch",
+			"flowgraph.flow.gate",
+			"flowgraph.logic.and",
+			"flowgraph.logic.or",
+			"flowgraph.logic.xor",
+			"flowgraph.logic.not",
+			"flowgraph.compare.eq",
+			"flowgraph.compare.neq",
+			"flowgraph.string.concat",
+			"flowgraph.string.len",
+			"flowgraph.string.contains",
+			"flowgraph.string.replace",
+			"flowgraph.string.split",
+			"flowgraph.string.join",
+			"flowgraph.regex.replace",
+			"flowgraph.json.parse",
+			"flowgraph.json.stringify",
+			"flowgraph.json.get",
+			"flowgraph.list.len",
+			"flowgraph.list.get",
+			"flowgraph.list.is_empty",
+			"flowgraph.map.get",
+			"flowgraph.map.keys",
+			"flowgraph.map.has",
+			"flowgraph.state.bool",
+			"flowgraph.state.int_counter",
+			"flowgraph.state.latch",
+			"flowgraph.state.accumulator",
+			"flowgraph.util.delay",
+			"flowgraph.util.rate_limit",
+			"flowgraph.util.log",
+			"flowgraph.tts.speak",
+			"flowgraph.twitch.chat_send",
+			"flowgraph.twitch.get_token",
+			"flowgraph.twitch.validate_token",
+			"flowgraph.twitch.user_id_by_login",
+			"flowgraph.twitch.ban",
+			"flowgraph.twitch.timeout",
+			"flowgraph.translate.gas",
+			"flowgraph.translate.libre",
+			"flowgraph.ingress.web_input",
+			"flowgraph.ingress.voice",
+			"flowgraph.ingress.twitch",
+			"flowgraph.ingress.twitch_eventsub",
+			"flowgraph.ingress.channel_subscribe",
+			"flowgraph.channel.emit",
+		] {
+			assert!(
+				r.contains(feature),
+				"registry にコア feature '{feature}' が登録されていない"
+			);
+			assert_eq!(r.spec(feature).unwrap().feature, feature);
+		}
+	}
+
+	#[test]
+	fn make_impl_pure_returns_pure() {
+		let r = registry();
+		let impl_ = r.make_impl("flowgraph.literal.string").unwrap();
+		assert!(impl_.is_pure());
+	}
+
+	#[test]
+	fn make_impl_stateful_returns_stateful_with_fresh_state() {
+		let r = registry();
+		let impl_a = r.make_impl("flowgraph.state.int_counter").unwrap();
+		let impl_b = r.make_impl("flowgraph.state.int_counter").unwrap();
+		assert!(impl_a.is_stateful());
+		assert!(impl_b.is_stateful());
+	}
+
+	#[test]
+	fn make_impl_effectful_returns_effectful() {
+		let r = registry();
+		let impl_ = r.make_impl("flowgraph.util.log").unwrap();
+		assert!(impl_.is_effectful());
+	}
+
+	#[test]
+	fn unknown_feature_returns_none() {
+		let r = registry();
+		assert!(r.make_impl("flowgraph.does.not.exist").is_none());
+		assert!(r.spec("flowgraph.does.not.exist").is_none());
+	}
+}

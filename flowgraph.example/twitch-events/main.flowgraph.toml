@@ -1,0 +1,366 @@
+# =========================================================================
+#  flowgraph.example/twitch-events/main.flowgraph.toml
+# =========================================================================
+# Twitch EventSub を Flowgraph-native に受け取り、イベント種別ごとに
+# 実用的な出口につなぐサンプル（ζ-2）。
+#
+# `flowgraph.ingress.twitch_eventsub` は WebSocket を自前で張り、`notification`
+# ごとに TriggerEvent を発火する。`payload` 出力には **生の event JSON** が
+# そのまま流れるので、`flowgraph.json.get` で任意フィールドを取り出せる。
+#
+# デモ内容:
+#   - channel.cheer     → TTS で「<user> さん、cheer ありがとう！」を読み上げ
+#   - channel.raid      → チャットに「ようこそ <from_user> さん！」を送信
+#   - channel.subscribe → channel.emit でブラウザ出力向けチャンネルに通知
+#   - その他イベント    → event_type を log
+#
+# 前提:
+#   1. `conf.toml` に `[twitch]` / `[twitch.eventsub]` / `[tts]` が設定済み。
+#   2. 起動後に `broadcaster` / `moderator` の OAuth DCF を 1 度通す。
+#   3. ζ-2c により、本 Flowgraph を読み込むと V1 eventsub ループは自動スキップ。
+# =========================================================================
+
+[meta]
+title = "Twitch EventSub: cheer/raid/subscribe practical demo"
+description = "cheer → TTS、raid → chat_send、subscribe → channel.emit の実用パイプ。"
+tags = ["example", "twitch", "eventsub", "raw_payload", "tts", "chat_send"]
+
+
+# =========================================================================
+# 1. Ingress + moderator トークン解決
+# =========================================================================
+[[nodes]]
+id = "es_in"
+feature = "flowgraph.ingress.twitch_eventsub"
+position = [80, 200]
+properties.token_key = "broadcaster"
+properties.event_types = [
+    "channel.cheer",
+    "channel.raid",
+    "channel.subscribe",
+    "channel.subscription.message",
+    "channel.follow",
+]
+
+[[nodes]]
+id = "mod_token_key"
+feature = "flowgraph.literal.string"
+position = [80, 60]
+properties.value = "moderator"
+
+[[nodes]]
+id = "get_mod_token"
+feature = "flowgraph.twitch.get_token"
+position = [260, 60]
+
+[[nodes]]
+id = "log_mod_token_fail"
+feature = "flowgraph.util.log"
+position = [480, 60]
+
+
+# =========================================================================
+# 2. イベント種別判定（string.contains で exact 一致と等価）
+# =========================================================================
+[[nodes]]
+id = "cheer_key"
+feature = "flowgraph.literal.string"
+position = [320, 140]
+properties.value = "channel.cheer"
+[[nodes]]
+id = "is_cheer"
+feature = "flowgraph.string.contains"
+position = [500, 140]
+[[nodes]]
+id = "cheer_branch"
+feature = "flowgraph.flow.branch"
+position = [680, 140]
+
+[[nodes]]
+id = "raid_key"
+feature = "flowgraph.literal.string"
+position = [320, 280]
+properties.value = "channel.raid"
+[[nodes]]
+id = "is_raid"
+feature = "flowgraph.string.contains"
+position = [500, 280]
+[[nodes]]
+id = "raid_branch"
+feature = "flowgraph.flow.branch"
+position = [680, 280]
+
+[[nodes]]
+id = "sub_key"
+feature = "flowgraph.literal.string"
+position = [320, 440]
+properties.value = "channel.subscribe"
+[[nodes]]
+id = "is_sub"
+feature = "flowgraph.string.contains"
+position = [500, 440]
+[[nodes]]
+id = "sub_branch"
+feature = "flowgraph.flow.branch"
+position = [680, 440]
+
+
+# =========================================================================
+# 3. cheer → TTS
+# =========================================================================
+[[nodes]]
+id = "cheer_suffix"
+feature = "flowgraph.literal.string"
+position = [880, 100]
+properties.value = " さん、cheer ありがとう！"
+
+[[nodes]]
+id = "cheer_text"
+feature = "flowgraph.string.concat"
+position = [1060, 140]
+
+[[nodes]]
+id = "tts_engine"
+feature = "flowgraph.literal.string"
+position = [1060, 60]
+# conf.toml の [tts] で有効化している engine 名。coeiroink / voicevox / bouyomichan / os など。
+properties.value = "coeiroink"
+
+[[nodes]]
+id = "tts_cheer"
+feature = "flowgraph.tts.speak"
+position = [1280, 140]
+
+
+# =========================================================================
+# 4. raid → chat_send
+# =========================================================================
+[[nodes]]
+id = "raid_prefix_text"
+feature = "flowgraph.literal.string"
+position = [880, 220]
+properties.value = "ようこそ "
+
+[[nodes]]
+id = "raid_prefix_concat"
+feature = "flowgraph.string.concat"
+position = [1000, 240]
+
+[[nodes]]
+id = "raid_suffix"
+feature = "flowgraph.literal.string"
+position = [880, 300]
+properties.value = " さん、raid ありがとう！"
+
+[[nodes]]
+id = "raid_text"
+feature = "flowgraph.string.concat"
+position = [1140, 280]
+
+[[nodes]]
+id = "raid_broadcaster_id"
+feature = "flowgraph.literal.string"
+position = [1060, 340]
+properties.value = ""
+
+[[nodes]]
+id = "raid_sender_user_id"
+feature = "flowgraph.literal.string"
+position = [1060, 400]
+properties.value = ""
+
+[[nodes]]
+id = "raid_chat"
+feature = "flowgraph.twitch.chat_send"
+position = [1320, 300]
+
+[[nodes]]
+id = "log_raid_fail"
+feature = "flowgraph.util.log"
+position = [1500, 340]
+
+
+# =========================================================================
+# 5. subscribe → channel.emit
+# =========================================================================
+[[nodes]]
+id = "sub_suffix"
+feature = "flowgraph.literal.string"
+position = [880, 440]
+properties.value = " さんが subscribe しました！"
+
+[[nodes]]
+id = "sub_text"
+feature = "flowgraph.string.concat"
+position = [1060, 440]
+
+[[nodes]]
+id = "sub_channel"
+feature = "flowgraph.literal.string"
+position = [1060, 500]
+# conf.toml で browser-output が監視しているチャンネル名。
+properties.value = "subtitles-1"
+
+[[nodes]]
+id = "sub_emit"
+feature = "flowgraph.channel.emit"
+position = [1280, 440]
+
+
+# =========================================================================
+# 6. 汎用ログ
+# =========================================================================
+[[nodes]]
+id = "log_any"
+feature = "flowgraph.util.log"
+position = [1060, 600]
+
+
+# =========================================================================
+# 7. 配線
+# =========================================================================
+
+# 7.1 moderator トークン解決
+[[edges]]
+from = "mod_token_key:value"
+to = "get_mod_token:token_key"
+[[edges]]
+from = "get_mod_token:on_failure"
+to = "log_mod_token_fail:exec_in"
+[[edges]]
+from = "get_mod_token:error"
+to = "log_mod_token_fail:value"
+
+# 7.2 event_type 判定
+[[edges]]
+from = "es_in:event_type"
+to = "is_cheer:haystack"
+[[edges]]
+from = "cheer_key:value"
+to = "is_cheer:needle"
+
+[[edges]]
+from = "es_in:event_type"
+to = "is_raid:haystack"
+[[edges]]
+from = "raid_key:value"
+to = "is_raid:needle"
+
+[[edges]]
+from = "es_in:event_type"
+to = "is_sub:haystack"
+[[edges]]
+from = "sub_key:value"
+to = "is_sub:needle"
+
+# 7.3 exec 分岐
+[[edges]]
+from = "es_in:exec_out"
+to = "cheer_branch:exec_in"
+[[edges]]
+from = "is_cheer:result"
+to = "cheer_branch:cond"
+
+[[edges]]
+from = "es_in:exec_out"
+to = "raid_branch:exec_in"
+[[edges]]
+from = "is_raid:result"
+to = "raid_branch:cond"
+
+[[edges]]
+from = "es_in:exec_out"
+to = "sub_branch:exec_in"
+[[edges]]
+from = "is_sub:result"
+to = "sub_branch:cond"
+
+# 汎用ログ（event_type を出す）
+[[edges]]
+from = "es_in:exec_out"
+to = "log_any:exec_in"
+[[edges]]
+from = "es_in:event_type"
+to = "log_any:value"
+
+# 7.4 cheer → TTS: actor_name + suffix
+[[edges]]
+from = "es_in:actor_name"
+to = "cheer_text:a"
+[[edges]]
+from = "cheer_suffix:value"
+to = "cheer_text:b"
+
+[[edges]]
+from = "cheer_branch:then"
+to = "tts_cheer:exec_in"
+[[edges]]
+from = "tts_engine:value"
+to = "tts_cheer:engine"
+[[edges]]
+from = "cheer_text:result"
+to = "tts_cheer:text"
+
+# 7.5 raid → chat_send: "ようこそ " + actor_name + " さん..."
+[[edges]]
+from = "raid_prefix_text:value"
+to = "raid_prefix_concat:a"
+[[edges]]
+from = "es_in:actor_name"
+to = "raid_prefix_concat:b"
+[[edges]]
+from = "raid_prefix_concat:result"
+to = "raid_text:a"
+[[edges]]
+from = "raid_suffix:value"
+to = "raid_text:b"
+
+# raid branch で get_mod_token を都度 trigger（トークンは内部キャッシュ済みなので再読込は安い）
+[[edges]]
+from = "raid_branch:then"
+to = "get_mod_token:exec_in"
+
+[[edges]]
+from = "get_mod_token:on_success"
+to = "raid_chat:exec_in"
+[[edges]]
+from = "raid_text:result"
+to = "raid_chat:text"
+[[edges]]
+from = "get_mod_token:access_token"
+to = "raid_chat:access_token"
+[[edges]]
+from = "get_mod_token:client_id"
+to = "raid_chat:client_id"
+[[edges]]
+from = "raid_broadcaster_id:value"
+to = "raid_chat:broadcaster_id"
+[[edges]]
+from = "raid_sender_user_id:value"
+to = "raid_chat:sender_user_id"
+
+# chat_send 失敗ログ
+[[edges]]
+from = "raid_chat:on_error"
+to = "log_raid_fail:exec_in"
+[[edges]]
+from = "raid_chat:error"
+to = "log_raid_fail:value"
+
+# 7.6 subscribe → channel.emit
+[[edges]]
+from = "es_in:actor_name"
+to = "sub_text:a"
+[[edges]]
+from = "sub_suffix:value"
+to = "sub_text:b"
+
+[[edges]]
+from = "sub_branch:then"
+to = "sub_emit:exec_in"
+[[edges]]
+from = "sub_channel:value"
+to = "sub_emit:channel"
+[[edges]]
+from = "sub_text:result"
+to = "sub_emit:content"

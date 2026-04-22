@@ -1,6 +1,10 @@
+pub mod control;
+pub mod gui;
 pub mod input;
 pub mod output;
+pub use output::OutputPaths;
 pub mod status;
+pub mod web_input;
 mod ws;
 
 use actix_web::{get, HttpResponse};

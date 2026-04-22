@@ -1,0 +1,28 @@
+meta {
+  name: AI persona config (update)
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/control/ai_personas/0/config
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "config": {
+      "id": "main",
+      "custom_instructions": "..."
+    }
+  }
+}
+
+docs {
+  `[[ai.personas]]` の指定 index のエントリを丸ごと差し替える（γ-3b）。
+
+  - `config` は `GET /ai_personas/:index/config` と同じ形状（null キーは削除扱い）。
+  - `toml_edit::DocumentMut` で `doc["ai"]["personas"]` を掘り下げて差し替え。
+  - バックアップ・妥当性検証・再起動警告は Processor 側と同じ扱い。
+}

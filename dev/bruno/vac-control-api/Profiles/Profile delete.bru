@@ -1,0 +1,18 @@
+meta {
+  name: Profile delete
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/control/profiles/conf.backup-archive.toml
+  body: none
+  auth: inherit
+}
+
+docs {
+  プロファイルを削除する。実体は `<name>.bak-YYYYMMDD-HHmmSS` にリネームされる（物理削除ではなく退避）。
+
+  - `is_current`（現在読み込み中）なファイルの削除は 409
+  - レスポンスの `backup` にバックアップ先ファイル名が入る
+}
