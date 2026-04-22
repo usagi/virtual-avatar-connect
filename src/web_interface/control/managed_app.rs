@@ -4,6 +4,7 @@
 //!   - `GET  /api/v1/control/managed_apps`           … specs + 現在 status
 //!   - `POST /api/v1/control/managed_apps/:id/start`   … 起動（既に running なら 409 Conflict）
 //!   - `POST /api/v1/control/managed_apps/:id/stop`    … 2 段階停止（WM_CLOSE → grace → TerminateProcess、Windows 専用）
+//!   - `POST /api/v1/control/managed_apps/:id/restart` … stop → start の連続操作（γ-2）
 //!   - `POST /api/v1/control/managed_apps/:id/minimize`… 最小化（Windows 専用）
 //!
 //! 不明 `id` は 404、`supports_status=false` entry への stop/minimize は 400、
@@ -190,6 +191,109 @@ pub async fn post_stop(
  }
 }
 
+#[derive(Debug, Serialize)]
+pub struct RestartResponse {
+	pub id: String,
+	pub closed_windows: usize,
+	pub terminated_pids: usize,
+	/// stop を試みた結果プロセスが走っていなかった場合は false（start のみ実行）。
+	pub was_running: bool,
+}
+
+#[post("/managed_apps/{id}/restart")]
+pub async fn post_restart(
+	state: Data<SharedState>,
+	id: Path<String>,
+	body: Option<Json<StopRequest>>,
+) -> impl Responder {
+	let id = id.into_inner();
+	let body_grace_ms = body.and_then(|b| b.grace_ms);
+
+	// 1) stop 部分: spec / status を解決し、running なら graceful stop。supports_status=false は restart 非対応。
+	let (spec, status) = match lookup_spec_status(&state, &id).await {
+		Ok(x) => x,
+		Err(r) => return r,
+	};
+	if !spec.supports_status {
+		return HttpResponse::BadRequest().json(serde_json::json!({
+			"error": "restart_unsupported",
+			"id": id,
+			"reason": "status 監視不可の entry は restart できません（`if_not_running` が未指定）。",
+		}));
+	}
+
+	let (closed_windows, terminated_pids, was_running) = if status.running {
+		let cfg = match body_grace_ms {
+			Some(g) => spec.shutdown.clone().with_grace_ms(g),
+			None => spec.shutdown.clone(),
+		};
+		log::info!(
+			"《ManagedApp》 id={:?} を再起動します（stop action={:?} method={:?} grace_ms={} pids={:?}）。",
+			id,
+			cfg.action,
+			cfg.method,
+			cfg.grace_ms,
+			status.pids
+		);
+		match managed_app::stop_entry_graceful(&status.pids, cfg).await {
+			Ok(out) => (out.closed_windows, out.terminated_pids, true),
+			Err(e) => {
+				log::error!("《ManagedApp》 id={:?} 再起動中の停止に失敗: {e}", id);
+				#[cfg(target_os = "windows")]
+				let st = actix_web::http::StatusCode::INTERNAL_SERVER_ERROR;
+				#[cfg(not(target_os = "windows"))]
+				let st = actix_web::http::StatusCode::NOT_IMPLEMENTED;
+				return HttpResponse::build(st).json(serde_json::json!({
+					"error": "stop_failed",
+					"id": id,
+					"detail": e.to_string(),
+				}));
+			},
+		}
+	} else {
+		(0, 0, false)
+	};
+
+	// 2) start 部分: spec → run_with 再構成して起動。stop_entry_graceful が終わった直後は sysinfo がまだ古い
+	//    可能性があるが、start_entry は process_marker 再探索を行う（既に死んでいれば即新規起動）のでそのまま呼ぶ。
+	let registry = state.read().await.managed_apps.clone();
+	let run_with = {
+		let r = registry.read().await;
+		match r.find_spec(&id).cloned() {
+			Some(spec) => crate::conf::RunWith::CommandIfProcessIsNotRunning {
+				command: spec.command,
+				if_not_running: spec.process_marker,
+				run_as_admin: Some(spec.run_as_admin),
+				working_dir: spec.working_dir,
+				minimized: Some(spec.minimized),
+				id: Some(spec.id),
+				label: Some(spec.label),
+				shutdown: None,
+			},
+			None => {
+				return HttpResponse::NotFound().json(serde_json::json!({"error": "not_found", "id": id}));
+			},
+		}
+	};
+
+	log::info!("《ManagedApp》 id={:?} を再起動します（start phase）。", id);
+	if let Err(e) = managed_app::start_entry(&run_with) {
+		log::error!("《ManagedApp》 id={:?} 再起動後の起動に失敗: {e}", id);
+		return HttpResponse::InternalServerError().json(serde_json::json!({
+			"error": "start_failed",
+			"id": id,
+			"detail": e.to_string(),
+		}));
+	}
+
+	HttpResponse::Ok().json(RestartResponse {
+		id,
+		closed_windows,
+		terminated_pids,
+		was_running,
+	})
+}
+
 #[post("/managed_apps/{id}/minimize")]
 pub async fn post_minimize(state: Data<SharedState>, id: Path<String>) -> impl Responder {
  let id = id.into_inner();
@@ -295,5 +399,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
  cfg.service(get_managed_apps)
   .service(post_start)
   .service(post_stop)
+  .service(post_restart)
   .service(post_minimize);
 }

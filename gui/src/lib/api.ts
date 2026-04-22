@@ -38,6 +38,7 @@ import {
  type ManagedAppStartResponse,
  type ManagedAppStopRequest,
  type ManagedAppStopResponse,
+ type ManagedAppRestartResponse,
  type ManagedAppsResponse,
  type ProcessorConfigResponse,
  type PingResponse,
@@ -219,6 +220,12 @@ export const api = {
  managedAppMinimize(id: string): Promise<ManagedAppMinimizeResponse> {
   return request<ManagedAppMinimizeResponse>(`/managed_apps/${encodeURIComponent(id)}/minimize`, {
    method: 'POST',
+  });
+ },
+ managedAppRestart(id: string, req: ManagedAppStopRequest = {}): Promise<ManagedAppRestartResponse> {
+  return request<ManagedAppRestartResponse>(`/managed_apps/${encodeURIComponent(id)}/restart`, {
+   method: 'POST',
+   body: req,
   });
  },
 

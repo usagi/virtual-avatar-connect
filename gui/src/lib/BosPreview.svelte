@@ -77,6 +77,27 @@
 
  const absoluteUrl = $derived(composedUrl ? `${origin}${composedUrl}` : '');
 
+ // γ-2: 縦画面（portrait）では iframe プレビューは邪魔になりやすいので折りたたむ。
+ // 既定は横画面（landscape）だと展開、縦画面だと折りたたみ。ユーザ操作が優先される。
+ let previewManuallyToggled = $state(false);
+ let previewOpenOverride = $state(false);
+ let isPortrait = $state(false);
+ const previewOpen = $derived(previewManuallyToggled ? previewOpenOverride : !isPortrait);
+
+ $effect(() => {
+  if (typeof window === 'undefined') return;
+  const mq = window.matchMedia('(orientation: portrait)');
+  const apply = () => (isPortrait = mq.matches);
+  apply();
+  mq.addEventListener('change', apply);
+  return () => mq.removeEventListener('change', apply);
+ });
+
+ function togglePreview() {
+  previewManuallyToggled = true;
+  previewOpenOverride = !previewOpen;
+ }
+
  async function copyUrl() {
   if (!absoluteUrl) return;
   try {
@@ -217,14 +238,27 @@
   </div>
 
   {#if composedUrl}
-   <div class="mt-3 overflow-hidden rounded border border-surface-300-700 bg-black">
-    <!-- iframe の src は絶対 URL でも相対 URL でも良い。相対にしておくと origin を切り替えても追従する -->
-    <iframe
-     title={selectedEntry?.title ?? 'Browser source preview'}
-     src={composedUrl}
-     class="block h-64 w-full"
-     sandbox="allow-scripts allow-same-origin"
-    ></iframe>
+   <div class="mt-3">
+    <button
+     type="button"
+     class="flex w-full items-center justify-between rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1 text-xs hover:bg-surface-200-800"
+     onclick={togglePreview}
+     aria-expanded={previewOpen}
+    >
+     <span>プレビュー ({previewOpen ? '閉じる' : '開く'})</span>
+     <span class="opacity-60">{isPortrait ? '縦画面' : '横画面'}</span>
+    </button>
+    {#if previewOpen}
+     <div class="mt-1 overflow-hidden rounded border border-surface-300-700 bg-black">
+      <!-- iframe の src は絶対 URL でも相対 URL でも良い。相対にしておくと origin を切り替えても追従する -->
+      <iframe
+       title={selectedEntry?.title ?? 'Browser source preview'}
+       src={composedUrl}
+       class="block h-64 w-full"
+       sandbox="allow-scripts allow-same-origin"
+      ></iframe>
+     </div>
+    {/if}
    </div>
   {/if}
  {/if}

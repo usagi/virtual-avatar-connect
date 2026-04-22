@@ -436,6 +436,13 @@ export type ManagedAppMinimizeResponse = {
  scheduled_pids: number;
 };
 
+export type ManagedAppRestartResponse = {
+ id: string;
+ closed_windows: number;
+ terminated_pids: number;
+ was_running: boolean;
+};
+
 // ---------------------------------------------------------------------------
 // /modify/:id/dictionary|regex/entries (Phase VI-γ-8a)
 // ---------------------------------------------------------------------------

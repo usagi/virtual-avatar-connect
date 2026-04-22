@@ -129,7 +129,23 @@
   }
  }
 
- async function actMinimize(entry: ManagedAppView) {
+ async function actRestart(entry: ManagedAppView) {
+ if (!confirm(`${entry.label} を再起動しますか？\n（停止 → 起動 の順で実行します）`)) return;
+ setBusy(entry.id, true);
+ try {
+  const r = await api.managedAppRestart(entry.id, { grace_ms: 3000 });
+  const stoppedPart = r.was_running
+   ? `stopped (closed=${r.closed_windows}, terminated=${r.terminated_pids})`
+   : '起動していませんでした';
+  toastStore.success(`${entry.label} を再起動しました`, stoppedPart);
+ } catch (e) {
+  toastStore.error(`${entry.label} の再起動に失敗`, formatErr(e));
+ } finally {
+  setBusy(entry.id, false);
+ }
+}
+
+async function actMinimize(entry: ManagedAppView) {
   setBusy(entry.id, true);
   try {
    const r = await api.managedAppMinimize(entry.id);
@@ -270,6 +286,15 @@
          disabled={busy || !canStop}
         >
          停止
+        </button>
+        <button
+         type="button"
+         class="rounded border border-warning-500 px-2 py-1 text-xs font-semibold text-warning-500 hover:bg-warning-500 hover:text-white disabled:opacity-30"
+         onclick={() => void actRestart(entry)}
+         disabled={busy || !entry.supports_status}
+         title="停止 → 起動 の連続操作"
+        >
+         再起動
         </button>
         <button
          type="button"
