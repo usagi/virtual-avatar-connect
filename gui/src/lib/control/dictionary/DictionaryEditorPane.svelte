@@ -11,14 +11,21 @@
   */
 
  import { onMount } from 'svelte';
- import { dictionaryEditorStore } from './dictionaryEditorStore.svelte';
+ import { api } from '../../api';
+ import { ControlApiError } from '../../types';
+ import { dictionaryEditorStore, extractControlApiMessage } from './dictionaryEditorStore.svelte';
  import { toastStore } from '../../toasts.svelte';
  import DictionaryTable from './DictionaryTable.svelte';
+ import DictionaryEntryForm, { type EntryFormMode } from './DictionaryEntryForm.svelte';
  import type { TableEntryDto } from '../../types';
 
  onMount(() => {
   void dictionaryEditorStore.loadCatalog();
  });
+
+ // φ-3c: 新規/編集ダイアログの open 状態と mode。
+ let formOpen = $state(false);
+ let formMode = $state<EntryFormMode>({ kind: 'new' });
 
  async function selectTab(key: string): Promise<void> {
   if (dictionaryEditorStore.currentKey === key) return;
@@ -31,15 +38,56 @@
  }
 
  function onAdd(): void {
-  toastStore.info('追加フォームは φ-3c で実装予定です');
+  formMode = { kind: 'new' };
+  formOpen = true;
  }
 
  function onEdit(row: TableEntryDto): void {
-  toastStore.info('編集フォームは φ-3c で実装予定です', `row_index=${row.row_index}`);
+  formMode = { kind: 'edit', row };
+  formOpen = true;
  }
 
- function onDelete(row: TableEntryDto): void {
-  toastStore.info('削除ハンドラは φ-3c で実装予定です', `row_index=${row.row_index}`);
+ async function onDelete(row: TableEntryDto): Promise<void> {
+  const key = dictionaryEditorStore.currentKey;
+  const hash = dictionaryEditorStore.currentTable?.content_hash;
+  if (!key || !hash) return;
+  const label =
+   typeof row.values.source === 'string' ? row.values.source : `row_index=${row.row_index}`;
+  // confirm は window.confirm で最小実装（φ-3d で専用ダイアログに寄せる選択肢はあり）。
+  if (!confirm(`「${label}」を削除しますか？`)) return;
+  try {
+   await api.deleteControlTableEntry(key, row.row_index, hash);
+   toastStore.success('辞書行を削除しました', label);
+   await dictionaryEditorStore.reloadCurrent();
+  } catch (e) {
+   if (e instanceof ControlApiError && e.status === 409) {
+    toastStore.warn(
+     '他のクライアントが先に更新していました',
+     '再読込してからやり直してください（衝突解決 UI は φ-3d 予定）'
+    );
+    await dictionaryEditorStore.reloadCurrent();
+    return;
+   }
+   if (e instanceof ControlApiError && e.status === 403) {
+    toastStore.warn('ロックされている行は削除できません', label);
+    return;
+   }
+   toastStore.error('削除に失敗しました', extractControlApiMessage(e));
+  }
+ }
+
+ async function onSaved(): Promise<void> {
+  // mutation response だけでは Table 全体を再構成しづらいので単純に再読込。
+  await dictionaryEditorStore.reloadCurrent();
+ }
+
+ function onConflict(_body: unknown): void {
+  // φ-3d の ConflictDialog 接続予定。暫定で toast + 再読込。
+  toastStore.warn(
+   '他のクライアントが先に更新していました',
+   '最新内容で再読込します（衝突解決 UI は φ-3d 予定）'
+  );
+  void dictionaryEditorStore.reloadCurrent();
  }
 </script>
 
@@ -126,11 +174,19 @@ editable  = true`}</pre>
     <DictionaryTable
      table={dictionaryEditorStore.currentTable}
      {onEdit}
-     {onDelete}
+     onDelete={(r) => void onDelete(r)}
      {onAdd}
      onReload={() => void onReload()}
     />
    </div>
+
+   <DictionaryEntryForm
+    bind:open={formOpen}
+    table={dictionaryEditorStore.currentTable}
+    mode={formMode}
+    onSaved={() => void onSaved()}
+    {onConflict}
+   />
   {/if}
  {/if}
 </section>
