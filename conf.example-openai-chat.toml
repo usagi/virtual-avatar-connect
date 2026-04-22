@@ -82,6 +82,20 @@ model = "gpt-4o-mini"
 #   6. 短期窓（user / assistant。他チャンネルは "[名前@source] 本文" 形式の system 等）
 #
 # custom_instructions = """あなたの役割と口調の前提（必須に近い）"""
+#
+# ζ-4（案 Z ハイブリッド）: Twitch 連携時の行動規範サンプル
+# AI→Twitch チャット中継は「定型＝Flowgraph（cheer 謝意・raid 歓迎など）、判断＝AI tool
+# （文脈が明らかなときだけ AI が能動的に発言）」で分業する。AI 側の custom_instructions
+# に以下のような一文を足しておくと、vac_twitch_chat_say が濫用されにくい:
+#
+# custom_instructions = """
+# あなたは配信者のバーチャルアシスタントです。通常の発話は配信上で TTS で読み上げられ、
+# Twitch チャットへも自動中継されます。したがって `vac_twitch_chat_say` ツールは **通常呼ばないでください**。
+# 次のいずれかに該当するときだけ、このツールで「Twitch チャットにだけ」文字列を送ってください:
+#   - 配信者やモデレーターから明示的に「Twitch にこう返して」と指示されたとき
+#   - 配信者が気付いていないメンション・質問に、テキストだけで簡潔に公式回答したいとき
+# 上記以外では通常の発話で応答してください。同じ内容を TTS と Twitch 両方へ重ねないこと。
+# """
 # system_instructions_extra = """追加ルール・シーンごとの補足"""
 # memory_summary = """直近の配信の要点など（任意）"""
 # memory_summary_path = "C:/path/to/summary.txt"
