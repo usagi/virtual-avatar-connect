@@ -133,24 +133,12 @@ pub async fn run() -> Result<()> {
 
  // δ-9 Part B/E: Flowgraph ブリッジの収集。ingress ノードごとに HTTP ルートやワーカーを準備する。
  // ζ-2c: V1 eventsub_loop スキップ判定にも使うので、V1 ingress::prepare より先に走らせる。
- let (flowgraph_bridges, flowgraph_trigger, channel_datum_tx) = {
+ let (flowgraph_bridges_catalog, flowgraph_trigger, channel_datum_tx) = {
   let s = state.read().await;
   let fg = s.flowgraph.read().await;
   let tx = s.channel_datum_tx.clone();
   if let Some(rt) = fg.as_ref() {
-   let cat = bridges::collect_all(&rt.node_meta);
-   if !cat.is_empty() {
-    log::info!(
-     "《Flowgraph/Bridges》 ingress 合計 {} 件を検出: web_input={}, voice={}, twitch={}, twitch_eventsub={}, channel_subscribe={}",
-     cat.len(),
-     cat.web_input.len(),
-     cat.voice.len(),
-     cat.twitch.len(),
-     cat.twitch_eventsub.len(),
-     cat.channel_subscribe.len()
-    );
-   }
-   (cat, rt.trigger(), tx)
+   (bridges::collect_all(&rt.node_meta), rt.trigger(), tx)
   } else {
    (bridges::BridgeCatalog::default(), None, tx)
   }
@@ -165,7 +153,7 @@ pub async fn run() -> Result<()> {
    .map(|t| t.username.clone())
    .unwrap_or_default();
   bridges::twitch_eventsub::v1_skip_broadcaster_logins(
-   &flowgraph_bridges.twitch_eventsub,
+   &flowgraph_bridges_catalog.twitch_eventsub,
    &username_fallback,
   )
  };
@@ -176,31 +164,18 @@ pub async fn run() -> Result<()> {
   &v2_eventsub_skip_broadcasters,
  )
  .await?;
- // δ-9 Part E.2: voice ingress は VoiceSink 抽象で V1/V2 を統一した。handle は shutdown で join。
- let flowgraph_voice_handles = bridges::voice::spawn(
-  &flowgraph_bridges.voice,
-  flowgraph_trigger.clone(),
-  tokio::runtime::Handle::current(),
- );
- // ζ-1: twitch IRC ingress は Flowgraph bridge で実装。返されたハンドルは shutdown で finish する。
- let flowgraph_twitch_handles =
-  bridges::twitch::spawn(&flowgraph_bridges.twitch, flowgraph_trigger.clone(), state.clone()).await;
- // ζ-2: twitch EventSub ingress も Flowgraph-native に bridge 化。raw event JSON を payload 出力で流す。
- // V1 `spawn_eventsub_loop` とは独立。`[twitch.eventsub].enabled = false` で V1 を落とせば WS は 1 本化。
- let flowgraph_twitch_eventsub_handles = bridges::twitch_eventsub::spawn(
-  &flowgraph_bridges.twitch_eventsub,
-  flowgraph_trigger.clone(),
-  state.clone(),
- );
- // δ-9 Part E: channel.subscribe ingress は State.channel_datum_tx を subscribe して
- // ingress ノードごとに独立した tokio::task を持つ。handle は program 終了時に自動終了。
- let _channel_subscribe_handles = bridges::channel_subscribe::spawn(
-  &flowgraph_bridges.channel_subscribe,
-  flowgraph_trigger.clone(),
-  &channel_datum_tx,
- );
 
- let flowgraph_web_input_endpoints = std::sync::Arc::new(flowgraph_bridges.web_input.clone());
+ // ζ-3: 起動後の bridges ライフサイクルは `State.bridge_handles` に預ける。
+ // reload 経路と同じ [`bridges::spawn_all_from_state`] を使うことで初回と reload の再配線コードを共通化する。
+ let initial_bridges = bridges::spawn_all_from_state(&state, &channel_datum_tx).await;
+ // actix ルート用のスナップショットを取ってから State に譲渡する。
+ let flowgraph_web_input_endpoints =
+  std::sync::Arc::new(initial_bridges.web_input_snapshot.clone());
+ {
+  let s = state.read().await;
+  let mut slot = s.bridge_handles.lock().await;
+  *slot = initial_bridges;
+ }
  let flowgraph_trigger_data: std::sync::Arc<Option<flowgraph::node::TriggerHandle>> =
   std::sync::Arc::new(flowgraph_trigger.clone());
 
@@ -257,23 +232,12 @@ pub async fn run() -> Result<()> {
   );
  }
 
- // Phase ε-1: cleanup の await は全て 5 秒以内のガード付きで行う。何か 1 つが
- // ブロックしても他が進むようにする（shutdown 時の安全ネット）。
- for ing in flowgraph_twitch_eventsub_handles {
-  let node_id = ing.node_id().to_string();
-  if tokio::time::timeout(std::time::Duration::from_secs(5), ing.finish()).await.is_err() {
-   log::warn!("《Shutdown》 twitch_eventsub bridge の終了が 5s 以内に完了しませんでした node={}", node_id);
-  }
- }
- for ing in flowgraph_twitch_handles {
-  if tokio::time::timeout(std::time::Duration::from_secs(5), ing.finish()).await.is_err() {
-   log::warn!("《Shutdown》 Flowgraph/Twitch ingress の finish() が 5 秒以内に完了しませんでした。続行します。");
-  }
- }
- for ing in flowgraph_voice_handles {
-  if tokio::time::timeout(std::time::Duration::from_secs(5), ing.finish()).await.is_err() {
-   log::warn!("《Shutdown》 Voice ingress の finish() が 5 秒以内に完了しませんでした。続行します。");
-  }
+ // ζ-3: bridges の後処理は `State.bridge_handles` に集約。reload と同じ経路で閉じる。
+ {
+  let handles_arc = state.read().await.bridge_handles.clone();
+  let mut slot = handles_arc.lock().await;
+  let taken = std::mem::replace(&mut *slot, bridges::BridgeHandles::empty());
+  taken.finish_all().await;
  }
  for h in ingress_handles.eventsub {
   h.abort();

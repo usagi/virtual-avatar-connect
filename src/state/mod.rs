@@ -138,6 +138,18 @@ pub struct State {
  /// δ-8 以降で `run_forever` を接続する。未設定 / ディレクトリ非存在時は `None` が入る。
  pub flowgraph: SharedFlowgraph,
 
+ /// ζ-3: Flowgraph bridges (twitch / twitch_eventsub / voice / channel_subscribe) のライフサイクル束。
+ ///
+ /// 初回起動は `lib.rs::run` が [`crate::bridges::spawn_all_from_state`] で populate する。
+ /// flowgraph reload 時は `web_interface::control::flowgraph::reload_runtime` が旧ハンドルを取り出して
+ /// [`crate::bridges::BridgeHandles::finish_all`] で停止し、新 runtime 上で再 spawn して差し替える。
+ ///
+ /// - `Arc<tokio::sync::Mutex<...>>` なのは、respawn 中に他のリクエストが触りに来ないよう
+ ///   独立ロックを取るため（`SharedState::write()` を長時間保持したくない）。
+ /// - web_input は actix route 登録制で hot-swap 不可なので、`finish_all` 対象には含まない。
+ ///   差分は `web_input_snapshot` で検出し、`ControlEvent::RestartRecommended` で GUI に促す。
+ pub bridge_handles: std::sync::Arc<tokio::sync::Mutex<crate::bridges::BridgeHandles>>,
+
  /// Phase ε-1: 統合シャットダウンブローカー。
  ///
  /// Ctrl+C / `POST /api/v1/control/shutdown` / 致命的エラー の全てをここに集約する。
@@ -213,6 +225,7 @@ impl State {
    )),
    twitch_ignore_logins,
    flowgraph,
+   bridge_handles: std::sync::Arc::new(tokio::sync::Mutex::new(crate::bridges::BridgeHandles::empty())),
    shutdown,
   }));
   log::trace!("State の生成が完了しました。");

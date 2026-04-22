@@ -158,6 +158,17 @@ pub enum ControlEvent {
   /// 観測時刻（RFC3339）。
   checked_at: String,
  },
+ /// ζ-3: flowgraph reload 後に、再起動無しでは新しい `flowgraph.ingress.web_input` を反映できない
+ /// といった「本プロセス再起動が必要な差分」が発生したときの通知。
+ ///
+ /// GUI はトースト表示で「再起動推奨」「差分の概要」を伝え、任意で `/api/v1/control/restart` 呼び出しに繋ぐ。
+ /// reason は短文（例: `"web_input endpoints changed after flowgraph reload"`）、details は自由情報。
+ RestartRecommended {
+  reason: String,
+  /// 任意メタデータ（例: `{"changed_web_input": 2}`）。UI 側は詳細をそのまま表示できる。
+  details: serde_json::Value,
+ },
+
  /// Phase VI-α-5: Twitch Device Code Flow のセッション状態が変化したとき。
  /// Control API `/oauth/twitch/{account}/start|cancel` や、ポーリングタスク完了時に送る。
  OAuthStatus {

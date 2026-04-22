@@ -27,7 +27,7 @@ pub struct FlowgraphWebInputEndpoint {
 	pub fixed_channel: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Method {
 	Get,
 	Post,
