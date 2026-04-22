@@ -17,7 +17,7 @@ use anyhow::{Context, Result};
 use base64::Engine as _;
 use std::path::PathBuf;
 
-use crate::conf::{Conf, ControlApiConf};
+use crate::conf::{Conf, ControlApiConf, ControlTableEntry};
 use crate::SharedState;
 
 /// Bearer ??????????? `/whoami` ???????
@@ -44,6 +44,11 @@ pub struct ControlApiRuntime {
  pub require_token_for_non_loopback: bool,
  /// ?????????????????????????`Generated` ????? `Some`??
  pub written_token_file: Option<PathBuf>,
+ /// Phase φ-1: Control API Table CRUD の allow-list スナップショット。
+ ///
+ /// `ControlApiConf::tables` を init 時にコピーしたもの。`[[control_api.tables]]` を増やすには
+ /// 現状 VAC の再起動 (`POST /api/v1/control/restart`) が必要。GUI からの動的追加は φ 後続で検討。
+ pub tables: Vec<ControlTableEntry>,
 }
 
 impl ControlApiRuntime {
@@ -62,6 +67,7 @@ impl ControlApiRuntime {
    require_token_for_loopback: policy.require_token_for_loopback,
    require_token_for_non_loopback: policy.require_token_for_non_loopback,
    written_token_file,
+   tables: policy.tables.clone(),
   })
  }
 
@@ -234,14 +240,15 @@ mod tests {
  /// ??????? peer_addr ? policy ???????????????????
  /// middleware ????????????TestRequest ? peer_addr ??????????????
  fn make_runtime(loopback_req: bool, non_loopback_req: bool) -> ControlApiRuntime {
-  ControlApiRuntime {
-   token: "correct-token-xxxxxxxx".to_string(),
-   token_source: TokenSource::Generated,
-   require_token_for_loopback: loopback_req,
-   require_token_for_non_loopback: non_loopback_req,
-   written_token_file: None,
-  }
+ ControlApiRuntime {
+  token: "correct-token-xxxxxxxx".to_string(),
+  token_source: TokenSource::Generated,
+  require_token_for_loopback: loopback_req,
+  require_token_for_non_loopback: non_loopback_req,
+  written_token_file: None,
+  tables: Vec::new(),
  }
+}
 
  async fn exercise(
   runtime: ControlApiRuntime,

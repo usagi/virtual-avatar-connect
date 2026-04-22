@@ -28,6 +28,7 @@ pub mod reload;
 pub mod restart;
 pub mod run_with;
 pub mod shutdown;
+pub mod table;
 pub mod ws;
 
 pub use auth::{ControlApiRuntime, TokenSource};
@@ -55,6 +56,7 @@ pub fn register(cfg: &mut web::ServiceConfig) {
    .configure(managed_app::configure)
    .configure(oauth_twitch::configure)
    .configure(ingress::configure)
-   .configure(flowgraph::configure),
+   .configure(flowgraph::configure)
+   .configure(table::configure),
  );
 }

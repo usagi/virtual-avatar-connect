@@ -574,6 +574,54 @@ pub struct ControlApiConf {
  /// 非ループバック（LAN など）からのリクエストに Bearer 検証を要求するか。既定 `true`。
  #[serde(default = "bool_true")]
  pub require_token_for_non_loopback: bool,
+
+ /// Phase φ-1: Table CRUD API (`/api/v1/control/table/*`) から編集を許可する TSV ファイルの allow-list。
+ ///
+ /// 登録されていないファイルは API からは **存在しないもの**として扱う（404）。
+ /// GUI の Dictionary Editor Pane / Live Quick-Add はここに並んだものだけをカタログ表示する。
+ #[serde(default)]
+ pub tables: Vec<ControlTableEntry>,
+}
+
+/// Phase φ-1: Control API Table 編集対象エントリ。`[[control_api.tables]]` 配列で列挙する。
+///
+/// 設計:
+///   - `key` は URL 上の安定した一意キー（spec §3.1 の `fq_path` 相当）。英数 + `.` + `-` + `_` に限定。
+///   - `path` はディスク上の実ファイル。cwd 相対で解決する。書き込みは同一ディレクトリでの atomic rename。
+///   - `editable` を `false` にすると書き込み系は 403 を返す（GUI からは read-only 表示）。
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct ControlTableEntry
+{
+ /// URL 上の識別子（`/api/v1/control/table/{key}`）。
+ pub key: String,
+ /// ディスク上の TSV ファイル。cwd 相対 or 絶対パス。
+ pub path: PathBuf,
+ /// GUI カタログ表示用ラベル。省略時は `key` を表示。
+ #[serde(default)]
+ pub label: Option<String>,
+ /// 役割ヒント（`"dictionary"` | `"generic"` など）。GUI の skin 切替用。
+ #[serde(default)]
+ pub role: Option<String>,
+ /// GUI からの編集許可。`false` なら全 mutation API で 403。
+ #[serde(default = "bool_true")]
+ pub editable: bool,
+ /// Live Quick-Add 連携（φ-2 で利用）。未設定なら Quick-Add 対象外。
+ #[serde(default)]
+ pub quick_add: Option<ControlTableQuickAdd>
+}
+
+/// Phase φ-1: Quick-Add ウィジェットの対応先 `dictionary.learn` ノード指定。
+///
+/// 実際の trigger は φ-2 (`POST /control/flowgraph/.../trigger/{node_id}`) で行う。
+/// φ-1 時点ではこのメタデータを GUI に返すだけ。
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct ControlTableQuickAdd
+{
+ /// 対象ノードの fq ID（例 `"main::learn"`）。
+ pub node_id: String,
+ /// 既定の `kind`（`"literal"` | `"regex"`）。
+ #[serde(default)]
+ pub kind: Option<String>
 }
 
 impl Conf {
