@@ -19,6 +19,12 @@ AI疑似人格共演者、VRM制御、音声認識、画像認識、字幕、翻
 
 [Issues]:https://github.com/usagi/virtual-avatar-connect/issues
 
+## v1 → v2 移行
+
+v0.10.0 で **V1 processor 層は撤去**されました。`[[processors]]` は TOML に残っても無視
+されます。Flowgraph への移行は [`docs/manual/v1-to-v2-migration.md`](docs/manual/v1-to-v2-migration.md)
+を参照してください。主要な変更点の一覧は [`CHANGELOG.md`](CHANGELOG.md) にあります。
+
 ## Roadmap (抜粋)
 
 現在は Phase VI: **GUI 化** を進めています。GUI 本体に先立ち、まず制御面を REST/WS として切り出します。

@@ -5,6 +5,28 @@
 
 ## [Unreleased]
 
+### v2 merge-ready roadmap (ζ-3 / γ-4a.0 / γ-4a / γ-2 / δ-X / ζ-4)
+
+- **ζ-3: Flowgraph reload 時のブリッジ再配線**
+  - `BridgeHandles` 構造体を新設し `SharedState.bridge_handles` に常時保持。起動時 spawn と reload 時 respawn を同じ経路に統一。
+  - `web_interface::control::flowgraph::reload_runtime` が旧 `FlowgraphRuntime` worker と旧 bridges の両方を graceful shutdown してから新しい一式を spawn。
+  - `web_input` endpoint 差分時は `ControlEvent::RestartRecommended` を push して GUI にリスタート推奨トーストを出す（actix route は hot-swap 不可）。
+- **γ-4a.0: GUI ノード/エッジ削除 UX**
+  - `FlowgraphNodeCard` に hover 時の × ボタンを追加、`FlowgraphCanvas` の `ondelete` を multi-select 削除に接続。
+  - `flowgraphStore.removeSelection` / `undoLastDelete` を追加し、削除直後の toast に「元に戻す」action ボタンを表示。
+- **γ-4a: Pipeline エディタ基盤**
+  - `flowgraphStore.isDirty` getter を追加し、`FlowgraphTab` の Save ボタンを `Save *`（warning 色）で dirty 表示。
+  - Ctrl+S / Cmd+S で保存する window 級キーボードショートカットと、dirty 状態のとき `beforeunload` で確認ダイアログを出す移行ガード。
+- **γ-2: Live タブ仕上げ**
+  - Managed App の `POST /api/v1/control/managed_apps/{id}/restart` を追加（stop → start の合成、`supports_status=false` は非対応で 400）。
+  - `ManagedAppDrawer` に再起動ボタン、`BosPreview` に縦画面時アコーディオン（手動トグル可）を追加。
+- **δ-X: `flowgraph.command.set` ノード**
+  - V1 `feature = "command"` の scene switcher 相当を Flowgraph ネイティブに復活。プロパティ `sets` に `{name, pre, post, channel_contents}` を配列で持たせ、入力 `command_name` に一致した set を `pre → channel_contents → post` 順に emit。
+  - サンプル `flowgraph.example/command-sets/main.flowgraph.toml` を追加。
+- **ζ-4: AI-Twitch ハイブリッド方針の明文化**
+  - `conf.example-openai-chat.toml` の `custom_instructions` セクションに `vac_twitch_chat_say` の利用基準を行動規範サンプルとして追記。
+  - 既存の `vac_twitch_chat_say` ツールスキーマ（`conf.example-openai-tools.json`）と `flowgraph.example/twitch-events/`（C1 標準 flowgraph 群）とで、定型＝Flowgraph / 判断＝AI tool の分業を明示。
+
 ### Breaking changes
 
 - **V1 processor 層と V1 Control API エンドポイントの除去** (δ-9 D.2/D.3/D.4/D.5)
