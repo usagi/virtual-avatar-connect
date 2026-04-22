@@ -5,6 +5,55 @@
 
 ## [Unreleased]
 
+### η: Dictionary/Table Unification (η-0 .. η-6)
+
+V1 時代に合意されていた「11 カラム辞書」仕様（`source` / `replacement` / `kind` / `priority` / `is_locked` / `enabled` / `by` / `created_at` / `expires_at` / `tags` / `note`）と runtime 学習/忘却機能を V2 Flowgraph 上に再構築した。汎用 Table 型を型システムに追加し、辞書機能はその上に semantic layer として乗る。
+
+- **`SocketType::Table` 追加** (η-1a)
+  - Flowgraph 型システムに 9 番目の variant として導入。`List<Json>` とは別の第一級型として `Table` を扱う（暗黙変換なし、`flowgraph.table.*` 経由で明示）。
+  - `SocketValue::Table(Table)` で値を保持。`Table` は `Arc<TableInner>` + lazy `content_hash: OnceLock<[u8; 32]>` + `version: u64` でできた clone O(1) / COW mutation 構造。
+- **`src/flowgraph/table.rs` 新設** (η-1b)
+  - `Table` / `TableSchema` / `ColumnSpec` / `Row` の構造体群。`make_mut` / `push_row` / `remove_last_where` / `remove_all_where` で COW-based mutation、`content_hash()` は blake3 の lazy 計算。
+  - `Table::to_json_array()` / `Table::from_json_array()` で serde_json 側との相互変換を提供。
+- **`flowgraph.table.*` 4 ノード追加** (η-2)
+  - `flowgraph.table.from_json` (Pure): `List<Json>` → `Table`（スキーマは先頭 object から推論）。
+  - `flowgraph.table.to_json` (Pure): `Table` → `List<Json>`。
+  - `flowgraph.table.load_tsv` (Effectful): TSV ファイル → `Table`。モード `auto` / `headerful` / `legacy_loose` を支持し、V1 の space/TAB 2 列フォーマットを `legacy_loose` で吸収。エスケープは `\\` / `\t` / `\n` / `\r`。
+  - `flowgraph.table.write_tsv` (Effectful): `Table` → TSV ファイル。`path.tmp` への書き出し後 atomic rename。
+- **`flowgraph.dictionary.*` 4 ノード刷新** (η-3)
+  - `flowgraph.dictionary.replace` (Stateful、刷新): 入力を `Dictionary: List<Json>` から `Dictionary: Table` に変更。内部で literal エントリは Aho-Corasick（`LeftmostLongest`）で一括置換、regex エントリは priority desc 順に `Regex::replace_all`。`Arc identity → version → blake3 content_hash` の 3 段キャッシュで AC/Regex 再コンパイルを回避。`enabled=false` / `expires_at` 期限切れは compile 時に除外。
+  - `flowgraph.dictionary.match` (Stateful、新規): `text` と `dictionary` から照合結果を出す。`match_policy = first / all / longest`、`anchor = anywhere / prefix / full`。出力 `matched_entries: List<Json>` / `matched_count: Int` / `captures: List<List<String>>` / `first_replacement: String`、exec は `on_match` / `on_no_match`。
+  - `flowgraph.dictionary.learn` (Pure、新規): Table に 11 カラムエントリを append。同一 `(source, replacement, kind)` & 有効エントリが既存なら `on_duplicate`、新規なら `on_learned`。`created_at` は RFC3339 UTC 秒精度で自動採番。`is_locked` は常に `false` で追加。
+  - `flowgraph.dictionary.forget` (Pure、新規): `mode = latest / all / exact` で削除。`is_locked=true` は除外してロックカウントを報告。`latest` は「最新 1 件を消すことで過去エントリが自動復活する UNDO 動作」を保持。
+- **旧 `flowgraph.dictionary.command` ノード削除** (η-4)
+  - V1 由来の固定文法（`学習(X:=Y)` / `忘却(X)` 等）をノード内部に埋め込んでいたが、`flowgraph.dictionary.match` + `flowgraph.dictionary.learn` / `.forget` + ユーザー編集可能な `commands.tsv` で表現する方式に置き換え。コマンド構文を変更・拡張する場合はノード実装ではなく TSV を書き換えればよくなった。
+- **依存追加**
+  - `blake3 = "1.5"` — Table content_hash（Stateful Replace/Match キャッシュ識別）。
+  - `aho-corasick = "1.1"` — literal 辞書マッチング高速化。
+- **サンプル flowgraph 追加**
+  - `flowgraph.example/dictionary/basic-replace.flowgraph.toml` — TSV ロード → 辞書置換 → ログ出力の最小例。
+  - `flowgraph.example/dictionary/command-dispatch.flowgraph.toml` — `commands.tsv` を `flowgraph.dictionary.match` に食わせて「学習 / 忘却」コマンドを判別する例。
+  - `flowgraph.example/dictionary/commands.tsv` — 学習 / 忘却コマンド syntax のサンプル。
+  - `flowgraph.example/dictionary/sample.dict.tsv` — 固定辞書 + 通常エントリ + regex のサンプル。
+- **GUI: Table ポート視覚区別** (η-6)
+  - `gui/src/lib/flowgraph/FlowgraphNodeCard.svelte` の `handleClass` を更新し、`port.ty === 'table'` の Handle に `flowgraph-handle data table` クラスを付与。emerald-500 の角丸正方形（12×12px）で、通常の青円データポート / 橙三角 exec ポートと明確に形状区別。
+  - `flowgraph.dictionary.*` / `flowgraph.table.*` ノードはそれぞれ `category = "dictionary"` / `"table"` を返すため、既存 `FlowgraphPalette` の自動グルーピングで独立セクションとして出る（追加実装不要）。
+  - **保留**: 11 カラム編集 UI (Dictionary Editor pane) と Live quick-add widget は V2 に Table ファイル直接編集用の Control API が未整備のため φ フェーズ以降で実装予定。仕様書 §9.2 / §9.3 に保留理由を明記。
+- **V1 → η migrate CLI** (η-5)
+  - `virtual-avatar-connect-migrate-dict` 独立 bin を追加（`src/bin/migrate_dict.rs`）。`clap` ベース、`--input path[:kind[:tag]]` を複数指定可能で複数ファイルを 1 本の 11 カラム TSV に merge。
+  - V1 `dictionary.*.txt`（loose 空白 2 列）、`regex.*.txt`（replacement + pattern、multi-word replacement は "空白 + `^`" で境界推定）、`regex.*.csv`（CSV 標準クォート付き `replacement,pattern`）をサポート。
+  - `--locked` 指定でファイル由来エントリを `is_locked=true` に固定、`--by` で登録者 ID を付与。出力は atomic rename、既存ファイルは `--force` 指定がないと上書きしない。
+  - 既存の `dictionary.arknights.txt` / `dictionary.pre-coeiroink.txt` / `dictionary.chat.txt` + `regex.chat.csv` / `dictionary.local.txt` / `regex.pre-command.txt` / `regex.local.txt` を実際に η TSV に変換済み（該当 `.dict.tsv` を生成）。
+- **ドキュメント**
+  - `docs/roadmap/phase-eta-dictionary-unification.md` — 11 章構成の仕様書（Background / Goals / Data Model / File Formats / Type System Extension / Node Catalog / Caching & Performance / Migration / GUI / Test Plan / Open Questions）。§8.1 に migrate CLI の実装済み仕様を反映。
+  - `docs/roadmap/phase-delta-spec.md` の §2.1 に `Table` variant を追記、§10.2（TSV 化 ε 枠）を η で完了済みに更新、feature 命名規則の例に η 新ノードを列挙。
+
+### Breaking changes (η)
+
+- `SocketType` enum に `Table` variant が追加されたため、この enum に対して non-exhaustive match を書いている外部クレート/スクリプト（あれば）は追加対応が必要。
+- `flowgraph.dictionary.replace` の `dictionary` 入力ポートの型が `List<Json>` から `Table` に変更。既存の flowgraph ファイルは `flowgraph.table.from_json` を挟むか、TSV を読み込ませるように再配線する必要がある（同 feature 名だが型が非互換）。
+- `flowgraph.dictionary.command` ノードは削除された。同等機能は `flowgraph.dictionary.match` + `flowgraph.dictionary.learn` / `.forget` + `commands.tsv` で組み直す。
+
 ### v2 merge-ready roadmap (ζ-3 / γ-4a.0 / γ-4a / γ-2 / δ-X / ζ-4)
 
 - **ζ-3: Flowgraph reload 時のブリッジ再配線**

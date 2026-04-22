@@ -34,6 +34,7 @@ enum SocketType {
     Json,     // serde_json::Value 相当
     List(Box<SocketType>),
     Map(Box<SocketType>),   // key 型は常に String（δ-0 合意）。value 型のみ指定
+    Table,                  // η: 表形式データ（Columns × Rows）。辞書・scene registry 等で共通利用
     Exec,                   // 制御フロー専用（値なし）
 }
 ```
@@ -42,6 +43,7 @@ enum SocketType {
 - **型整合**: 接続時は `output.type == input.type` を要求する。`Json` と他型の相互変換は明示ノード（`JsonParse` / `JsonStringify` 等）でのみ行う。
 - **List**: ジェネリクス的に `List<String>` / `List<Json>` 等を許容。
 - **Map の key 型は常に `String`**（δ-0 合意）: `Map<T>` の表記で value 型のみ指定する。非 String key が必要な場合は `Json` 型で代替。
+- **Table**（η 追加）: スキーマ付きの行指向データ。`Arc<TableInner>` ベースの clone O(1)、`Arc::make_mut` による COW mutation。`SocketValue::Table` に対応。`List<Json>` との相互変換は `flowgraph.table.from_json` / `flowgraph.table.to_json` で明示的に行う（暗黙変換は無し）。辞書ノード（`flowgraph.dictionary.*`）は Table を受け取り、内部で AC/Regex キャッシュを content-hash で再利用する。詳細は [phase-eta-dictionary-unification.md](phase-eta-dictionary-unification.md) §3 / §5 を参照。
 
 ### 2.2 SocketValue
 
@@ -115,8 +117,15 @@ struct NodeSpec {
 - `flowgraph.string.concat`
 - `flowgraph.regex.match`
 - `flowgraph.regex.replace`
-- `flowgraph.dictionary.replace`
-- `flowgraph.dictionary.command`
+- `flowgraph.dictionary.replace`    (η: Stateful、Table 入力、literal+regex 統合、AC キャッシュ)
+- `flowgraph.dictionary.match`      (η 新設: Stateful、captures 出力、match_policy / anchor プロパティ)
+- `flowgraph.dictionary.learn`      (η 新設: Pure、11 カラム append + 重複検出)
+- `flowgraph.dictionary.forget`     (η 新設: Pure、mode=latest/all/exact、is_locked 尊重)
+- `flowgraph.table.from_json`       (η 新設: Pure)
+- `flowgraph.table.to_json`         (η 新設: Pure)
+- `flowgraph.table.load_tsv`        (η 新設: Effectful、auto / headerful / legacy_loose)
+- `flowgraph.table.write_tsv`       (η 新設: Effectful、atomic rename)
+- ~~`flowgraph.dictionary.command`~~ (η で削除、`dictionary.match` + `dictionary.learn` / `.forget` で代替。詳細は [phase-eta-dictionary-unification.md](phase-eta-dictionary-unification.md) §6)
 - `flowgraph.command.match`
 - `flowgraph.screenshot.capture`
 - `flowgraph.ocr.recognize`
@@ -941,10 +950,11 @@ paste 成功後は内部で reload を走らせ `FlowgraphReloaded` WS push を�
 - 課題: セッション状態（履歴、コンテキスト、tools）の DAG ノードとしての表現、streaming 応答の exec チェーン上での扱い、AiPersonaConf の PropertySpec 化。
 - 先行検討として δ-0 で `AiService` → Flowgraph の境界 API を整理しておく（別ドキュメント予定）。
 
-### 10.2 辞書フォーマット TSV 化（epsilon 枠）
+### 10.2 辞書フォーマット TSV 化（η フェーズで完了）
 
-- 現在 `dictionary.chat.txt` / regex CSV など複数フォーマット。Phase ε で TSV 統一予定。
-- δ-4a で Modify を Dictionary + Regex に分解する際、既存フォーマットはそのまま尊重。TSV 統一は後続フェーズ。
+- ~~現在 `dictionary.chat.txt` / regex CSV など複数フォーマット。Phase ε で TSV 統一予定。~~
+- ~~δ-4a で Modify を Dictionary + Regex に分解する際、既存フォーマットはそのまま尊重。TSV 統一は後続フェーズ。~~
+- **2026-04-23 更新**: Phase η（Dictionary/Table Unification）にて、辞書と正規表現を 1 本の 11 カラム TSV に統一し、`SocketType::Table` + `flowgraph.table.*` / `flowgraph.dictionary.*` で扱えるようになった。V1 の loose 2 列形式は `flowgraph.table.load_tsv` が `mode=legacy_loose` / `auto` で吸収する。詳細仕様は [phase-eta-dictionary-unification.md](phase-eta-dictionary-unification.md) §3 / §4 / §8（migration）を参照。
 
 ### 10.3 ホットリロード
 

@@ -21,13 +21,13 @@
 //!
 //! δ-4a:
 //! - `command`: command.match（V1 Command 由来、verb + args パーサ）
-//! - `dictionary`: dictionary.replace / dictionary.command（V1 Modify / DictionaryCommand 由来、辞書置換と学習/忘却構文）
 //! - `regex_ops`: regex.replace（V1 Modify 由来、正規表現逐次置換）
 //!
-//! η（Dictionary/Table Unification, 途中）:
+//! η（Dictionary/Table Unification）:
 //! - `table_ops`: table.from_json / table.to_json（Pure）、table.load_tsv / table.write_tsv（Effectful）
 //!   汎用 Table 型の I/O と JSON 相互変換。辞書以外にも scene registry / credential store 等で利用可能。
-//!   （`dictionary` ノードの Table 化は η-PR2 で対応予定）
+//! - `dictionary`: dictionary.replace / .match (Stateful, AC + Regex キャッシュ) と
+//!   dictionary.learn / .forget (Pure)。V1 dictionary.command は η-4 で廃止。
 //!
 //! δ-4b:
 //! - `screenshot`: screenshot.capture（Windows 限定、V1 Screenshot 由来の EffectfulNode）

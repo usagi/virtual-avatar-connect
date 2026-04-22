@@ -1,0 +1,121 @@
+# =========================================================================
+#  flowgraph.example/dictionary/command-dispatch.flowgraph.toml
+# =========================================================================
+# η-4 サンプル: dictionary.command（V1 時代）を廃し、
+# 汎用 dictionary.match + commands.tsv で「学習(X:=Y) / 忘却(X!)」の
+# コマンド構文をパースする例。
+#
+# 考え方:
+#   commands.tsv の 1,2 行目は regex kind のエントリで、
+#     - `^(?P<src>\S+):=(?P<dst>.+)$` → replacement="learn"
+#     - `^(?P<src>\S+)!$`           → replacement="forget"
+#   になっている。dictionary.match の first_replacement を見ることで
+#   「どのコマンドか」が判別でき、captures[0] に `src` / `dst` が入る。
+#
+# フロー:
+#   1. web_input.exec_out → load (commands.tsv)
+#   2. web_input.content  → match.text
+#   3. match.on_match     → log（first_replacement / captures を表示）
+#   4. match.on_no_match  → log（通常メッセージとして扱う）
+#
+# 実運用の発展形:
+#   - match.first_replacement と compare.eq("learn") を噛ませて flow.branch で
+#     dictionary.learn の exec_in を叩く。captures[0][0] が source、[0][1] が replacement
+#   - 同様に compare.eq("forget") → dictionary.forget
+#   - 辞書本体は別 Table（user_dict.dict.tsv）として load_tsv で供給し、
+#     learn/forget → write_tsv で永続化
+# =========================================================================
+
+[meta]
+title = "Dictionary command dispatch"
+description = "dictionary.match + commands.tsv で学習/忘却コマンドを判別する例（dictionary.command 後継）"
+tags = ["example", "dictionary", "command", "match", "eta"]
+
+
+# ---- 起動 ----
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 260]
+
+# ---- コマンド TSV path ----
+[[nodes]]
+id = "cmd_path"
+feature = "flowgraph.literal.string"
+position = [80, 80]
+properties.value = "flowgraph.example/dictionary/commands.tsv"
+
+[[nodes]]
+id = "cmd_mode"
+feature = "flowgraph.literal.string"
+position = [80, 160]
+properties.value = "headerful"
+
+# ---- コマンド TSV ロード ----
+[[nodes]]
+id = "load_cmds"
+feature = "flowgraph.table.load_tsv"
+position = [340, 120]
+
+# ---- Match（commands.tsv を辞書として）----
+[[nodes]]
+id = "match"
+feature = "flowgraph.dictionary.match"
+position = [620, 260]
+properties.match_policy = "first"
+properties.anchor = "full"
+
+# ---- マッチ時ログ（何のコマンドか / キャプチャ）----
+[[nodes]]
+id = "log_matched"
+feature = "flowgraph.util.log"
+position = [900, 200]
+
+# ---- 未マッチ時ログ（通常メッセージ）----
+[[nodes]]
+id = "log_plain"
+feature = "flowgraph.util.log"
+position = [900, 340]
+
+
+# =========================================================================
+# 配線
+# =========================================================================
+
+# web_input.exec → load_cmds
+[[edges]]
+from = "in:exec_out"
+to = "load_cmds:exec_in"
+[[edges]]
+from = "cmd_path:value"
+to = "load_cmds:path"
+[[edges]]
+from = "cmd_mode:value"
+to = "load_cmds:mode"
+
+# load_cmds.on_success → match.exec_in （同時に dictionary も配線）
+[[edges]]
+from = "load_cmds:on_success"
+to = "match:exec_in"
+[[edges]]
+from = "load_cmds:table"
+to = "match:dictionary"
+[[edges]]
+from = "in:content"
+to = "match:text"
+
+# on_match: コマンド種別（first_replacement）をログ
+[[edges]]
+from = "match:on_match"
+to = "log_matched:exec_in"
+[[edges]]
+from = "match:first_replacement"
+to = "log_matched:value"
+
+# on_no_match: 普通のメッセージとしてログ
+[[edges]]
+from = "match:on_no_match"
+to = "log_plain:exec_in"
+[[edges]]
+from = "in:content"
+to = "log_plain:value"

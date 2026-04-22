@@ -178,17 +178,21 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::collection::MapKeysNode));
 	r.register_pure(Arc::new(nodes::collection::MapHasNode));
 
-	// --- command / dictionary ---
+	// --- command ---
 	r.register_pure(Arc::new(nodes::command::CommandMatchNode));
 	r.register_effectful(Arc::new(nodes::command::CommandSetNode));
-	r.register_pure(Arc::new(nodes::dictionary::DictionaryReplaceNode));
-	r.register_pure(Arc::new(nodes::dictionary::DictionaryCommandNode));
 
 	// --- table (η-2) ---
 	r.register_pure(Arc::new(nodes::table_ops::TableFromJsonNode));
 	r.register_pure(Arc::new(nodes::table_ops::TableToJsonNode));
 	r.register_effectful(Arc::new(nodes::table_ops::TableLoadTsvNode));
 	r.register_effectful(Arc::new(nodes::table_ops::TableWriteTsvNode));
+
+	// --- dictionary (η-3: Stateful Replace/Match + Pure Learn/Forget) ---
+	r.register_stateful(Arc::new(nodes::dictionary::DictionaryReplaceNode));
+	r.register_stateful(Arc::new(nodes::dictionary::DictionaryMatchNode));
+	r.register_pure(Arc::new(nodes::dictionary::DictionaryLearnNode));
+	r.register_pure(Arc::new(nodes::dictionary::DictionaryForgetNode));
 
 	// --- ingress (δ-3d, δ-9 Part E) ---
 	r.register_pure(Arc::new(nodes::ingress::WebInputIngressNode));

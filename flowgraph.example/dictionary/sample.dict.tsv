@@ -1,0 +1,4 @@
+source	replacement	kind	priority	is_locked	enabled	by	created_at	expires_at	tags	note
+にんげん	人間	literal	0	true	true	arknights	2026-04-23T00:00:00Z		arknights,seed	Arknights 固定辞書のサンプル（削除不可）
+Dr.USAGI	ドクターウサギ	literal	10	false	true	user:bootstrap	2026-04-23T00:00:00Z		arknights	通常学習エントリのサンプル
+(?P<num>\d+)円	$num 円	regex	50	false	true	system	2026-04-23T00:00:00Z		formatting	数値キャプチャのサンプル

@@ -34,7 +34,9 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.convert.string_to_float`](#flowgraph-convert-string-to-float) — String → Float
   - [`flowgraph.convert.string_to_int`](#flowgraph-convert-string-to-int) — String → Int
 - **dictionary**
-  - [`flowgraph.dictionary.command`](#flowgraph-dictionary-command) — Dictionary Command
+  - [`flowgraph.dictionary.forget`](#flowgraph-dictionary-forget) — Dictionary Forget
+  - [`flowgraph.dictionary.learn`](#flowgraph-dictionary-learn) — Dictionary Learn
+  - [`flowgraph.dictionary.match`](#flowgraph-dictionary-match) — Dictionary Match
   - [`flowgraph.dictionary.replace`](#flowgraph-dictionary-replace) — Dictionary Replace
 - **flow**
   - [`flowgraph.flow.branch`](#flowgraph-flow-branch) — Branch
@@ -96,6 +98,11 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.string.len`](#flowgraph-string-len) — String Length
   - [`flowgraph.string.replace`](#flowgraph-string-replace) — String Replace
   - [`flowgraph.string.split`](#flowgraph-string-split) — String Split
+- **table**
+  - [`flowgraph.table.from_json`](#flowgraph-table-from-json) — Table From JSON
+  - [`flowgraph.table.load_tsv`](#flowgraph-table-load-tsv) — Table Load TSV
+  - [`flowgraph.table.to_json`](#flowgraph-table-to-json) — Table To JSON
+  - [`flowgraph.table.write_tsv`](#flowgraph-table-write-tsv) — Table Write TSV
 - **translate**
   - [`flowgraph.translate.gas`](#flowgraph-translate-gas) — Translate (GAS)
   - [`flowgraph.translate.libre`](#flowgraph-translate-libre) — Translate (LibreTranslate)
@@ -361,41 +368,90 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ## dictionary
 
-### `flowgraph.dictionary.command`
+### `flowgraph.dictionary.forget`
 
-**Dictionary Command** — 学習/忘却構文を解釈し、更新後辞書 + feedback を返す（Pure）
+**Dictionary Forget** — Table 辞書から source (+ replacement) 一致行を削除。mode=latest/all/exact、is_locked 保護
 
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
-| `content` | `string` | — |  |
-| `dictionary` | `list<json>` | `[]` |  |
+| `dictionary` | `table` | `[]` |  |
+| `source` | `string` | — |  |
+| `replacement` | `string` | `""` |  |
+| `mode` | `string` | `"latest"` |  |
 
 | Output | Type | Note |
 |---|---|---|
-| `on_parsed` | `exec` (out) |  |
-| `on_other` | `exec` (out) |  |
-| `verb` | `string` |  |
-| `source` | `string` |  |
-| `replacement` | `string` |  |
-| `feedback` | `string` |  |
-| `updated_dictionary` | `list<json>` |  |
+| `on_forgotten` | `exec` (out) |  |
+| `on_nothing` | `exec` (out) |  |
+| `on_locked` | `exec` (out) |  |
+| `updated_dictionary` | `table` |  |
 | `removed_count` | `int` |  |
-| `already_present` | `bool` |  |
-| `original` | `string` |  |
+| `locked_count` | `int` |  |
+| `feedback` | `string` |  |
+
+### `flowgraph.dictionary.learn`
+
+**Dictionary Learn** — Table 辞書に 11 カラムエントリを append。同値エントリは duplicate 検出して no-op
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `dictionary` | `table` | `[]` |  |
+| `source` | `string` | — |  |
+| `replacement` | `string` | — |  |
+| `kind` | `string` | `"literal"` |  |
+| `priority` | `int` | `0` |  |
+| `by` | `string` | `""` |  |
+| `tags` | `string` | `""` |  |
+| `note` | `string` | `""` |  |
+| `expires_at` | `string` | `""` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_learned` | `exec` (out) |  |
+| `on_duplicate` | `exec` (out) |  |
+| `updated_dictionary` | `table` |  |
+| `added_entry` | `json` |  |
+| `feedback` | `string` |  |
+
+### `flowgraph.dictionary.match`
+
+**Dictionary Match** — Table 辞書で text を照合し、一致エントリと captures を取り出す。exec 分岐可能。Stateful
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `text` | `string` | — |  |
+| `dictionary` | `table` | `[]` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_match` | `exec` (out) |  |
+| `on_no_match` | `exec` (out) |  |
+| `matched_entries` | `list<json>` |  |
+| `matched_count` | `int` |  |
+| `captures` | `list<list<string>>` |  |
+| `first_replacement` | `string` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `match_policy` | `string` | `"first"` |  | first / all / longest |
+| `anchor` | `string` | `"anywhere"` |  | anywhere / prefix / full |
 
 ### `flowgraph.dictionary.replace`
 
-**Dictionary Replace** — 辞書リスト（{to, from}）で content を逐次置換する（Pure）
+**Dictionary Replace** — Table 辞書（11 カラム）で content を literal(AC) + regex 統合で逐次置換。Stateful（AC/Regex キャッシュ）
 
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `content` | `string` | — |  |
-| `dictionary` | `list<json>` | `[]` |  |
+| `dictionary` | `table` | `[]` |  |
 
 | Output | Type | Note |
 |---|---|---|
 | `result` | `string` |  |
+| `applied_count` | `int` |  |
 
 ## flow
 
@@ -1140,6 +1196,69 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `parts` | `list<string>` |  |
+
+## table
+
+### `flowgraph.table.from_json`
+
+**Table From JSON** — List<Json> (object の配列) を Table に変換。スキーマは先頭 object から推論
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `json` | `list<json>` | `[]` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `table` | `table` |  |
+| `row_count` | `int` |  |
+
+### `flowgraph.table.load_tsv`
+
+**Table Load TSV** — TSV ファイルを Table に読み込む（auto / headerful / legacy_loose）。Effectful
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `path` | `string` | — |  |
+| `mode` | `string` | `"auto"` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `table` | `table` |  |
+| `row_count` | `int` |  |
+| `error` | `string` |  |
+
+### `flowgraph.table.to_json`
+
+**Table To JSON** — Table を List<Json> (object の配列) に変換
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `table` | `table` | `[]` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `json` | `list<json>` |  |
+| `row_count` | `int` |  |
+
+### `flowgraph.table.write_tsv`
+
+**Table Write TSV** — Table を TSV ファイルに書き出す（atomic rename）。Effectful
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `table` | `table` | — |  |
+| `path` | `string` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `bytes_written` | `int` |  |
+| `error` | `string` |  |
 
 ## translate
 

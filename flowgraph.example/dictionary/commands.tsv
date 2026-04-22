@@ -1,0 +1,3 @@
+source	replacement	kind	priority	is_locked	enabled	by	created_at	expires_at	tags	note
+^(?P<src>\S+):=(?P<dst>.+)$	learn	regex	100	true	true	system	2026-04-23T00:00:00Z		command,learn	学習コマンド syntax。captures[0]=src, captures[1]=dst
+^(?P<src>\S+)!$	forget	regex	100	true	true	system	2026-04-23T00:00:00Z		command,forget	忘却コマンド syntax。captures[0]=src

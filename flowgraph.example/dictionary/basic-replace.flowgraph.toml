@@ -1,0 +1,93 @@
+# =========================================================================
+#  flowgraph.example/dictionary/basic-replace.flowgraph.toml
+# =========================================================================
+# η-4 サンプル: 辞書 TSV を読み込んで Web 入力を置換しログに出力する最小例。
+#
+# 流れ:
+#   1. web_input が発火したタイミングで flowgraph.table.load_tsv が
+#      flowgraph.example/dictionary/commands.tsv を Table として読み込む
+#   2. ingress.web_input の content を flowgraph.dictionary.replace に流す
+#   3. 置換結果を util.log に出す
+#
+# 実運用の発展形:
+#   - commands.tsv の代わりに辞書本体（dictionary.arknights.dict.tsv など）を指定
+#   - Table は flowgraph.dictionary.learn / .forget で更新し、flowgraph.table.write_tsv で永続化
+#   - state.latch へ格納したければ flowgraph.table.to_json を経由して List<Json> に変換
+# =========================================================================
+
+[meta]
+title = "Dictionary basic replace"
+description = "TSV を Table として読み込み、web_input のテキストを辞書置換してログに出す最小サンプル"
+tags = ["example", "dictionary", "table", "tsv", "eta"]
+
+
+# ---- 辞書ファイル path ----
+[[nodes]]
+id = "dict_path"
+feature = "flowgraph.literal.string"
+position = [80, 100]
+properties.value = "flowgraph.example/dictionary/sample.dict.tsv"
+
+[[nodes]]
+id = "dict_mode"
+feature = "flowgraph.literal.string"
+position = [80, 180]
+properties.value = "auto"
+
+# ---- TSV ロード（Effectful）----
+[[nodes]]
+id = "load"
+feature = "flowgraph.table.load_tsv"
+position = [340, 120]
+
+# ---- 入力テキスト ----
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 340]
+
+# ---- 辞書置換 ----
+[[nodes]]
+id = "replace"
+feature = "flowgraph.dictionary.replace"
+position = [600, 320]
+
+# ---- 結果ログ ----
+[[nodes]]
+id = "log_out"
+feature = "flowgraph.util.log"
+position = [880, 320]
+
+
+# =========================================================================
+# 配線
+# =========================================================================
+
+# web_input の exec で辞書ロードをキック
+[[edges]]
+from = "in:exec_out"
+to = "load:exec_in"
+[[edges]]
+from = "dict_path:value"
+to = "load:path"
+[[edges]]
+from = "dict_mode:value"
+to = "load:mode"
+
+# web_input content → replace:content
+[[edges]]
+from = "in:content"
+to = "replace:content"
+
+# load:table → replace:dictionary
+[[edges]]
+from = "load:table"
+to = "replace:dictionary"
+
+# load 成功後にログ
+[[edges]]
+from = "load:on_success"
+to = "log_out:exec_in"
+[[edges]]
+from = "replace:result"
+to = "log_out:value"
