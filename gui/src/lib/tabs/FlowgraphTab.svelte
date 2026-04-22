@@ -31,10 +31,33 @@ let dialogMode = $state<'paste' | 'import_zip'>('paste');
 onMount(() => {
   void flowgraphStore.refreshAll();
   flowgraphStore.attachWsSubscriber();
+  // γ-4a: Ctrl+S / Cmd+S で現在ファイルを保存。フォーカスが input 系でも有効にするため window に付ける。
+  const onKeyDown = (ev: KeyboardEvent) => {
+   const isSave = (ev.ctrlKey || ev.metaKey) && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === 's';
+   if (!isSave) return;
+   if (!flowgraphStore.currentFq || flowgraphStore.mutating) return;
+   ev.preventDefault();
+   void flowgraphStore.saveCurrent();
+  };
+  window.addEventListener('keydown', onKeyDown);
+  // γ-4a: 未保存変更がある状態で閉じようとしたらブラウザにネイティブ確認ダイアログを出す。
+  const onBeforeUnload = (ev: BeforeUnloadEvent) => {
+   if (!flowgraphStore.isDirty) return;
+   ev.preventDefault();
+   ev.returnValue = '';
+  };
+  window.addEventListener('beforeunload', onBeforeUnload);
   return () => {
    flowgraphStore.detachWsSubscriber();
+   window.removeEventListener('keydown', onKeyDown);
+   window.removeEventListener('beforeunload', onBeforeUnload);
   };
  });
+
+ const isDirty = $derived(flowgraphStore.isDirty);
+ const saveLabel = $derived(
+  flowgraphStore.mutating ? 'Saving…' : isDirty ? 'Save *' : 'Save',
+ );
 
  const summary = $derived(summarizeDiagnostics(flowgraphStore.diagnostics?.diagnostics));
  const hasErrors = $derived(summary.error > 0);
@@ -163,12 +186,16 @@ function onImportZip() {
  </button>
  <button
   type="button"
-  class="rounded bg-primary-500 px-3 py-1 text-xs font-semibold text-white hover:bg-primary-600 disabled:opacity-40"
+  class="rounded px-3 py-1 text-xs font-semibold text-white disabled:opacity-40"
+  class:bg-primary-500={!isDirty}
+  class:hover:bg-primary-600={!isDirty}
+  class:bg-warning-500={isDirty}
+  class:hover:bg-warning-600={isDirty}
   disabled={!flowgraphStore.currentFq || flowgraphStore.mutating}
-  title="現在のファイルを保存"
+  title={isDirty ? '未保存の変更があります（Ctrl+S）' : '現在のファイルを保存（Ctrl+S）'}
   onclick={onSave}
  >
-  {flowgraphStore.mutating ? 'Saving…' : 'Save'}
+  {saveLabel}
  </button>
 </div>
 
