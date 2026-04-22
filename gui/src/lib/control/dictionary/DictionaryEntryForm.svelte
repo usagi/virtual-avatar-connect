@@ -26,6 +26,16 @@
   | { kind: 'new' }
   | { kind: 'edit'; row: TableEntryDto };
 
+ /** 409 時に親へ渡すコンテキスト。親は mode / myValues / base（edit 時）から
+  * 3-way 衝突解決 UI を組み立てる（φ-3d）。 */
+ export type EntryFormConflictContext = {
+  body: unknown;
+  mode: EntryFormMode;
+  myValues: Record<string, unknown>;
+  /** 送信時点の table.content_hash（親の refetch 後ハッシュ差分をデバッグ表示する用）。 */
+  priorHash: string;
+ };
+
  type Props = {
   open: boolean;
   table: TableFileDto;
@@ -34,7 +44,7 @@
    * 親側は response の content_hash を保持した上で Table 全体を再読込する設計にする。 */
   onSaved?: (res: TableMutationResponse) => void;
   /** 409 Conflict 時に呼ぶ（φ-3d の ConflictDialog を親から開くためのフック）。 */
-  onConflict?: (body: unknown) => void;
+  onConflict?: (ctx: EntryFormConflictContext) => void;
  };
 
  let { open = $bindable(false), table, mode, onSaved, onConflict }: Props = $props();
@@ -150,18 +160,20 @@
   }
   submitting = true;
   formError = null;
-  const body: TableEntryRequest = { values: buildValues() };
+  const values = buildValues();
+  const body: TableEntryRequest = { values };
+  const priorHash = table.content_hash;
   try {
    let res: TableMutationResponse;
    if (mode.kind === 'new') {
-    res = await api.postControlTableEntry(table.key, body, table.content_hash);
+    res = await api.postControlTableEntry(table.key, body, priorHash);
     toastStore.success('辞書に追加しました', `row_index=${res.affected_row_index ?? '?'}`);
    } else {
     res = await api.patchControlTableEntry(
      table.key,
      mode.row.row_index,
      body,
-     table.content_hash
+     priorHash
     );
     toastStore.success('辞書を更新しました', `row_index=${mode.row.row_index}`);
    }
@@ -169,7 +181,7 @@
    open = false;
   } catch (e) {
    if (e instanceof ControlApiError && e.status === 409) {
-    onConflict?.(e.body);
+    onConflict?.({ body: e.body, mode, myValues: values, priorHash });
     open = false;
     return;
    }

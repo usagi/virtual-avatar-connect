@@ -16,7 +16,11 @@
  import { dictionaryEditorStore, extractControlApiMessage } from './dictionaryEditorStore.svelte';
  import { toastStore } from '../../toasts.svelte';
  import DictionaryTable from './DictionaryTable.svelte';
- import DictionaryEntryForm, { type EntryFormMode } from './DictionaryEntryForm.svelte';
+ import DictionaryEntryForm, {
+  type EntryFormMode,
+  type EntryFormConflictContext
+ } from './DictionaryEntryForm.svelte';
+ import DictionaryConflictDialog from './DictionaryConflictDialog.svelte';
  import type { TableEntryDto } from '../../types';
 
  onMount(() => {
@@ -26,6 +30,12 @@
  // φ-3c: 新規/編集ダイアログの open 状態と mode。
  let formOpen = $state(false);
  let formMode = $state<EntryFormMode>({ kind: 'new' });
+
+ // φ-3d: 衝突解決ダイアログの状態。edit 用のみ表示する。
+ let conflictOpen = $state(false);
+ let conflictBaseRow = $state<TableEntryDto | null>(null);
+ let conflictMyValues = $state<Record<string, unknown>>({});
+ let conflictServerRow = $state<TableEntryDto | null>(null);
 
  async function selectTab(key: string): Promise<void> {
   if (dictionaryEditorStore.currentKey === key) return;
@@ -81,13 +91,39 @@
   await dictionaryEditorStore.reloadCurrent();
  }
 
- function onConflict(_body: unknown): void {
-  // φ-3d の ConflictDialog 接続予定。暫定で toast + 再読込。
-  toastStore.warn(
-   '他のクライアントが先に更新していました',
-   '最新内容で再読込します（衝突解決 UI は φ-3d 予定）'
-  );
-  void dictionaryEditorStore.reloadCurrent();
+ async function onConflict(ctx: EntryFormConflictContext): Promise<void> {
+  // new モードの POST 衝突は 3-way diff の対象外。ただの再読込 + toast で済ませる。
+  if (ctx.mode.kind === 'new') {
+   toastStore.warn(
+    '追加時に競合が発生しました',
+    '他のクライアントが同時に更新した可能性があります。再度試してください。'
+   );
+   await dictionaryEditorStore.reloadCurrent();
+   return;
+  }
+
+  // edit モード: まず最新を取り直す → 対象行を row_index で特定（無ければ source 一致で fallback） → ダイアログを開く。
+  await dictionaryEditorStore.reloadCurrent();
+  const serverTable = dictionaryEditorStore.currentTable;
+  if (!serverTable) return;
+
+  const baseRow = ctx.mode.row;
+  const byIdx = serverTable.rows.find((r) => r.row_index === baseRow.row_index);
+  const bySource =
+   byIdx ??
+   (typeof baseRow.values.source === 'string'
+    ? serverTable.rows.find((r) => r.values.source === baseRow.values.source)
+    : undefined);
+
+  conflictBaseRow = baseRow;
+  conflictMyValues = ctx.myValues;
+  conflictServerRow = bySource ?? null;
+  conflictOpen = true;
+ }
+
+ async function onConflictResolved(): Promise<void> {
+  conflictOpen = false;
+  await dictionaryEditorStore.reloadCurrent();
  }
 </script>
 
@@ -185,8 +221,20 @@ editable  = true`}</pre>
     table={dictionaryEditorStore.currentTable}
     mode={formMode}
     onSaved={() => void onSaved()}
-    {onConflict}
+    onConflict={(ctx) => void onConflict(ctx)}
    />
+
+   {#if conflictBaseRow}
+    <DictionaryConflictDialog
+     bind:open={conflictOpen}
+     serverTable={dictionaryEditorStore.currentTable}
+     serverRow={conflictServerRow}
+     baseRow={conflictBaseRow}
+     myValues={conflictMyValues}
+     onResolved={() => void onConflictResolved()}
+     onCancelled={() => (conflictOpen = false)}
+    />
+   {/if}
   {/if}
  {/if}
 </section>
