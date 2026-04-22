@@ -39,6 +39,8 @@
 
  function handleClass(port: FlowgraphPortSpec): string {
   if (port.is_exec) return 'flowgraph-handle exec';
+  // η: Table ポートは辞書/表データを表す特別なハンドルとして視覚的に区別する。
+  if (port.ty === 'table') return 'flowgraph-handle data table';
   return 'flowgraph-handle data';
  }
 
@@ -271,6 +273,14 @@
   height: 10px;
   border-radius: 50%;
   background: rgb(59 130 246);
+  border: 2px solid white;
+ }
+ /* η: Table 型のポートは角を落とした正方形 + 深緑で他のデータと視覚的に区別する。 */
+ :global(.flowgraph-handle.data.table) {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: rgb(16 185 129);
   border: 2px solid white;
  }
  :global(.flowgraph-handle.exec) {
