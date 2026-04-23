@@ -150,8 +150,8 @@ API が無ければ `DelayNode` と同じ経路で対応する。
 
 ### 1.7 優先度 / 着手タイミング
 
-- 現時点で blocking な利用者は居ない（Twitch token refresh は現行 processor 側 poll に依存）が、
-  φ 完了後の **χ 候補**として扱う。
+- 現時点で blocking な利用者は居ない（Twitch token refresh は現行 processor 側 poll に依存）。
+- **φ 完了後の Phase χ は OpenAI Responses API 全面移行に確定**（[`phase-chi-openai-responses.md`](phase-chi-openai-responses.md)）したため、本ノードは **Phase χ 以降の単独ノード PR** として別途扱う。
 - もし GUI の Editor Pane live-refresh（e.g. テーブル変更を polling する用途）で内部的に必要になれば
   前倒しも検討。
 
