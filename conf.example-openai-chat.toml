@@ -17,6 +17,9 @@
 #   - 新キー `openai_store`（bool、既定 `false`）。OpenAI 側に会話 state を保存するか。
 #     既定で無効化（VAC は client 側で memory window を完全管理しているので不要）。
 #   - 環境変数 `VAC_OPENAI_MAX_OUTPUT_TOKENS` で conf 側より優先的に上書き可能。
+#   - 新キー `openai_reasoning_encrypted_passthrough`（bool、既定 `true`）。Phase ψ-α で追加。
+#     gpt-5 系の tool loop round 間で `reasoning.encrypted_content` を client 側で持ち回る。
+#     非 gpt-5 モデルでは完全 no-op。デバッグ / 実機計測用に false で opt-out 可。
 #   - tools.json は Responses API のフラット形式 (`{"type":"function","name":...}`)
 #     を推奨。旧 Chat Completions 形式 (`{"type":"function","function":{...}}`) も
 #     `parse_tools_json` が後方互換で受け付けるので、既存 conf はそのまま動く。
@@ -170,8 +173,14 @@ model = "gpt-4o-mini"
 #                                           # 非 gpt-5 モデルでは警告ログを出して黙殺する。
 # openai_store = false                      # 既定 false（VAC は client 側で会話履歴を完全管理）。
 #                                           # OpenAI Dashboard > Logs で生 Response を見たいときだけ true。
-#                                           # Phase ψ-α で `include: ["reasoning.encrypted_content"]` を
-#                                           # 採用する際も `store = false` のまま運用する方針。
+#                                           # Phase ψ-α 採用後も `store = false` のまま
+#                                           # encrypted reasoning passthrough で reasoning state を維持できる。
+# openai_reasoning_encrypted_passthrough = true
+#                                           # Phase ψ-α で追加。gpt-5 系の tool loop round 間で
+#                                           # `reasoning.encrypted_content` を client 側で持ち回る。
+#                                           # 既定 true（gpt-5 系のみ実効、非 gpt-5 は request / log とも無変化）。
+#                                           # デバッグ / 実機計測の比較用に false で opt-out 可。
+#                                           # 詳細: docs/roadmap/phase-psi-alpha-encrypted-reasoning.md
 
 
 # -------------------------------------------------------------------------

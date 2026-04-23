@@ -127,6 +127,7 @@ AI Persona を 1 個以上定義する配列。Phase χ 以降は **OpenAI Respo
 - `openai_max_output_tokens`（u32, Responses API `max_output_tokens`）／ 環境変数 `VAC_OPENAI_MAX_OUTPUT_TOKENS` で上書き可
 - `openai_reasoning_effort`（`"low"` / `"medium"` / `"high"`、gpt-5 系のみ有効）
 - `openai_store`（bool、既定 `false`。OpenAI 側に会話 state を保存するか。VAC は client 側で memory window を完全管理するため通常 `false` のままで良い）
+- `openai_reasoning_encrypted_passthrough`（bool、既定 `true`）— **gpt-5 系の tool loop round 間で `reasoning.encrypted_content` を client 側で持ち回る**（Phase ψ-α）。`store: false` を維持したまま reasoning state を transit することで、複数ラウンドに渡る tool loop の thought continuity を保つ。非 gpt-5 モデル（`gpt-4o-mini` 等）では完全 no-op（request も log も無変化）。デバッグや実機計測の比較用に明示 `false` で opt-out 可能。詳細: [`docs/roadmap/phase-psi-alpha-encrypted-reasoning.md`](../roadmap/phase-psi-alpha-encrypted-reasoning.md)
 - `[ai.personas.memory]` / `[ai.personas.decision]` / `[ai.personas.function_calling]`
 
 **互換性メモ**:

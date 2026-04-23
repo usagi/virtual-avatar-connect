@@ -704,11 +704,21 @@ impl AiService {
 
   // ψ-α: gpt-5 系 + passthrough 有効時のみ `include: ["reasoning.encrypted_content"]` を付与。
   // 非 gpt-5 モデルでは no-op（API 側で意味を持たない keyword 指定を避ける）。
+  let include_before = request.include.as_ref().map(|v| v.len()).unwrap_or(0);
   apply_reasoning_passthrough_include(
    &mut request,
    model_for_runtime.as_deref(),
    reasoning_encrypted_passthrough,
   );
+  if request.include.as_ref().map(|v| v.len()).unwrap_or(0) > include_before
+  {
+   log::debug!(
+    "《AI[{}]》 ψ-α: include=reasoning.encrypted_content を付与（model={:?}, passthrough={}）。",
+    persona_label,
+    model_for_runtime,
+    reasoning_encrypted_passthrough
+   );
+  }
 
   // χ-5: tools は Responses API の `Vec<Tool>` を直接 request.tools に入れる。
   // hosted tools（web_search / file_search / code_interpreter）も passthrough。

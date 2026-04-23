@@ -35,8 +35,31 @@ Chat Completions (`/v1/chat/completions`) 依存を完全撤去し、OpenAI **Re
   - `drive_responses_tool_loop` に `StreamEvent::{Created, InProgress, Completed, Incomplete, Failed, Error}` の受信ログを追加（本番は DEBUG、Created/InProgress は TRACE）。SSE ループ終了時に events 数・finalized 有無・failure 要約を 1 行で出す。
   - `reqwest::Client::builder()` に `connect_timeout(10s)` を明示（Windows TLS 交渉ストールで total timeout だけだと事実上無限待ちになるケースを防ぐ）。
 - **Breaking（χ）**: なし（既存 `max_tokens` / Chat Completions 形式 tools.json は fallback 経路で互換維持）。ただし **OpenAI 側の最新モデル（gpt-5 系）を使うなら新キーへの移行を強く推奨**。
-- **将来の関連フェーズ**
-  - **ψ-α encrypted reasoning passthrough** (backlog): `include: ["reasoning.encrypted_content"]` を使い、`store: false` を維持したまま gpt-5 の reasoning state を tool loop round 間で持ち回る最適化。詳細は [`docs/roadmap/phase-chi-openai-responses.md`](docs/roadmap/phase-chi-openai-responses.md) §11.2。
+
+### ψ-α: Encrypted Reasoning Passthrough (ψ-α-0 .. ψ-α-3)
+
+Phase χ の基盤に乗せる狭い範囲の最適化。gpt-5 系の tool loop で、`store: false` を維持したまま `reasoning.encrypted_content` blob を client 側で持ち回ることで、reasoning token の重複課金と round 間の思考コヒーレンス欠落を緩和する。設計詳細: [`docs/roadmap/phase-psi-alpha-encrypted-reasoning.md`](docs/roadmap/phase-psi-alpha-encrypted-reasoning.md)。
+
+- **ψ-α-0 設計**: χ-11.2 の設計メモを正式な phase doc に昇格。適用範囲を **「1 回の `react()` 内の tool loop round 間のみ」** に限定（複数 `react()` を跨ぐ持ち回りは hot-reload / memory window trim でコヒーレンスが崩れるため対象外）。
+- **ψ-α-1 DTO 拡張** (`src/ai/openai_responses/types/`)
+  - `CreateResponseRequest.include: Option<Vec<String>>` を追加（Phase ψ-α では `["reasoning.encrypted_content"]` のみ指定）。
+  - `OutputItem::Reasoning` に `encrypted_content: Option<String>` を追加（`#[serde(default)]` で既存 response との互換性維持）。
+  - `InputItem::Reasoning { id, encrypted_content?, summary? }` variant を新設（前ラウンドの `OutputItem::Reasoning` を次ラウンド input に round-trip するための専用型。wire format は output 側と同じ `type: "reasoning"` + 同フィールド名）。
+  - golden tests を 5 ケース追加。特に、同じ JSON を `OutputItem` / `InputItem` どちらにもデシリアライズできることを保証（OpenAI 公式 "pass back reasoning items" の前提）。
+- **ψ-α-2 tool loop pass-through** (`src/ai/service.rs` / `src/ai/config.rs`)
+  - `openai_reasoning_encrypted_passthrough: Option<bool>` conf key を追加（既定 `true`、gpt-5 系でのみ実効、非 gpt-5 / opt-out 時は完全 no-op）。
+  - `apply_reasoning_passthrough_include()` helper で `include` 付与を model 判定と enabled flag に基づいて冪等に実施。
+  - `drive_responses_tool_loop` の round 終了時、`collect_reasoning_input_items()` で `OutputItem::Reasoning` を抽出し、`InputItem::Reasoning` として次ラウンド input の FunctionCall / FunctionCallOutput **より先**に積む（OpenAI 公式推奨順）。
+  - `encrypted_content` 欠落は warn（API 側応答形状変更の検知用）+ blob 無しで transit（現行動作に degrade）。
+  - 単体 tests 9 ケース追加（resolver / include application / Reasoning collection の各パスで no-op / active / dedup / missing blob をカバー）。
+- **ψ-α-3 ドキュメント**: 本 CHANGELOG / [`docs/manual/conf-reference.md`](docs/manual/conf-reference.md) / [`conf.example-openai-chat.toml`](conf.example-openai-chat.toml) を更新。
+- **Breaking（ψ-α）**: なし。非 gpt-5 モデル（`gpt-4o-mini` 等）の経路は request / input / log すべて bit-for-bit 同一のまま維持される。gpt-5 系ユーザも conf 未指定なら自動 opt-in、デバッグ時は `openai_reasoning_encrypted_passthrough = false` で opt-out 可。
+- **計測について**: tool loop が実際に 2 round 以上回るかは `openai_tools_json_path` の tool 構成とユーザ発話依存。VAC 同梱の `vac_ping` / `vac_emit_effect` は 1 round で返るため、実用的な reasoning token 節約の numbers 比較は将来 phase でユーザ作成の multi-round tools で実施する想定。ψ-α-3 時点では（a）DTO 互換性、（b）gpt-4o-mini / gpt-5-mini 双方の既存経路の非退行、を主たる実機検証対象とした。
+- **実機スモーク結果（ψ-α-3）**:
+  - `conf.chi8-smoke.toml` + OpenAI 実 API で 2 persona を起動し ingress を投入。
+  - **gpt-4o-mini 経路**: `ψ-α: include=...` 付与ログは**出ない**（no-op を確認）、POST body=285B、`SSE ループ終了 (events=16, finalized=true)` — ψ-α 前と bit-for-bit 同一挙動。
+  - **gpt-5-mini 経路**: `ψ-α: include=reasoning.encrypted_content を付与（model=Some("gpt-5-mini"), passthrough=true）` が appears、POST body=392B（include 分 +107B）、OpenAI 側 `status=200 OK`、`SSE ループ終了 (events=19, finalized=true)` — include キーは API に受理され、既存 stream / content 流路も正常完了。
+  - cargo test --lib は ψ-α 関連 unit tests（DTO golden + resolver/helper）をすべて緑で通過し、既存テストの退行なし。
 
 ### η: Dictionary/Table Unification (η-0 .. η-6)
 
