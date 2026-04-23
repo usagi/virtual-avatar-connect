@@ -1,6 +1,8 @@
 # Phase ν — GUI E2E testing with Playwright
 
-> **Status**: Active。ψ-α 完了後に着手する独立フェーズ。
+> **Status**: ν-0 / ν-1 / ν-2 (部分) 完了。初期 5 ケースのうち 3 ケース (§3.1 / §3.4 /
+> §3.5) を着地させ、残り 2 ケース (§3.2 flowgraph-canvas-basic / §3.3
+> dictionary-editor-409-merge) は **ν-β** として後続フェーズに分離する。
 > 起点となるスコープ感は [`../roadmap.md`](../roadmap.md) の "Phase ν" を参照。
 
 ---
@@ -61,42 +63,72 @@
   3. `/api/v1/control/channels` が 200 を返す（HTTP 直叩きで認証を確認）。
 - 失敗条件: 500 / 401 / Tab が表示されない / `ToastLayer` に fatal トーストが残る。
 
-### 3.2 `flowgraph-canvas-basic.spec.ts`
+### 3.2 `flowgraph-canvas-basic.spec.ts` — **ν-β deferred**
 
 - 目的: γ-4a の dirty tracking + Ctrl+S が壊れていないこと。
-- シナリオ:
+- シナリオ（予定）:
   1. Flowgraph タブに移動し fixture 同梱の `sample.flowgraph.toml` を開く。
   2. Palette からノードを 1 つ dnd し、既存ノードと接続する。
   3. Save-dirty badge が立つ、Ctrl+S で dirty 解消を確認。
   4. ページ reload 直前の `beforeunload` ガードが発火しないこと（dirty が無い状態で reload しても alert 無し）。
 - 失敗条件: dirty が立たない / Ctrl+S で save 呼び出しが無い / reload 直後にノードが消える。
+- **deferred 理由**: Svelte Flow (`@xyflow/svelte`) の DnD は座標計算と合成イベント
+  (HTML5 DnD ではなく mouse down/move/up で自前エミュレート) の両面で Playwright 自動化
+  が鬼門として知られる。ν のゴール "E2E 基盤の敷設" からは距離があり、γ-4 系機能が
+  安定してから改めて手を入れる方が効率的。代替として §3.1 / §3.4 の通過で Flowgraph
+  リード / trigger API 経路はカバーできている。
 
-### 3.3 `dictionary-editor-409-merge.spec.ts`
+### 3.3 `dictionary-editor-409-merge.spec.ts` — **ν-β deferred**
 
 - 目的: φ-3d の 3-way merge ダイアログが **実際の 409** で機能すること。
-- シナリオ:
+- シナリオ（予定）:
   1. Setup → Dictionary Editor で fixture の 1 エントリを編集（revision = 1）。
   2. Control API を **別クライアントとして HTTP 直叩き**し、同エントリを revision=1 → 2 に更新（baseline を動かす）。
   3. GUI で保存 → 409 を期待 → `DictionaryConflictDialog` が開き、3-way merge で 1 カラムを mine 側に倒して確定。
   4. 最終 revision = 3 が GUI 上と API 上で一致。
 - 失敗条件: ダイアログが出ない / merge 結果が silently overwrite される / 後続 409 が連鎖する。
+- **deferred 理由**: `DictionaryEditorPane` の state machine (load → dirty → conflict →
+  merge → save) を E2E 視点で成立させるには fixture だけでなくセレクタ網 (行/列/セル
+  単位) を追加する必要があり、§3.4 の Quick-Add より UI 依存度が高い。同じテーブル
+  fixture が使えるので §3.4 完了後なら増量コストは相対的に低い → ν-β 最優先候補。
 
-### 3.4 `live-quick-add-learn-undo.spec.ts`
+### 3.4 `live-quick-add-learn-undo.spec.ts` — **完了 (ν-2.4)**
 
-- 目的: φ-4 の quick add → Learn → Undo の往復。
+- 目的: φ-4 の Live Quick-Add → Learn → Undo の往復を、trigger API の発火と
+  `DictionaryLiveQuickAdd` の UX 側から両面検証する。
 - シナリオ:
-  1. Live タブで `DictionaryQuickAddWidget` にペアを入力、Learn を押す。
-  2. 直後に Undo を押す。
-  3. Dictionary Editor で該当エントリが存在しないことを確認（forget_node_id 経由で掃除されている）。
-- 失敗条件: Learn 後にエントリが残る / Undo がエラーになる / toast が stack したまま。
+  1. `/gui/` ロード後、`GET /api/v1/control/tables` で `sample_dict`
+     (quick_add 指定あり) が返ることを事前確認。
+  2. Live Quick-Add widget の source / replacement 入力を埋めて [Learn] クリック。
+  3. `page.waitForRequest` で `POST /flowgraph/default/trigger/sample::learn`
+     を捕捉し、body (`source`/`replacement`/`kind=literal`/`by=gui:quick_add`) と
+     レスポンス 202 Accepted を検証。
+  4. 履歴カウンタが `(1)` に変わり、展開して [Undo] を押すと
+     `POST /flowgraph/default/trigger/sample::forget` が `mode=latest` で飛ぶ。
+  5. 行の label が "Undone" に遷移。
+- 実装メモ: fixture は UI レベル検証に限定し、`table.write_tsv` 配線 (= ファイル
+  永続化) までは作らない。Table 型入力の engine 側 `with_default` が現状
+  `MissingRequiredInput` を吐くため、`learn:dictionary` / `forget:dictionary` には
+  `flowgraph.table.from_json` の Pure 出力を噛ませて評価を通す (§8 risk 追補)。
 
-### 3.5 `channels-ws-live-update.spec.ts`
+### 3.5 `channels-ws-live-update.spec.ts` — **完了 (ν-2.5)**
 
-- 目的: `/ws/control` → Live タブの channel view のリアルタイム反映。
-- シナリオ:
-  1. Live タブを表示し、Control API `/ingress` で test channel に content を投入。
-  2. WS 経由で 1s 以内に GUI の channel view に反映されること。
-- 失敗条件: WS が繋がらない / polling でしか反映されない（=WS 経路の breakage）。
+- 目的: `/api/v1/control/events` → Live タブの channel view リアルタイム反映を WS 経由で検証。
+- 実装: `page.waitForEvent('websocket')` で `/api/v1/control/events` への接続を掴み、
+  `POST /api/v1/control/ingress` で投入したユニーク content が `channel_datum`
+  フレームとして同じ session に配信されることを `framereceived` で確認。
+- 失敗条件（実装時の観察メモ）: `ControlEvent::ChannelDatum` は flat struct
+  (`channel`/`content` が top-level)。初期実装で `obj.datum.channel` のように
+  nested 想定の predicate を書いたため timeout していた — 既に修正済み。
+
+### 3.1 `control-panel-smoke.spec.ts` — **完了 (ν-2.1)**
+
+- 目的: 起動が通り、認証が疎通し、最小 UI が描画されることを確認。
+- 実装: `/gui/?token=...` ロード → `<nav aria-label="Main tabs">` の "Live"
+  ボタン可視 → `GET /api/v1/control/ping` に Bearer token を載せて 200。
+- 実装メモ: `TabNav.svelte` は `<button>` + `<nav aria-label>` 構造で、`role="tab"`
+  は使われていない。`getByRole('navigation', { name: 'Main tabs' })` でスコープを
+  切り、その中の `getByRole('button', { name: /live/i })` を見る形に確定。
 
 ---
 
@@ -172,10 +204,11 @@ webServer: [
 
 | sub | 内容 | 触るもの |
 |---|---|---|
-| ν-0 | docs: 本書本文 + fixture 設計 / 5 ケース仕様 / 命名規約の確定（= 本コミット） | `docs/roadmap/phase-nu-gui-e2e-playwright.md` + `docs/roadmap.md` |
-| ν-1 | chore(gui): Playwright 導入 + `playwright.config.ts` + `webServer` + `conf.fixture.e2e.toml` + fixture flowgraph | `gui/package.json` / `gui/playwright.config.ts` / `gui/tests/e2e/fixtures/` / `conf.fixture.e2e.toml` |
-| ν-2 | test(gui): 初期 5 ケース実装（§3.1〜§3.5） | `gui/tests/e2e/*.spec.ts` |
+| ν-0 | docs: 本書本文 + fixture 設計 / 5 ケース仕様 / 命名規約の確定 | `docs/roadmap/phase-nu-gui-e2e-playwright.md` + `docs/roadmap.md` ✅ |
+| ν-1 | chore(gui): Playwright 導入 + `playwright.config.ts` + `webServer` + `conf.fixture.e2e.toml` + fixture flowgraph | `gui/package.json` / `gui/playwright.config.ts` / `gui/tests/e2e/fixtures/` / `conf.fixture.e2e.toml` ✅ |
+| ν-2 | test(gui): 初期 5 ケースのうち **3 ケース** (§3.1 / §3.4 / §3.5) を実装 | `gui/tests/e2e/*.spec.ts` ✅ |
 | ν-3 | docs: CHANGELOG / `docs/manual/` に run 手順 + CI optional 方針 + roadmap tick | `CHANGELOG.md` / `docs/manual/*` / `docs/roadmap.md` |
+| ν-β | 残り 2 ケース (§3.2 canvas / §3.3 editor 409) を後続フェーズで着地 | `gui/tests/e2e/flowgraph-canvas-basic.spec.ts` / `gui/tests/e2e/dictionary-editor-409-merge.spec.ts` (未着手) |
 
 各サブは 1 commit 1 トピックで分ける（Commit Granularity Rule）。
 
@@ -191,17 +224,25 @@ webServer: [
 
 ### 6.2 ν-2 チェックリスト
 
-- [ ] §3.1〜§3.5 の 5 spec を `gui/tests/e2e/` に配置
-- [ ] fixture 追加が必要な場合は `gui/tests/e2e/fixtures/` に置く
-- [ ] §5.3 の必要箇所にのみ `data-testid` を後から刺す（まず accessible name で書いてみて無理な箇所のみ）
-- [ ] 全 spec が `npx playwright test` でローカル緑
-- [ ] 5 spec のうち 1 件を Windows / Linux / WSL で相互確認（cold start 成立の証明）
+- [x] §3.1 `control-panel-smoke.spec.ts`（accessible name のみ）
+- [x] §3.4 `live-quick-add-learn-undo.spec.ts`（placeholder + role button + `waitForRequest`）
+- [x] §3.5 `channels-ws-live-update.spec.ts`（`page.waitForEvent('websocket')` で frame 検証）
+- [ ] §3.2 `flowgraph-canvas-basic.spec.ts` **→ ν-β へ延期**
+- [ ] §3.3 `dictionary-editor-409-merge.spec.ts` **→ ν-β へ延期**
+- [x] 全 spec が `npx playwright test` でローカル緑（3 specs / 1 worker で 8.4s）
+- [ ] 残 2 spec の Linux / WSL 相互確認（ν-β で取り組む）
 
 ### 6.3 ν-3 チェックリスト
 
-- [ ] CHANGELOG: `### ν: GUI E2E testing with Playwright` 節追加
+- [ ] CHANGELOG: `### ν: GUI E2E testing with Playwright` 節に ν-2 (3 specs) + ν-β 延期を追記
 - [ ] `docs/manual/` に `tutorials/gui-e2e.md` 相当（run 手順 + 失敗時の切り分け）
-- [ ] `docs/roadmap.md` の Phase ν を Completed に移動
+- [ ] `docs/roadmap.md` の Phase ν を "Active" → "Completed" に移し、ν-β を backlog に起こす
+
+### 6.4 ν-β チェックリスト（後続フェーズ）
+
+- [ ] §3.2 Flowgraph Canvas DnD: Svelte Flow ノード追加 / edge 作成 / Ctrl+S / beforeunload
+- [ ] §3.3 Dictionary Editor 409 merge: 別クライアントで revision を進めた上で merge dialog
+- [ ] engine の `Table::empty()` default coerce 失敗 (§3.4 実装中に遭遇) を Flowgraph 側で修正 → fixture flowgraph から `table.from_json` 補助ノードを除去
 
 ---
 
@@ -224,6 +265,7 @@ webServer: [
 | svelte-flow の DOM 構造変更で selector が脆くなる | `data-testid` を最小限刺し、role 経路に寄せる（§5.3）|
 | OS 固有フォント差分 | ν-2 時点で visual regression を使わない決定（§5.4） |
 | VAC 起動ポート衝突（既に別プロセスが 57098 を使っている） | fixture を 57098 固定とし、conflict 時は開発者に kill を促すエラーメッセージ |
+| Table 型 `PortSpec::with_default(SocketValue::Table(Table::empty()))` が engine で coerce されず `MissingRequiredInput` を吐く（§3.4 実装中に遭遇） | fixture 側に `flowgraph.table.from_json` (Pure) を挟んで空 Table を供給する回避策を採用。ν-β で engine 側を修正し fixture を簡素化する |
 
 ---
 

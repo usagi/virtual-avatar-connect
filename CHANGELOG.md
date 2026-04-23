@@ -61,6 +61,28 @@ Phase χ の基盤に乗せる狭い範囲の最適化。gpt-5 系の tool loop 
   - **gpt-5-mini 経路**: `ψ-α: include=reasoning.encrypted_content を付与（model=Some("gpt-5-mini"), passthrough=true）` が appears、POST body=392B（include 分 +107B）、OpenAI 側 `status=200 OK`、`SSE ループ終了 (events=19, finalized=true)` — include キーは API に受理され、既存 stream / content 流路も正常完了。
   - cargo test --lib は ψ-α 関連 unit tests（DTO golden + resolver/helper）をすべて緑で通過し、既存テストの退行なし。
 
+### ν: GUI E2E Testing with Playwright (ν-0 .. ν-2)
+
+GUI の自動回帰テストをゼロから構築。Playwright を `gui/` 配下に閉じ込めて導入し、外部 IO なしの fixture (`conf.fixture.e2e.toml`) を `webServer` で `cargo run --release` 起動して、本番と同じ `gui/dist` 経路で叩く。初期 5 ケースのうち **3 ケース**（`control-panel-smoke` / `channels-ws-live-update` / `live-quick-add-learn-undo`）を着地させ、残る 2 ケース（flowgraph canvas DnD / dictionary editor 409 merge）は **Phase ν-β** として分離した。設計詳細: [`docs/roadmap/phase-nu-gui-e2e-playwright.md`](docs/roadmap/phase-nu-gui-e2e-playwright.md)。
+
+- **ν-0 設計**: phase doc 新設。fixture 設計 / 5 ケース仕様 / webServer 戦略 / セレクタ規約（`data-testid` より accessible name を優先）を固定。
+- **ν-1 Playwright 基盤** (`gui/package.json` / `gui/playwright.config.ts` / `gui/tests/e2e/` / `gui/.gitignore` / `gui/eslint.config.js` / `conf.fixture.e2e.toml` / `gui/tests/e2e/fixtures/`)
+  - `@playwright/test` を devDependency として導入。`test:e2e` / `test:e2e:ui` / `test:e2e:install` の npm script を追加。
+  - `playwright.config.ts` で workspace root を `cwd` として `cargo run --quiet --release --bin virtual-avatar-connect -- conf.fixture.e2e.toml` を起動する `webServer` を設定。`baseURL='http://127.0.0.1:57098'`、`workers: 1`。
+  - `conf.fixture.e2e.toml`: `workers=2` / `log_level="Debug"` / `web_ui_address="127.0.0.1:57098"` / `runtime_dir="target/e2e-runtime"` / `flowgraph_dir="gui/tests/e2e/fixtures/flowgraph"` / `[control_api] bearer_token="e2e-fixture-token"` + `require_token_for_*=true`。Twitch / OpenAI / TTS / OCR / Voice / Translate は全セクション未設定で外部 IO ゼロ。
+  - 共有ヘルパ (`gui/tests/e2e/fixtures.ts`): `TOKEN` 定数 + `authHeader()` + `tokenQuery()`。
+  - fixture flowgraph (`gui/tests/e2e/fixtures/flowgraph/sample.flowgraph.toml`): `web_input → log` の §3.5 用経路 + `dictionary.learn` / `dictionary.forget` + `table.from_json` の §3.4 用 Pure チェーン。
+- **ν-2 初期 spec（3 ケース）** (`gui/tests/e2e/*.spec.ts`)
+  - **§3.1 `control-panel-smoke`**: `/gui/?token=...` ロード → `<nav aria-label="Main tabs">` 配下の "Live" ボタン可視 → `GET /api/v1/control/ping` が 200 を返す。`TabNav.svelte` が `<button>` ベースで `role="tab"` を使わない構造に対応。
+  - **§3.5 `channels-ws-live-update`**: `page.waitForEvent('websocket')` で `/api/v1/control/events` への接続を掴み、`POST /api/v1/control/ingress` で投入したユニーク content が `channel_datum` フレームとして同じ session に配信されることを `framereceived` で検証。`ControlEvent::ChannelDatum` が flat struct (`channel`/`content` が top-level) である点に合わせて predicate を確定。
+  - **§3.4 `live-quick-add-learn-undo`**: `DictionaryLiveQuickAdd` 経由で `POST /flowgraph/default/trigger/sample::learn` を `waitForRequest` 捕捉（body に `source`/`replacement`/`kind=literal`/`by=gui:quick_add`）→ 履歴カウンタが (1) へ → [履歴] 展開して [Undo] で `sample::forget` が `mode=latest` で飛ぶ → 行 label が "Undone" に遷移、までの UX を検証。trigger は 202 Accepted を期待。
+  - 実行時間: 3 specs / 1 worker で **8.4s**（chromium headless, cold `cargo run --release` は `reuseExistingServer` で回避）。
+- **ν-β に分離したもの**
+  - §3.2 `flowgraph-canvas-basic`（Svelte Flow の DnD 自動化は座標ベース合成イベントが鬼門で ν のスコープを外れる）
+  - §3.3 `dictionary-editor-409-merge`（editor state machine + 別クライアントで revision を進める race condition + conflict dialog の UI セレクタが §3.4 より UI 依存度が高い）
+  - ν-2.4 実装中に engine 側の `PortSpec::with_default(SocketValue::Table(Table::empty()))` が `MissingRequiredInput` を吐く現象を回避するため fixture に `flowgraph.table.from_json` を挟んでいる。ν-β で engine 側を直し、fixture の補助ノードを除去する計画。
+- **Breaking（ν）**: なし。既存 conf / runtime / GUI 経路に一切手を入れていない（`gui/` 配下の新規ファイルと `conf.fixture.e2e.toml` / `gui/tests/e2e/fixtures/` の追加のみ）。
+
 ### η: Dictionary/Table Unification (η-0 .. η-6)
 
 V1 時代に合意されていた「11 カラム辞書」仕様（`source` / `replacement` / `kind` / `priority` / `is_locked` / `enabled` / `by` / `created_at` / `expires_at` / `tags` / `note`）と runtime 学習/忘却機能を V2 Flowgraph 上に再構築した。汎用 Table 型を型システムに追加し、辞書機能はその上に semantic layer として乗る。

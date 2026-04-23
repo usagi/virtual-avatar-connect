@@ -31,6 +31,7 @@ v2 では「チャンネル名で繋ぐ v1 プロセッサー列」から **Flow
 - [twitch-moderation](./tutorials/twitch-moderation.md)：user_id_by_login + timeout
 - [voice-input](./tutorials/voice-input.md)：Vosk / Whisper 認識 → TTS echo
 - [dictionary-editor-and-quick-add](./tutorials/dictionary-editor-and-quick-add.md)：GUI から TSV 辞書を直接編集する / Live Quick-Add で `dictionary.learn` を即発火する（Phase φ）
+- [gui-e2e](./tutorials/gui-e2e.md)：Playwright で GUI の回帰テストを実行する / fixture 構成と失敗時の切り分け（Phase ν）
 
 ---
 

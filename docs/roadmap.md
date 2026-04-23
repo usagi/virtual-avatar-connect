@@ -85,29 +85,30 @@ Phase χ の次の一手として、gpt-5 系の tool loop round 間で `include
 - scope: `drive_responses_tool_loop` の round-over-round に閉じる narrow change。`react()` 呼び出しを跨ぐ持ち回りはしない（hot-reload / memory window trim で context shape が変わるため）
 - 実用的 reasoning token 節約の数値比較は VAC 同梱 tool がすべて 1 round で返るため将来 phase（user 作成 multi-round tools を使う）に委ねる
 
+### Phase ν — GUI E2E testing with Playwright
+
+Playwright による E2E テスト基盤を `gui/` 配下に閉じ込めて導入。初期 5 ケースのうち **3 ケース** (§3.1 / §3.4 / §3.5) を着地させ、残り 2 ケース (§3.2 canvas DnD / §3.3 editor 409 merge) は **ν-β** に分離する narrow-scoped な幕引きとした。`webServer` が `cargo run --release -- conf.fixture.e2e.toml` を起動し、外部 IO ゼロの fixture で auth / HTTP / WS / widget 操作 / flowgraph trigger までを 3 specs / 8.4s で回帰検知できる状態になった。
+
+- [x] ν-0 docs: `phase-nu-gui-e2e-playwright.md` 本文書き下ろし + 5 ケース仕様 + fixture 設計 + webServer 戦略 + セレクタ規約確定
+- [x] ν-1 chore(gui): `@playwright/test` 追加 + `playwright.config.ts` + `gui/tests/e2e/` + `conf.fixture.e2e.toml`（外部 IO ゼロ）+ fixture flowgraph 同梱
+- [x] ν-2 test(gui): 3 ケース実装完了（`control-panel-smoke` / `channels-ws-live-update` / `live-quick-add-learn-undo`）— §3.2 / §3.3 は ν-β へ分離
+- [ ] ν-3 docs: CHANGELOG / manual 追記（run 手順 + CI optional 方針）+ roadmap tick（本行の tick 化含む）
+- 仕様書: [`roadmap/phase-nu-gui-e2e-playwright.md`](roadmap/phase-nu-gui-e2e-playwright.md)
+- scope: narrow-scoped。`gui/` 配下に閉じ、Rust 側 `Cargo.toml` や CI には一切触れない。visual regression / 多ブラウザ matrix / component testing は ν+ に送る
+- Linux / Windows どちらでも手元で回せることが必須。CI 化は optional（ν-β 以降で検討）
+
 ---
 
 ## Active Phases
 
-### Phase ν — GUI E2E testing with Playwright
+### Phase ν-β — Flowgraph Canvas + Dictionary Editor E2E
 
-現状 `gui/` に自動テストは 0 件（`svelte-check` の型検査のみ）。ε / φ / γ 系で GUI 機能面積が拡大しており、手動スモークでの回帰検知が限界に近づきつつあるため、Playwright による E2E テスト基盤を導入する独立フェーズ。
+ν-2 から分離した後続フェーズ。Svelte Flow の DnD 自動化と Dictionary Editor の 409 race condition を Playwright で着地させる。同時に ν-2.4 実装中に踏んだ engine 側の Table default coerce 失敗 (`MissingRequiredInput`) を Flowgraph コア側で修正し、fixture flowgraph から `table.from_json` 補助ノードを除去するクリーンアップも含める。
 
-動機（E2E でしか拾えない挙動が溜まっている）:
-
-- Phase φ の **Dictionary Editor Pane**（optimistic lock / 409 → 3-way merge ダイアログ / Live Quick-Add の Learn + Undo）
-- **Flowgraph Canvas**（γ-4a / γ-4a.0 のノード追加・接続・削除・Save-dirty 表示・Ctrl+S・beforeunload ガード）
-- **Live Tab** / **Managed App Drawer**（γ-2 の restart + status polling）
-- **`/ws/control` WebSocket**（channel ingress のリアルタイム反映）
-- OBS Browser Source（`/browser-output/*`）の WebKit 挙動検証
-
-- [x] ν-0 docs: `phase-nu-gui-e2e-playwright.md` 本文書き下ろし + 5 ケース仕様 + fixture 設計 + webServer 戦略 + セレクタ規約確定
-- [ ] ν-1 chore(gui): `@playwright/test` 追加 + `playwright.config.ts` + `gui/tests/e2e/` + `conf.fixture.e2e.toml`（外部 IO ゼロ）+ fixture flowgraph 同梱
-- [ ] ν-2 test(gui): 初期 5 ケース `control-panel-smoke` / `flowgraph-canvas-basic` / `dictionary-editor-409-merge` / `live-quick-add-learn-undo` / `channels-ws-live-update`
-- [ ] ν-3 docs: CHANGELOG / manual 追記（run 手順 + CI optional 方針）+ roadmap tick
-- 仕様書: [`roadmap/phase-nu-gui-e2e-playwright.md`](roadmap/phase-nu-gui-e2e-playwright.md)
-- scope: narrow-scoped。`gui/` 配下に閉じ、Rust 側 `Cargo.toml` や CI には一切触れない。visual regression / 多ブラウザ matrix / component testing は ν+ に送る
-- Linux / Windows どちらでも手元で回せることが必須。CI 化は optional（ν-2 以降）
+- [ ] ν-β-1 test(gui): §3.3 `dictionary-editor-409-merge.spec.ts`（editor state machine + 409 → 3-way merge）
+- [ ] ν-β-2 test(gui): §3.2 `flowgraph-canvas-basic.spec.ts`（Svelte Flow DnD + Ctrl+S + beforeunload）
+- [ ] ν-β-3 fix(flowgraph/engine): `PortSpec::with_default(SocketValue::Table(Table::empty()))` の coerce 失敗を修正 + fixture flowgraph 簡素化
+- 仕様書: [`roadmap/phase-nu-gui-e2e-playwright.md`](roadmap/phase-nu-gui-e2e-playwright.md) §3.2〜§3.3 および §6.4
 
 ---
 
@@ -133,11 +134,11 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 
 ### Flowgraph 機能向上（TBD）
 
-ψ-α / ν 完了後の次フェーズ候補（ユーザー意向）。ν の Flowgraph Canvas E2E が足場になるため、ν 完了後に着手するのが自然。具体サブフェーズは改めて phase doc を新設して確定する予定。
+ψ-α / ν 完了後の次フェーズ候補（ユーザー意向）。ν-β の canvas DnD E2E が足場になるので、小規模 UX 改善（node catalog 絞り込み / 配線補助）から engine 拡張（Table default coerce fix、新 node 追加）まで、phase doc を新設して具体サブフェーズを確定する予定。ν-β で発見済みの engine 修正 (`Table::empty()` default coerce) も取り込む。
 
 ### ε-2 Tauri ネイティブウィンドウ化
 
-ψ-α / ν / Flowgraph 機能拡張の次に着手検討（ユーザー意向として "GUI の Tauri 化" を積んでいる）。仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
+ψ-α / ν / ν-β / Flowgraph 機能拡張の次に着手検討（ユーザー意向として "GUI の Tauri 化" を積んでいる）。仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
 
 ---
 
