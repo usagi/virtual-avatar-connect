@@ -237,6 +237,25 @@ impl Tool {
 
 hosted tools は VAC では実行せず OpenAI 側で完結し、`output[]` に `web_search_call` / `file_search_call` / `code_interpreter_call` 等の item として混入する（χ-2 の `StreamEvent::Other`、χ-5 で個別 handling 追加予定）。χ-3 時点では **Chat Completions pipeline に載らない**ため、`tools::tools_to_chat_completions` が除外して warn ログを出す。χ-5 の Responses 全面移行で有効化される。
 
+### 4.2c Request assembly（χ-4 で追加）
+
+χ-4 で Responses API 用の request / input 組み立て関数を **追加** した（Chat Completions 用は残置。χ-5 で旧経路を剥がす）。
+
+| Chat Completions 版（既存） | Responses 版（χ-4 で追加） |
+|---|---|
+| `context::assemble_openai_chat_messages` → `Vec<ChatCompletionRequestMessage>` | `context::assemble_openai_responses_input` → `Vec<InputItem>` |
+| `model_policy::apply_model_chat_options(builder, model, max_tokens: u16)` | `model_policy::apply_model_responses_options(request, model, max_output_tokens: u32, reasoning_effort)` |
+| `service::make_request_template(persona) -> CreateChatCompletionRequest` | `reload::make_responses_request_template(persona, max_output_tokens, reasoning_effort, store) -> CreateResponseRequest` |
+
+主な挙動差:
+
+- **Instruction role**: gpt-5 系では `custom_instructions` / `system_instructions_extra` を `role: "developer"` で投入する（他 system 扱いは従来通り `role: "system"`）。gpt-5 は developer role を特別扱いするため。
+- **Default instruction insertion**: gpt-5 系で instruction が 1 本も無いときだけ先頭に既定文を insert する挙動は Chat Completions 版と同じ。Responses 版は `system` / `developer` のどちらかを見つけた時点で skip する。
+- **`max_tokens` → `max_output_tokens`**: Responses は `u32`。`u16` の `persona.max_tokens` を legacy fallback として受理（χ-6 で `openai_max_output_tokens` が正式 conf キーに昇格したら fallback を削除）。
+- **`reasoning.effort`**: gpt-5 系のみ。非 gpt-5 系で指定された場合は warn して落とす。
+- **`text.format`**: gpt-5 系でのみ既定 `Text` を埋めて structured output 誤起動を防ぐ（旧 `ResponseFormat::Text` の Responses 等価）。
+- **`store`**: `None` を渡すと API 既定（true）、`Some(false)` で server-side 履歴を無効化する。VAC は client 側で input を構築するので χ-5 以降は `Some(false)` を既定にする予定。
+
 ### 4.3 `InputItem` structure
 
 ```rust

@@ -25,6 +25,8 @@ use tokio::sync::RwLock;
 
 use super::config::AiPersonaConf;
 use super::decision::DecisionSpec;
+use super::model_policy;
+use super::openai_responses::types::request::{CreateResponseRequest, ReasoningEffort};
 
 // NOTE:
 //   `CreateChatCompletionRequest` は他フィールドの reload 対応を追加した際の rebuild 先として
@@ -191,5 +193,185 @@ impl AiReloadHandle {
   }
 
   Ok(report)
+ }
+}
+
+// ============================================================
+// χ-4: Responses API 用の request template builder。
+//
+// [`service::make_request_template`] の Responses 版。χ-5 で AiService が Responses
+// API に全面移行する際、このビルダを使って template を用意する。`input` / `tools` /
+// `tool_choice` / `stream` は **per-request** に詰めるので、ここでは静的な persona
+// 設定（model / temperature / max_output_tokens / reasoning / store 等）だけ埋める。
+//
+// NOTE: 現時点では `AiPersonaConf` に `openai_max_output_tokens` / `openai_reasoning_effort`
+// フィールドは存在しない（χ-6 で追加）。χ-4 ではビルダのシグネチャに引数として受け取り、
+// χ-5 / χ-6 の接続を待つ。
+// ============================================================
+
+/// persona から Responses API の request template を組み立てる。
+///
+/// `openai_max_output_tokens` / `openai_reasoning_effort` は χ-6 で persona に追加される
+/// 予定の optional フィールド。それまでは呼び出し側（service）で明示 None を渡す。
+pub(crate) fn make_responses_request_template(
+ conf: &AiPersonaConf,
+ openai_max_output_tokens: Option<u32>,
+ openai_reasoning_effort: Option<ReasoningEffort>,
+ openai_store: Option<bool>,
+) -> Result<CreateResponseRequest>
+{
+ let mut request = CreateResponseRequest::default();
+
+ // model とモデル依存オプション（reasoning / text.format）は model が指定された時だけ触る。
+ if let Some(model) = conf.model.as_ref()
+ {
+  request.model = model.clone();
+  model_policy::apply_model_responses_options(&mut request, model, openai_max_output_tokens, openai_reasoning_effort);
+ }
+ else if let Some(mt) = openai_max_output_tokens
+ {
+  // model 未指定でも `openai_max_output_tokens` は尊重する（model_policy は通らないので直接代入）。
+  request.max_output_tokens = Some(mt);
+ }
+
+ // 旧 `max_tokens`（u16, Chat Completions 由来）経由のレガシー構成でも χ-6 の切り替え前に
+ // fallback を効かせる。明示の `openai_max_output_tokens` が指定されなかった場合に限り
+ // `max_tokens` を Responses の `max_output_tokens` に昇格させる。χ-6 で conf の一本化が
+ // 済んだらこの分岐は削除。
+ if request.max_output_tokens.is_none()
+ {
+  if let Some(mt) = conf.max_tokens
+  {
+   request.max_output_tokens = Some(u32::from(mt));
+  }
+ }
+
+ if let Some(temperature) = conf.temperature
+ {
+  request.temperature = Some(temperature);
+ }
+ if let Some(top_p) = conf.top_p
+ {
+  request.top_p = Some(top_p);
+ }
+ if let Some(store) = openai_store
+ {
+  request.store = Some(store);
+ }
+
+ Ok(request)
+}
+
+#[cfg(test)]
+mod responses_template_tests
+{
+ use super::*;
+ use crate::ai::openai_responses::types::request::TextFormat;
+
+ fn persona_minimal() -> AiPersonaConf
+ {
+  AiPersonaConf {
+   id: Some("test".to_string()),
+   is_enabled: true,
+   channel_utterance: Some("to".to_string()),
+   channel_effect: None,
+   observe: Default::default(),
+   decision: None,
+   heartbeat: None,
+   api_key: None,
+   model: Some("gpt-5-mini".to_string()),
+   custom_instructions: None,
+   system_instructions_extra: None,
+   max_tokens: None,
+   temperature: Some(0.5),
+   top_p: Some(0.9),
+   n: None,
+   presence_penalty: None,
+   frequency_penalty: None,
+   user: None,
+   memory_capacity: None,
+   memory_max_chars: None,
+   memory_budget_approx_tokens: None,
+   memory_budget_chars_per_approx_token: None,
+   memory_overflow_summary_enabled: None,
+   memory_overflow_summary_model: None,
+   memory_overflow_summary_max_completion_tokens: None,
+   memory_overflow_summary_max_input_chars: None,
+   memory_overflow_summary_min_chars: None,
+   memory_overflow_summary_cooldown_secs: None,
+   memory_summary: None,
+   memory_summary_path: None,
+   openai_few_shot: Vec::new(),
+   persona_anchor: None,
+   force_activate_regex_pattern: None,
+   ignore_regex_pattern: None,
+   min_interval_in_secs: None,
+   remove_chars: None,
+   assistant_max_chars: None,
+   assistant_strip_substrings: Vec::new(),
+   openai_stream: None,
+   openai_tools_json_path: None,
+   openai_tool_choice: None,
+   openai_parallel_tool_calls: None,
+   openai_max_in_flight: None,
+   fine_tuning: None,
+   respect_speech_floor: None,
+  }
+ }
+
+ #[test]
+ fn make_responses_template_uses_model_and_temperature()
+ {
+  let persona = persona_minimal();
+  let req = make_responses_request_template(&persona, Some(512), Some(ReasoningEffort::Medium), Some(false)).unwrap();
+  assert_eq!(req.model, "gpt-5-mini");
+  assert_eq!(req.temperature, Some(0.5));
+  assert_eq!(req.top_p, Some(0.9));
+  assert_eq!(req.max_output_tokens, Some(512));
+  assert_eq!(req.store, Some(false));
+  assert_eq!(req.reasoning.as_ref().and_then(|r| r.effort), Some(ReasoningEffort::Medium));
+  assert!(matches!(
+   req.text.as_ref().and_then(|t| t.format.clone()),
+   Some(TextFormat::Text)
+  ));
+ }
+
+ #[test]
+ fn make_responses_template_falls_back_to_legacy_max_tokens()
+ {
+  let mut persona = persona_minimal();
+  persona.max_tokens = Some(256);
+  let req = make_responses_request_template(&persona, None, None, None).unwrap();
+  assert_eq!(req.max_output_tokens, Some(256));
+ }
+
+ #[test]
+ fn make_responses_template_prefers_explicit_max_output_tokens_over_legacy()
+ {
+  let mut persona = persona_minimal();
+  persona.max_tokens = Some(256);
+  let req = make_responses_request_template(&persona, Some(777), None, None).unwrap();
+  assert_eq!(req.max_output_tokens, Some(777));
+ }
+
+ #[test]
+ fn make_responses_template_skips_reasoning_for_non_gpt5()
+ {
+  let mut persona = persona_minimal();
+  persona.model = Some("gpt-4o-mini".to_string());
+  let req = make_responses_request_template(&persona, None, Some(ReasoningEffort::High), None).unwrap();
+  assert!(req.reasoning.is_none());
+  assert!(req.text.is_none());
+ }
+
+ #[test]
+ fn make_responses_template_handles_missing_model()
+ {
+  let mut persona = persona_minimal();
+  persona.model = None;
+  let req = make_responses_request_template(&persona, Some(100), Some(ReasoningEffort::Low), None).unwrap();
+  assert_eq!(req.model, "");
+  assert_eq!(req.max_output_tokens, Some(100));
+  assert!(req.reasoning.is_none(), "model 未指定時は reasoning も未指定にする");
  }
 }
