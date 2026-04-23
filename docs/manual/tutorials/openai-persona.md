@@ -1,8 +1,10 @@
 # Tutorial: openai-persona
 
-AI Persona（OpenAI Chat）を独立サービスとして運用し、その発話を Flowgraph で受けて TTS に流すサンプル。
+AI Persona（OpenAI Responses API）を独立サービスとして運用し、その発話を Flowgraph で受けて TTS に流すサンプル。
 
 > ソース: [`flowgraph.example/openai-persona/main.flowgraph.toml`](../../../flowgraph.example/openai-persona/main.flowgraph.toml) + [`conf.example-openai-chat.toml`](../../../conf.example-openai-chat.toml)
+
+> **注記 (Phase χ)**: VAC の AI ペルソナは OpenAI **Responses API (`/v1/responses`)** を使う。旧 Chat Completions (`/v1/chat/completions`) 経路は撤去済み。設定ファイル名に `-chat` が残っているのは歴史的経緯で、内容は Responses API 用。
 
 ## ねらい
 
@@ -15,7 +17,7 @@ AI Persona（OpenAI Chat）を独立サービスとして運用し、その発�
 - OpenAI API key（`VAC_OPENAI_API_KEY` 環境変数 or `conf.toml` の `api_key`）
 - conf.toml に `[[ai.personas]]` を 1 つ以上定義（`conf.example-openai-chat.toml` を参照）
 
-例:
+例（gpt-4o-mini、最小）:
 
 ```toml
 [[ai.personas]]
@@ -23,8 +25,25 @@ id = "main"
 model = "gpt-4o-mini"
 observe.triggers = ["user"]
 channel_utterance = "ai"
-system_instructions = "あなたは配信のアシスタントです..."
+custom_instructions = "あなたは配信のアシスタントです..."
+openai_max_output_tokens = 1024
 ```
+
+例（gpt-5 系、reasoning 調整あり）:
+
+```toml
+[[ai.personas]]
+id = "main"
+model = "gpt-5-mini"
+observe.triggers = ["user"]
+channel_utterance = "ai"
+custom_instructions = "あなたは配信のアシスタントです..."
+openai_max_output_tokens = 2048
+openai_reasoning_effort = "low"  # "low" | "medium" | "high"
+# openai_store = false             # 既定 false、明示しなくても同じ
+```
+
+`gpt-5` / `gpt-5-mini` / `gpt-5-nano` といった reasoning model は、Responses API の `reasoning.effort` を介して思考量を指定できる。多くの配信用途では `"low"` で十分で、レイテンシとコストが抑えられる。
 
 ## 現時点の限界
 

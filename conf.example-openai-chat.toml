@@ -1,7 +1,25 @@
 # =========================================================================
-#  conf.example-openai-chat.toml  (v2)
+#  conf.example-openai-chat.toml  (v2, Phase χ / OpenAI Responses API)
 # =========================================================================
-# OpenAI Chat ベースの AI ペルソナ（常駐 AI サービス）。
+# OpenAI Responses API ベースの AI ペルソナ（常駐 AI サービス）。
+#
+# Phase χ (OpenAI Responses API 移行) 以降、VAC の AI ペルソナは `/v1/responses`
+# エンドポイントを唯一の経路として使う。旧 Chat Completions (`/v1/chat/completions`)
+# は完全に撤去済み。ファイル名に `-chat` が残っているのは歴史的経緯で、
+# 内容は Responses API 用。
+#
+# ■ Phase χ で変わったところ（ユーザ視点の要点）
+#   - 新キー `openai_max_output_tokens` (u32) を推奨。legacy `max_tokens` (u16) は
+#     `openai_max_output_tokens` が空のときだけ fallback として使われる。
+#   - 新キー `memory_overflow_summary_max_output_tokens` (u32)。legacy
+#     `memory_overflow_summary_max_completion_tokens` (u16) が fallback。
+#   - 新キー `openai_reasoning_effort`（`"low"`/`"medium"`/`"high"`）。gpt-5 系専用。
+#   - 新キー `openai_store`（bool、既定 `false`）。OpenAI 側に会話 state を保存するか。
+#     既定で無効化（VAC は client 側で memory window を完全管理しているので不要）。
+#   - 環境変数 `VAC_OPENAI_MAX_OUTPUT_TOKENS` で conf 側より優先的に上書き可能。
+#   - tools.json は Responses API のフラット形式 (`{"type":"function","name":...}`)
+#     を推奨。旧 Chat Completions 形式 (`{"type":"function","function":{...}}`) も
+#     `parse_tools_json` が後方互換で受け付けるので、既存 conf はそのまま動く。
 #
 # v2 では `[[ai.personas]]` は **常駐タスク**として動作する（Flowgraph とは別ラインの
 # AI サービス）。Flowgraph の副作用ノードから呼び出すのではなく、自身で:
@@ -73,13 +91,18 @@ model = "gpt-4o-mini"
 # -------------------------------------------------------------------------
 # 4. 人格・長期メモ（system prompt 群）
 # -------------------------------------------------------------------------
-# メッセージ組み立て順（固定）:
-#   1. custom_instructions（system）→ 任意で system_instructions_extra（system）
-#   2. gpt-5 系で上記が 1 本も無いときだけ既定 system を先頭 insert
-#   3. memory_summary と memory_summary_path を 1 本の system に連結（ファイルが先、`---` で inline）
+# メッセージ組み立て順（固定。Responses API の `input[]` として送る）:
+#   1. custom_instructions（system/developer）→ 任意で system_instructions_extra（system/developer）
+#   2. gpt-5 系で上記が 1 本も無いときだけ既定 system/developer を先頭 insert
+#   3. memory_summary と memory_summary_path を 1 本の system/developer に連結（ファイルが先、`---` で inline）
 #   4. openai_few_shot（user / assistant / system）
-#   5. 任意: persona_anchor（system・履歴直前）
+#   5. 任意: persona_anchor（system/developer・履歴直前）
 #   6. 短期窓（user / assistant。他チャンネルは "[名前@source] 本文" 形式の system 等）
+#
+# Responses API 仕様: gpt-5 系の reasoning モデルに対しては system role ではなく
+# `developer` role を明示的に使うのが推奨とされている。VAC は model 名が `gpt-5` で
+# 始まるときだけ自動で `developer` role に切り替えるので、conf 側の書き方は従来通り
+# （`custom_instructions` などを書けばよい）で問題ない。
 #
 # custom_instructions = """あなたの役割と口調の前提（必須に近い）"""
 #
@@ -121,8 +144,9 @@ model = "gpt-4o-mini"
 #
 # --- あふれ要約（別 API で old turn を要約し long-term memory 先頭に連結）---
 # memory_overflow_summary_enabled = true
-# memory_overflow_summary_model = "gpt-4o-mini"   # 未指定なら上の model と同じ
-# memory_overflow_summary_max_completion_tokens = 256
+# memory_overflow_summary_model = "gpt-4o-mini"             # 未指定なら上の model と同じ
+# memory_overflow_summary_max_output_tokens = 256           # χ-6 推奨（Responses API `max_output_tokens`）
+# # memory_overflow_summary_max_completion_tokens = 256     # legacy (u16)。上が未指定時のみ fallback
 # memory_overflow_summary_max_input_chars = 16000
 # memory_overflow_summary_min_chars = 64
 # memory_overflow_summary_cooldown_secs = 45
@@ -136,6 +160,18 @@ model = "gpt-4o-mini"
 # openai_stream = true
 # assistant_max_chars = 500
 # assistant_strip_substrings = ["NGワード1", "NGワード2"]
+#
+# --- Responses API 固有（χ-6 で追加）---
+# openai_max_output_tokens = 1024           # Responses API の `max_output_tokens`（u32）。
+#                                           # 未指定時は env `VAC_OPENAI_MAX_OUTPUT_TOKENS`、
+#                                           # それも無ければ legacy `max_tokens`（u16）へ fallback。
+# # max_tokens = 1024                         # legacy（Chat Completions 時代）。上が指定されていたら無視。
+# openai_reasoning_effort = "medium"        # "low" | "medium" | "high"。gpt-5 系のみ有効。
+#                                           # 非 gpt-5 モデルでは警告ログを出して黙殺する。
+# openai_store = false                      # 既定 false（VAC は client 側で会話履歴を完全管理）。
+#                                           # OpenAI Dashboard > Logs で生 Response を見たいときだけ true。
+#                                           # Phase ψ-α で `include: ["reasoning.encrypted_content"]` を
+#                                           # 採用する際も `store = false` のまま運用する方針。
 
 
 # -------------------------------------------------------------------------
@@ -153,8 +189,37 @@ model = "gpt-4o-mini"
 #
 # モデレーション系は [twitch.moderator] の OAuth が必要（`conf.example-twitch.toml`）。
 #
+# --- tools.json の形式（χ-5 以降）---
+#
+# Phase χ で Responses API に切り替えた結果、公式の tools 形式は「フラット」形に
+# なった。推奨形:
+#
+#   [
+#     { "type": "function", "name": "vac_ping",
+#       "description": "...",
+#       "parameters": { "type": "object", "properties": {} } }
+#   ]
+#
+# 旧 Chat Completions 形式（`{"type":"function","function":{...}}`）も
+# `parse_tools_json` が後方互換で受け付けるので、既存 conf を書き換えなくても
+# そのまま動く。新規作成時は Responses 形式を使うのが望ましい。
+# 同梱の `conf.example-openai-tools.json` は旧形式のまま残してあるので、
+# Responses 形式への書き換え例としては上の snippet を参照。
+#
+# --- hosted tools（Responses API から新規採用可能、χ 時点では optional）---
+#
+# Responses API は `web_search` / `file_search` / `code_interpreter` といった
+# OpenAI ホステッドツールも同じ tools 配列に混ぜられる。VAC 側は hosted tool を
+# 「宣言のみ、dispatch は OpenAI 側」として通す（tool_call に対するローカル実装は不要）。
+#
+#   [
+#     { "type": "function", "name": "vac_ping", "parameters": {...} },
+#     { "type": "web_search", "search_context_size": "medium" },
+#     { "type": "file_search", "vector_store_ids": ["vs_..."] }
+#   ]
+#
 # openai_tools_json_path = "C:/path/to/tools.json"
-# openai_tool_choice = "auto"       # none / auto / required
+# openai_tool_choice = "auto"       # none / auto / required / function:<name> / custom:<name>
 # openai_parallel_tool_calls = false
 
 

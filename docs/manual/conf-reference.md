@@ -115,16 +115,32 @@ Twitch OAuth / EventSub / チャット取り込み / モデレーション設定
 - `broadcaster_login`：配信者の Twitch login（小文字）
 - `[twitch.eventsub]` / `[twitch.moderator]`：EventSub / 別トークン（モデレーター権限）
 
-### 6.2 `[[ai.personas]]`（OpenAI Chat）
+### 6.2 `[[ai.personas]]`（OpenAI Responses API）
 
-AI Persona を 1 個以上定義する配列。詳細は [`conf.example-openai-chat.toml`](../../conf.example-openai-chat.toml)。
+AI Persona を 1 個以上定義する配列。Phase χ 以降は **OpenAI Responses API (`/v1/responses`)** を唯一の経路として使う（Chat Completions は撤去済み）。詳細は [`conf.example-openai-chat.toml`](../../conf.example-openai-chat.toml)。
 
 主要キー:
 
 - `id`, `api_key`（環境変数 `VAC_OPENAI_API_KEY` 可）, `model`
 - `observe.triggers`（購読するチャンネル名）, `channel_utterance`（発話を書き出すチャンネル名）
-- `system_instructions` / `custom_instructions`
+- `custom_instructions` / `system_instructions_extra`
+- `openai_max_output_tokens`（u32, Responses API `max_output_tokens`）／ 環境変数 `VAC_OPENAI_MAX_OUTPUT_TOKENS` で上書き可
+- `openai_reasoning_effort`（`"low"` / `"medium"` / `"high"`、gpt-5 系のみ有効）
+- `openai_store`（bool、既定 `false`。OpenAI 側に会話 state を保存するか。VAC は client 側で memory window を完全管理するため通常 `false` のままで良い）
 - `[ai.personas.memory]` / `[ai.personas.decision]` / `[ai.personas.function_calling]`
+
+**互換性メモ**:
+
+- legacy `max_tokens` (u16) は `openai_max_output_tokens` が未指定のときだけ fallback として使われる。両方指定時は新キーが優先。
+- `memory_overflow_summary_max_output_tokens` (u32) が推奨。legacy `memory_overflow_summary_max_completion_tokens` (u16) は fallback。
+- `openai_tools_json` / `openai_tools_json_path` は Responses API 形式 (`{"type":"function","name":...}`) と旧 Chat Completions 形式 (`{"type":"function","function":{...}}`) の双方を自動判別するので、既存 conf はそのまま動く。
+
+**環境変数オーバーライド**:
+
+| 変数名 | 上書き対象 | 備考 |
+|---|---|---|
+| `VAC_OPENAI_API_KEY` | `api_key` | API キーは conf 直書きよりこちらを推奨 |
+| `VAC_OPENAI_MAX_OUTPUT_TOKENS` | `openai_max_output_tokens` | env > 新キー > legacy `max_tokens` の順で解決 |
 
 ### 6.3 TTS
 

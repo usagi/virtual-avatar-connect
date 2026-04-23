@@ -5,6 +5,34 @@
 
 ## [Unreleased]
 
+### χ: OpenAI Responses API Migration (χ-0 .. χ-7)
+
+Chat Completions (`/v1/chat/completions`) 依存を完全撤去し、OpenAI **Responses API (`/v1/responses`)** を AI ペルソナの唯一の経路に統一した。reasoning model (gpt-5 系) 対応と将来的な hosted tools / encrypted reasoning 採用のための基盤整備。
+
+- **χ-0 設計**: [`docs/roadmap/phase-chi-openai-responses.md`](docs/roadmap/phase-chi-openai-responses.md) にサブフェーズ分割・DTO 設計・移行手順を確定。
+- **χ-1〜χ-4: Responses API DTO 層と HTTP クライアント** (`src/ai/openai_responses/`)
+  - `CreateResponseRequest` / `Response` / `InputItem` / `OutputItem` / `Tool` / `ToolChoice` / `StreamEvent` 等を自前 DTO で実装（`async-openai` の Chat Completions 型に依存しない）。
+  - `ResponsesClient` (`reqwest` ベース) で non-stream / SSE stream の両対応。`OutputTextDelta` / `FunctionCallArgumentsDelta` / `ResponseCompleted` 等のイベントを統一的に処理。
+  - tools は Responses API のフラット形式 (`{"type":"function","name":...}`) を native として受け、旧 Chat Completions 形式 (`{"type":"function","function":{...}}`) も後方互換で自動判別。
+- **χ-5 AI service 層移行** (`src/ai/service.rs` / `completion.rs` / `context.rs` / `tools.rs` / `model_policy.rs` / `reload.rs`)
+  - `AiService` が `ResponsesClient` / `CreateResponseRequest` を保持する構造に一新。`react()` を Responses API の stream + 統合 tool loop (`drive_responses_tool_loop`) に書き換え。
+  - gpt-5 系で本文が空になる応答を検出したときの自動リトライ、メモリオーバーフロー要約の Responses API 呼び出しも同経路に統合。
+  - 旧 Chat Completions 固有コード（`ChatCompletionRequestMessage` アセンブル、tools → Chat Completions 変換、`extract_assistant_text` 等）は削除。
+- **χ-6 設定スキーマ拡張** (`src/ai/config.rs` / `service.rs` / `mod.rs`)
+  - `[[ai.personas]]` に Responses API ネイティブな新キーを追加:
+    - `openai_max_output_tokens` (u32) — `max_output_tokens` に対応
+    - `openai_reasoning_effort` (`"low"`/`"medium"`/`"high"`) — gpt-5 系のみ有効
+    - `openai_store` (bool、既定 `false`) — サーバ側会話 state 保存フラグ
+    - `memory_overflow_summary_max_output_tokens` (u32)
+  - 旧 `max_tokens` (u16) / `memory_overflow_summary_max_completion_tokens` (u16) は新キー未指定時だけ fallback として使われる（両方指定時は新キー優先、warn 無しで legacy を無視）。
+  - 環境変数 `VAC_OPENAI_MAX_OUTPUT_TOKENS` による上書きに対応（precedence: env > 新キー > legacy）。
+- **χ-7 ドキュメント**: [`conf.example-openai-chat.toml`](conf.example-openai-chat.toml) / [`docs/manual/conf-reference.md`](docs/manual/conf-reference.md) / [`docs/manual/tutorials/openai-persona.md`](docs/manual/tutorials/openai-persona.md) を Responses API 前提に更新。
+- **χ-8.0 付随バグ修正** (`src/flowgraph/docs.rs`)
+  - `flowgraph::docs::docs_tests::node_catalog_md_up_to_date` が Windows (`core.autocrlf=true`) で CRLF/LF 差分により failing していた件を修正。テスト比較と `BLESS_NODE_CATALOG=1` の書き出しを LF 正規化。
+- **Breaking（χ）**: なし（既存 `max_tokens` / Chat Completions 形式 tools.json は fallback 経路で互換維持）。ただし **OpenAI 側の最新モデル（gpt-5 系）を使うなら新キーへの移行を強く推奨**。
+- **将来の関連フェーズ**
+  - **ψ-α encrypted reasoning passthrough** (backlog): `include: ["reasoning.encrypted_content"]` を使い、`store: false` を維持したまま gpt-5 の reasoning state を tool loop round 間で持ち回る最適化。詳細は [`docs/roadmap/phase-chi-openai-responses.md`](docs/roadmap/phase-chi-openai-responses.md) §11.2。
+
 ### η: Dictionary/Table Unification (η-0 .. η-6)
 
 V1 時代に合意されていた「11 カラム辞書」仕様（`source` / `replacement` / `kind` / `priority` / `is_locked` / `enabled` / `by` / `created_at` / `expires_at` / `tags` / `note`）と runtime 学習/忘却機能を V2 Flowgraph 上に再構築した。汎用 Table 型を型システムに追加し、辞書機能はその上に semantic layer として乗る。
