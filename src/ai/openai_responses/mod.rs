@@ -53,6 +53,7 @@ pub mod types;
 pub mod util;
 
 pub use client::{ResponsesClient, ResponsesClientConfig, ResponsesClientError};
+#[allow(unused_imports)]
 pub use util::{extract_output_text, truncate_error_body};
 
 #[cfg(test)]

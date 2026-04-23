@@ -12,10 +12,6 @@
 //! - `vac_twitch_delete_message`: Helix `DELETE /moderation/chat` 縺ｧ迚ｹ螳壹Γ繝・そ繝ｼ繧ｸ蜑企勁縲・
 
 use anyhow::{bail, Context, Result};
-use async_openai::types::chat::{
- ChatCompletionMessageToolCalls, ChatCompletionRequestAssistantMessage, ChatCompletionRequestAssistantMessageContent,
- ChatCompletionResponseMessage, ChatCompletionToolChoiceOption, ChatCompletionTools, ToolChoiceOptions,
-};
 use serde_json::{json, Value};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -122,6 +118,7 @@ fn tool_from_json_any_format(v: Value) -> Result<Tool> {
 }
 
 /// 宣言された tool 名の集合を返す。hosted tools は固定名（`"web_search"` 等）。
+#[allow(dead_code)]
 pub(crate) fn declared_tool_names(tools: &[Tool]) -> HashSet<String> {
  tools.iter().map(|t| t.name().to_string()).collect()
 }
@@ -163,86 +160,6 @@ pub(crate) fn parse_tool_choice(s: &str) -> Result<ToolChoice> {
     s
    )
   },
- }
-}
-
-// ---------- χ-5 までの Chat Completions 互換 bridge（移行期間限定） ----------
-
-/// Responses API の [`Tool`] 配列を Chat Completions の `ChatCompletionTools` 配列に変換する。
-///
-/// hosted tools（web_search / file_search / code_interpreter）は Chat Completions では
-/// 対応していないので **サイレントに除外** し、呼び出し側で warn ログを出せるよう個数を返す。
-///
-/// 戻り値: `(変換済 tools, 除外した hosted tools の名前)`
-pub(crate) fn tools_to_chat_completions(tools: &[Tool]) -> Result<(Vec<ChatCompletionTools>, Vec<String>)> {
- let mut cc_json = Vec::new();
- let mut skipped = Vec::new();
- for t in tools {
-  match t {
-   Tool::Function {
-    name,
-    description,
-    parameters,
-    strict,
-   } => {
-    let mut function = json!({"name": name, "parameters": parameters});
-    if let Some(d) = description {
-     function["description"] = Value::String(d.clone());
-    }
-    if let Some(s) = strict {
-     function["strict"] = Value::Bool(*s);
-    }
-    cc_json.push(json!({"type": "function", "function": function}));
-   },
-   Tool::Custom {
-    name,
-    description,
-    format,
-   } => {
-    let mut custom = json!({"name": name});
-    if let Some(d) = description {
-     custom["description"] = Value::String(d.clone());
-    }
-    if let Some(f) = format {
-     custom["format"] = f.clone();
-    }
-    cc_json.push(json!({"type": "custom", "custom": custom}));
-   },
-   Tool::WebSearch { .. } | Tool::FileSearch { .. } | Tool::CodeInterpreter { .. } => {
-    skipped.push(t.name().to_string());
-   },
-  }
- }
- let converted: Vec<ChatCompletionTools> = serde_json::from_value(Value::Array(cc_json))
-  .context("Responses Tool を ChatCompletionTools に変換する際に失敗")?;
- Ok((converted, skipped))
-}
-
-/// [`ToolChoice`] を Chat Completions の `ChatCompletionToolChoiceOption` に変換する。
-pub(crate) fn tool_choice_to_chat_completions(choice: &ToolChoice) -> ChatCompletionToolChoiceOption {
- match choice {
-  ToolChoice::Mode(ToolChoiceMode::Auto) => ChatCompletionToolChoiceOption::Mode(ToolChoiceOptions::Auto),
-  ToolChoice::Mode(ToolChoiceMode::None) => ChatCompletionToolChoiceOption::Mode(ToolChoiceOptions::None),
-  ToolChoice::Mode(ToolChoiceMode::Required) => ChatCompletionToolChoiceOption::Mode(ToolChoiceOptions::Required),
-  ToolChoice::Named(NamedToolChoice::Function { name }) => {
-   let v = json!({"type": "function", "function": {"name": name}});
-   serde_json::from_value(v).unwrap_or(ChatCompletionToolChoiceOption::Mode(ToolChoiceOptions::Auto))
-  },
-  ToolChoice::Named(NamedToolChoice::Custom { name }) => {
-   let v = json!({"type": "custom", "custom": {"name": name}});
-   serde_json::from_value(v).unwrap_or(ChatCompletionToolChoiceOption::Mode(ToolChoiceOptions::Auto))
-  },
- }
-}
-
-pub(crate) fn response_message_to_assistant_request(m: &ChatCompletionResponseMessage) -> ChatCompletionRequestAssistantMessage {
- ChatCompletionRequestAssistantMessage {
-  content: m.content.as_ref().map(|s| ChatCompletionRequestAssistantMessageContent::Text(s.clone())),
-  refusal: m.refusal.clone(),
-  name: None,
-  audio: None,
-  tool_calls: m.tool_calls.clone(),
-  ..Default::default()
  }
 }
 
@@ -296,40 +213,6 @@ pub(crate) async fn dispatch_tool_call(
   run_function_tool(call.name, call.arguments, ctx).await
  };
  InputItem::function_call_output(call.call_id, output)
-}
-
-/// χ-5 までの Chat Completions 互換 dispatch（移行期間限定）。
-///
-/// `completion.rs::create_chat_completion_resolve_tools` が Chat Completions の
-/// `ChatCompletionRequestToolMessage` を作るのに必要な `(id, output)` タプルを返す。
-/// χ-5 で service.rs / completion.rs が `create_stream` / `dispatch_tool_call` に
-/// 全面移行した時点で削除する。
-pub(crate) async fn dispatch_cc_tool_call(
- tc: &ChatCompletionMessageToolCalls,
- declared: &HashSet<String>,
- ctx: &ToolContext,
-) -> Option<(String, String)> {
- match tc {
-  ChatCompletionMessageToolCalls::Function(f) => {
-   if !declared.contains(&f.function.name) {
-    return Some((
-     f.id.clone(),
-     json_tool_error("tool not declared in openai_tools_json", &f.function.name),
-    ));
-   }
-   let out = run_function_tool(&f.function.name, &f.function.arguments, ctx).await;
-   Some((f.id.clone(), out))
-  },
-  ChatCompletionMessageToolCalls::Custom(c) => {
-   if !declared.contains(&c.custom_tool.name) {
-    return Some((c.id.clone(), json_tool_error("tool not declared in openai_tools_json", &c.custom_tool.name)));
-   }
-   Some((
-    c.id.clone(),
-    r#"{"error":"custom tools are not executed by VAC yet"}"#.to_string(),
-   ))
-  },
- }
 }
 
 // ---------- Phase IV: Action impls ----------
@@ -966,69 +849,6 @@ mod tests {
  fn parse_tool_choice_rejects_unknown() {
   assert!(parse_tool_choice("xyz").is_err());
   assert!(parse_tool_choice("function:").is_err());
- }
-
- // ---------- bridge: tools_to_chat_completions ----------
-
- #[test]
- fn bridge_converts_function_tool_preserving_strict() {
-  let tools = vec![Tool::Function {
-   name: "vac_ping".into(),
-   description: Some("ping".into()),
-   parameters: json!({"type": "object"}),
-   strict: Some(true),
-  }];
-  let (cc, skipped) = tools_to_chat_completions(&tools).unwrap();
-  assert_eq!(cc.len(), 1);
-  assert!(skipped.is_empty());
-  match &cc[0] {
-   ChatCompletionTools::Function(ft) => {
-    assert_eq!(ft.function.name, "vac_ping");
-    assert_eq!(ft.function.strict, Some(true));
-   },
-   _ => panic!("expected CC Function"),
-  }
- }
-
- #[test]
- fn bridge_reports_skipped_hosted_tools() {
-  let tools = vec![
-   Tool::Function {
-    name: "vac_ping".into(),
-    description: None,
-    parameters: json!({"type": "object"}),
-    strict: None,
-   },
-   Tool::WebSearch {
-    user_location: None,
-    search_context_size: None,
-   },
-   Tool::FileSearch {
-    vector_store_ids: vec!["vs_1".into()],
-    max_num_results: None,
-    filters: None,
-   },
-  ];
-  let (cc, skipped) = tools_to_chat_completions(&tools).unwrap();
-  assert_eq!(cc.len(), 1, "Function だけ CC 変換される");
-  assert_eq!(skipped, vec!["web_search".to_string(), "file_search".to_string()]);
- }
-
- #[test]
- fn bridge_tool_choice_roundtrip() {
-  use async_openai::types::chat::ChatCompletionToolChoiceOption as CC;
-  assert!(matches!(
-   tool_choice_to_chat_completions(&ToolChoice::Mode(ToolChoiceMode::Auto)),
-   CC::Mode(ToolChoiceOptions::Auto)
-  ));
-  assert!(matches!(
-   tool_choice_to_chat_completions(&ToolChoice::Mode(ToolChoiceMode::None)),
-   CC::Mode(ToolChoiceOptions::None)
-  ));
-  assert!(matches!(
-   tool_choice_to_chat_completions(&ToolChoice::Mode(ToolChoiceMode::Required)),
-   CC::Mode(ToolChoiceOptions::Required)
-  ));
  }
 
  // ---------- dispatch_tool_call 周辺（State 依存のないロジックのみ） ----------

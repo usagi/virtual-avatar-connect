@@ -13,22 +13,23 @@ use super::context;
 use super::decision::{uniform_jitter, Decision, DecisionInput, DecisionSpec};
 use super::model_policy;
 use super::observe::{Observation, ObserveSet};
+use super::reload::make_responses_request_template;
 use super::tools::{self, ToolContext};
 use super::ENV_OPENAI_API_KEY;
 
+use crate::ai::openai_responses::types::input::InputItem;
+use crate::ai::openai_responses::types::request::CreateResponseRequest;
+use crate::ai::openai_responses::types::response::OutputItem;
+use crate::ai::openai_responses::types::stream::StreamEvent;
+use crate::ai::openai_responses::util::extract_output_text;
+use crate::ai::openai_responses::{ResponsesClient, ResponsesClientConfig};
 use crate::conf::{TwitchEventSubConfig, TwitchModeratorConfig};
 use crate::state::AiRuntime;
 use crate::{ChannelDatum, SharedChannelData, SharedState};
 
 use anyhow::{anyhow, bail, Result};
-use async_openai::{
- config::OpenAIConfig,
- types::chat::{
-  ChatCompletionToolChoiceOption, CreateChatCompletionRequest, CreateChatCompletionRequestArgs, ToolChoiceOptions,
- },
- Client,
-};
 use futures::StreamExt;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Instant, SystemTime};
@@ -55,10 +56,11 @@ pub struct AiService {
  observe: Arc<ObserveSet>,
  state: SharedState,
  channel_data: SharedChannelData,
- client: Client<OpenAIConfig>,
- /// instructions などに由来する Chat Completion リクエストテンプレート。
- /// `make_request_template()` の結果を atomic swap する。
- request_template: Arc<RwLock<Arc<CreateChatCompletionRequest>>>,
+ /// χ-5: OpenAI Responses API `/v1/responses` 用の自前 client。
+ client: ResponsesClient,
+ /// χ-5: Responses API リクエストテンプレート。
+ /// `reload::make_responses_request_template()` の結果を atomic swap する。
+ request_template: Arc<RwLock<Arc<CreateResponseRequest>>>,
  last_activated: Arc<Mutex<SystemTime>>,
  /// Phase II: 旧 `force_activate_regex` / `ignore_regex` / `min_interval` を包含するスコアリング仕様。
  /// Phase VI-α-4 で reload 対象になったので `RwLock<Arc<_>>`。
@@ -108,7 +110,10 @@ impl AiService {
   let observe = ObserveSet::from_conf(&channel_utterance, &persona.observe);
 
   let client = make_client(&persona)?;
-  let request_template = make_request_template(&persona)?;
+  // χ-6 で `openai_max_output_tokens` / `openai_reasoning_effort` / `openai_store` を persona の
+  // 正式フィールドに入れる。それまでは環境変数のみで上書きさせ、既定は None（= legacy `max_tokens`
+  // fallback または API 既定）。
+  let request_template = make_responses_request_template(&persona, None, None, Some(false))?;
 
   let decision = Arc::new(DecisionSpec::from_persona(&persona)?);
   log::debug!(
@@ -357,8 +362,8 @@ impl AiService {
   let state = self.state.clone();
   let channel_data = self.channel_data.clone();
   let client = self.client.clone();
-  // Arc<CreateChatCompletionRequest> として取得し、後続で `(*request_template).clone()` で深い複製を作る。
-  let request_template: Arc<CreateChatCompletionRequest> = self.request_template.read().await.clone();
+  // χ-5: Arc<CreateResponseRequest> として取得し、後続で `(*request_template).clone()` で深い複製を作る。
+  let request_template: Arc<CreateResponseRequest> = self.request_template.read().await.clone();
   let last_activated = self.last_activated.clone();
   let in_flight = self.in_flight.clone();
   let overflow_summary_last_at = self.overflow_summary_last_at.clone();
@@ -559,9 +564,9 @@ impl AiService {
    }
   };
 
-  // Arc 包みから 1 回だけ実体を深くコピーして手元で可変にする。
+  // χ-5: Responses API 用の request を template から深くコピー。
   let mut request = (*request_template).clone();
-  request.messages = context::assemble_openai_chat_messages(
+  request.input = context::assemble_openai_responses_input(
    model_for_runtime.as_deref(),
    custom_instructions.as_deref(),
    system_instructions_extra.as_deref(),
@@ -572,160 +577,95 @@ impl AiService {
    &observe,
   );
 
- let mut use_tools_roundtrip = false;
- if let Some(ref p) = openai_tools_json_path {
-  match tokio::fs::read_to_string(p).await {
-   // χ-3: parse_tools_json は Responses API の `Vec<Tool>` を返す。
-   // 現在の Chat Completions pipeline に載せるため bridge で `Vec<ChatCompletionTools>` に畳む。
-   // hosted tools（web_search / file_search / code_interpreter）は Chat Completions では
-   // 対応していないのでここで除外 + warn（χ-5 の Responses 全面移行で passthrough になる）。
-   Ok(s) => match tools::parse_tools_json(&s) {
-    Ok(v) if !v.is_empty() => {
-     let total = v.len();
-     let (cc_tools, skipped_hosted) = match tools::tools_to_chat_completions(&v) {
-      Ok(pair) => pair,
-      Err(e) => {
-       log::warn!(
-        "《AI[{}]》 openai_tools_json の Chat Completions 変換に失敗: {:?} ({})",
-        persona_label,
-        p,
-        e
-       );
-       (Vec::new(), Vec::new())
-      },
-     };
-     if !skipped_hosted.is_empty() {
-      log::warn!(
-       "《AI[{}]》 hosted tools {:?} は Chat Completions では未対応のため除外しました。χ-5 の Responses API 全面移行で有効化されます。",
-       persona_label,
-       skipped_hosted
-      );
-     }
-     if cc_tools.is_empty() {
-      log::warn!(
-       "《AI[{}]》 openai_tools_json から Chat Completions 互換 tool が 1 件も取れませんでした（全て hosted だった可能性）: {:?}",
-       persona_label,
-       p
-      );
-     }
-     else {
-      request.tools = Some(cc_tools);
-      request.tool_choice = Some(match openai_tool_choice.as_deref() {
-       None => ChatCompletionToolChoiceOption::Mode(ToolChoiceOptions::Auto),
+  // χ-5: tools は Responses API の `Vec<Tool>` を直接 request.tools に入れる。
+  // hosted tools（web_search / file_search / code_interpreter）も passthrough。
+  let mut tools_declared_local: std::collections::HashSet<String> = std::collections::HashSet::new();
+  let mut has_tools = false;
+  if let Some(ref p) = openai_tools_json_path {
+   match tokio::fs::read_to_string(p).await {
+    Ok(s) => match tools::parse_tools_json(&s) {
+     Ok(v) if !v.is_empty() => {
+      tools_declared_local = tools::locally_dispatched_tool_names(&v);
+      let declared_count = v.len();
+      let hosted_count = v.iter().filter(|t| !t.is_locally_dispatched()).count();
+      request.tools = Some(v);
+      request.tool_choice = match openai_tool_choice.as_deref() {
+       None => None,
        Some(tc) => match tools::parse_tool_choice(tc) {
-        Ok(x) => tools::tool_choice_to_chat_completions(&x),
+        Ok(x) => Some(x),
         Err(e) => {
-         log::warn!("openai_tool_choice を解釈できません: {} — auto にします。", e);
-         ChatCompletionToolChoiceOption::Mode(ToolChoiceOptions::Auto)
+         log::warn!("openai_tool_choice を解釈できません: {} — 未指定にします。", e);
+         None
         },
        },
-      });
+      };
       if let Some(ptc) = openai_parallel_tool_calls {
        request.parallel_tool_calls = Some(ptc);
       }
-      use_tools_roundtrip = true;
+      has_tools = true;
       log::info!(
-       "《AI[{}]》 OpenAI tools を読み込みました: {:?} (declared={}, cc_dispatchable={})",
+       "《AI[{}]》 OpenAI tools を読み込みました: {:?} (declared={}, local_dispatchable={}, hosted={})",
        persona_label,
        p,
-       total,
-       request.tools.as_ref().map(|t| t.len()).unwrap_or(0)
+       declared_count,
+       tools_declared_local.len(),
+       hosted_count,
       );
-     }
+     },
+     Ok(_) => log::warn!("《AI[{}]》 openai_tools_json_path の tools が空です: {:?}", persona_label, p),
+     Err(e) => log::warn!("《AI[{}]》 openai_tools_json をパースできません: {:?} ({})", persona_label, p, e),
     },
-    Ok(_) => log::warn!("《AI[{}]》 openai_tools_json_path の tools が空です: {:?}", persona_label, p),
-    Err(e) => log::warn!("《AI[{}]》 openai_tools_json をパースできません: {:?} ({})", persona_label, p, e),
-   },
-   Err(e) => log::warn!("《AI[{}]》 openai_tools_json_path を読めませんでした: {:?} ({})", persona_label, p, e),
-  }
- }
-
-  let effective_stream = openai_stream && !use_tools_roundtrip;
-  if openai_stream && use_tools_roundtrip {
-   log::warn!(
-    "《AI[{}]》 openai_tools_json_path が指定されているため、ツール解決のためストリーミングをオフにします。",
-    persona_label
-   );
-  }
-
-  log::debug!("《AI[{}]》 応答をリクエストします（stream={}）。", persona_label, effective_stream);
-
-  let mut content = String::new();
-  let mut stream_datum_id: Option<u64> = None;
-  let mut stream_nonempty_delta_chunks: usize = 0;
-
-  if effective_stream {
-   request.stream = Some(true);
-   request.n = Some(1);
-   let mut stream = match client.chat().create_stream(request).await {
-    Ok(s) => s,
-    Err(e) => {
-     log::error!("《AI[{}]》 ストリーミングの開始に失敗しました: {:?}", persona_label, e);
-     eprint_openai_usage_hint_if_needed(&e.to_string());
-     bail!("{e:?}");
-    },
-   };
-   while let Some(item) = stream.next().await {
-    let chunk = item.map_err(|e| anyhow!("{e:?}"))?;
-    for choice in chunk.choices {
-     if let Some(delta) = choice.delta.content {
-      if delta.is_empty() {
-       continue;
-      }
-      stream_nonempty_delta_chunks += 1;
-      content.push_str(&delta);
-      match stream_datum_id {
-       None => {
-        let cd = ChannelDatum::new(channel_utterance.clone(), content.clone());
-        let sid = cd.get_id();
-        state.read().await.push_channel_datum_quiet(cd).await;
-        stream_datum_id = Some(sid);
-       },
-       Some(sid) => {
-        state.read().await.update_channel_datum_content_by_id(sid, content.clone()).await;
-       },
-      }
-     }
-    }
+    Err(e) => log::warn!("《AI[{}]》 openai_tools_json_path を読めませんでした: {:?} ({})", persona_label, p, e),
    }
-   log::trace!(
-    "《AI[{}]》 SSE 終了: nonempty_delta_chunks={} assistant_chars={}",
-    persona_label,
-    stream_nonempty_delta_chunks,
-    content.chars().count(),
-   );
-  } else if use_tools_roundtrip {
-   let tool_ctx = self.tool_context().await;
-   content = match completion::create_chat_completion_resolve_tools(&client, request, &tool_ctx).await {
-    Ok(c) => c,
-    Err(e) => {
-     log::error!("《AI[{}]》 ツール解決のリクエストに失敗しました: {:?}", persona_label, e);
-     eprint_openai_usage_hint_if_needed(&e.to_string());
-     bail!("{e:?}");
-    },
-   };
-  } else {
-   let response = match completion::create_chat_completion(&client, request.clone()).await {
-    Ok(response) => response,
-    Err(e) => {
-     log::error!("《AI[{}]》 OpenAI へのリクエストに失敗しました: {:?}", persona_label, e);
-     eprint_openai_usage_hint_if_needed(&e.to_string());
-     bail!("{e:?}");
-    },
-   };
-   log::trace!("《AI[{}]》 response = {:?}", persona_label, response);
-   content = completion::extract_assistant_text(&response)?;
   }
+
+  let effective_stream = openai_stream;
+  let request_max_output_tokens = request.max_output_tokens;
+
+  log::debug!(
+   "《AI[{}]》 応答をリクエストします（stream={}, tools={}）。",
+   persona_label,
+   effective_stream,
+   has_tools
+  );
+
+  // χ-5: Responses API の stream / non-stream を同じ tool-loop で駆動する。
+  // streaming 経路でも OutputItem::FunctionCall が返れば次ラウンドの input[] に積んで再 request、
+  // ツール無し応答のラウンドで break。
+  let tool_ctx_opt: Option<ToolContext> = if has_tools { Some(self.tool_context().await) } else { None };
+  let drive_result = drive_responses_tool_loop(
+   &client,
+   request,
+   effective_stream,
+   has_tools,
+   &tools_declared_local,
+   tool_ctx_opt.as_ref(),
+   &state,
+   &channel_utterance,
+   &persona_label,
+  )
+  .await;
+
+  let (mut content, stream_datum_id, stream_nonempty_delta_chunks) = match drive_result {
+   Ok(out) => (out.content, out.stream_datum_id, out.stream_nonempty_delta_chunks),
+   Err(e) => {
+    log::error!("《AI[{}]》 OpenAI Responses API 呼び出しに失敗しました: {:?}", persona_label, e);
+    eprint_openai_usage_hint_if_needed(&format!("{e:?}"));
+    bail!("{e:?}");
+   },
+  };
 
   if model_policy::should_retry_on_empty_assistant(model_for_runtime.as_deref()) && content.trim().is_empty() {
    log::warn!("《AI[{}]》 gpt-5 系モデルから空の content が返却されました。再試行します。", persona_label);
    if let Some(model) = model_for_runtime.as_deref() {
-    if let Some(filled) = completion::retry_if_gpt5_empty_content(&client, model, &latest_user_content, orig_max_tokens).await
+    if let Some(filled) =
+     completion::retry_if_gpt5_empty_response(&client, model, &latest_user_content, request_max_output_tokens).await
     {
      content = filled;
     }
    }
   }
+  let _ = orig_max_tokens; // χ-5: legacy `max_tokens` (u16) は max_output_tokens(u32) 経由で扱う。χ-6 で廃止予定。
 
   content = apply_openai_output_filters(content, &remove_chars, assistant_max_chars, &assistant_strip_substrings);
 
@@ -826,7 +766,7 @@ pub async fn spawn_all(
 }
 
 async fn run_overflow_summary(
- client: &Client<OpenAIConfig>,
+ client: &ResponsesClient,
  overflow_model: &Option<String>,
  main_model: Option<&str>,
  max_completion_tokens: Option<u16>,
@@ -850,7 +790,8 @@ async fn run_overflow_summary(
   let mut g = last_at.lock().await;
   *g = Some(Instant::now());
  }
- match completion::summarize_overflow_turns(client, model_ov, max_completion_tokens, truncated).await {
+ let max_out: Option<u32> = max_completion_tokens.map(|v| v as u32);
+ match completion::summarize_overflow_turns(client, model_ov, max_out, truncated).await {
   Ok(s) if !s.trim().is_empty() => Some(s.trim().to_string()),
   Ok(_) => {
    log::warn!("メモリ窓オーバーフロー要約の結果が空でした。長期メモには載せません。");
@@ -963,42 +904,213 @@ fn eprint_openai_usage_hint_if_needed(err: &str) {
  }
 }
 
-fn make_client(conf: &AiPersonaConf) -> Result<Client<OpenAIConfig>> {
+/// χ-5: Responses API tool-loop driver の戻り値。
+struct ToolLoopOutput {
+ content: String,
+ stream_datum_id: Option<u64>,
+ stream_nonempty_delta_chunks: usize,
+}
+
+/// χ-5: Responses API の streaming / non-stream を共通 tool-loop で駆動する。
+///
+/// - streaming: `create_stream` で SSE を読み、`OutputTextDelta` で live 表示を更新、
+///   `Completed` / `Incomplete` で `response.output[]` を確定取得。
+///   非 streaming: `create` を呼んで `Response` を直接取得。
+/// - `OutputItem::FunctionCall` が 1 件でもあれば、それら（と対応 output）を `request.input[]`
+///   に積み直して次ラウンドに入る。無ければ assistant text を抽出して break。
+///
+/// 既定のラウンド上限は 8（旧 Chat Completions 経路と同じ）。
+#[allow(clippy::too_many_arguments)]
+async fn drive_responses_tool_loop(
+ client: &ResponsesClient,
+ mut request: CreateResponseRequest,
+ streaming: bool,
+ has_tools: bool,
+ declared_local: &std::collections::HashSet<String>,
+ tool_ctx: Option<&ToolContext>,
+ state: &SharedState,
+ channel_utterance: &str,
+ persona_label: &str,
+) -> Result<ToolLoopOutput> {
+ const MAX_TOOL_ROUNDS: usize = 8;
+
+ let mut content = String::new();
+ let mut stream_datum_id: Option<u64> = None;
+ let mut stream_nonempty_delta_chunks: usize = 0;
+
+ for round in 0 .. MAX_TOOL_ROUNDS {
+  let response: crate::ai::openai_responses::types::response::Response = if streaming {
+   let stream = client
+    .create_stream(request.clone())
+    .await
+    .map_err(|e| anyhow!("create_stream 失敗: {e}"))?;
+   futures::pin_mut!(stream);
+
+   // FunctionCallArgumentsDelta を item_id 単位で蓄積する（Completed 前に最終 response
+   // が届けばそちらを優先して使うが、届かないサーバ実装への保険として持っておく）。
+   let mut fc_args_accum: HashMap<String, String> = HashMap::new();
+   let mut finalized: Option<crate::ai::openai_responses::types::response::Response> = None;
+   let mut failure: Option<String> = None;
+
+   while let Some(ev) = stream.next().await {
+    match ev {
+     Ok(StreamEvent::OutputTextDelta { delta, .. }) => {
+      if delta.is_empty() {
+       continue;
+      }
+      stream_nonempty_delta_chunks += 1;
+      content.push_str(&delta);
+      match stream_datum_id {
+       None => {
+        let cd = ChannelDatum::new(channel_utterance.to_string(), content.clone());
+        let sid = cd.get_id();
+        state.read().await.push_channel_datum_quiet(cd).await;
+        stream_datum_id = Some(sid);
+       },
+       Some(sid) => {
+        state.read().await.update_channel_datum_content_by_id(sid, content.clone()).await;
+       },
+      }
+     },
+     Ok(StreamEvent::FunctionCallArgumentsDelta { item_id, delta, .. }) => {
+      fc_args_accum.entry(item_id).or_default().push_str(&delta);
+     },
+     Ok(StreamEvent::FunctionCallArgumentsDone { item_id, arguments, .. }) => {
+      fc_args_accum.insert(item_id, arguments);
+     },
+     Ok(StreamEvent::Completed { response }) | Ok(StreamEvent::Incomplete { response }) => {
+      finalized = Some(response);
+     },
+     Ok(StreamEvent::Failed { response }) => {
+      let err = response
+       .error
+       .as_ref()
+       .and_then(|e| e.message.clone())
+       .unwrap_or_else(|| "unknown".to_string());
+      failure = Some(format!("response.failed: {err}"));
+     },
+     Ok(StreamEvent::Error { error }) => {
+      failure = Some(format!(
+       "stream error: code={:?} message={:?}",
+       error.code, error.message
+      ));
+     },
+     Ok(_) => {},
+     Err(e) => {
+      failure = Some(format!("stream decode error: {e}"));
+      break;
+     },
+    }
+    if failure.is_some() {
+     break;
+    }
+   }
+   if let Some(msg) = failure {
+    bail!("《AI[{persona_label}]》 Responses SSE で失敗: {msg}");
+   }
+   let Some(mut resp) = finalized else {
+    bail!("《AI[{persona_label}]》 Responses SSE が Completed/Incomplete を受信しないまま終了しました。");
+   };
+
+   // FunctionCall item の arguments が stream 終了時に未充填のケース（サーバ実装差異）用フォールバック。
+   for item in resp.output.iter_mut() {
+    if let OutputItem::FunctionCall { id, arguments, .. } = item {
+     if arguments.is_empty() {
+      if let Some(acc) = fc_args_accum.remove(id.as_str()) {
+       *arguments = acc;
+      }
+     }
+    }
+   }
+   resp
+  } else {
+   client
+    .create(request.clone())
+    .await
+    .map_err(|e| anyhow!("create 失敗: {e}"))?
+  };
+
+  // function_call 抽出
+  let function_calls: Vec<OutputItem> = response
+   .output
+   .iter()
+   .filter(|item| matches!(item, OutputItem::FunctionCall { .. }))
+   .cloned()
+   .collect();
+
+  if function_calls.is_empty() {
+   // final assistant text を確定する。streaming で live に積んできた text と、response の
+   // 確定 output_text を比較し、確定側が長ければ（サーバが補った最終テキストを使って）置き換える。
+   if !streaming {
+    if let Some(t) = extract_output_text(&response) {
+     content = t;
+    }
+   } else if let Some(final_text) = extract_output_text(&response) {
+    if final_text.chars().count() > content.chars().count() {
+     content = final_text;
+    }
+   }
+   return Ok(ToolLoopOutput {
+    content,
+    stream_datum_id,
+    stream_nonempty_delta_chunks,
+   });
+  }
+
+  if !has_tools {
+   bail!(
+    "《AI[{persona_label}]》 tools を宣言していないのに OpenAI が function_call を返しました（想定外）。"
+   );
+  }
+  let ctx = tool_ctx.ok_or_else(|| anyhow!("tool_ctx が未初期化（バグ）"))?;
+
+  // 次ラウンド input[] に FunctionCall item をそのまま積み、続けて FunctionCallOutput を積む。
+  for fc in &function_calls {
+   if let OutputItem::FunctionCall {
+    call_id,
+    name,
+    arguments,
+    ..
+   } = fc
+   {
+    request.input.push(InputItem::FunctionCall {
+     call_id: call_id.clone(),
+     name: name.clone(),
+     arguments: arguments.clone(),
+    });
+   }
+  }
+  for fc in &function_calls {
+   if let Some(view) = fc.as_function_call() {
+    let out_item = tools::dispatch_tool_call(view, declared_local, ctx).await;
+    request.input.push(out_item);
+   }
+  }
+
+  log::debug!(
+   "《AI[{}]》 tool-loop round={} function_calls={} 次ラウンドへ。",
+   persona_label,
+   round + 1,
+   function_calls.len()
+  );
+ }
+
+ bail!(
+  "《AI[{persona_label}]》 OpenAI ツール呼び出しのラウンド上限（{}）に達しました。",
+  MAX_TOOL_ROUNDS
+ );
+}
+
+fn make_client(conf: &AiPersonaConf) -> Result<ResponsesClient> {
  let api_key = crate::utility::load_from_env_or_conf(ENV_OPENAI_API_KEY, &conf.api_key);
- if let Some(api_key) = api_key {
-  Ok(Client::with_config(OpenAIConfig::default().with_api_key(api_key)))
- } else {
+ let Some(api_key) = api_key else {
   bail!(
    "OpenAI の API KEY が設定されていません。環境変数 VAC_OPENAI_API_KEY を設定するか、`[[ai.personas]]` の api_key を設定して下さい。"
   );
- }
-}
-
-fn make_request_template(conf: &AiPersonaConf) -> Result<CreateChatCompletionRequest> {
- let mut builder = CreateChatCompletionRequestArgs::default();
-
- if let Some(model) = conf.model.as_ref() {
-  builder.model(model.clone());
-  model_policy::apply_model_chat_options(&mut builder, model, conf.max_tokens);
- }
- if let Some(temperature) = conf.temperature {
-  builder.temperature(temperature);
- }
- if let Some(top_p) = conf.top_p {
-  builder.top_p(top_p);
- }
- if let Some(n) = conf.n {
-  builder.n(n);
- }
- if let Some(presence_penalty) = conf.presence_penalty {
-  builder.presence_penalty(presence_penalty);
- }
- if let Some(frequency_penalty) = conf.frequency_penalty {
-  builder.frequency_penalty(frequency_penalty);
- }
- if let Some(user) = conf.user.as_ref() {
-  builder.user(user.clone());
- }
-
- Ok(builder.build()?)
+ };
+ let cfg = ResponsesClientConfig {
+  api_key,
+  ..Default::default()
+ };
+ ResponsesClient::new(cfg).map_err(|e| anyhow!("ResponsesClient の構築に失敗しました: {e}"))
 }

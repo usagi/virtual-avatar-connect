@@ -18,7 +18,6 @@
 //!     mutable な 3 ハンドルだけを持つ（`state: SharedState` を含まない）。
 
 use anyhow::Result;
-use async_openai::types::chat::CreateChatCompletionRequest;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -29,9 +28,11 @@ use super::model_policy;
 use super::openai_responses::types::request::{CreateResponseRequest, ReasoningEffort};
 
 // NOTE:
-//   `CreateChatCompletionRequest` は他フィールドの reload 対応を追加した際の rebuild 先として
-//   ハンドル側に枠だけ残してある（現状の instructions 経路では `react()` 内で毎回持ち込むので rebuild 不要）。
-//   将来 `model` / `tools` / `max_tokens` を reload 対象に入れるときはここで rebuild して swap する。
+//   χ-5 で `request_template` は Responses API の [`CreateResponseRequest`] に置き換わった。
+//   `input` / `tools` / `tool_choice` / `stream` は per-request で service 側が詰めるので、
+//   本ハンドルで reload する項目は静的な persona 設定（instructions 等）に限定する。
+//   将来 `model` / `max_output_tokens` / `reasoning.effort` を reload 対象に入れるときは
+//   ここで rebuild して swap する。
 
 /// Control API から飛んでくる reload 要求。未指定フィールドは現状維持。
 ///
@@ -91,7 +92,8 @@ pub struct AiReloadReport {
 pub struct AiReloadHandle {
  pub persona_id: Option<String>,
  pub persona: Arc<RwLock<Arc<AiPersonaConf>>>,
- pub request_template: Arc<RwLock<Arc<CreateChatCompletionRequest>>>,
+ /// χ-5: Responses API 版の request template。reload_handle は参照だけ共有する。
+ pub request_template: Arc<RwLock<Arc<CreateResponseRequest>>>,
  pub decision: Arc<RwLock<Arc<DecisionSpec>>>,
 }
 
