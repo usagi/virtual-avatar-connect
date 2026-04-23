@@ -93,6 +93,31 @@ Phase χ Out-of-scope から派生する将来フェーズ候補:
 - [ ] `vac-openai-responses` shared crate 化（un-discord-kaltsitpseudo との共有）
 - [ ] ε-2 Tauri ネイティブウィンドウ化
 
+### Phase ν（TBD）: GUI E2E testing with Playwright
+
+現状 `gui/` に自動テストは 0 件、`svelte-check`（型検査）のみ。ε / φ 系で GUI 機能面積が拡大しており、手動スモークでの回帰検知が限界に近づきつつあるため、Playwright による E2E テスト基盤を導入する独立フェーズ。
+
+動機（E2E でしか拾えない挙動が溜まっている）:
+
+- Phase φ の **Dictionary Editor Pane**（optimistic lock / 409 → 3-way merge ダイアログ / Live Quick-Add の Learn + Undo）
+- **Flowgraph Canvas**（γ-4a / γ-4a.0 のノード追加・接続・削除・Save-dirty 表示・Ctrl+S・beforeunload ガード）
+- **Live Tab** / **Managed App Drawer**（γ-2 の restart + status polling）
+- OBS Browser Source（`/browser-output/*`）の WebKit 挙動検証
+
+初期スコープ（ν-1 の受け入れ基準想定）:
+
+- [ ] `gui/playwright.config.ts` + `gui/tests/e2e/` を配置、`webServer` で VAC を `conf.fixture.e2e.toml`（Twitch / OpenAI / TTS 全 disabled、外部依存ゼロ）で起動
+- [ ] 最小 5 ケース: `control-panel-smoke` / `flowgraph-canvas-basic` / `dictionary-editor-409-merge` / `live-quick-add-learn-undo` / `channels-ws-live-update`
+- [ ] Linux / Windows どちらでも手元で回せること（CI 化は optional）
+
+ν-2 以降（拡張）:
+
+- [ ] φ / γ 後続サーフェス（Managed App Drawer 詳細、BOS Preview の縦画面トグル 等）
+- [ ] visual regression（`toHaveScreenshot`）
+- [ ] GitHub Actions 上での chromium / firefox / webkit マトリクス
+
+優先度: 中。φ の Dictionary Editor で手動見落とし由来の回帰が出た時点で即昇格。Phase χ（runtime 移行）とは独立しており、χ-8 完了とは切り離して着手可。
+
 ---
 
 ## Commit Unit Convention
