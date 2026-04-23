@@ -1,0 +1,37 @@
+meta {
+  name: Ingress - chi8 smoke a (gpt-4o-mini)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/ingress
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "channel": "user_a",
+    "content": "こんにちは、自己紹介して",
+    "is_final": true,
+    "source": {
+      "kind": "user.web",
+      "subtype": "chi8-smoke",
+      "actor": "smoke-user"
+    }
+  }
+}
+
+docs {
+  # χ-8 smoke シナリオ a: gpt-4o-mini happy path (stream, no tools)
+
+  - 想定 conf: `conf.chi8-smoke.toml`
+  - 想定 env: `Chi8Smoke` (baseUrl `http://127.0.0.1:57099`)
+  - 期待: `ai_a` チャンネルに短い日本語応答が返る
+  - 確認観点:
+    - Responses API に `/v1/responses` で 200 が返る
+    - `openai_stream = true` 経路で逐次テキストが流れる
+    - 最終的に `ChannelDatum` が `ai_a` に push される
+  - ログ目印: `[I/smoke-a-mini]` のログ、`reasoning.effort` は request に**無い**こと
+}

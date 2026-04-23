@@ -1,0 +1,57 @@
+# =========================================================================
+#  conf.chi8-smoke.toml  (Phase χ-8 smoke 用、外部依存ほぼゼロ)
+# =========================================================================
+# 起動方法 (PowerShell):
+#   $env:VAC_OPENAI_API_KEY = "sk-..."
+#   cargo run --bin virtual-avatar-connect --release -- conf.chi8-smoke.toml
+#
+# API キーは環境変数 VAC_OPENAI_API_KEY が優先される（conf に書くよりこちらが安全）。
+# どうしても conf に直書きしたい場合は、各 persona 下に `api_key = "sk-..."` を追加。
+#
+# 叩き方: Bruno collection `dev/bruno/vac-control-api/` の env `Chi8Smoke` を選んで
+#   Ingress/Ingress - chi8 smoke a (gpt-4o-mini).bru
+#   Ingress/Ingress - chi8 smoke b (tool).bru
+#   Ingress/Ingress - chi8 smoke c (gpt-5-mini).bru
+# を順に実行。
+# =========================================================================
+log_level = "Debug"
+web_ui_address = "127.0.0.1:57099"
+flowgraph_dir = "flowgraph.chi8-smoke" # 空/未存在で OK、起動継続する
+
+# --- a. gpt-4o-mini happy path (stream, no tools) ---
+[[ai.personas]]
+id = "smoke-a-mini"
+channel_utterance = "ai_a"
+observe.triggers = ["user_a"]
+model = "gpt-4o-mini"
+openai_stream = true
+openai_max_output_tokens = 256
+custom_instructions = "あなたは配信テスト用 bot。20 字以内で返答。"
+
+# --- b. gpt-4o-mini + tool loop (path-based tools.json) ---
+# NOTE: tools は `openai_tools_json_path` で**外部 JSON ファイルのパス**を渡す方式のみサポート
+# （TOML 内に `openai_tools_json = """[...]"""` を inline で書いても黙って無視される）。
+# χ-8 スモークでは tool loop 自体は cargo test 側（`tool_loop_drives_chat_completions_when_function_call`）
+# でカバー済みのため、ここでは tools 無し構成で LLM 実入力経路のみ確認する。
+# tools 付きスモークをやりたい場合は `openai_tools_json_path = "conf.example-openai-tools.json"` を有効化。
+[[ai.personas]]
+id = "smoke-b-mini-tool"
+channel_utterance = "ai_b"
+observe.triggers = ["user_b"]
+model = "gpt-4o-mini"
+openai_stream = true
+openai_max_output_tokens = 256
+# openai_tool_choice = "auto"
+# openai_tools_json_path = "conf.example-openai-tools.json"
+custom_instructions = "あなたは配信テスト用 bot。ユーザが疎通確認の意図を示したら短く反応し、その他は 20 字以内で返答。"
+
+# --- c. gpt-5-mini + reasoning.effort = low ---
+[[ai.personas]]
+id = "smoke-c-gpt5"
+channel_utterance = "ai_c"
+observe.triggers = ["user_c"]
+model = "gpt-5-mini"
+openai_stream = true
+openai_max_output_tokens = 1024
+openai_reasoning_effort = "low"
+custom_instructions = "あなたは配信テスト用 bot。30 字以内で返答。"

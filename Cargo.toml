@@ -3,6 +3,7 @@ name = "virtual-avatar-connect"
 version = "0.10.0"
 edition = "2021"
 build = "build.rs"
+default-run = "virtual-avatar-connect"
 
 [lib]
 name = "virtual_avatar_connect"
@@ -21,7 +22,11 @@ path = "src/bin/migrate_dict.rs"
 anyhow = "1.0.102"
 # 0.34+ はデフォルトが TLS のみ。利用する API ごとに feature を足す（`chat-completion` 単独に固定する意味はない）。
 # 全体をまとめたい場合は `full` も可だがコンパイルが重くなる。
-async-openai = { version = "0.34", features = ["chat-completion", "finetuning", "file"] }
+async-openai = { version = "0.34", features = [
+ "chat-completion",
+ "finetuning",
+ "file",
+] }
 clap = { version = "4.6.0", features = ["derive"] }
 clap_lex = "1.1.0"
 log = "0.4.29"
@@ -36,7 +41,12 @@ rand = "0.10.0"
 actix-web = "4.13.0"
 actix = "0.13.5"
 thiserror = "2.0.18"
-reqwest = { version = "0.13.2", features = ["multipart", "json", "blocking", "stream"] }
+reqwest = { version = "0.13.2", features = [
+ "multipart",
+ "json",
+ "blocking",
+ "stream",
+] }
 rodio = "0.22.2"
 num_cpus = "1.17.0"
 chrono = { version = "0.4.44", features = ["serde"] }

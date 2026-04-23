@@ -72,8 +72,13 @@ impl ResponsesClient
  /// 内部 `reqwest::Client` を自前で構築する。
  pub fn new(cfg: ResponsesClientConfig) -> Result<Self, ResponsesClientError>
  {
+  // χ-8 diag: connect と total を別々に設定しておく。total だけだと
+  // Windows TLS 交渉が詰まった時に timeout が事実上無限になる事があるため
+  // connect_timeout を明示する。
+  let connect_timeout = Duration::from_secs(10).min(cfg.timeout);
   let http = reqwest::Client::builder()
    .timeout(cfg.timeout)
+   .connect_timeout(connect_timeout)
    .build()
    .map_err(|e| ResponsesClientError::Build(e.to_string()))?;
   Ok(Self {
@@ -113,6 +118,12 @@ impl ResponsesClient
   let url = format!("{}/responses", self.cfg.base_url.trim_end_matches('/'));
   let body = serde_json::to_vec(&request)
    .map_err(|e| ResponsesClientError::Encode(e.to_string()))?;
+  log::debug!(
+   "《ResponsesClient》 POST {} (body={}B, stream=false, timeout={:?})",
+   url,
+   body.len(),
+   self.cfg.timeout
+  );
 
   let mut req = self
    .http
@@ -128,12 +139,24 @@ impl ResponsesClient
   {
    req = req.header("OpenAI-Project", project);
   }
-  let res = req
-   .send()
-   .await
-   .map_err(|e| ResponsesClientError::Transport(e.to_string()))?;
+  let send_start = std::time::Instant::now();
+  let res = req.send().await.map_err(|e| {
+   log::error!(
+    "《ResponsesClient》 send() 失敗 url={} elapsed={:?} err={}",
+    url,
+    send_start.elapsed(),
+    e
+   );
+   ResponsesClientError::Transport(e.to_string())
+  })?;
 
   let status = res.status();
+  log::debug!(
+   "《ResponsesClient》 ← status={} url={} headers_elapsed={:?}",
+   status,
+   url,
+   send_start.elapsed()
+  );
   let body_text = res
    .text()
    .await
@@ -177,6 +200,12 @@ impl ResponsesClient
   let url = format!("{}/responses", self.cfg.base_url.trim_end_matches('/'));
   let body = serde_json::to_vec(&request)
    .map_err(|e| ResponsesClientError::Encode(e.to_string()))?;
+  log::debug!(
+   "《ResponsesClient》 POST {} (body={}B, stream=true, timeout={:?})",
+   url,
+   body.len(),
+   self.cfg.timeout
+  );
 
   let mut req = self
    .http
@@ -194,15 +223,32 @@ impl ResponsesClient
    req = req.header("OpenAI-Project", project);
   }
 
-  let res = req
-   .send()
-   .await
-   .map_err(|e| ResponsesClientError::Transport(e.to_string()))?;
+  let send_start = std::time::Instant::now();
+  let res = req.send().await.map_err(|e| {
+   log::error!(
+    "《ResponsesClient》 send() 失敗 (stream) url={} elapsed={:?} err={}",
+    url,
+    send_start.elapsed(),
+    e
+   );
+   ResponsesClientError::Transport(e.to_string())
+  })?;
 
   let status = res.status();
+  log::debug!(
+   "《ResponsesClient》 ← status={} url={} (stream) headers_elapsed={:?}",
+   status,
+   url,
+   send_start.elapsed()
+  );
   if !status.is_success()
   {
    let body_text = res.text().await.unwrap_or_default();
+   log::warn!(
+    "《ResponsesClient》 non-success status={} body={}",
+    status,
+    truncate_error_body(&body_text)
+   );
    return Err(ResponsesClientError::Api {
     status: status.as_u16(),
     body: truncate_error_body(&body_text),

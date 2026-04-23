@@ -1,0 +1,39 @@
+meta {
+  name: Ingress - chi8 smoke b (tool)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/ingress
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "channel": "user_b",
+    "content": "テスト、聞こえてる？ 生きてるなら ping して",
+    "is_final": true,
+    "source": {
+      "kind": "user.web",
+      "subtype": "chi8-smoke",
+      "actor": "smoke-user"
+    }
+  }
+}
+
+docs {
+  # χ-8 smoke シナリオ b: gpt-4o-mini + vac_ping tool loop
+
+  - 想定 conf: `conf.chi8-smoke.toml`
+  - 想定 env: `Chi8Smoke`
+  - 期待: モデルが `vac_ping` を発火 → VAC 側で dispatch → tool output を input に戻して 2nd round → 自然言語応答が `ai_b` に出る
+  - 確認観点:
+    - request の `tools` が Responses フラット形式 (`{"type":"function","name":"vac_ping",...}`) で送られている
+    - `StreamEvent::FunctionCallArgumentsDone` 等が log に出るか、non-stream 経路に落ちる場合は `OutputItem::FunctionCall` が見える
+    - 2 round 目で `input[]` に `function_call_output` が積まれる
+  - ログ目印: `「AI[smoke-b-mini-tool]」・action vac_ping` 相当、あるいは「tool dispatched: vac_ping」ログ
+
+  tool が発火しない場合: prompt を「動作確認、ping を 1 回実行して応答して」等に強めて再投。
+}

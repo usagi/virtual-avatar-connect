@@ -1,0 +1,37 @@
+meta {
+  name: Ingress - chi8 smoke c (gpt-5-mini)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/control/ingress
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "channel": "user_c",
+    "content": "日本語で短く挨拶して",
+    "is_final": true,
+    "source": {
+      "kind": "user.web",
+      "subtype": "chi8-smoke",
+      "actor": "smoke-user"
+    }
+  }
+}
+
+docs {
+  # χ-8 smoke シナリオ c: gpt-5-mini + reasoning.effort = low
+
+  - 想定 conf: `conf.chi8-smoke.toml`
+  - 想定 env: `Chi8Smoke`
+  - 期待: `ai_c` チャンネルに短い日本語応答が返る。latency は "low" のため中程度。
+  - 確認観点:
+    - request JSON に `"reasoning": {"effort": "low"}` が入っている（Debug log で確認）
+    - gpt-5 系の空応答 retry (`retry_if_gpt5_empty_response`) が発火した場合でも最終 text が返る
+    - persona 1 が `developer` role で送られている（system 扱い）
+  - ログ目印: `instruction_role_for_model` が `developer` を返している、または request body JSON の `input[].role == "developer"`
+}

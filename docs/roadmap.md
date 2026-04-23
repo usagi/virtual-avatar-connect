@@ -71,9 +71,12 @@ Chat Completions API から Responses API へ全面移行。streaming + tool loo
 - [x] χ-5 refactor(ai/service,completion): streaming / tool-loop / gpt-5 retry を Responses 全面移行
 - [x] χ-6 refactor(conf): `openai_max_output_tokens` + レガシーフォールバック
 - [x] χ-7 docs: manual / conf.example / CHANGELOG 更新 + roadmap.md の χ tick
-- [ ] χ-8 test: cargo test + svelte-check + 実機スモーク
+- [x] χ-8 test: cargo test + svelte-check + 実機スモーク
   - [x] χ-8.0 fix(flowgraph/docs): `node_catalog_md_up_to_date` テストを line-ending 正規化して CRLF 環境でも通るように（χ-5 以前からの既知 pre-existing bug、Windows の `core.autocrlf=true` で検出）
+  - [x] χ-8.1 test(ai/responses): `cargo test --lib --release` 481 pass / 0 fail / 1 ignored、`gui/ npm run check` / `npm run build` 緑、実機スモーク (gpt-4o-mini happy / gpt-4o-mini + tools / gpt-5-mini + `reasoning.effort=low`) 全成功
+  - [x] χ-8.2 feat(ai/responses): `ResponsesClient` / `drive_responses_tool_loop` に送信・status・SSE イベント受信の debug/trace ログを追加。`connect_timeout(10s)` を明示し、Windows TLS 交渉ストールで total timeout が事実上無効化されるケースの耐性を上げる
 - 仕様書: [`roadmap/phase-chi-openai-responses.md`](roadmap/phase-chi-openai-responses.md)
+- Phase χ はこれで閉じる。Active Phase は次フェーズで差し替え。
 
 ---
 

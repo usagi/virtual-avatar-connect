@@ -998,10 +998,18 @@ async fn drive_responses_tool_loop(
 
  for round in 0 .. MAX_TOOL_ROUNDS {
   let response: crate::ai::openai_responses::types::response::Response = if streaming {
+   log::debug!(
+    "《AI[{}]》 create_stream 開始 (round={})",
+    persona_label, round
+   );
    let stream = client
     .create_stream(request.clone())
     .await
     .map_err(|e| anyhow!("create_stream 失敗: {e}"))?;
+   log::debug!(
+    "《AI[{}]》 create_stream accepted, SSE 受信待ち (round={})",
+    persona_label, round
+   );
    futures::pin_mut!(stream);
 
    // FunctionCallArgumentsDelta を item_id 単位で蓄積する（Completed 前に最終 response
@@ -1009,8 +1017,19 @@ async fn drive_responses_tool_loop(
    let mut fc_args_accum: HashMap<String, String> = HashMap::new();
    let mut finalized: Option<crate::ai::openai_responses::types::response::Response> = None;
    let mut failure: Option<String> = None;
+   let mut ev_count: usize = 0;
 
    while let Some(ev) = stream.next().await {
+    ev_count += 1;
+    match &ev {
+     Ok(StreamEvent::Created { .. }) => log::trace!("《AI[{}]》 SSE #{}: Created", persona_label, ev_count),
+     Ok(StreamEvent::InProgress { .. }) => log::trace!("《AI[{}]》 SSE #{}: InProgress", persona_label, ev_count),
+     Ok(StreamEvent::Completed { .. }) => log::debug!("《AI[{}]》 SSE #{}: Completed", persona_label, ev_count),
+     Ok(StreamEvent::Incomplete { .. }) => log::debug!("《AI[{}]》 SSE #{}: Incomplete", persona_label, ev_count),
+     Ok(StreamEvent::Failed { .. }) => log::warn!("《AI[{}]》 SSE #{}: Failed", persona_label, ev_count),
+     Ok(StreamEvent::Error { error }) => log::warn!("《AI[{}]》 SSE #{}: Error code={:?} msg={:?}", persona_label, ev_count, error.code, error.message),
+     _ => {},
+    }
     match ev {
      Ok(StreamEvent::OutputTextDelta { delta, .. }) => {
       if delta.is_empty() {
@@ -1063,11 +1082,18 @@ async fn drive_responses_tool_loop(
      break;
     }
    }
+   log::debug!(
+    "《AI[{}]》 SSE ループ終了 (events={}, finalized={}, failure={:?})",
+    persona_label,
+    ev_count,
+    finalized.is_some(),
+    failure
+   );
    if let Some(msg) = failure {
     bail!("《AI[{persona_label}]》 Responses SSE で失敗: {msg}");
    }
    let Some(mut resp) = finalized else {
-    bail!("《AI[{persona_label}]》 Responses SSE が Completed/Incomplete を受信しないまま終了しました。");
+    bail!("《AI[{persona_label}]》 Responses SSE が Completed/Incomplete を受信しないまま終了しました。（events={ev_count}）");
    };
 
    // FunctionCall item の arguments が stream 終了時に未充填のケース（サーバ実装差異）用フォールバック。

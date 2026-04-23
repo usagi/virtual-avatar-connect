@@ -439,9 +439,9 @@ env 未指定時は `None` を送り OpenAI デフォルトに任せる。
 | χ-6 ✅ | `χ-6 refactor(conf):` | `openai_max_output_tokens` + レガシーフォールバック + `openai_reasoning_effort` + `openai_store` + `memory_overflow_summary_max_output_tokens` | `src/ai/config.rs` / `src/ai/mod.rs` / `src/ai/service.rs` / `src/ai/reload.rs` / `src/ai/decision.rs` |
 | χ-7 ✅ | `χ-7 docs:` | manual / conf.example / CHANGELOG / roadmap.md χ tick | `docs/manual/conf-reference.md` / `docs/manual/tutorials/openai-persona.md` / `conf.example-openai-chat.toml` / `CHANGELOG.md` / `docs/roadmap.md` |
 | χ-8.0 ✅ | `χ-8.0 fix(flowgraph/docs):` | `node_catalog_md_up_to_date` を line-ending 正規化で CRLF 環境でも通す（χ-5 以前からの pre-existing bug、§9.5 参照） | `src/flowgraph/docs.rs` |
-| χ-8 | `χ-8 test:` | 全体テスト + 実機スモーク + 必要ならリリースノート微修正 | テスト実行 + CHANGELOG 調整のみ（コード変更は基本 0） |
+| χ-8 ✅ | `χ-8 test:` | 全体テスト + 実機スモーク + 観測器追加 | `src/ai/openai_responses/client.rs` / `src/ai/service.rs` / `CHANGELOG.md` / `docs/roadmap.md` / `docs/roadmap/phase-chi-openai-responses.md` / `conf.chi8-smoke.toml` / `dev/bruno/vac-control-api/Ingress/Ingress - chi8 smoke {a,b,c}.bru` / `dev/bruno/vac-control-api/environments/Chi8Smoke.bru` |
 
-計 10 commit / 1 PR。χ-0 はドキュメント先行で、χ-1..χ-8 が順序依存の実装。χ-8.0 は χ-8 本体の前提（`cargo test --lib` 全 pass を実効的に保証するため χ-8 の冒頭で commit）。
+計 10 commit / 1 PR。χ-0 はドキュメント先行で、χ-1..χ-8 が順序依存の実装。χ-8.0 は χ-8 本体の前提（`cargo test --lib` 全 pass を実効的に保証するため χ-8 の冒頭で commit）。χ-8 本体は「テストのみ・コード変更 0」を初期計画としていたが、実機スモーク中に `ResponsesClient::create_stream().await` 内でのストール事象（120s timeout が事実上無効化された状態）に遭遇したため、最低限の観測器追加（送信・status 受信・SSE イベント受信の debug/trace ログ、`connect_timeout(10s)` 明示）を同じ commit に含めている。
 
 ---
 

@@ -133,7 +133,7 @@ AI Persona を 1 個以上定義する配列。Phase χ 以降は **OpenAI Respo
 
 - legacy `max_tokens` (u16) は `openai_max_output_tokens` が未指定のときだけ fallback として使われる。両方指定時は新キーが優先。
 - `memory_overflow_summary_max_output_tokens` (u32) が推奨。legacy `memory_overflow_summary_max_completion_tokens` (u16) は fallback。
-- `openai_tools_json` / `openai_tools_json_path` は Responses API 形式 (`{"type":"function","name":...}`) と旧 Chat Completions 形式 (`{"type":"function","function":{...}}`) の双方を自動判別するので、既存 conf はそのまま動く。
+- `openai_tools_json_path` は Responses API 形式 (`{"type":"function","name":...}`) と旧 Chat Completions 形式 (`{"type":"function","function":{...}}`) の双方を自動判別するので、既存 conf はそのまま動く。tools は **`openai_tools_json_path` に外部 JSON ファイルのパスを指定する方式のみサポート**（TOML 内に `openai_tools_json = """[...]"""` を inline で書いても黙って無視される）。
 
 **環境変数オーバーライド**:
 

@@ -5,7 +5,7 @@
 
 ## [Unreleased]
 
-### χ: OpenAI Responses API Migration (χ-0 .. χ-7)
+### χ: OpenAI Responses API Migration (χ-0 .. χ-8)
 
 Chat Completions (`/v1/chat/completions`) 依存を完全撤去し、OpenAI **Responses API (`/v1/responses`)** を AI ペルソナの唯一の経路に統一した。reasoning model (gpt-5 系) 対応と将来的な hosted tools / encrypted reasoning 採用のための基盤整備。
 
@@ -29,6 +29,11 @@ Chat Completions (`/v1/chat/completions`) 依存を完全撤去し、OpenAI **Re
 - **χ-7 ドキュメント**: [`conf.example-openai-chat.toml`](conf.example-openai-chat.toml) / [`docs/manual/conf-reference.md`](docs/manual/conf-reference.md) / [`docs/manual/tutorials/openai-persona.md`](docs/manual/tutorials/openai-persona.md) を Responses API 前提に更新。
 - **χ-8.0 付随バグ修正** (`src/flowgraph/docs.rs`)
   - `flowgraph::docs::docs_tests::node_catalog_md_up_to_date` が Windows (`core.autocrlf=true`) で CRLF/LF 差分により failing していた件を修正。テスト比較と `BLESS_NODE_CATALOG=1` の書き出しを LF 正規化。
+- **χ-8 テスト / 観測器追加** (`src/ai/openai_responses/client.rs` / `src/ai/service.rs`)
+  - `cargo test --lib --release` 481 passed / 0 failed / 1 ignored、`npm run check` / `npm run build` (gui) 緑、OpenAI Responses API 3 シナリオ (gpt-4o-mini happy / gpt-4o-mini + tools 宣言 / gpt-5-mini + `reasoning.effort=low`) の実機スモーク成功を確認。
+  - `ResponsesClient::create` / `create_stream` に POST 送信・`status` 受信・`Transport` 失敗時の `log::error!` を追加。これまで「`create_stream().await` から戻って来ないのか、SSE 受信待ちなのか」がログから判別不能だったのを解消。
+  - `drive_responses_tool_loop` に `StreamEvent::{Created, InProgress, Completed, Incomplete, Failed, Error}` の受信ログを追加（本番は DEBUG、Created/InProgress は TRACE）。SSE ループ終了時に events 数・finalized 有無・failure 要約を 1 行で出す。
+  - `reqwest::Client::builder()` に `connect_timeout(10s)` を明示（Windows TLS 交渉ストールで total timeout だけだと事実上無限待ちになるケースを防ぐ）。
 - **Breaking（χ）**: なし（既存 `max_tokens` / Chat Completions 形式 tools.json は fallback 経路で互換維持）。ただし **OpenAI 側の最新モデル（gpt-5 系）を使うなら新キーへの移行を強く推奨**。
 - **将来の関連フェーズ**
   - **ψ-α encrypted reasoning passthrough** (backlog): `include: ["reasoning.encrypted_content"]` を使い、`store: false` を維持したまま gpt-5 の reasoning state を tool loop round 間で持ち回る最適化。詳細は [`docs/roadmap/phase-chi-openai-responses.md`](docs/roadmap/phase-chi-openai-responses.md) §11.2。
