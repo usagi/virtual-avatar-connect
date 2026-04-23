@@ -22,6 +22,12 @@ pub(crate) mod reload;
 mod service;
 mod tools;
 
+// Phase χ: OpenAI Responses API（`/v1/responses`）の自前 `reqwest + 自前 DTO` 実装。
+// `crate::*` には依存せず（`SharedState` / `ChannelDatum` 非参照）、
+// 将来 `vac-openai-responses` crate 等に切り出せる境界を保つ。
+// 詳細: docs/roadmap/phase-chi-openai-responses.md §3。
+pub(crate) mod openai_responses;
+
 pub mod fine_tuning;
 
 pub use config::AiConf;
