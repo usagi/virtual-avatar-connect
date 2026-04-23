@@ -310,6 +310,77 @@ fn tool_choice_named_function_serializes_with_type_tag()
 }
 
 #[test]
+fn tool_web_search_roundtrip_with_user_location()
+{
+ let tool = Tool::WebSearch {
+  user_location: Some(json!({"type": "approximate", "country": "JP"})),
+  search_context_size: Some("high".to_string()),
+ };
+ let v = serde_json::to_value(&tool).unwrap();
+ assert_eq!(v["type"], "web_search");
+ assert_eq!(v["user_location"]["country"], "JP");
+ assert_eq!(v["search_context_size"], "high");
+ let back: Tool = serde_json::from_value(v).unwrap();
+ assert_eq!(back, tool);
+}
+
+#[test]
+fn tool_file_search_roundtrip()
+{
+ let tool = Tool::FileSearch {
+  vector_store_ids: vec!["vs_1".into(), "vs_2".into()],
+  max_num_results: Some(10),
+  filters: Some(json!({"type": "eq", "key": "kind", "value": "manual"})),
+ };
+ let v = serde_json::to_value(&tool).unwrap();
+ assert_eq!(v["type"], "file_search");
+ assert_eq!(v["vector_store_ids"], json!(["vs_1", "vs_2"]));
+ assert_eq!(v["max_num_results"], 10);
+ assert_eq!(v["filters"]["key"], "kind");
+ let back: Tool = serde_json::from_value(v).unwrap();
+ assert_eq!(back, tool);
+}
+
+#[test]
+fn tool_code_interpreter_roundtrip_minimal()
+{
+ let tool = Tool::CodeInterpreter { container: None };
+ let v = serde_json::to_value(&tool).unwrap();
+ assert_eq!(v["type"], "code_interpreter");
+ assert!(v.get("container").is_none());
+ let back: Tool = serde_json::from_value(v).unwrap();
+ assert_eq!(back, tool);
+}
+
+#[test]
+fn tool_helper_methods_name_and_is_locally_dispatched()
+{
+ let f = Tool::Function {
+  name: "vac_ping".into(),
+  description: None,
+  parameters: json!({}),
+  strict: None,
+ };
+ assert_eq!(f.name(), "vac_ping");
+ assert!(f.is_locally_dispatched());
+
+ let ws = Tool::WebSearch {
+  user_location: None,
+  search_context_size: None,
+ };
+ assert_eq!(ws.name(), "web_search");
+ assert!(!ws.is_locally_dispatched());
+
+ let fs = Tool::FileSearch {
+  vector_store_ids: vec!["vs_x".into()],
+  max_num_results: None,
+  filters: None,
+ };
+ assert_eq!(fs.name(), "file_search");
+ assert!(!fs.is_locally_dispatched());
+}
+
+#[test]
 fn text_format_json_schema_roundtrip()
 {
  let tf = TextFormat::JsonSchema {

@@ -66,7 +66,7 @@ Chat Completions API から Responses API へ全面移行。streaming + tool loo
 - [ ] χ-0 docs: roadmap.md / architecture.md 新設 + phase-chi-openai-responses.md 新設 + cross-link 更新
 - [x] χ-1 feat(ai/responses): scaffold + Cargo deps 調整 + non-stream DTO types + `create` + golden tests
 - [x] χ-2 feat(ai/responses): `StreamEvent` enum + SSE parser + モック stream tests
-- [ ] χ-3 refactor(ai/tools): Tool 定義 + `dispatch_tool_call` を Responses 型に移行
+- [x] χ-3 refactor(ai/tools): Tool 定義 + `dispatch_tool_call` を Responses 型に移行
 - [ ] χ-4 refactor(ai/context,reload,model_policy): request assembly を `CreateResponseRequest` に置換
 - [ ] χ-5 refactor(ai/service,completion): streaming / tool-loop / gpt-5 retry を Responses 全面移行
 - [ ] χ-6 refactor(conf): `openai_max_output_tokens` + レガシーフォールバック

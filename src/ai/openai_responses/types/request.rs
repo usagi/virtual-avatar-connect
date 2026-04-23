@@ -125,7 +125,24 @@ pub enum TextFormat
  },
 }
 
-/// Tool definition（function / custom）。
+/// Tool definition。
+///
+/// # Variants
+///
+/// - [`Tool::Function`] — VAC 側で実行する通常の function tool（JSON Schema 引数）。
+/// - [`Tool::Custom`] — gpt-5 系の freeform custom tool（CFG 等）。
+/// - [`Tool::WebSearch`] — OpenAI 側 hosted の Web 検索。VAC は定義だけ投げて結果は
+///   ``output[]`` に自動で混入される。
+/// - [`Tool::FileSearch`] — ベクトルストアを使った hosted file search。
+///   `vector_store_ids` 必須。
+/// - [`Tool::CodeInterpreter`] — hosted コード実行。container は `{"type":"auto"}`
+///   等を明示的に置く（`None` の場合は API 既定に委ねる）。
+///
+/// hosted tools は Responses API の最新機能。Chat Completions 時代には
+/// 無かった選択肢で、ユーザ関数と自由に混在させられる。
+///
+/// 将来 OpenAI が追加する tool 種別は個別 variant として追記する。未知 `type:`
+/// は deserialize エラーになるので、conf で新タイプを使う前に VAC の追従が必要。
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Tool
@@ -151,6 +168,71 @@ pub enum Tool
   #[serde(skip_serializing_if = "Option::is_none", default)]
   format: Option<serde_json::Value>,
  },
+ /// Hosted web search（OpenAI 側実行）。
+ WebSearch
+ {
+  /// ユーザ所在地ヒント（`{"type":"approximate","country":"JP",...}` 等）。
+  #[serde(skip_serializing_if = "Option::is_none", default)]
+  user_location: Option<serde_json::Value>,
+  /// 検索結果の context 量（`"low"` / `"medium"` / `"high"`）。
+  #[serde(skip_serializing_if = "Option::is_none", default)]
+  search_context_size: Option<String>,
+ },
+ /// Hosted file search（ベクトルストア越し）。
+ FileSearch
+ {
+  vector_store_ids: Vec<String>,
+  #[serde(skip_serializing_if = "Option::is_none", default)]
+  max_num_results: Option<u32>,
+  /// フィルタ式（`{"type":"eq","key":"...","value":"..."}` 等）。
+  #[serde(skip_serializing_if = "Option::is_none", default)]
+  filters: Option<serde_json::Value>,
+ },
+ /// Hosted code interpreter。
+ CodeInterpreter
+ {
+  /// コンテナ指定（`{"type":"auto"}` 等）。
+  #[serde(skip_serializing_if = "Option::is_none", default)]
+  container: Option<serde_json::Value>,
+ },
+}
+
+impl Tool
+{
+ /// `Tool::Function` の短縮コンストラクタ。
+ pub fn function(
+  name: impl Into<String>,
+  parameters: serde_json::Value,
+  description: Option<String>,
+  strict: Option<bool>,
+ ) -> Self
+ {
+  Tool::Function {
+   name: name.into(),
+   description,
+   parameters,
+   strict,
+  }
+ }
+
+ /// 定義された tool 名を返す。hosted tools は固定名（`"web_search"` / `"file_search"`
+ /// / `"code_interpreter"`）として返す。
+ pub fn name(&self) -> &str
+ {
+  match self
+  {
+   Tool::Function { name, .. } | Tool::Custom { name, .. } => name,
+   Tool::WebSearch { .. } => "web_search",
+   Tool::FileSearch { .. } => "file_search",
+   Tool::CodeInterpreter { .. } => "code_interpreter",
+  }
+ }
+
+ /// VAC が自分で実行する tool なら `true`。hosted tools は OpenAI が実行するので `false`。
+ pub fn is_locally_dispatched(&self) -> bool
+ {
+  matches!(self, Tool::Function { .. } | Tool::Custom { .. })
+ }
 }
 
 /// Tool 選択モード。`"auto"` / `"none"` / `"required"` と特定 tool 強制の 2 系統。

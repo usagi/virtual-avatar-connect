@@ -13,6 +13,6 @@ pub use request::{
  ToolChoice, ToolChoiceMode,
 };
 pub use response::{
- ErrorObject, IncompleteDetails, MessageContent, OutputItem, Response, ResponseStatus, Usage,
- UsageInputDetails, UsageOutputDetails,
+ ErrorObject, FunctionCallView, IncompleteDetails, MessageContent, OutputItem, Response,
+ ResponseStatus, Usage, UsageInputDetails, UsageOutputDetails,
 };

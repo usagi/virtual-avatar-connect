@@ -25,10 +25,20 @@ pub(crate) async fn create_chat_completion_resolve_tools(
  mut request: CreateChatCompletionRequest,
  tool_ctx: &ToolContext,
 ) -> Result<String> {
- let declared = request
+ // χ-3: Chat Completions の tools 配列から宣言済み tool 名を抽出する。
+ // async-openai v0.34 の `ChatCompletionTools` から直接名前を拾う（Responses 移行後は
+ // tools.rs 側の `declared_tool_names` を直接使う）。
+ let declared: std::collections::HashSet<String> = request
   .tools
   .as_deref()
-  .map(tools::declared_tool_names)
+  .map(|ts| {
+   ts.iter()
+    .map(|t| match t {
+     async_openai::types::chat::ChatCompletionTools::Function(ft) => ft.function.name.clone(),
+     async_openai::types::chat::ChatCompletionTools::Custom(ct) => ct.custom.name.clone(),
+    })
+    .collect()
+  })
   .unwrap_or_default();
  const MAX_TOOL_ROUNDS: usize = 8;
  for _ in 0..MAX_TOOL_ROUNDS {
@@ -42,7 +52,7 @@ pub(crate) async fn create_chat_completion_resolve_tools(
      .messages
      .push(ChatCompletionRequestMessage::Assistant(assistant));
     for tc in tcs {
-     if let Some((id, out)) = tools::dispatch_tool_call(tc, &declared, tool_ctx).await {
+     if let Some((id, out)) = tools::dispatch_cc_tool_call(tc, &declared, tool_ctx).await {
       request.messages.push(ChatCompletionRequestMessage::Tool(ChatCompletionRequestToolMessage {
        content: ChatCompletionRequestToolMessageContent::Text(out),
        tool_call_id: id,

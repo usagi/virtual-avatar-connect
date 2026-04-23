@@ -216,6 +216,27 @@ pub struct CreateResponseRequest {
 }
 ```
 
+### 4.2b `Tool` structure（χ-3 で拡張済み）
+
+χ-3 で hosted tools を含む 5 variant に拡張した。ユーザ関数は `Function` / `Custom`、OpenAI 側 hosted は `WebSearch` / `FileSearch` / `CodeInterpreter`。`openai_tools_json` は Chat Completions の `{type:"function",function:{...}}` と Responses の `{type:"function",name:...}` の両方を受け入れる（`tools::parse_tools_json` で自動判定）。
+
+```rust
+pub enum Tool {
+    Function { name, description?, parameters, strict? },
+    Custom   { name, description?, format? },
+    WebSearch       { user_location?, search_context_size? },
+    FileSearch      { vector_store_ids, max_num_results?, filters? },
+    CodeInterpreter { container? },
+}
+
+impl Tool {
+    pub fn name(&self) -> &str;            // hosted は "web_search" 等を返す
+    pub fn is_locally_dispatched(&self) -> bool;  // hosted は false
+}
+```
+
+hosted tools は VAC では実行せず OpenAI 側で完結し、`output[]` に `web_search_call` / `file_search_call` / `code_interpreter_call` 等の item として混入する（χ-2 の `StreamEvent::Other`、χ-5 で個別 handling 追加予定）。χ-3 時点では **Chat Completions pipeline に載らない**ため、`tools::tools_to_chat_completions` が除外して warn ログを出す。χ-5 の Responses 全面移行で有効化される。
+
 ### 4.3 `InputItem` structure
 
 ```rust

@@ -572,16 +572,48 @@ impl AiService {
    &observe,
   );
 
-  let mut use_tools_roundtrip = false;
-  if let Some(ref p) = openai_tools_json_path {
-   match tokio::fs::read_to_string(p).await {
-    Ok(s) => match tools::parse_tools_json(&s) {
-     Ok(v) if !v.is_empty() => {
-      request.tools = Some(v);
+ let mut use_tools_roundtrip = false;
+ if let Some(ref p) = openai_tools_json_path {
+  match tokio::fs::read_to_string(p).await {
+   // χ-3: parse_tools_json は Responses API の `Vec<Tool>` を返す。
+   // 現在の Chat Completions pipeline に載せるため bridge で `Vec<ChatCompletionTools>` に畳む。
+   // hosted tools（web_search / file_search / code_interpreter）は Chat Completions では
+   // 対応していないのでここで除外 + warn（χ-5 の Responses 全面移行で passthrough になる）。
+   Ok(s) => match tools::parse_tools_json(&s) {
+    Ok(v) if !v.is_empty() => {
+     let total = v.len();
+     let (cc_tools, skipped_hosted) = match tools::tools_to_chat_completions(&v) {
+      Ok(pair) => pair,
+      Err(e) => {
+       log::warn!(
+        "《AI[{}]》 openai_tools_json の Chat Completions 変換に失敗: {:?} ({})",
+        persona_label,
+        p,
+        e
+       );
+       (Vec::new(), Vec::new())
+      },
+     };
+     if !skipped_hosted.is_empty() {
+      log::warn!(
+       "《AI[{}]》 hosted tools {:?} は Chat Completions では未対応のため除外しました。χ-5 の Responses API 全面移行で有効化されます。",
+       persona_label,
+       skipped_hosted
+      );
+     }
+     if cc_tools.is_empty() {
+      log::warn!(
+       "《AI[{}]》 openai_tools_json から Chat Completions 互換 tool が 1 件も取れませんでした（全て hosted だった可能性）: {:?}",
+       persona_label,
+       p
+      );
+     }
+     else {
+      request.tools = Some(cc_tools);
       request.tool_choice = Some(match openai_tool_choice.as_deref() {
        None => ChatCompletionToolChoiceOption::Mode(ToolChoiceOptions::Auto),
        Some(tc) => match tools::parse_tool_choice(tc) {
-        Ok(x) => x,
+        Ok(x) => tools::tool_choice_to_chat_completions(&x),
         Err(e) => {
          log::warn!("openai_tool_choice を解釈できません: {} — auto にします。", e);
          ChatCompletionToolChoiceOption::Mode(ToolChoiceOptions::Auto)
@@ -593,18 +625,20 @@ impl AiService {
       }
       use_tools_roundtrip = true;
       log::info!(
-       "《AI[{}]》 OpenAI tools を読み込みました: {:?} ({} 件)",
+       "《AI[{}]》 OpenAI tools を読み込みました: {:?} (declared={}, cc_dispatchable={})",
        persona_label,
        p,
+       total,
        request.tools.as_ref().map(|t| t.len()).unwrap_or(0)
       );
-     },
-     Ok(_) => log::warn!("《AI[{}]》 openai_tools_json_path の tools が空です: {:?}", persona_label, p),
-     Err(e) => log::warn!("《AI[{}]》 openai_tools_json をパースできません: {:?} ({})", persona_label, p, e),
+     }
     },
-    Err(e) => log::warn!("《AI[{}]》 openai_tools_json_path を読めませんでした: {:?} ({})", persona_label, p, e),
-   }
+    Ok(_) => log::warn!("《AI[{}]》 openai_tools_json_path の tools が空です: {:?}", persona_label, p),
+    Err(e) => log::warn!("《AI[{}]》 openai_tools_json をパースできません: {:?} ({})", persona_label, p, e),
+   },
+   Err(e) => log::warn!("《AI[{}]》 openai_tools_json_path を読めませんでした: {:?} ({})", persona_label, p, e),
   }
+ }
 
   let effective_stream = openai_stream && !use_tools_roundtrip;
   if openai_stream && use_tools_roundtrip {
