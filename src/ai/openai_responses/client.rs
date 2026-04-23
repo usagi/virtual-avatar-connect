@@ -11,10 +11,13 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use futures::{Stream, StreamExt};
 use serde::Serialize;
 
+use super::sse::{stream_events, SseError};
 use super::types::request::CreateResponseRequest;
 use super::types::response::Response;
+use super::types::stream::StreamEvent;
 use super::util::truncate_error_body;
 
 /// Responses API エンドポイントのホスト URL（末尾スラッシュなし）。
@@ -148,6 +151,83 @@ impl ResponsesClient
    error: e.to_string(),
    body: truncate_error_body(&body_text),
   })
+ }
+
+ /// `POST /v1/responses`（streaming）。
+ ///
+ /// 呼び出し時に `request.stream` は強制的に `Some(true)` に上書きされる。
+ /// 返り値は [`StreamEvent`] の async stream。`[DONE]` 受信または実 stream 終了で
+ /// stream が終わる。途中で transport / decode エラーが起きた場合はそのアイテムが
+ /// `Err(ResponsesClientError)` として流れ、後続イベントは呼び出し側の方針次第で
+ /// 継続 or 打ち切り。
+ ///
+ /// # Errors
+ ///
+ /// - HTTP ステータスが 200 以外: [`ResponsesClientError::Api`]（body は 2048 chars 切り）
+ /// - Transport / decode 失敗: stream item として返る（ここの Result とは別レイヤー）
+ pub async fn create_stream(
+  &self,
+  mut request: CreateResponseRequest,
+ ) -> Result<
+  impl Stream<Item = Result<StreamEvent, ResponsesClientError>> + Send + 'static,
+  ResponsesClientError,
+ >
+ {
+  request.stream = Some(true);
+  let url = format!("{}/responses", self.cfg.base_url.trim_end_matches('/'));
+  let body = serde_json::to_vec(&request)
+   .map_err(|e| ResponsesClientError::Encode(e.to_string()))?;
+
+  let mut req = self
+   .http
+   .post(&url)
+   .bearer_auth(&self.cfg.api_key)
+   .header(reqwest::header::CONTENT_TYPE, "application/json")
+   .header(reqwest::header::ACCEPT, "text/event-stream")
+   .body(body);
+  if let Some(org) = &self.cfg.organization
+  {
+   req = req.header("OpenAI-Organization", org);
+  }
+  if let Some(project) = &self.cfg.project
+  {
+   req = req.header("OpenAI-Project", project);
+  }
+
+  let res = req
+   .send()
+   .await
+   .map_err(|e| ResponsesClientError::Transport(e.to_string()))?;
+
+  let status = res.status();
+  if !status.is_success()
+  {
+   let body_text = res.text().await.unwrap_or_default();
+   return Err(ResponsesClientError::Api {
+    status: status.as_u16(),
+    body: truncate_error_body(&body_text),
+   });
+  }
+
+  let bytes = res.bytes_stream();
+  Ok(stream_events(bytes).map(|item: Result<StreamEvent, SseError>| {
+   item.map_err(ResponsesClientError::from)
+  }))
+ }
+}
+
+impl From<SseError> for ResponsesClientError
+{
+ fn from(e: SseError) -> Self
+ {
+  match e
+  {
+   SseError::Json { kind, error, body } => ResponsesClientError::Decode {
+    error: format!("{kind}: {error}"),
+    body,
+   },
+   SseError::Transport(msg) => ResponsesClientError::Transport(msg),
+  }
  }
 }
 

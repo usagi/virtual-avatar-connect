@@ -36,7 +36,7 @@ rand = "0.10.0"
 actix-web = "4.13.0"
 actix = "0.13.5"
 thiserror = "2.0.18"
-reqwest = { version = "0.13.2", features = ["multipart", "json", "blocking"] }
+reqwest = { version = "0.13.2", features = ["multipart", "json", "blocking", "stream"] }
 rodio = "0.22.2"
 num_cpus = "1.17.0"
 chrono = { version = "0.4.44", features = ["serde"] }
@@ -87,8 +87,10 @@ blake3 = "1.5"
 # η: 辞書 literal マッチングの高速化（DFA ベース）
 aho-corasick = "1.1"
 # χ: OpenAI Responses API の SSE ストリーム（`reqwest::Response` の bytes stream を SSE イベント単位に割る）。
-# 実際の利用は χ-2 以降だが、χ-1 scaffold 時点で依存だけ先に追加しておく。
 eventsource-stream = "0.2"
+# χ-2: `sse::stream_events` の公開シグネチャで `bytes::Bytes` を名前付きで使うため直接依存を宣言。
+# reqwest / eventsource-stream が推移的に依存しているので追加コストは実質ゼロ。
+bytes = "1"
 
 [dependencies.vosk]
 version = "0.3.1"
