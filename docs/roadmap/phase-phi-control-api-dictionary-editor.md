@@ -468,3 +468,5 @@ pub struct NodeSpec {
 - V1 死体: 過去 `gui/src/lib/DictionaryQuickAddWidget.svelte`（`modify` processor 前提で dead code 化、V2 δ-9 で削除）
 - Flowgraph node spec: [src/flowgraph/node.rs](../../src/flowgraph/node.rs)、[src/flowgraph/registry.rs](../../src/flowgraph/registry.rs)
 - 関連メモ: [v2-merge-pr.md](v2-merge-pr.md) の η→φ 移行計画
+- ユーザ向け解説: [manual/tutorials/dictionary-editor-and-quick-add.md](../manual/tutorials/dictionary-editor-and-quick-add.md)（φ-5 追加）
+- conf リファレンス §5.1: [manual/conf-reference.md](../manual/conf-reference.md#51-control_apitables--辞書--汎用-table-の-gui-編集許可リスト-phase-φ)

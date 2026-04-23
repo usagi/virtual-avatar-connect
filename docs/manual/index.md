@@ -30,6 +30,7 @@ v2 では「チャンネル名で繋ぐ v1 プロセッサー列」から **Flow
 - [twitch-chat-send](./tutorials/twitch-chat-send.md)：rate_limit + chat_send
 - [twitch-moderation](./tutorials/twitch-moderation.md)：user_id_by_login + timeout
 - [voice-input](./tutorials/voice-input.md)：Vosk / Whisper 認識 → TTS echo
+- [dictionary-editor-and-quick-add](./tutorials/dictionary-editor-and-quick-add.md)：GUI から TSV 辞書を直接編集する / Live Quick-Add で `dictionary.learn` を即発火する（Phase φ）
 
 ---
 

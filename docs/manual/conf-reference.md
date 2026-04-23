@@ -49,6 +49,58 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 
 ※ 環境変数 `VAC_CONTROL_API_BEARER_TOKEN` でもトークンを渡せる（`conf.toml` より優先）。
 
+### 5.1 `[[control_api.tables]]` — 辞書 / 汎用 Table の GUI 編集許可リスト (Phase φ)
+
+GUI の **Dictionary Editor Pane** と **Live Quick-Add Widget** から操作できる TSV ファイルの allow-list。
+`[[control_api.tables]]` に登録されていないファイルは Control API から **404**（存在隠蔽）として扱われ、
+GUI のカタログにも出ません。
+
+```toml
+# 辞書を 1 件、GUI から編集 + Quick-Add トリガ可能にする例。
+[[control_api.tables]]
+key      = "chat_dict"                            # 必須。URL / localStorage のキー
+path     = "dictionary.chat.dict.tsv"             # 必須。cwd 相対 or 絶対パス
+label    = "Chat 辞書"                            # 任意。GUI 表示名。省略時は key
+role     = "dictionary"                           # 任意。"dictionary" | "generic" など
+editable = true                                   # 任意。false で read-only（全 mutation が 403）
+
+[control_api.tables.quick_add]
+node_id        = "chat-echo/main::learn"          # 必須。dictionary.learn ノードの fq ID
+kind           = "literal"                        # 任意。"literal" | "regex"（既定 literal）
+forget_node_id = "chat-echo/main::forget"         # 任意。Undo に使う dictionary.forget ノード
+```
+
+| キー | 型 | 既定値 | 説明 |
+|---|---|---|---|
+| `key` | string | — | 必須。URL (`/api/v1/control/table/{key}`) と GUI 内の識別子 |
+| `path` | string | — | 必須。TSV の実パス。親ディレクトリは atomic rename 用に自動生成 |
+| `label` | string | `key` | GUI タブに表示するラベル |
+| `role` | string | `null` | `"dictionary"` を指定した Table だけが Dictionary Editor のタブに並ぶ |
+| `editable` | bool | `true` | `false` で書き込み系 API を 403 に固定。閲覧のみ許可したい時に使う |
+| `quick_add.node_id` | string | — | Live Quick-Add で発火する `flowgraph.dictionary.learn` ノードの fq ID |
+| `quick_add.kind` | string | `"literal"` | 既定 kind。GUI で上書き可能 |
+| `quick_add.forget_node_id` | string | `null` | Undo 用 `flowgraph.dictionary.forget` ノードの fq ID。未指定なら [Undo] を自動的に無効化 |
+
+#### 挙動メモ
+
+- **optimistic lock**: mutation 系（PUT / POST / PATCH / DELETE）は `If-Match: b3:<content_hash>`
+  を付与すると楽観ロックが効く。GUI は常に直近ハッシュを送るため、多タブ同時編集は 409
+  → 3-way 解決ダイアログで明示的にマージさせる。
+- **is_locked 保護**: `is_locked = true` の行は PATCH / DELETE が 403。「Arknights 固定辞書」など
+  消えてほしくない seed データを保護する用途。
+- **allow-list の反映**: 現在は起動時 snapshot。`[[control_api.tables]]` を増減した場合は VAC 再起動が必要。
+- **Flowgraph 側との関係**: Quick-Add / Editor が書き戻すのは **ファイル**（TSV）。
+  flowgraph は `table.load_tsv` が都度読み直す実装のため、次の実行タイミングで自然に反映される。
+
+#### 対応 Flowgraph ノード（`control_triggerable = true`）
+
+- `flowgraph.dictionary.learn` — Quick-Add の Learn ボタン
+- `flowgraph.dictionary.forget` — Quick-Add の Undo ボタン、Editor の削除
+
+上記以外のノードに trigger API を打つと **400 control_triggerable_forbidden** が返る（安全装置）。
+
+---
+
 ## 6. 外部サービス接続（セクション単位）
 
 以下は「外部サービスへの接続情報」であり、**データ配線は Flowgraph で行う**のが v2 の原則です。
