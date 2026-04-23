@@ -91,20 +91,22 @@ Phase χ の次の一手として、gpt-5 系の tool loop round 間で `include
 
 ### Phase ν — GUI E2E testing with Playwright
 
-現状 `gui/` に自動テストは 0 件（`svelte-check` の型検査のみ）。ε / φ 系で GUI 機能面積が拡大しており、手動スモークでの回帰検知が限界に近づきつつあるため、Playwright による E2E テスト基盤を導入する独立フェーズ。ψ-α 完了後に着手予定（ψ-α と独立だが、ランタイム変更が連続する方がメモリコストが低いため）。
+現状 `gui/` に自動テストは 0 件（`svelte-check` の型検査のみ）。ε / φ / γ 系で GUI 機能面積が拡大しており、手動スモークでの回帰検知が限界に近づきつつあるため、Playwright による E2E テスト基盤を導入する独立フェーズ。
 
 動機（E2E でしか拾えない挙動が溜まっている）:
 
 - Phase φ の **Dictionary Editor Pane**（optimistic lock / 409 → 3-way merge ダイアログ / Live Quick-Add の Learn + Undo）
 - **Flowgraph Canvas**（γ-4a / γ-4a.0 のノード追加・接続・削除・Save-dirty 表示・Ctrl+S・beforeunload ガード）
 - **Live Tab** / **Managed App Drawer**（γ-2 の restart + status polling）
+- **`/ws/control` WebSocket**（channel ingress のリアルタイム反映）
 - OBS Browser Source（`/browser-output/*`）の WebKit 挙動検証
 
-- [ ] ν-0 docs: `phase-nu-gui-e2e-playwright.md` 新設 + スコープ / fixture 設計 / 5 初期ケース仕様の確定
-- [ ] ν-1 chore(gui): `playwright.config.ts` + `gui/tests/e2e/` 配置、`webServer` で VAC を `conf.fixture.e2e.toml`（外部依存ゼロ）で起動する仕組み
+- [x] ν-0 docs: `phase-nu-gui-e2e-playwright.md` 本文書き下ろし + 5 ケース仕様 + fixture 設計 + webServer 戦略 + セレクタ規約確定
+- [ ] ν-1 chore(gui): `@playwright/test` 追加 + `playwright.config.ts` + `gui/tests/e2e/` + `conf.fixture.e2e.toml`（外部 IO ゼロ）+ fixture flowgraph 同梱
 - [ ] ν-2 test(gui): 初期 5 ケース `control-panel-smoke` / `flowgraph-canvas-basic` / `dictionary-editor-409-merge` / `live-quick-add-learn-undo` / `channels-ws-live-update`
 - [ ] ν-3 docs: CHANGELOG / manual 追記（run 手順 + CI optional 方針）+ roadmap tick
 - 仕様書: [`roadmap/phase-nu-gui-e2e-playwright.md`](roadmap/phase-nu-gui-e2e-playwright.md)
+- scope: narrow-scoped。`gui/` 配下に閉じ、Rust 側 `Cargo.toml` や CI には一切触れない。visual regression / 多ブラウザ matrix / component testing は ν+ に送る
 - Linux / Windows どちらでも手元で回せることが必須。CI 化は optional（ν-2 以降）
 
 ---
@@ -129,9 +131,13 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 - [ ] visual regression（`toHaveScreenshot`）
 - [ ] GitHub Actions 上での chromium / firefox / webkit マトリクス
 
+### Flowgraph 機能向上（TBD）
+
+ψ-α / ν 完了後の次フェーズ候補（ユーザー意向）。ν の Flowgraph Canvas E2E が足場になるため、ν 完了後に着手するのが自然。具体サブフェーズは改めて phase doc を新設して確定する予定。
+
 ### ε-2 Tauri ネイティブウィンドウ化
 
-ψ-α / ν 完了 + Flowgraph 機能拡張の次点として着手検討。仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
+ψ-α / ν / Flowgraph 機能拡張の次に着手検討（ユーザー意向として "GUI の Tauri 化" を積んでいる）。仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
 
 ---
 
