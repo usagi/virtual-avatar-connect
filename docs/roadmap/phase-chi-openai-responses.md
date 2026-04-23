@@ -438,9 +438,10 @@ env 未指定時は `None` を送り OpenAI デフォルトに任せる。
 | χ-5 ✅ | `χ-5 refactor(ai/service,completion):` | streaming / tool-loop / gpt-5 retry を Responses に全面移行 | `src/ai/service.rs` / `src/ai/completion.rs` / `src/ai/context.rs` / `src/ai/model_policy.rs` / `src/ai/tools.rs` |
 | χ-6 | `χ-6 refactor(conf):` | `openai_max_output_tokens` + レガシーフォールバック + `openai_reasoning_effort` | `src/ai/config.rs` / `src/conf/mod.rs` |
 | χ-7 | `χ-7 docs:` | manual / conf.example / CHANGELOG / roadmap.md χ tick | `docs/manual/conf-reference.md` / `docs/manual/tutorials/openai-persona.md` / `conf.example*.toml` / `CHANGELOG.md` / `docs/roadmap.md` |
+| χ-8.0 | `χ-8.0 fix(flowgraph/docs):` | `node_catalog_md_up_to_date` を line-ending 正規化で CRLF 環境でも通す（χ-5 以前からの pre-existing bug、§9.5 参照） | `src/flowgraph/docs.rs` |
 | χ-8 | `χ-8 test:` | 全体テスト + 実機スモーク + 必要ならリリースノート微修正 | テスト実行 + CHANGELOG 調整のみ（コード変更は基本 0） |
 
-計 9 commit / 1 PR。χ-0 はドキュメント先行で、χ-1..χ-8 が順序依存の実装。
+計 10 commit / 1 PR。χ-0 はドキュメント先行で、χ-1..χ-8 が順序依存の実装。χ-8.0 は χ-8 本体の前提（`cargo test --lib` 全 pass を実効的に保証するため χ-8 の冒頭で commit）。
 
 ---
 
@@ -468,7 +469,8 @@ env 未指定時は `None` を送り OpenAI デフォルトに任せる。
 
 ### 9.2 Integration
 
-- `cargo test --all` 全通過（既知の `flowgraph::docs::docs_tests::node_catalog_md_up_to_date` は Windows の LF/CRLF 問題で skip 可）
+- `cargo test --all` 全通過
+  - 既知の `flowgraph::docs::docs_tests::node_catalog_md_up_to_date` は Windows の `core.autocrlf=true` + CRLF/LF 不一致で fail する **pre-existing bug**。χ-8 の最初（χ-8.0）で line-ending 正規化パッチを当てて解消する（§9.5 参照）
 - `cd gui && npm run check` 0 errors
 - `cd gui && npm run build` 成功
 
@@ -486,6 +488,35 @@ env 未指定時は `None` を送り OpenAI デフォルトに任せる。
 
 - `.github/workflows/*.yml` は既存のものを流用（fmt / clippy / build / test）
 - 新しい外部依存 `eventsource-stream` の license（MIT/Apache-2.0）を `CHANGELOG` に記載
+
+### 9.5 Pre-existing test bug: `node_catalog_md_up_to_date` の CRLF/LF 対処
+
+`src/flowgraph/docs.rs` の `docs_tests::node_catalog_md_up_to_date` は、`render_node_catalog_md(&default_registry())` が返す文字列（LF 改行）と、`std::fs::read_to_string(docs/manual/node-catalog.md)`（Windows の `core.autocrlf=true` で checkout すると CRLF 改行）を **バイト比較** しているため、Windows 環境で必ず fail する既知のバグ。
+
+`.gitattributes` で `eol=lf` を強制する手もあるが、既存 clone に対して破壊的（`git add --renormalize .` が必要）なので、テスト側で line-ending を正規化するアプローチを取る。
+
+#### χ-8.0 で当てる最小パッチ
+
+```rust
+// src/flowgraph/docs.rs :: docs_tests::node_catalog_md_up_to_date
+let actual = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!(/* ... */));
+let actual_norm = actual.replace("\r\n", "\n");
+let expected_norm = expected.replace("\r\n", "\n");
+
+if actual_norm != expected_norm {
+  let diff_hint = "BLESS_NODE_CATALOG=1 で再生成してください。";
+  panic!("docs/manual/node-catalog.md が registry と不一致。{diff_hint}");
+}
+```
+
+`BLESS_NODE_CATALOG=1` 経路も `expected.replace("\r\n", "\n")` を書き出して LF 固定にする（`std::fs::write` は byte を触らないので、`expected` が LF なら LF のまま書かれる。明示的 normalize は防御）。
+
+#### χ-8.0 の commit 方針
+
+- Commit prefix: `χ-8.0 fix(flowgraph/docs):`
+- 対象: `src/flowgraph/docs.rs` のみ（`docs/manual/node-catalog.md` は触らない）
+- テスト: Windows / Linux の両方で `cargo test --lib flowgraph::docs::docs_tests` が pass
+- この fix は χ-5 完了時点での `cargo test --lib` 全 pass を実効的に保証するための前提作業で、Responses API 移行とは独立した範囲修正
 
 ---
 

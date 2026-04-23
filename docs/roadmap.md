@@ -72,6 +72,7 @@ Chat Completions API から Responses API へ全面移行。streaming + tool loo
 - [ ] χ-6 refactor(conf): `openai_max_output_tokens` + レガシーフォールバック
 - [ ] χ-7 docs: manual / conf.example / CHANGELOG 更新 + roadmap.md の χ tick
 - [ ] χ-8 test: cargo test + svelte-check + 実機スモーク
+  - [ ] χ-8.0 fix(flowgraph/docs): `node_catalog_md_up_to_date` テストを line-ending 正規化して CRLF 環境でも通るように（χ-5 以前からの既知 pre-existing bug、Windows の `core.autocrlf=true` で検出）
 - 仕様書: [`roadmap/phase-chi-openai-responses.md`](roadmap/phase-chi-openai-responses.md)
 
 ---

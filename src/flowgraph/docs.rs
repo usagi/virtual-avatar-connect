@@ -197,11 +197,16 @@ mod docs_tests {
 		let expected = render_node_catalog_md(&default_registry());
 		let path = node_catalog_path();
 
+		// Windows の `core.autocrlf=true` で checkout すると作業コピーが CRLF になるが、
+		// `render_node_catalog_md` の出力は LF なので、バイト比較だと必ず mismatch する。
+		// チェック時も BLESS 書き出し時も LF に正規化してから扱う（§χ-8.0）。
+		let expected_norm = expected.replace("\r\n", "\n");
+
 		if std::env::var_os("BLESS_NODE_CATALOG").is_some() {
 			if let Some(parent) = path.parent() {
 				std::fs::create_dir_all(parent).expect("create docs/manual");
 			}
-			std::fs::write(&path, &expected).expect("write node-catalog.md");
+			std::fs::write(&path, &expected_norm).expect("write node-catalog.md");
 			eprintln!("[BLESS] wrote {}", path.display());
 			return;
 		}
@@ -213,8 +218,9 @@ mod docs_tests {
 				 （powershell: `$env:BLESS_NODE_CATALOG=\"1\"; cargo test --lib node_catalog_md_up_to_date`）"
 			);
 		});
+		let actual_norm = actual.replace("\r\n", "\n");
 
-		if actual != expected {
+		if actual_norm != expected_norm {
 			let diff_hint = "BLESS_NODE_CATALOG=1 で再生成してください。";
 			panic!("docs/manual/node-catalog.md が registry と不一致。{diff_hint}");
 		}
