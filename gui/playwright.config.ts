@@ -28,7 +28,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 57098;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-const FIXTURE_CONF = '../conf.fixture.e2e.toml';
+const FIXTURE_CONF = 'conf.fixture.e2e.toml';
 
 const isCI = !!process.env.CI;
 

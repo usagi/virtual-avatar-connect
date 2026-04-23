@@ -18,14 +18,18 @@ test.describe('Phase ν-1 scaffolding smoke', () => {
  }) => {
   await page.goto(`/gui/?token=${TOKEN}`);
 
-  // TabNav is rendered (Live / Setup / Flowgraph / Logs / Tools).
-  // We only assert one tab by role+name to keep this spec narrow.
+  // TabNav is rendered. TabNav.svelte uses plain `<button>` inside
+  // `<nav aria-label="Main tabs">`, so we scope the role lookup to that
+  // nav to avoid collisions with other "Live" buttons on the page.
+  const tabs = page.getByRole('navigation', { name: 'Main tabs' });
   await expect(
-   page.getByRole('tab', { name: /live/i }),
+   tabs.getByRole('button', { name: /live/i }),
   ).toBeVisible({ timeout: 15_000 });
 
   // Control API is reachable and auth succeeds with the fixture token.
-  const res = await request.get('/api/v1/control/channels', {
+  // /ping is the lightest endpoint inside the auth-wrapped scope, so it's
+  // ideal for confirming both routing and bearer_token handling.
+  const res = await request.get('/api/v1/control/ping', {
    headers: { Authorization: `Bearer ${TOKEN}` },
   });
   expect(res.status(), await res.text()).toBe(200);
