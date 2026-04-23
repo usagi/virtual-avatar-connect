@@ -568,6 +568,8 @@ if actual_norm != expected_norm {
 
 ### 11.2 設計メモ: ψ-α encrypted reasoning passthrough
 
+> **Status (2026-04-23 以降)**: 本節の設計メモは Phase ψ-α として正式に起票・昇格した。実装仕様は [`phase-psi-alpha-encrypted-reasoning.md`](phase-psi-alpha-encrypted-reasoning.md) に引き継がれる。以下は χ 時点での初期メモとして保存する。
+
 `store: false` を維持したまま gpt-5 系 reasoning の効率を上げる中間解。
 
 #### 仕組み

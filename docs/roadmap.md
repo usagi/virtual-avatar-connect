@@ -55,10 +55,6 @@ Virtual Avatar Connect の全フェーズ × サブフェーズ単位のチェ�
 - [x] φ-6 feat(flowgraph,gui): Flowgraph Editor 上の Trigger ボタン
 - 仕様書: [`roadmap/phase-phi-control-api-dictionary-editor.md`](roadmap/phase-phi-control-api-dictionary-editor.md)
 
----
-
-## Active Phase
-
 ### Phase χ — OpenAI Responses API 全面移行
 
 Chat Completions API から Responses API へ全面移行。streaming + tool loop + gpt-5 retry + overflow summary + hot-reload を **1 PR / 9 commit** で full_parity 移植。Option A（`reqwest` + 自前 DTO）で実装、shared crate 化を視野に境界設計する。
@@ -71,12 +67,44 @@ Chat Completions API から Responses API へ全面移行。streaming + tool loo
 - [x] χ-5 refactor(ai/service,completion): streaming / tool-loop / gpt-5 retry を Responses 全面移行
 - [x] χ-6 refactor(conf): `openai_max_output_tokens` + レガシーフォールバック
 - [x] χ-7 docs: manual / conf.example / CHANGELOG 更新 + roadmap.md の χ tick
-- [x] χ-8 test: cargo test + svelte-check + 実機スモーク
+- [x] χ-8 test: cargo test + svelte-check + 実機スモーク + 観測器追加
   - [x] χ-8.0 fix(flowgraph/docs): `node_catalog_md_up_to_date` テストを line-ending 正規化して CRLF 環境でも通るように（χ-5 以前からの既知 pre-existing bug、Windows の `core.autocrlf=true` で検出）
   - [x] χ-8.1 test(ai/responses): `cargo test --lib --release` 481 pass / 0 fail / 1 ignored、`gui/ npm run check` / `npm run build` 緑、実機スモーク (gpt-4o-mini happy / gpt-4o-mini + tools / gpt-5-mini + `reasoning.effort=low`) 全成功
   - [x] χ-8.2 feat(ai/responses): `ResponsesClient` / `drive_responses_tool_loop` に送信・status・SSE イベント受信の debug/trace ログを追加。`connect_timeout(10s)` を明示し、Windows TLS 交渉ストールで total timeout が事実上無効化されるケースの耐性を上げる
 - 仕様書: [`roadmap/phase-chi-openai-responses.md`](roadmap/phase-chi-openai-responses.md)
-- Phase χ はこれで閉じる。Active Phase は次フェーズで差し替え。
+
+---
+
+## Active Phases
+
+### Phase ψ-α — Encrypted Reasoning Passthrough
+
+Phase χ 完了後の次の一手。gpt-5 系の tool loop round 間で `include: ["reasoning.encrypted_content"]` を使い、`store: false` を維持したまま reasoning state を client 側で持ち回る **狭い範囲の最適化**。`drive_responses_tool_loop` の round 間で暗号化 reasoning blob を `output[]` → 次ラウンドの `input[]` に pass-through する。
+
+- [ ] ψ-α-0 docs: `phase-psi-alpha-encrypted-reasoning.md` 新設 + roadmap を backlog→Active に移行 + χ の §11.2 設計メモから phase doc に昇格
+- [ ] ψ-α-1 feat(ai/responses): DTO 拡張（`CreateResponseRequest.include` / `InputItem::Reasoning` / `OutputItem::Reasoning.encrypted_content`）+ golden tests
+- [ ] ψ-α-2 feat(ai/service,config): `openai_reasoning_encrypted_passthrough` (既定 `true`) + `drive_responses_tool_loop` の round 間 pass-through（gpt-5 系のみ有効、他モデルは no-op）
+- [ ] ψ-α-3 docs: CHANGELOG / conf-reference / conf.example 更新 + 実機計測（reasoning tokens / latency / $）を記録 + roadmap tick
+- 仕様書: [`roadmap/phase-psi-alpha-encrypted-reasoning.md`](roadmap/phase-psi-alpha-encrypted-reasoning.md)
+- scope: `drive_responses_tool_loop` の round-over-round に閉じる narrow change。`react()` 呼び出しを跨ぐ持ち回りはしない（hot-reload / memory window trim で context shape が変わるため）
+
+### Phase ν — GUI E2E testing with Playwright
+
+現状 `gui/` に自動テストは 0 件（`svelte-check` の型検査のみ）。ε / φ 系で GUI 機能面積が拡大しており、手動スモークでの回帰検知が限界に近づきつつあるため、Playwright による E2E テスト基盤を導入する独立フェーズ。ψ-α 完了後に着手予定（ψ-α と独立だが、ランタイム変更が連続する方がメモリコストが低いため）。
+
+動機（E2E でしか拾えない挙動が溜まっている）:
+
+- Phase φ の **Dictionary Editor Pane**（optimistic lock / 409 → 3-way merge ダイアログ / Live Quick-Add の Learn + Undo）
+- **Flowgraph Canvas**（γ-4a / γ-4a.0 のノード追加・接続・削除・Save-dirty 表示・Ctrl+S・beforeunload ガード）
+- **Live Tab** / **Managed App Drawer**（γ-2 の restart + status polling）
+- OBS Browser Source（`/browser-output/*`）の WebKit 挙動検証
+
+- [ ] ν-0 docs: `phase-nu-gui-e2e-playwright.md` 新設 + スコープ / fixture 設計 / 5 初期ケース仕様の確定
+- [ ] ν-1 chore(gui): `playwright.config.ts` + `gui/tests/e2e/` 配置、`webServer` で VAC を `conf.fixture.e2e.toml`（外部依存ゼロ）で起動する仕組み
+- [ ] ν-2 test(gui): 初期 5 ケース `control-panel-smoke` / `flowgraph-canvas-basic` / `dictionary-editor-409-merge` / `live-quick-add-learn-undo` / `channels-ws-live-update`
+- [ ] ν-3 docs: CHANGELOG / manual 追記（run 手順 + CI optional 方針）+ roadmap tick
+- 仕様書: [`roadmap/phase-nu-gui-e2e-playwright.md`](roadmap/phase-nu-gui-e2e-playwright.md)
+- Linux / Windows どちらでも手元で回せることが必須。CI 化は optional（ν-2 以降）
 
 ---
 
@@ -88,38 +116,21 @@ Chat Completions API から Responses API へ全面移行。streaming + tool loo
 
 ### Phase ψ+（TBD）
 
-Phase χ Out-of-scope から派生する将来フェーズ候補:
+Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 
-- [ ] **ψ-α encrypted reasoning passthrough**: gpt-5 系の tool loop round 間で `include: ["reasoning.encrypted_content"]` を使い、`store: false` を維持したまま reasoning state を client 側で持ち回る最適化。`drive_responses_tool_loop` の round 間で暗号化 reasoning blob を `output[]` → 次 `input[]` に pass-through する狭い範囲の改修。効果測定（reasoning tokens / latency / $）を伴う。詳細: [`roadmap/phase-chi-openai-responses.md`](roadmap/phase-chi-openai-responses.md) §11.2
 - [ ] `previous_response_id` / `conversation` / `compact` API による server-side memory（ψ-α を経てなお解決しない長期会話ユースケースが残る場合のみ検討。VAC の `include_all` / `overflow_summary` / hot-reload と構造的に衝突するため、既定は `store: false` を維持。設計判断メモ: [`roadmap/phase-chi-openai-responses.md`](roadmap/phase-chi-openai-responses.md) §11.1）
 - [ ] built-in tools（`web_search_preview` / `file_search` / `code_interpreter` / MCP tool）
 - [ ] `vac-openai-responses` shared crate 化（un-discord-kaltsitpseudo との共有）
-- [ ] ε-2 Tauri ネイティブウィンドウ化
 
-### Phase ν（TBD）: GUI E2E testing with Playwright
-
-現状 `gui/` に自動テストは 0 件、`svelte-check`（型検査）のみ。ε / φ 系で GUI 機能面積が拡大しており、手動スモークでの回帰検知が限界に近づきつつあるため、Playwright による E2E テスト基盤を導入する独立フェーズ。
-
-動機（E2E でしか拾えない挙動が溜まっている）:
-
-- Phase φ の **Dictionary Editor Pane**（optimistic lock / 409 → 3-way merge ダイアログ / Live Quick-Add の Learn + Undo）
-- **Flowgraph Canvas**（γ-4a / γ-4a.0 のノード追加・接続・削除・Save-dirty 表示・Ctrl+S・beforeunload ガード）
-- **Live Tab** / **Managed App Drawer**（γ-2 の restart + status polling）
-- OBS Browser Source（`/browser-output/*`）の WebKit 挙動検証
-
-初期スコープ（ν-1 の受け入れ基準想定）:
-
-- [ ] `gui/playwright.config.ts` + `gui/tests/e2e/` を配置、`webServer` で VAC を `conf.fixture.e2e.toml`（Twitch / OpenAI / TTS 全 disabled、外部依存ゼロ）で起動
-- [ ] 最小 5 ケース: `control-panel-smoke` / `flowgraph-canvas-basic` / `dictionary-editor-409-merge` / `live-quick-add-learn-undo` / `channels-ws-live-update`
-- [ ] Linux / Windows どちらでも手元で回せること（CI 化は optional）
-
-ν-2 以降（拡張）:
+### Phase ν+（TBD）: E2E 拡張
 
 - [ ] φ / γ 後続サーフェス（Managed App Drawer 詳細、BOS Preview の縦画面トグル 等）
 - [ ] visual regression（`toHaveScreenshot`）
 - [ ] GitHub Actions 上での chromium / firefox / webkit マトリクス
 
-優先度: 中。φ の Dictionary Editor で手動見落とし由来の回帰が出た時点で即昇格。Phase χ（runtime 移行）とは独立しており、χ-8 完了とは切り離して着手可。
+### ε-2 Tauri ネイティブウィンドウ化
+
+ψ-α / ν 完了 + Flowgraph 機能拡張の次点として着手検討。仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
 
 ---
 
