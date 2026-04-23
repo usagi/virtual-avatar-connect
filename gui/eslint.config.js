@@ -22,7 +22,15 @@ import svelteParser from 'svelte-eslint-parser';
 export default tseslint.config(
  // 除外
  {
-  ignores: ['dist/**', 'node_modules/**', '.svelte-kit/**'],
+  ignores: [
+   'dist/**',
+   'node_modules/**',
+   '.svelte-kit/**',
+   // Phase ν: Playwright が書き出す artifact / cache
+   'test-results/**',
+   'playwright-report/**',
+   'playwright/.cache/**',
+  ],
  },
 
  // 1) ベース: JS + TS recommended

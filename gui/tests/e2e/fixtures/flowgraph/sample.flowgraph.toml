@@ -1,0 +1,38 @@
+# =========================================================================
+#  gui/tests/e2e/fixtures/flowgraph/sample.flowgraph.toml
+# =========================================================================
+# Minimal fixture flowgraph loaded by `conf.fixture.e2e.toml` for Phase ν
+# Playwright E2E tests. Design locked in:
+#   docs/roadmap/phase-nu-gui-e2e-playwright.md §4
+#
+# Intentionally tiny and side-effect free:
+#   - `in`   : web_input ingress (no external services)
+#   - `log`  : flowgraph.util.log that just prints to VAC stdout
+#
+# E2E specs that exercise the canvas add / connect / delete nodes
+# against this baseline (see §3.2 of the phase doc). Do not add
+# TTS / OpenAI / Twitch / file IO nodes here.
+# =========================================================================
+
+[meta]
+title = "ν fixture: web_input → log"
+description = "Phase ν Playwright E2E で使う最小 flowgraph。web_input ingress + util.log のみ。"
+tags = ["fixture", "e2e", "ν"]
+
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 200]
+
+[[nodes]]
+id = "log"
+feature = "flowgraph.util.log"
+position = [360, 200]
+
+[[edges]]
+from = "in:exec_out"
+to = "log:exec_in"
+
+[[edges]]
+from = "in:content"
+to = "log:value"

@@ -1,0 +1,55 @@
+# =========================================================================
+#  conf.fixture.e2e.toml  — Phase ν Playwright E2E fixture
+# =========================================================================
+# This conf is loaded by `gui/playwright.config.ts` via its `webServer`
+# entry. It must stay self-contained: no Twitch / OpenAI / TTS / OCR /
+# Voice / Translate integrations, no API keys, no external HTTP calls.
+#
+# Design locked in:
+#   docs/roadmap/phase-nu-gui-e2e-playwright.md §4
+#
+# DO NOT add personal data, secrets, or machine-specific paths here.
+# =========================================================================
+
+# Keep the async runtime small and predictable so specs don't depend on
+# scheduler timing of a big worker pool.
+workers = 2
+
+# Verbose logs are captured by Playwright's `webServer.stdout/stderr`
+# pipes and surface in `test-results/` on failure.
+log_level = "Debug"
+
+# Port deliberately offset from the dev defaults:
+#   57000 = normal dev run
+#   5173  = vite dev server
+#   57098 = E2E fixture (this file)
+web_ui_address = "127.0.0.1:57098"
+
+# GUI build output. `npm run build` in gui/ must have been run at least
+# once (the Playwright run script reminds developers of this).
+gui_dist_path = "gui/dist"
+
+# Ephemeral runtime directory — scoped to the workspace so CI cleanup
+# is just "rm -rf target/e2e-runtime".
+runtime_dir = "target/e2e-runtime"
+
+# No RON persistence: each E2E run starts from an empty state so specs
+# don't influence each other through disk residue.
+# state_data_path = (intentionally unset)
+
+# Fixture flowgraph directory, committed under gui/tests/e2e/fixtures/
+# so Cargo never walks it as part of `cargo test`.
+flowgraph_dir = "gui/tests/e2e/fixtures/flowgraph"
+
+# -------------------------------------------------------------------------
+# Control API — fixed Bearer token so specs can authenticate
+# deterministically without probing control-token.txt.
+# -------------------------------------------------------------------------
+
+[control_api]
+require_token_for_loopback = true
+require_token_for_non_loopback = true
+bearer_token = "e2e-fixture-token"
+
+# No [[ai.personas]], no [twitch], no [tts], no [ocr], no [voice],
+# no [translate], no [run_with]. E2E is a pure GUI + Control API smoke.

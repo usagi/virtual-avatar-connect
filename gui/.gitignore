@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright (Phase ν)
+test-results/
+playwright-report/
+playwright/.cache/
