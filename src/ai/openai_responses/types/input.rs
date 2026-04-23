@@ -44,6 +44,26 @@ pub enum InputItem
   /// Tool 実行結果。通常は JSON 文字列化した値。
   output: String,
  },
+ /// 前ラウンドの `OutputItem::Reasoning` を次ラウンドの input に詰め直すための variant。
+ ///
+ /// Phase ψ-α の **gpt-5 系 tool loop の round 間 pass-through** 専用。
+ /// 通常の `react()` 経路（system / user / assistant メッセージ）では使わない。
+ /// 詳細: [`docs/roadmap/phase-psi-alpha-encrypted-reasoning.md`](../../docs/roadmap/phase-psi-alpha-encrypted-reasoning.md)
+ ///
+ /// OpenAI 側の仕様: round 間で reasoning item をそのまま積み直すと、
+ /// サーバ側が関連する reasoning のみ context に残してくれる。
+ Reasoning
+ {
+  /// OpenAI が発行する reasoning item id（`rs_...`）。
+  id: String,
+  /// `include: ["reasoning.encrypted_content"]` 指定時のみ付与される blob。
+  /// `store: false` + `include` の組み合わせで stateless に reasoning state を維持する。
+  #[serde(skip_serializing_if = "Option::is_none", default)]
+  encrypted_content: Option<String>,
+  /// Reasoning summary（`summary_text` 等）。pass-through 時はそのまま透過する。
+  #[serde(skip_serializing_if = "Option::is_none", default)]
+  summary: Option<serde_json::Value>,
+ },
 }
 
 /// `InputItem::Message.content` のフィールド。

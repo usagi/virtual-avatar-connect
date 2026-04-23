@@ -99,6 +99,11 @@ pub enum OutputItem
   status: Option<String>,
   #[serde(default)]
   summary: Option<serde_json::Value>,
+  /// Phase ψ-α: `include: ["reasoning.encrypted_content"]` を指定した request の
+  /// response にのみ含まれる blob。次ラウンドの `InputItem::Reasoning` にそのまま
+  /// 詰め直すと、gpt-5 系で `store: false` のまま reasoning state を維持できる。
+  #[serde(default)]
+  encrypted_content: Option<String>,
  },
  /// 未知タイプを受け取った場合の catch-all（web_search_call / file_search_call /
  /// code_interpreter_call / mcp_tool_call 等）。

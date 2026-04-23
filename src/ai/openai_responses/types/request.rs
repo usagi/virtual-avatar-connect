@@ -72,6 +72,14 @@ pub struct CreateResponseRequest
  /// API 互換のため保持する。
  #[serde(skip_serializing_if = "Option::is_none", default)]
  pub instructions: Option<String>,
+
+ /// Response の `output[]` に追加で含める拡張項目の指定。
+ ///
+ /// 現状 VAC が利用するのは `"reasoning.encrypted_content"` のみ。
+ /// Phase ψ-α で gpt-5 系 tool loop の round 間 reasoning pass-through に使う。
+ /// 詳細: [`docs/roadmap/phase-psi-alpha-encrypted-reasoning.md`](../../docs/roadmap/phase-psi-alpha-encrypted-reasoning.md)
+ #[serde(skip_serializing_if = "Option::is_none", default)]
+ pub include: Option<Vec<String>>,
 }
 
 /// gpt-5 系の thinking token 制御。

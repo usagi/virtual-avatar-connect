@@ -380,6 +380,184 @@ fn tool_helper_methods_name_and_is_locally_dispatched()
  assert!(!fs.is_locally_dispatched());
 }
 
+/// Phase ψ-α: `include: ["reasoning.encrypted_content"]` がシリアライズ結果に現れる。
+#[test]
+fn serialize_request_with_include_reasoning_encrypted_content()
+{
+ let req = CreateResponseRequest {
+  model: "gpt-5-mini".to_string(),
+  input: vec![InputItem::message("user", "Ping")],
+  include: Some(vec!["reasoning.encrypted_content".to_string()]),
+  ..Default::default()
+ };
+ let v = serde_json::to_value(&req).unwrap();
+ assert_eq!(v["include"], serde_json::json!(["reasoning.encrypted_content"]));
+
+ let no_include = CreateResponseRequest {
+  model: "gpt-5-mini".to_string(),
+  input: vec![InputItem::message("user", "Ping")],
+  ..Default::default()
+ };
+ let v2 = serde_json::to_value(&no_include).unwrap();
+ assert!(v2.get("include").is_none(), "None include must be skipped");
+}
+
+/// Phase ψ-α: response の Reasoning item に `encrypted_content` が乗る。
+#[test]
+fn deserialize_response_reasoning_with_encrypted_content()
+{
+ let raw = json!({
+  "id": "resp_enc",
+  "status": "completed",
+  "model": "gpt-5-mini",
+  "output": [
+   {
+    "id": "rs_enc",
+    "type": "reasoning",
+    "status": "completed",
+    "summary": [{"type": "summary_text", "text": "thinking..."}],
+    "encrypted_content": "enc_blob_xxx"
+   },
+   {
+    "id": "fc_1",
+    "type": "function_call",
+    "status": "completed",
+    "call_id": "call_123",
+    "name": "vac_ping",
+    "arguments": "{}"
+   }
+  ]
+ });
+ let res: Response = serde_json::from_value(raw).unwrap();
+ assert_eq!(res.output.len(), 2);
+ match &res.output[0]
+ {
+  OutputItem::Reasoning {
+   id,
+   encrypted_content,
+   summary,
+   ..
+  } =>
+  {
+   assert_eq!(id, "rs_enc");
+   assert_eq!(encrypted_content.as_deref(), Some("enc_blob_xxx"));
+   assert!(summary.is_some(), "summary も一緒に来る想定");
+  }
+  _ => panic!("expected Reasoning"),
+ }
+}
+
+/// Phase ψ-α: Reasoning item の `encrypted_content` フィールドが欠落しても壊れない。
+#[test]
+fn deserialize_response_reasoning_without_encrypted_content()
+{
+ let raw = json!({
+  "id": "resp_no_enc",
+  "status": "completed",
+  "model": "gpt-5-mini",
+  "output": [
+   {
+    "id": "rs_plain",
+    "type": "reasoning",
+    "status": "completed",
+    "summary": [{"type": "summary_text", "text": "no include param"}]
+   }
+  ]
+ });
+ let res: Response = serde_json::from_value(raw).unwrap();
+ match &res.output[0]
+ {
+  OutputItem::Reasoning {
+   id,
+   encrypted_content,
+   ..
+  } =>
+  {
+   assert_eq!(id, "rs_plain");
+   assert!(
+    encrypted_content.is_none(),
+    "include 指定なしなら encrypted_content は None"
+   );
+  }
+  _ => panic!("expected Reasoning"),
+ }
+}
+
+/// Phase ψ-α: `InputItem::Reasoning` は output → input の round-trip 用。
+/// シリアライズ時の wire format が output 側と一致する（`type: "reasoning"` + 同じフィールド名）。
+#[test]
+fn serialize_input_reasoning_matches_output_shape()
+{
+ let item = InputItem::Reasoning {
+  id: "rs_pass".to_string(),
+  encrypted_content: Some("enc_blob_xxx".to_string()),
+  summary: Some(json!([{"type": "summary_text", "text": "thinking..."}])),
+ };
+ let v = serde_json::to_value(&item).unwrap();
+ assert_eq!(v["type"], "reasoning");
+ assert_eq!(v["id"], "rs_pass");
+ assert_eq!(v["encrypted_content"], "enc_blob_xxx");
+ assert_eq!(v["summary"][0]["type"], "summary_text");
+
+ let back: InputItem = serde_json::from_value(v).unwrap();
+ assert_eq!(back, item, "InputItem::Reasoning is serde-roundtrippable");
+}
+
+/// Phase ψ-α: `InputItem::Reasoning` の encrypted_content / summary が None でも serde を通過する。
+#[test]
+fn serialize_input_reasoning_skips_none_fields()
+{
+ let item = InputItem::Reasoning {
+  id: "rs_minimal".to_string(),
+  encrypted_content: None,
+  summary: None,
+ };
+ let v = serde_json::to_value(&item).unwrap();
+ assert_eq!(v["type"], "reasoning");
+ assert_eq!(v["id"], "rs_minimal");
+ assert!(
+  v.get("encrypted_content").is_none(),
+  "None encrypted_content must be skipped"
+ );
+ assert!(v.get("summary").is_none(), "None summary must be skipped");
+
+ let back: InputItem = serde_json::from_value(v).unwrap();
+ assert_eq!(back, item);
+}
+
+/// Phase ψ-α: `OutputItem::Reasoning` の wire JSON をそのまま `InputItem::Reasoning`
+/// として受け直せる（OpenAI 公式 "pass back reasoning items" の前提）。
+#[test]
+fn output_reasoning_json_can_be_fed_back_as_input_reasoning()
+{
+ let raw = json!({
+  "id": "rs_x",
+  "type": "reasoning",
+  "encrypted_content": "enc_blob_xxx",
+  "summary": [{"type": "summary_text", "text": "..."}]
+ });
+
+ // (1) output 側としてデシリアライズできる
+ let out: OutputItem = serde_json::from_value(raw.clone()).unwrap();
+ assert!(matches!(out, OutputItem::Reasoning { .. }));
+
+ // (2) input 側としてもそのままデシリアライズできる
+ let inp: InputItem = serde_json::from_value(raw).unwrap();
+ match inp
+ {
+  InputItem::Reasoning {
+   id,
+   encrypted_content,
+   ..
+  } =>
+  {
+   assert_eq!(id, "rs_x");
+   assert_eq!(encrypted_content.as_deref(), Some("enc_blob_xxx"));
+  }
+  _ => panic!("expected InputItem::Reasoning"),
+ }
+}
+
 #[test]
 fn text_format_json_schema_roundtrip()
 {
