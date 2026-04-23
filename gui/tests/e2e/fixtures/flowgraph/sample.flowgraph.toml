@@ -1,23 +1,15 @@
-# =========================================================================
-#  gui/tests/e2e/fixtures/flowgraph/sample.flowgraph.toml
-# =========================================================================
-# Minimal fixture flowgraph loaded by `conf.fixture.e2e.toml` for Phase ν
-# Playwright E2E tests. Design locked in:
-#   docs/roadmap/phase-nu-gui-e2e-playwright.md §4
-#
-# Intentionally tiny and side-effect free:
-#   - `in`   : web_input ingress (no external services)
-#   - `log`  : flowgraph.util.log that just prints to VAC stdout
-#
-# E2E specs that exercise the canvas add / connect / delete nodes
-# against this baseline (see §3.2 of the phase doc). Do not add
-# TTS / OpenAI / Twitch / file IO nodes here.
-# =========================================================================
-
 [meta]
-title = "ν fixture: web_input → log"
-description = "Phase ν Playwright E2E で使う最小 flowgraph。web_input ingress + util.log のみ。"
+title = "ν fixture: web_input + dictionary learn/forget"
+description = """
+Phase ν Playwright E2E で使う最小 flowgraph。
+- `in`  (web_input) → `log` は §3.5 の ingress → WS 配信経路を保つ
+- `learn` / `forget` は §3.4 Live Quick-Add の trigger 対象（外部入力でだけ発火）
+- `dict_src` は Pure な空 Table 供給源（learn/forget の `dictionary` 入力を満たすための
+  プレースホルダ）。E2E は trigger の往復検証が目的なので永続化は行わない。
+"""
 tags = ["fixture", "e2e", "ν"]
+
+# --- §3.5 で使う ingress 経路 ---
 
 [[nodes]]
 id = "in"
@@ -36,3 +28,34 @@ to = "log:exec_in"
 [[edges]]
 from = "in:content"
 to = "log:value"
+
+# --- §3.4 Live Quick-Add 用 Pure チェーン ---
+#
+# `flowgraph.table.from_json` は List<Json> から Table を作る Pure ノードで、
+# 入力省略時は空 List→空 Table を返す。これを learn/forget の `dictionary`
+# 入力に配線することで、trigger の pull 評価中に Table 入力を解決できる。
+# （Table の default 値は現状 engine 側で coerce に失敗することがあり、
+#  `MissingRequiredInput("...:dictionary")` を招くため Pure ノード経由で補う。）
+
+[[nodes]]
+id = "dict_src"
+feature = "flowgraph.table.from_json"
+position = [340, 440]
+
+[[nodes]]
+id = "learn"
+feature = "flowgraph.dictionary.learn"
+position = [620, 400]
+
+[[nodes]]
+id = "forget"
+feature = "flowgraph.dictionary.forget"
+position = [620, 520]
+
+[[edges]]
+from = "dict_src:table"
+to = "learn:dictionary"
+
+[[edges]]
+from = "dict_src:table"
+to = "forget:dictionary"
