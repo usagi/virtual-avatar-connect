@@ -544,11 +544,59 @@ if actual_norm != expected_norm {
 ## 11. Open Questions / Future Extensions
 
 - **Streaming tool-loop の複雑性**: χ-5 実装中に streaming + tool 共存で race / partial JSON 問題が出た場合、non-stream fallback を fall-through で残す選択肢も許容。判断は実装時に commit log に記録
-- **`previous_response_id` 採用**: サーバ側会話状態を使うと VAC の memory window / overflow summary 資産と重複する。Phase ψ+ で評価
+- **`previous_response_id` / `store: true` 採用**: χ-6 で `openai_store` を opt-in knob として提供したが、既定は `false`。詳細な設計判断は §11.1
+- **encrypted reasoning passthrough（ψ-α）**: `include: ["reasoning.encrypted_content"]` で gpt-5 reasoning state を client 側で持ち回る最適化。設計方針は §11.2
 - **`conversation` / `compact` API**: 長期セッション向け。VAC の用途（リアルタイム配信）では必要性が低いが、AI Persona の持続 persona を強化する文脈で再検討候補
 - **built-in tools（`web_search_preview` / `file_search` / `code_interpreter` / MCP tool）**: 個別フェーズで採用可否を議論。MCP tool は [`src/web_interface/control/`](../../src/web_interface/control/) と組み合わせて VAC 自身を MCP server 化する方向も考えられる
 - **`vac-openai-responses` shared crate 化**: un-discord-kaltsitpseudo が streaming / tools 実装したタイミングで切り出し候補。Phase ω 想定
 - **Structured Outputs (JSON mode)**: 現行 `ResponseFormat::JsonSchema` 相当を Responses でも維持。OpenAI の JSON schema extension に追従
+
+### 11.1 設計判断メモ: `store: false` を既定とする理由
+
+χ-6 で `openai_store: Option<bool>` を conf に公開したが、service 層で未指定時は `Some(false)` を明示的に送る既定にした。「全面的に `store: true` 化」は以下の VAC コア機能と構造的に衝突するため採用不可。
+
+| 衝突点 | 内容 |
+|---|---|
+| 動的 memory window | `observe.triggers` + `include_all` / `include_additional` / `exclude` で補助チャンネル（Twitch EventSub / flow status 等）が毎発話ごとに合流する。`previous_response_id` の線形会話モデルで再現できない |
+| memory 縮退 | `shrink_memory_window_by_approx_tokens` / `shrink_memory_window_by_chars` で発話ごとにトリム。server 側 state はこの削減を見ない |
+| overflow summary | 古い発話群を独立 LLM 呼び出しで要約置換。id chain では表現不能 |
+| hot-reload | `custom_instructions` / `decision` が runtime で差し替わる。古い state を参照しながら新 instruction を足すと inconsistent |
+| multi-persona | 1 チャンネルに複数ペルソナが反応しうる。ペルソナ × 会話の id chain 管理コストが線形増 |
+| crash / restart | VAC 再起動で server-side id は失われ、結局 `ChannelDatum` から再構築。真実のソースは client 側 |
+
+**唯一の実用ユースケース**は OpenAI ダッシュボード Logs でのデバッグ。χ-6 で公開した `openai_store = true` を手動で有効化すれば足りるので、追加実装は不要。既定 `false` は privacy 面でも安全（Twitch/YouTube 発言が OpenAI 30 日保存の対象にならない）。
+
+### 11.2 設計メモ: ψ-α encrypted reasoning passthrough
+
+`store: false` を維持したまま gpt-5 系 reasoning の効率を上げる中間解。
+
+#### 仕組み
+
+- request に `include: ["reasoning.encrypted_content"]` を足す
+- response の `output[]` に `Reasoning` item の encrypted blob が載る
+- 次回 request の `input[]` に同 blob を詰め直す
+- サーバ側 state は不要（`store: false` のまま）
+
+#### VAC での適用範囲
+
+**1 回の `react()` 内の tool loop round 間のみ** に限定する。理由:
+
+- 複数の `react()` 呼び出しを跨ぐと、hot-reload や memory window trim で context shape が変わり、blob が参照する reasoning のコヒーレンスが保てない
+- 1 `react()` 内の tool loop round 間は context が安定しているので blob を安全に持ち回れる
+- `drive_responses_tool_loop`（[`src/ai/service.rs`](../../src/ai/service.rs)）の round-over-round に閉じた変更で済む（narrow scope）
+
+#### 受け入れ基準（将来 ψ-α commit 時）
+
+- conf: `openai_reasoning_encrypted_passthrough: Option<bool>` を追加（既定 `true`、opt-out 可能に）
+- gpt-5 系のみ有効化し、それ以外では静かに no-op
+- tool loop round ごとに blob を `output[]` → `input[]` に pass-through
+- round 間の実測: reasoning tokens / p95 latency / $ を計測し CHANGELOG に記録
+- blob が壊れていた / 欠落した場合は warn + blob 無しで fallback（現行動作に degrade）
+
+#### 優先度の目安
+
+- 実運用で gpt-5 系を tool call 込みで回しているか次第。VAC の persona 例は当面 `gpt-4.1-mini` 主体なので優先度は中
+- χ 完了 → 実機で gpt-5-mini + `vac_ping` / `vac_emit_effect` の tool loop を計測 → reasoning token コストが顕著なら ψ-α 起票、という流れが自然
 
 ---
 

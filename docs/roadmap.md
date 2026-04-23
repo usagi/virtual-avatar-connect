@@ -87,7 +87,8 @@ Chat Completions API から Responses API へ全面移行。streaming + tool loo
 
 Phase χ Out-of-scope から派生する将来フェーズ候補:
 
-- [ ] `previous_response_id` / `conversation` / `compact` API による server-side memory
+- [ ] **ψ-α encrypted reasoning passthrough**: gpt-5 系の tool loop round 間で `include: ["reasoning.encrypted_content"]` を使い、`store: false` を維持したまま reasoning state を client 側で持ち回る最適化。`drive_responses_tool_loop` の round 間で暗号化 reasoning blob を `output[]` → 次 `input[]` に pass-through する狭い範囲の改修。効果測定（reasoning tokens / latency / $）を伴う。詳細: [`roadmap/phase-chi-openai-responses.md`](roadmap/phase-chi-openai-responses.md) §11.2
+- [ ] `previous_response_id` / `conversation` / `compact` API による server-side memory（ψ-α を経てなお解決しない長期会話ユースケースが残る場合のみ検討。VAC の `include_all` / `overflow_summary` / hot-reload と構造的に衝突するため、既定は `store: false` を維持。設計判断メモ: [`roadmap/phase-chi-openai-responses.md`](roadmap/phase-chi-openai-responses.md) §11.1）
 - [ ] built-in tools（`web_search_preview` / `file_search` / `code_interpreter` / MCP tool）
 - [ ] `vac-openai-responses` shared crate 化（un-discord-kaltsitpseudo との共有）
 - [ ] ε-2 Tauri ネイティブウィンドウ化
