@@ -530,12 +530,14 @@ pub trait NodeDescriptor: Send + Sync {
  /// Phase φ-2: Control API (`POST /api/v1/control/flowgraph/{instance_id}/trigger/{node_id}`)
  /// からの外部トリガ発火を許可するかの opt-in フラグ。既定 `false`。
  ///
- /// `describe()` が返す [`NodeSpec::control_triggerable`] への射影元。
- /// trait 側で override することで、既存の `NodeSpec { ... }` リテラルを触らずに
- /// dictionary.learn / dictionary.forget 等だけを opt-in にできる設計。
+ /// `NodeSpec` には持たせず trait 側に置くことで、既存の `NodeSpec { ... }` リテラル
+ /// （各 describe() 実装）を触らずに dictionary.learn / dictionary.forget 等だけを
+ /// opt-in にできる設計。
  ///
- /// `NodeRegistry::spec()` / `all_specs()` がこの値を `NodeSpec.control_triggerable` に
- /// 詰め直してから返すため、GUI から見える仕様とトリガ許可判定の 1 源として振る舞う。
+ /// セキュリティ判定の source of truth は `NodeRegistry::is_control_triggerable()`（trait 経由）。
+ /// GUI 向けの node-catalog API（φ-6）はレスポンス JSON に同じ trait 値を
+ /// `control_triggerable` フィールドとして混ぜ込んで返すため、Flowgraph Editor は
+ /// 仕様レベルでノードごとの発火可否を知ることができる。
  fn control_triggerable(&self) -> bool
  {
   false

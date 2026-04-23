@@ -190,8 +190,24 @@ pub struct NodeCatalogResponse {
 
 #[get("/flowgraph/node-catalog")]
 pub async fn get_node_catalog() -> impl Responder {
-	let specs = registry().all_specs();
-	let values: Vec<serde_json::Value> = specs.iter().map(|s| serde_json::to_value(s).unwrap()).collect();
+	// Phase φ-6: Flowgraph Editor の「Trigger」ボタン表示判定のため、
+	// `control_triggerable` を NodeSpec JSON に差し込んで返す。NodeSpec 自体に
+	// field を増やすと既存リテラルが全て壊れるので JSON 層で注入する。
+	let reg = registry();
+	let specs = reg.all_specs();
+	let values: Vec<serde_json::Value> = specs
+		.iter()
+		.map(|s| {
+			let mut v = serde_json::to_value(s).unwrap();
+			if let Some(obj) = v.as_object_mut() {
+				obj.insert(
+					"control_triggerable".to_string(),
+					serde_json::Value::Bool(reg.is_control_triggerable(&s.feature)),
+				);
+			}
+			v
+		})
+		.collect();
 	HttpResponse::Ok().json(NodeCatalogResponse {
 		count: values.len(),
 		specs: values,
@@ -1449,6 +1465,58 @@ mod tests {
 		assert!(!r.is_control_triggerable("flowgraph.channel.emit"));
 		// 未登録は無条件 false。
 		assert!(!r.is_control_triggerable("flowgraph.does.not.exist"));
+	}
+
+	/// φ-6: node-catalog JSON に `control_triggerable` が混ざっているかの検証。
+	/// Flowgraph Editor の Trigger ボタン表示判定が GUI 側の主キーになるため、
+	/// dictionary.learn / .forget が true、その他が false になっていることを固定化する。
+	#[test]
+	fn node_catalog_json_injects_control_triggerable_flag() {
+		let reg = registry();
+		let specs = reg.all_specs();
+		let values: Vec<serde_json::Value> = specs
+			.iter()
+			.map(|s| {
+				let mut v = serde_json::to_value(s).unwrap();
+				if let Some(obj) = v.as_object_mut() {
+					obj.insert(
+						"control_triggerable".to_string(),
+						serde_json::Value::Bool(reg.is_control_triggerable(&s.feature)),
+					);
+				}
+				v
+			})
+			.collect();
+
+		let by_feature: std::collections::HashMap<&str, &serde_json::Value> = values
+			.iter()
+			.map(|v| (v["feature"].as_str().unwrap(), v))
+			.collect();
+
+		// opt-in 済み: dictionary.learn / .forget
+		for f in ["flowgraph.dictionary.learn", "flowgraph.dictionary.forget"] {
+			let spec = by_feature.get(f).unwrap_or_else(|| panic!("{f} が node-catalog にいない"));
+			assert_eq!(
+				spec["control_triggerable"].as_bool(),
+				Some(true),
+				"{f} は control_triggerable=true であるべき"
+			);
+		}
+
+		// 典型的な non-opt-in: literal / log / tts / dictionary.replace
+		for f in [
+			"flowgraph.literal.string",
+			"flowgraph.util.log",
+			"flowgraph.tts.speak",
+			"flowgraph.dictionary.replace",
+		] {
+			let spec = by_feature.get(f).unwrap_or_else(|| panic!("{f} が node-catalog にいない"));
+			assert_eq!(
+				spec["control_triggerable"].as_bool(),
+				Some(false),
+				"{f} は control_triggerable=false であるべき"
+			);
+		}
 	}
 
 	#[test]

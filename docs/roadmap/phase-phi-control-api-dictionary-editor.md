@@ -457,7 +457,7 @@ pub struct NodeSpec {
 - **Quick-Add の history 永続化**: client 側 `localStorage` で十分か、server 側 `~/.vac/quickadd.history.jsonl` を作るか
 - **Bulk import / export**: Editor から CSV / JSON エクスポート、他プロファイルからのインポート
 - **Scene Registry / Credential Store**: `role="scene-registry"` などは φ では DTO とルーティングだけ通し、GUI Pane は θ で実装
-- **Flowgraph topology 可視化への trigger 統合**: Flowgraph Editor キャンバス上で `control_triggerable=true` のノードに "Trigger" ボタンを出し、dev 用の手動発火手段を提供（θ 候補）
+- ~~**Flowgraph topology 可視化への trigger 統合**: Flowgraph Editor キャンバス上で `control_triggerable=true` のノードに "Trigger" ボタンを出し、dev 用の手動発火手段を提供（θ 候補）~~ → **φ-6 で実装済み**（`FlowgraphNodeCard.svelte` に ▶ ボタン、`FlowgraphTriggerDialog.svelte` で inputs を手入力）。node-catalog JSON に `control_triggerable` フィールドを注入して GUI が判別できるようにした
 
 ---
 

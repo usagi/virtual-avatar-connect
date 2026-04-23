@@ -727,6 +727,13 @@ export type FlowgraphNodeSpec = {
  inputs: FlowgraphPortSpec[];
  outputs: FlowgraphPortSpec[];
  properties: FlowgraphPropertySpec[];
+ /**
+  * Phase φ-6: Control API `POST /flowgraph/{instance}/trigger/{node_id}` で
+  * このノードを外部から発火できるか。サーバ側では `NodeDescriptor::control_triggerable()`
+  * の opt-in が source of truth で、node-catalog レスポンス JSON にだけこの field が注入される。
+  * 古いバックエンドに繋いだ場合は undefined になる可能性があるため `?` を付ける。
+  */
+ control_triggerable?: boolean;
 };
 
 export type FlowgraphNodeCatalogResponse = {

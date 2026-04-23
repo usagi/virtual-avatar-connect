@@ -8,11 +8,15 @@
   * - is_exec ポートは矢印形をイメージしたアクセント色で描画
   *
   * 接続時の型チェックは `FlowgraphCanvas` の onConnect で行なうのでここは表示のみ。
+  *
+  * Phase φ-6: `spec.control_triggerable === true` のノードには ▶ Trigger ボタンを出す。
+  * クリックで `FlowgraphTriggerDialog` を開き、Control API から 1-shot 発火できる。
   */
  import { Handle, Position } from '@xyflow/svelte';
  import { flowgraphStore } from '../flowgraphStore.svelte';
  import { toastStore } from '../toasts.svelte';
  import type { FlowgraphNodeSpec, FlowgraphPortSpec } from '../types';
+ import FlowgraphTriggerDialog from './FlowgraphTriggerDialog.svelte';
 
  type Data = {
   nodeId: string;
@@ -60,6 +64,26 @@
    },
   });
  }
+
+ // φ-6: Trigger ボタン。control_triggerable=true のノードにだけ出す。
+ const triggerable = $derived(spec?.control_triggerable === true);
+ /**
+  * サーバの `node_meta` キー（= `{fq_path}::{node_id}`）に揃えるため、現在開いている
+  * flowgraph の fq と node id を連結する。currentFq が空（root 直下）の時は id 単体。
+  */
+ const fqNodeId = $derived.by(() => {
+  const fq = flowgraphStore.currentFq;
+  if (!fq || fq.length === 0) return data.nodeId;
+  return `${fq}::${data.nodeId}`;
+ });
+ let triggerDialogOpen = $state(false);
+
+ function onClickTrigger(event: MouseEvent) {
+  event.stopPropagation();
+  event.preventDefault();
+  if (!spec) return;
+  triggerDialogOpen = true;
+ }
 </script>
 
 <div
@@ -78,6 +102,18 @@
  >
   ×
  </button>
+ {#if triggerable && spec}
+  <button
+   type="button"
+   class="trigger-btn"
+   aria-label="このノードをトリガ"
+   title="Control API からこのノードを 1-shot で発火する (φ-6)"
+   onclick={onClickTrigger}
+   onmousedown={(e) => e.stopPropagation()}
+  >
+   ▶
+  </button>
+ {/if}
  <div class="head">
   <div class="title">{title}</div>
   <div class="feature">{shortFeature(data.feature)}</div>
@@ -117,6 +153,14 @@
   <div class="warn">未知 feature</div>
  {/if}
 </div>
+
+{#if triggerable && spec}
+ <FlowgraphTriggerDialog
+  bind:open={triggerDialogOpen}
+  {fqNodeId}
+  {spec}
+ />
+{/if}
 
 <style>
  .flowgraph-node {
@@ -177,6 +221,35 @@
  .close-btn:hover {
   opacity: 1;
   background: rgba(239, 68, 68, 0.25);
+ }
+ /* φ-6: Trigger ボタン。control_triggerable=true のノードにだけ出る。
+    × ボタンの左隣に固定配置し、hover / selected で可視化、通常時は半透明で邪魔にならないように。 */
+ .trigger-btn {
+  position: absolute;
+  top: 2px;
+  right: 22px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  line-height: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  color: rgb(29, 78, 216);
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease-in-out, background-color 0.12s ease-in-out;
+  z-index: 5;
+ }
+ .flowgraph-node:hover .trigger-btn,
+ .flowgraph-node.selected .trigger-btn {
+  opacity: 0.9;
+ }
+ .trigger-btn:hover {
+  opacity: 1;
+  background: rgba(59, 130, 246, 0.25);
  }
  .flowgraph-node.missing-spec {
   border-color: rgb(239 68 68);
