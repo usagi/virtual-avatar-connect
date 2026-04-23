@@ -75,6 +75,69 @@ fn resolve_openai_max_output_tokens(persona: &AiPersonaConf) -> Option<u32>
  persona.max_tokens.map(u32::from)
 }
 
+/// ψ-α: gpt-5 系の tool loop round 間 reasoning pass-through を有効にするかを解決する。
+///
+/// - conf `openai_reasoning_encrypted_passthrough = true/false` が明示されていればそれを優先
+/// - 未指定なら **既定 `true`**（gpt-5 系でのみ実際に有効になり、非 gpt-5 は呼び出し側で no-op）
+fn resolve_reasoning_encrypted_passthrough(persona: &AiPersonaConf) -> bool
+{
+ persona.openai_reasoning_encrypted_passthrough.unwrap_or(true)
+}
+
+/// ψ-α: `include: ["reasoning.encrypted_content"]` の付与をモデル判定と enabled flag に基づいて適用する。
+///
+/// - gpt-5 系 + `enabled == true` のときだけ `include` に追加（重複 append しない）
+/// - 非 gpt-5 モデル or `enabled == false` では request を変更しない
+fn apply_reasoning_passthrough_include(
+ request: &mut CreateResponseRequest,
+ model: Option<&str>,
+ enabled: bool,
+)
+{
+ if !(enabled && model_policy::is_gpt5_family(model))
+ {
+  return;
+ }
+ let entry = "reasoning.encrypted_content".to_string();
+ let list = request.include.get_or_insert_with(Vec::new);
+ if !list.iter().any(|s| s == &entry)
+ {
+  list.push(entry);
+ }
+}
+
+/// ψ-α: `response.output` 中の `OutputItem::Reasoning` を次ラウンド input 用の
+/// `InputItem::Reasoning` に変換して返す。順序は出力順を維持する。
+///
+/// 返り値の 2 番目は `encrypted_content` が欠落していた件数。`include` を指定した
+/// request に対して API 側が blob を返さないケースを観測したい目的で使う（warn で露出）。
+fn collect_reasoning_input_items(output: &[OutputItem]) -> (Vec<InputItem>, usize)
+{
+ let mut items = Vec::new();
+ let mut missing = 0usize;
+ for item in output
+ {
+  if let OutputItem::Reasoning {
+   id,
+   encrypted_content,
+   summary,
+   ..
+  } = item
+  {
+   if encrypted_content.is_none()
+   {
+    missing += 1;
+   }
+   items.push(InputItem::Reasoning {
+    id: id.clone(),
+    encrypted_content: encrypted_content.clone(),
+    summary: summary.clone(),
+   });
+  }
+ }
+ (items, missing)
+}
+
 /// `openai_reasoning_effort` の conf enum を Responses API の `ReasoningEffort` に写す。
 fn resolve_openai_reasoning_effort(persona: &AiPersonaConf) -> Option<ReasoningEffort>
 {
@@ -417,6 +480,7 @@ impl AiService {
   let openai_tools_json_path = persona.openai_tools_json_path.clone();
   let openai_tool_choice = persona.openai_tool_choice.clone();
   let openai_parallel_tool_calls = persona.openai_parallel_tool_calls;
+  let reasoning_encrypted_passthrough = resolve_reasoning_encrypted_passthrough(&persona);
   let respect_speech_floor = persona.respect_speech_floor.clone();
 
   let channel_utterance = self.channel_utterance.clone();
@@ -636,6 +700,14 @@ impl AiService {
    persona_anchor.as_deref(),
    &reversed_sources,
    &observe,
+  );
+
+  // ψ-α: gpt-5 系 + passthrough 有効時のみ `include: ["reasoning.encrypted_content"]` を付与。
+  // 非 gpt-5 モデルでは no-op（API 側で意味を持たない keyword 指定を避ける）。
+  apply_reasoning_passthrough_include(
+   &mut request,
+   model_for_runtime.as_deref(),
+   reasoning_encrypted_passthrough,
   );
 
   // χ-5: tools は Responses API の `Vec<Tool>` を直接 request.tools に入れる。
@@ -996,6 +1068,15 @@ async fn drive_responses_tool_loop(
  let mut stream_datum_id: Option<u64> = None;
  let mut stream_nonempty_delta_chunks: usize = 0;
 
+ // ψ-α: caller が `include: ["reasoning.encrypted_content"]` を付けた場合のみ
+ // tool loop round 間で Reasoning item を pass-through する。caller は
+ // is_gpt5_family(model) && openai_reasoning_encrypted_passthrough チェックを
+ // 済ませた上で include を設定するので、ここでは include の内容だけ見る。
+ let reasoning_passthrough = request
+  .include
+  .as_ref()
+  .is_some_and(|v| v.iter().any(|s| s == "reasoning.encrypted_content"));
+
  for round in 0 .. MAX_TOOL_ROUNDS {
   let response: crate::ai::openai_responses::types::response::Response = if streaming {
    log::debug!(
@@ -1148,6 +1229,39 @@ async fn drive_responses_tool_loop(
   }
   let ctx = tool_ctx.ok_or_else(|| anyhow!("tool_ctx が未初期化（バグ）"))?;
 
+  // ψ-α: passthrough 有効時、response.output に含まれる Reasoning item を
+  // 次ラウンドの input[] に FunctionCall より先に積み直す。OpenAI 公式の推奨形
+  // （"all items between the last user message and your function call output are
+  //   passed into the next response untouched"）に従う。
+  // 壊れた / 欠落 blob は warn + そのまま透過（item 自体は落とさない）。
+  if reasoning_passthrough
+  {
+   let (reasoning_items, missing_blob) = collect_reasoning_input_items(&response.output);
+   let pushed = reasoning_items.len();
+   for item in reasoning_items
+   {
+    request.input.push(item);
+   }
+   if missing_blob > 0
+   {
+    log::warn!(
+     "《AI[{}]》 ψ-α: include=reasoning.encrypted_content を指定したが Reasoning item {}/{} 件で encrypted_content が欠落（blob 無しで transit）。API 側の応答形状変更を疑う余地あり。",
+     persona_label,
+     missing_blob,
+     pushed
+    );
+   }
+   else if pushed > 0
+   {
+    log::trace!(
+     "《AI[{}]》 ψ-α: Reasoning item {} 件を次ラウンド input に pass-through (round={}).",
+     persona_label,
+     pushed,
+     round
+    );
+   }
+  }
+
   // 次ラウンド input[] に FunctionCall item をそのまま積み、続けて FunctionCallOutput を積む。
   for fc in &function_calls {
    if let OutputItem::FunctionCall {
@@ -1222,6 +1336,7 @@ mod chi6_resolver_tests
    max_tokens: None,
    openai_reasoning_effort: None,
    openai_store: None,
+   openai_reasoning_encrypted_passthrough: None,
    temperature: None,
    top_p: None,
    n: None,
@@ -1391,5 +1506,145 @@ mod chi6_resolver_tests
   // 大文字表記は受理しない。
   let err = serde_json::from_str::<OpenAiReasoningEffortConf>("\"HIGH\"");
   assert!(err.is_err());
+ }
+
+ // ============================================================
+ // ψ-α: encrypted reasoning passthrough
+ // ============================================================
+
+ #[test]
+ fn reasoning_encrypted_passthrough_defaults_to_true()
+ {
+  let p = persona_minimal();
+  assert!(
+   resolve_reasoning_encrypted_passthrough(&p),
+   "未指定時は既定 true（gpt-5 系で実際に有効、非 gpt-5 は caller 側で no-op）"
+  );
+ }
+
+ #[test]
+ fn reasoning_encrypted_passthrough_respects_opt_out()
+ {
+  let mut p = persona_minimal();
+  p.openai_reasoning_encrypted_passthrough = Some(false);
+  assert!(
+   !resolve_reasoning_encrypted_passthrough(&p),
+   "明示的 false は尊重"
+  );
+ }
+
+ #[test]
+ fn apply_reasoning_passthrough_include_noop_when_disabled()
+ {
+  let mut req = CreateResponseRequest::default();
+  apply_reasoning_passthrough_include(&mut req, Some("gpt-5-mini"), false);
+  assert!(req.include.is_none(), "disabled なら include を触らない");
+ }
+
+ #[test]
+ fn apply_reasoning_passthrough_include_noop_for_non_gpt5()
+ {
+  let mut req = CreateResponseRequest::default();
+  apply_reasoning_passthrough_include(&mut req, Some("gpt-4o-mini"), true);
+  assert!(req.include.is_none(), "非 gpt-5 モデルでは no-op");
+ }
+
+ #[test]
+ fn apply_reasoning_passthrough_include_sets_for_gpt5()
+ {
+  let mut req = CreateResponseRequest::default();
+  apply_reasoning_passthrough_include(&mut req, Some("gpt-5-mini"), true);
+  assert_eq!(
+   req.include.as_ref().map(|v| v.as_slice()),
+   Some(&["reasoning.encrypted_content".to_string()][..])
+  );
+ }
+
+ #[test]
+ fn apply_reasoning_passthrough_include_dedupes()
+ {
+  let mut req = CreateResponseRequest {
+   include: Some(vec!["reasoning.encrypted_content".to_string()]),
+   ..Default::default()
+  };
+  apply_reasoning_passthrough_include(&mut req, Some("gpt-5-mini"), true);
+  assert_eq!(
+   req.include.as_ref().unwrap().len(),
+   1,
+   "既に入っていれば重複 append しない"
+  );
+ }
+
+ #[test]
+ fn apply_reasoning_passthrough_include_handles_unknown_model()
+ {
+  let mut req = CreateResponseRequest::default();
+  apply_reasoning_passthrough_include(&mut req, None, true);
+  assert!(req.include.is_none(), "model 未指定でも no-op（safe default）");
+ }
+
+ #[test]
+ fn collect_reasoning_input_items_preserves_order_and_flags_missing_blobs()
+ {
+  use crate::ai::openai_responses::types::{MessageContent, OutputItem};
+  let output = vec![
+   OutputItem::Reasoning {
+    id: "rs_a".into(),
+    status: None,
+    summary: Some(serde_json::json!([])),
+    encrypted_content: Some("blob_a".into()),
+   },
+   // 間に Message が挟まっていても Reasoning だけを抽出する。
+   OutputItem::Message {
+    id: "msg_a".into(),
+    status: None,
+    role: "assistant".into(),
+    content: vec![MessageContent::OutputText {
+     text: "hi".into(),
+     annotations: None,
+    }],
+   },
+   OutputItem::Reasoning {
+    id: "rs_b".into(),
+    status: None,
+    summary: None,
+    encrypted_content: None, // blob 欠落
+   },
+  ];
+  let (items, missing) = collect_reasoning_input_items(&output);
+  assert_eq!(items.len(), 2);
+  assert_eq!(missing, 1, "blob 欠落は 1 件");
+  match &items[0] {
+   InputItem::Reasoning { id, encrypted_content, .. } => {
+    assert_eq!(id, "rs_a");
+    assert_eq!(encrypted_content.as_deref(), Some("blob_a"));
+   }
+   _ => panic!("[0] must be Reasoning"),
+  }
+  match &items[1] {
+   InputItem::Reasoning { id, encrypted_content, .. } => {
+    assert_eq!(id, "rs_b");
+    assert!(encrypted_content.is_none(), "blob は None で保持");
+   }
+   _ => panic!("[1] must be Reasoning"),
+  }
+ }
+
+ #[test]
+ fn collect_reasoning_input_items_returns_empty_when_no_reasoning()
+ {
+  use crate::ai::openai_responses::types::{MessageContent, OutputItem};
+  let output = vec![OutputItem::Message {
+   id: "msg_only".into(),
+   status: None,
+   role: "assistant".into(),
+   content: vec![MessageContent::OutputText {
+    text: "hi".into(),
+    annotations: None,
+   }],
+  }];
+  let (items, missing) = collect_reasoning_input_items(&output);
+  assert!(items.is_empty());
+  assert_eq!(missing, 0);
  }
 }

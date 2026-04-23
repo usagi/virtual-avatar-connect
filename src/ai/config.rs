@@ -244,6 +244,12 @@ pub struct AiPersonaConf {
  /// ので、**未指定時は `false`** を送る（サーバ側 conversation state に依存しない運用）。
  /// `previous_response_id` を活用する将来 phase で true 化する余地を残す。
  pub openai_store: Option<bool>,
+ /// ψ-α で追加。gpt-5 系の tool loop round 間で `reasoning.encrypted_content` を
+ /// 使って reasoning state を client 側で持ち回るかどうか。未指定時は `true`
+ /// （gpt-5 系のみ自動 opt-in、非 gpt-5 モデルでは DTO にも request にも影響しない no-op）。
+ /// 明示的に `false` を指定すれば opt-out できる（デバッグや実機計測の比較用）。
+ /// 詳細: [`docs/roadmap/phase-psi-alpha-encrypted-reasoning.md`](../../docs/roadmap/phase-psi-alpha-encrypted-reasoning.md)
+ pub openai_reasoning_encrypted_passthrough: Option<bool>,
  pub temperature: Option<f32>,
  pub top_p: Option<f32>,
  pub n: Option<u8>,

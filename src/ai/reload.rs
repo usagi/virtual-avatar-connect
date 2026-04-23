@@ -288,6 +288,7 @@ mod responses_template_tests
    max_tokens: None,
    openai_reasoning_effort: None,
    openai_store: None,
+   openai_reasoning_encrypted_passthrough: None,
    temperature: Some(0.5),
    top_p: Some(0.9),
    n: None,

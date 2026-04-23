@@ -283,6 +283,7 @@ mod tests {
    max_tokens: None,
    openai_reasoning_effort: None,
    openai_store: None,
+   openai_reasoning_encrypted_passthrough: None,
    temperature: None,
    top_p: None,
    n: None,
