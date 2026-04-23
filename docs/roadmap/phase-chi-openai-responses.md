@@ -436,7 +436,7 @@ env 未指定時は `None` を送り OpenAI デフォルトに任せる。
 | χ-3 | `χ-3 refactor(ai/tools):` | Tool 定義 + `dispatch_tool_call` を Responses 型に移行 | `src/ai/tools.rs` |
 | χ-4 | `χ-4 refactor(ai/context,reload,model_policy):` | request assembly を `CreateResponseRequest` に置換 | `src/ai/context.rs` / `src/ai/reload.rs` / `src/ai/model_policy.rs` |
 | χ-5 ✅ | `χ-5 refactor(ai/service,completion):` | streaming / tool-loop / gpt-5 retry を Responses に全面移行 | `src/ai/service.rs` / `src/ai/completion.rs` / `src/ai/context.rs` / `src/ai/model_policy.rs` / `src/ai/tools.rs` |
-| χ-6 | `χ-6 refactor(conf):` | `openai_max_output_tokens` + レガシーフォールバック + `openai_reasoning_effort` | `src/ai/config.rs` / `src/conf/mod.rs` |
+| χ-6 ✅ | `χ-6 refactor(conf):` | `openai_max_output_tokens` + レガシーフォールバック + `openai_reasoning_effort` + `openai_store` + `memory_overflow_summary_max_output_tokens` | `src/ai/config.rs` / `src/ai/mod.rs` / `src/ai/service.rs` / `src/ai/reload.rs` / `src/ai/decision.rs` |
 | χ-7 | `χ-7 docs:` | manual / conf.example / CHANGELOG / roadmap.md χ tick | `docs/manual/conf-reference.md` / `docs/manual/tutorials/openai-persona.md` / `conf.example*.toml` / `CHANGELOG.md` / `docs/roadmap.md` |
 | χ-8.0 | `χ-8.0 fix(flowgraph/docs):` | `node_catalog_md_up_to_date` を line-ending 正規化で CRLF 環境でも通す（χ-5 以前からの pre-existing bug、§9.5 参照） | `src/flowgraph/docs.rs` |
 | χ-8 | `χ-8 test:` | 全体テスト + 実機スモーク + 必要ならリリースノート微修正 | テスト実行 + CHANGELOG 調整のみ（コード変更は基本 0） |

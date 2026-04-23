@@ -36,3 +36,7 @@ pub use reload::{AiReloadHandle, AiReloadReport, AiReloadRequest};
 pub use service::spawn_all;
 
 pub(crate) const ENV_OPENAI_API_KEY: &str = "VAC_OPENAI_API_KEY";
+
+/// χ-6: Responses API の `max_output_tokens` を env で上書きするためのキー。
+/// conf `[[ai.personas]].openai_max_output_tokens` / legacy `max_tokens` より優先される。
+pub(crate) const ENV_OPENAI_MAX_OUTPUT_TOKENS: &str = "VAC_OPENAI_MAX_OUTPUT_TOKENS";

@@ -188,6 +188,19 @@ pub struct OpenAiFewShotTurn {
  pub content: String,
 }
 
+/// `[[ai.personas]].openai_reasoning_effort` に書く値。gpt-5 系モデル専用。
+///
+/// Responses API の `reasoning.effort` (`ReasoningEffort` enum) に 1:1 でマップされる。
+/// conf 層では async_openai / openai_responses の型に依存したくないので、conf 側の enum として
+/// 独立に持ち、変換は `src/ai/service.rs` で行う（χ-6）。
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum OpenAiReasoningEffortConf {
+ Low,
+ Medium,
+ High,
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct AiPersonaConf {
  /// 任意の識別子。ログ・CLI の `--persona-id` 指定に使う。未指定でもサービスは起動するが、Fine-tune 等の CLI 指定が効かない。
@@ -217,7 +230,20 @@ pub struct AiPersonaConf {
  pub model: Option<String>,
  pub custom_instructions: Option<String>,
  pub system_instructions_extra: Option<String>,
+ /// χ-6 で追加した Responses API 正式キー。未指定時は env `VAC_OPENAI_MAX_OUTPUT_TOKENS`、
+ /// それも無ければ legacy `max_tokens`（Chat Completions 由来の u16）が fallback に使われる。
+ /// 両方指定時は **新キーが優先**（`max_tokens` は warn 無しで無視）。
+ pub openai_max_output_tokens: Option<u32>,
+ /// χ-6 で追加した Chat Completions 互換 legacy フィールド。`openai_max_output_tokens` が
+ /// 未指定のときだけ fallback として u32 へ昇格させて扱う。
  pub max_tokens: Option<u16>,
+ /// χ-6 で追加。gpt-5 系の `reasoning.effort` を制御する。低 / 中 / 高で切り替え可能。
+ /// gpt-5 系以外で指定しても Responses 層で無視される（warn ログ）。
+ pub openai_reasoning_effort: Option<OpenAiReasoningEffortConf>,
+ /// χ-6 で追加。Responses API の `store` フラグ。VAC は client 側で全 input を再構築する
+ /// ので、**未指定時は `false`** を送る（サーバ側 conversation state に依存しない運用）。
+ /// `previous_response_id` を活用する将来 phase で true 化する余地を残す。
+ pub openai_store: Option<bool>,
  pub temperature: Option<f32>,
  pub top_p: Option<f32>,
  pub n: Option<u8>,
@@ -232,6 +258,12 @@ pub struct AiPersonaConf {
  pub memory_budget_chars_per_approx_token: Option<u8>,
  pub memory_overflow_summary_enabled: Option<bool>,
  pub memory_overflow_summary_model: Option<String>,
+ /// χ-6 で追加した Responses API 正式キー。オーバーフロー要約呼び出しの
+ /// `max_output_tokens` に使う。未指定時は legacy `memory_overflow_summary_max_completion_tokens`
+ /// が u32 に昇格して fallback する。
+ pub memory_overflow_summary_max_output_tokens: Option<u32>,
+ /// Chat Completions 時代の legacy フィールド（χ-6 から deprecated 扱い）。
+ /// `memory_overflow_summary_max_output_tokens` が未指定のときだけ fallback に使う。
  pub memory_overflow_summary_max_completion_tokens: Option<u16>,
  pub memory_overflow_summary_max_input_chars: Option<usize>,
  pub memory_overflow_summary_min_chars: Option<usize>,

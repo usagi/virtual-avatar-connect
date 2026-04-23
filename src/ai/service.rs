@@ -8,17 +8,17 @@
 //! Phase II 以降で加える Decision Engine・Heartbeat・Action 実行はこの event loop を拡張する形で入れる。
 
 use super::completion;
-use super::config::{AiPersonaConf, OpenAiChatFinetuning};
+use super::config::{AiPersonaConf, OpenAiChatFinetuning, OpenAiReasoningEffortConf};
 use super::context;
 use super::decision::{uniform_jitter, Decision, DecisionInput, DecisionSpec};
 use super::model_policy;
 use super::observe::{Observation, ObserveSet};
 use super::reload::make_responses_request_template;
 use super::tools::{self, ToolContext};
-use super::ENV_OPENAI_API_KEY;
+use super::{ENV_OPENAI_API_KEY, ENV_OPENAI_MAX_OUTPUT_TOKENS};
 
 use crate::ai::openai_responses::types::input::InputItem;
-use crate::ai::openai_responses::types::request::CreateResponseRequest;
+use crate::ai::openai_responses::types::request::{CreateResponseRequest, ReasoningEffort};
 use crate::ai::openai_responses::types::response::OutputItem;
 use crate::ai::openai_responses::types::stream::StreamEvent;
 use crate::ai::openai_responses::util::extract_output_text;
@@ -40,6 +40,61 @@ const DEFAULT_REMOVE_CHARS: &str = "\n\r\t";
 const DEFAULT_OPENAI_MAX_IN_FLIGHT: usize = 2;
 const DEFAULT_OPENAI_STREAM: bool = true;
 const DEFAULT_OVERFLOW_SUMMARY_MIN_CHARS: usize = 64;
+
+// ============================================================
+// χ-6: conf 値を Responses API の request 値へ resolve するヘルパ。
+//
+// 優先順位は `env > 新 conf キー > legacy conf キー > None（= API 既定）`。
+// 新旧両方指定されても warn は出さない（un-discord 方針に合わせ "warn 無しで fallback"）。
+// ============================================================
+
+/// `openai_max_output_tokens` を env / 新 conf / legacy `max_tokens` の順に解決する。
+///
+/// - env `VAC_OPENAI_MAX_OUTPUT_TOKENS`: 数値パース失敗時は warn ログを出して無視
+/// - 新キー `openai_max_output_tokens` (u32) → そのまま
+/// - legacy `max_tokens` (u16) → u32 にキャスト
+fn resolve_openai_max_output_tokens(persona: &AiPersonaConf) -> Option<u32>
+{
+ if let Ok(raw) = std::env::var(ENV_OPENAI_MAX_OUTPUT_TOKENS)
+ {
+  match raw.trim().parse::<u32>()
+  {
+   Ok(v) => return Some(v),
+   Err(e) => log::warn!(
+    "環境変数 {} = {:?} は u32 に解釈できませんでした（{}）。conf のフォールバックを使います。",
+    ENV_OPENAI_MAX_OUTPUT_TOKENS,
+    raw,
+    e
+   ),
+  }
+ }
+ if let Some(v) = persona.openai_max_output_tokens
+ {
+  return Some(v);
+ }
+ persona.max_tokens.map(u32::from)
+}
+
+/// `openai_reasoning_effort` の conf enum を Responses API の `ReasoningEffort` に写す。
+fn resolve_openai_reasoning_effort(persona: &AiPersonaConf) -> Option<ReasoningEffort>
+{
+ persona.openai_reasoning_effort.map(|e| match e
+ {
+  OpenAiReasoningEffortConf::Low => ReasoningEffort::Low,
+  OpenAiReasoningEffortConf::Medium => ReasoningEffort::Medium,
+  OpenAiReasoningEffortConf::High => ReasoningEffort::High,
+ })
+}
+
+/// オーバーフロー要約で使う `max_output_tokens` を新キー > legacy の順に解決する。
+fn resolve_overflow_summary_max_output_tokens(persona: &AiPersonaConf) -> Option<u32>
+{
+ if let Some(v) = persona.memory_overflow_summary_max_output_tokens
+ {
+  return Some(v);
+ }
+ persona.memory_overflow_summary_max_completion_tokens.map(u32::from)
+}
 
 /// 1 ペルソナ分の AI サービス。`Clone` で同一リソースを共有する（Arc + broadcast）。
 ///
@@ -110,10 +165,17 @@ impl AiService {
   let observe = ObserveSet::from_conf(&channel_utterance, &persona.observe);
 
   let client = make_client(&persona)?;
-  // χ-6 で `openai_max_output_tokens` / `openai_reasoning_effort` / `openai_store` を persona の
-  // 正式フィールドに入れる。それまでは環境変数のみで上書きさせ、既定は None（= legacy `max_tokens`
-  // fallback または API 既定）。
-  let request_template = make_responses_request_template(&persona, None, None, Some(false))?;
+  // χ-6: 新 conf キー（`openai_max_output_tokens` / `openai_reasoning_effort` / `openai_store`）を
+  // 優先しつつ env / legacy にフォールバックして request_template に詰める。
+  let resolved_max_output_tokens = resolve_openai_max_output_tokens(&persona);
+  let resolved_reasoning_effort = resolve_openai_reasoning_effort(&persona);
+  let resolved_store = Some(persona.openai_store.unwrap_or(false));
+  let request_template = make_responses_request_template(
+   &persona,
+   resolved_max_output_tokens,
+   resolved_reasoning_effort,
+   resolved_store,
+  )?;
 
   let decision = Arc::new(DecisionSpec::from_persona(&persona)?);
   log::debug!(
@@ -337,12 +399,11 @@ impl AiService {
   let memory_budget_chars_per_approx_token = persona.memory_budget_chars_per_approx_token.unwrap_or(4).max(1);
   let memory_overflow_summary_enabled = persona.memory_overflow_summary_enabled.unwrap_or(false);
   let memory_overflow_summary_model = persona.memory_overflow_summary_model.clone();
-  let memory_overflow_summary_max_completion_tokens = persona.memory_overflow_summary_max_completion_tokens;
+  let memory_overflow_summary_max_output_tokens = resolve_overflow_summary_max_output_tokens(&persona);
   let memory_overflow_summary_max_input_chars = persona.memory_overflow_summary_max_input_chars.unwrap_or(16_000);
   let memory_overflow_summary_min_chars = persona.memory_overflow_summary_min_chars.unwrap_or(DEFAULT_OVERFLOW_SUMMARY_MIN_CHARS);
   let memory_overflow_summary_cooldown_secs = persona.memory_overflow_summary_cooldown_secs.filter(|&s| s > 0);
   let model_for_runtime = persona.model.clone();
-  let orig_max_tokens = persona.max_tokens;
   let remove_chars = persona
    .remove_chars
    .as_ref()
@@ -443,7 +504,7 @@ impl AiService {
       &client,
       &memory_overflow_summary_model,
       model_for_runtime.as_deref(),
-      memory_overflow_summary_max_completion_tokens,
+      memory_overflow_summary_max_output_tokens,
       &truncated,
       dropped_for_overflow.len(),
       &overflow_summary_last_at,
@@ -455,7 +516,7 @@ impl AiService {
      &client,
      &memory_overflow_summary_model,
      model_for_runtime.as_deref(),
-     memory_overflow_summary_max_completion_tokens,
+     memory_overflow_summary_max_output_tokens,
      &truncated,
      dropped_for_overflow.len(),
      &overflow_summary_last_at,
@@ -665,8 +726,6 @@ impl AiService {
     }
    }
   }
-  let _ = orig_max_tokens; // χ-5: legacy `max_tokens` (u16) は max_output_tokens(u32) 経由で扱う。χ-6 で廃止予定。
-
   content = apply_openai_output_filters(content, &remove_chars, assistant_max_chars, &assistant_strip_substrings);
 
   if content.trim().is_empty() {
@@ -769,7 +828,7 @@ async fn run_overflow_summary(
  client: &ResponsesClient,
  overflow_model: &Option<String>,
  main_model: Option<&str>,
- max_completion_tokens: Option<u16>,
+ max_output_tokens: Option<u32>,
  truncated: &str,
  dropped_count: usize,
  last_at: &Arc<Mutex<Option<Instant>>>,
@@ -790,8 +849,7 @@ async fn run_overflow_summary(
   let mut g = last_at.lock().await;
   *g = Some(Instant::now());
  }
- let max_out: Option<u32> = max_completion_tokens.map(|v| v as u32);
- match completion::summarize_overflow_turns(client, model_ov, max_out, truncated).await {
+ match completion::summarize_overflow_turns(client, model_ov, max_output_tokens, truncated).await {
   Ok(s) if !s.trim().is_empty() => Some(s.trim().to_string()),
   Ok(_) => {
    log::warn!("メモリ窓オーバーフロー要約の結果が空でした。長期メモには載せません。");
@@ -1113,4 +1171,199 @@ fn make_client(conf: &AiPersonaConf) -> Result<ResponsesClient> {
   ..Default::default()
  };
  ResponsesClient::new(cfg).map_err(|e| anyhow!("ResponsesClient の構築に失敗しました: {e}"))
+}
+
+#[cfg(test)]
+mod chi6_resolver_tests
+{
+ use super::*;
+
+ fn persona_minimal() -> AiPersonaConf
+ {
+  AiPersonaConf {
+   id: Some("test".to_string()),
+   is_enabled: true,
+   channel_utterance: Some("to".to_string()),
+   channel_effect: None,
+   observe: Default::default(),
+   decision: None,
+   heartbeat: None,
+   api_key: None,
+   model: Some("gpt-5-mini".to_string()),
+   custom_instructions: None,
+   system_instructions_extra: None,
+   openai_max_output_tokens: None,
+   max_tokens: None,
+   openai_reasoning_effort: None,
+   openai_store: None,
+   temperature: None,
+   top_p: None,
+   n: None,
+   presence_penalty: None,
+   frequency_penalty: None,
+   user: None,
+   memory_capacity: None,
+   memory_max_chars: None,
+   memory_budget_approx_tokens: None,
+   memory_budget_chars_per_approx_token: None,
+   memory_overflow_summary_enabled: None,
+   memory_overflow_summary_model: None,
+   memory_overflow_summary_max_output_tokens: None,
+   memory_overflow_summary_max_completion_tokens: None,
+   memory_overflow_summary_max_input_chars: None,
+   memory_overflow_summary_min_chars: None,
+   memory_overflow_summary_cooldown_secs: None,
+   memory_summary: None,
+   memory_summary_path: None,
+   openai_few_shot: vec![],
+   persona_anchor: None,
+   force_activate_regex_pattern: None,
+   ignore_regex_pattern: None,
+   min_interval_in_secs: None,
+   remove_chars: None,
+   assistant_max_chars: None,
+   assistant_strip_substrings: vec![],
+   openai_stream: None,
+   openai_tools_json_path: None,
+   openai_tool_choice: None,
+   openai_parallel_tool_calls: None,
+   openai_max_in_flight: None,
+   fine_tuning: None,
+   respect_speech_floor: None,
+  }
+ }
+
+ /// env を絶対にいじりたくないテスト（他の #[test] と環境変数を共有するのを避ける）用に
+ /// 一時的に `unset` して実行する RAII ガード。
+ struct EnvUnset
+ {
+  key: &'static str,
+  prev: Option<String>,
+ }
+
+ impl EnvUnset
+ {
+  fn new(key: &'static str) -> Self
+  {
+   let prev = std::env::var(key).ok();
+   std::env::remove_var(key);
+   Self { key, prev }
+  }
+ }
+
+ impl Drop for EnvUnset
+ {
+  fn drop(&mut self)
+  {
+   match self.prev.take()
+   {
+    Some(v) => std::env::set_var(self.key, v),
+    None => std::env::remove_var(self.key),
+   }
+  }
+ }
+
+ /// env var を触るテストは parallel 実行で衝突するため、1 つの `#[test]` に寄せて
+ /// 内部でケースを順番に検証する。`EnvUnset` で test 終了時に元の値へ戻す。
+ #[test]
+ fn max_output_tokens_precedence_env_new_legacy()
+ {
+  let _guard = EnvUnset::new(ENV_OPENAI_MAX_OUTPUT_TOKENS);
+
+  // (a) env / 新 / legacy すべて未指定 → None
+  {
+   let p = persona_minimal();
+   assert_eq!(resolve_openai_max_output_tokens(&p), None, "all unset -> None");
+  }
+
+  // (b) legacy のみ指定 → u32 昇格
+  {
+   let mut p = persona_minimal();
+   p.max_tokens = Some(256);
+   assert_eq!(resolve_openai_max_output_tokens(&p), Some(256), "legacy only");
+  }
+
+  // (c) 新キー優先で legacy を上書き
+  {
+   let mut p = persona_minimal();
+   p.openai_max_output_tokens = Some(1024);
+   p.max_tokens = Some(256);
+   assert_eq!(resolve_openai_max_output_tokens(&p), Some(1024), "new over legacy");
+  }
+
+  // (d) env が妥当な u32 → 新 / legacy を上書き
+  {
+   std::env::set_var(ENV_OPENAI_MAX_OUTPUT_TOKENS, "2048");
+   let mut p = persona_minimal();
+   p.openai_max_output_tokens = Some(1024);
+   p.max_tokens = Some(256);
+   assert_eq!(resolve_openai_max_output_tokens(&p), Some(2048), "env wins");
+  }
+
+  // (e) env が不正値 → 新 / legacy にフォールバック
+  {
+   std::env::set_var(ENV_OPENAI_MAX_OUTPUT_TOKENS, "not-a-number");
+   let mut p = persona_minimal();
+   p.openai_max_output_tokens = Some(555);
+   assert_eq!(resolve_openai_max_output_tokens(&p), Some(555), "invalid env -> fallback to new");
+   p.openai_max_output_tokens = None;
+   p.max_tokens = Some(111);
+   assert_eq!(resolve_openai_max_output_tokens(&p), Some(111), "invalid env -> fallback to legacy");
+  }
+
+  // (f) env を空文字に → 空文字は u32::from_str で err → fallback
+  {
+   std::env::set_var(ENV_OPENAI_MAX_OUTPUT_TOKENS, "");
+   let mut p = persona_minimal();
+   p.openai_max_output_tokens = Some(999);
+   assert_eq!(resolve_openai_max_output_tokens(&p), Some(999), "empty env -> fallback");
+  }
+ }
+
+ #[test]
+ fn reasoning_effort_maps_each_variant()
+ {
+  let mut p = persona_minimal();
+  p.openai_reasoning_effort = Some(OpenAiReasoningEffortConf::Low);
+  assert_eq!(resolve_openai_reasoning_effort(&p), Some(ReasoningEffort::Low));
+  p.openai_reasoning_effort = Some(OpenAiReasoningEffortConf::Medium);
+  assert_eq!(resolve_openai_reasoning_effort(&p), Some(ReasoningEffort::Medium));
+  p.openai_reasoning_effort = Some(OpenAiReasoningEffortConf::High);
+  assert_eq!(resolve_openai_reasoning_effort(&p), Some(ReasoningEffort::High));
+  p.openai_reasoning_effort = None;
+  assert_eq!(resolve_openai_reasoning_effort(&p), None);
+ }
+
+ #[test]
+ fn overflow_summary_max_prefers_new_key_over_legacy()
+ {
+  let mut p = persona_minimal();
+  p.memory_overflow_summary_max_output_tokens = Some(800);
+  p.memory_overflow_summary_max_completion_tokens = Some(200);
+  assert_eq!(resolve_overflow_summary_max_output_tokens(&p), Some(800));
+ }
+
+ #[test]
+ fn overflow_summary_max_falls_back_to_legacy()
+ {
+  let mut p = persona_minimal();
+  p.memory_overflow_summary_max_completion_tokens = Some(200);
+  assert_eq!(resolve_overflow_summary_max_output_tokens(&p), Some(200));
+ }
+
+ #[test]
+ fn reasoning_effort_conf_serde_lowercase()
+ {
+  // toml で書く小文字表記 (`"low"` / `"medium"` / `"high"`) を受理できること。
+  let low: OpenAiReasoningEffortConf = serde_json::from_str("\"low\"").unwrap();
+  let medium: OpenAiReasoningEffortConf = serde_json::from_str("\"medium\"").unwrap();
+  let high: OpenAiReasoningEffortConf = serde_json::from_str("\"high\"").unwrap();
+  assert_eq!(low, OpenAiReasoningEffortConf::Low);
+  assert_eq!(medium, OpenAiReasoningEffortConf::Medium);
+  assert_eq!(high, OpenAiReasoningEffortConf::High);
+
+  // 大文字表記は受理しない。
+  let err = serde_json::from_str::<OpenAiReasoningEffortConf>("\"HIGH\"");
+  assert!(err.is_err());
+ }
 }
