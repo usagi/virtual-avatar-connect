@@ -127,7 +127,7 @@ pub async fn get_profiles(state: Data<SharedState>) -> impl Responder {
      let modified = meta
       .as_ref()
       .and_then(|m| m.modified().ok())
-      .map(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339());
+      .and_then(|t| jiff::Timestamp::try_from(t).ok().map(|ts| ts.to_string()));
      let is_current = paths_equivalent(&p, &current);
      entries.push(ProfileEntry {
       path: p.display().to_string(),

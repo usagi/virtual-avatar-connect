@@ -143,7 +143,7 @@ pub fn extra_bool(extra: &BTreeMap<String, SocketValue>, key: &str) -> Option<bo
 
 pub fn resolve_save_path(template: &str) -> String {
  if template.contains("{T}") {
-  let t = chrono::Utc::now().to_rfc3339().replace([':', '-'], "");
+  let t = jiff::Timestamp::now().to_string().replace([':', '-'], "");
   template.replace("{T}", &t)
  } else {
   template.to_string()

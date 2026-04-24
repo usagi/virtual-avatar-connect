@@ -143,7 +143,7 @@ fn safe_basename(dir: &Path, filename: &str) -> Result<PathBuf, HttpResponse> {
 
 /// バックアップファイル名を組み立てる。`conf.toml` → `conf.toml.bak-20260417-123456` 形式。
 fn backup_path(original: &Path) -> PathBuf {
- let ts = chrono::Local::now().format("%Y%m%d-%H%M%S").to_string();
+ let ts = jiff::Zoned::now().strftime("%Y%m%d-%H%M%S").to_string();
  let orig_name = original
   .file_name()
   .and_then(|s| s.to_str())

@@ -719,7 +719,7 @@ fn root_relative(root: &Path, file: &Path) -> String {
 }
 
 fn make_backup(file: &Path) -> std::io::Result<String> {
-	let ts = chrono::Local::now().format("%Y%m%d-%H%M%S").to_string();
+	let ts = jiff::Zoned::now().strftime("%Y%m%d-%H%M%S").to_string();
 	let name = file.file_name().and_then(|s| s.to_str()).unwrap_or("unknown.flowgraph.toml");
 	let bak_name = format!("{name}.bak-{ts}");
 	let bak_path = file.with_file_name(&bak_name);

@@ -108,7 +108,7 @@ fn build_args(req: &TtsRequest, output_path: &str) -> Vec<String> {
 
 /// 一時 WAV ファイル用のユニークなパスを生成する。
 fn temp_wav_path() -> PathBuf {
-	let ts = chrono::Utc::now().timestamp_nanos_opt().unwrap_or_else(|| chrono::Utc::now().timestamp_micros());
+	let ts = jiff::Timestamp::now().as_nanosecond();
 	let name = format!("vac-voicepeak-{ts}-{pid}.wav", pid = std::process::id());
 	std::env::temp_dir().join(name)
 }

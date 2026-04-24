@@ -8,7 +8,6 @@
 
 use crate::Conf;
 use anyhow::Result;
-use chrono::Utc;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
@@ -82,7 +81,7 @@ fn resolve_root(conf: &Conf) -> Result<PathBuf> {
 }
 
 fn new_session_id() -> String {
- let ts = Utc::now().format("%Y%m%dT%H%M%SZ");
+ let ts = jiff::Timestamp::now().strftime("%Y%m%dT%H%M%SZ").to_string();
  let rand: u32 = rand::random();
  format!("{}-{:08x}", ts, rand)
 }

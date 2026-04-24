@@ -98,7 +98,7 @@ pub async fn snapshot(state: &State) -> StateSnapshot {
  StateSnapshot {
   schema: 2,
   app_version: env!("CARGO_PKG_VERSION"),
-  now: chrono::Utc::now().to_rfc3339(),
+  now: jiff::Timestamp::now().to_string(),
   runtime,
   ai_personas,
   twitch,

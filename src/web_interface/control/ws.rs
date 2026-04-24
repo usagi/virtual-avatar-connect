@@ -89,7 +89,7 @@ impl Actor for ControlEventsWs {
    loop {
     tokio::time::sleep(HEARTBEAT_INTERVAL).await;
     let ev = ControlEvent::Heartbeat {
-     now: chrono::Utc::now().to_rfc3339(),
+     now: jiff::Timestamp::now().to_string(),
     };
     if let Ok(json) = serde_json::to_string(&ev) {
      if addr2.send(WsText(json)).await.is_err() {

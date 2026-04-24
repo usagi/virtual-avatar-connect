@@ -82,7 +82,7 @@ type Crop = (Option<i32>, Option<i32>, Option<i32>, Option<i32>);
 /// `{T}` を ISO-8601 時刻（`:` `-` を削除）に置換。V1 互換挙動。
 fn resolve_save_path(template: &str) -> String {
  if template.contains("{T}") {
-  let t = chrono::Utc::now().to_rfc3339().replace([':', '-'], "");
+  let t = jiff::Timestamp::now().to_string().replace([':', '-'], "");
   template.replace("{T}", &t)
  } else {
   template.to_string()

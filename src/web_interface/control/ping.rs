@@ -23,7 +23,7 @@ pub async fn ping() -> impl Responder {
   ok: true,
   service: "virtual-avatar-connect/control-api",
   version: env!("CARGO_PKG_VERSION"),
-  now: chrono::Utc::now().to_rfc3339(),
+  now: jiff::Timestamp::now().to_string(),
  })
 }
 
