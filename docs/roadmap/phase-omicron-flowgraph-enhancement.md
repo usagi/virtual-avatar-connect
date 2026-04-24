@@ -251,7 +251,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 |---|---|---|
 | ο-0 | docs: 本 phase doc + roadmap.md 再編 + backlog-nodes.md §1 の pointer 化（+ 後日 angle normalization / 双曲線 10 ノード追記 + Phase ξ 依存明記）| `docs/roadmap/phase-omicron-flowgraph-enhancement.md` ✅ / `docs/roadmap.md` ✅ / `docs/roadmap/backlog-nodes.md` ✅ |
 | ο-1 ✅ | feat(flowgraph/math): §3.1 **42 ノード**追加 + unit test（Quantity-aware）| `src/flowgraph/nodes/math.rs` / `src/flowgraph/registry.rs` |
-| ο-2 | feat(flowgraph/easing): §3.2 `apply` ノード + curve 関数群 + unit test | `src/flowgraph/nodes/easing.rs` (new) / `registry.rs` / 場合により `node.rs`（`PropertySpec.choices` 追加）|
+| ο-2 ✅ | feat(flowgraph/easing): §3.2 `apply` ノード + curve 関数群（19 curve）+ unit test 13 件 / `PropertySpec.choices` + GUI dropdown hook | `src/flowgraph/nodes/easing.rs` (new) / `src/flowgraph/nodes/mod.rs` / `src/flowgraph/registry.rs` / `src/flowgraph/node.rs`（`PropertySpec.choices` + `with_choices`）/ `gui/src/lib/types.ts` / `gui/src/lib/flowgraph/FlowgraphPropertyEditor.svelte` |
 | ο-3 | feat(flowgraph/vec): §3.3 18 ノード追加（vec2 9 + vec3 9）+ unit test | `src/flowgraph/nodes/vec.rs` (new) / `registry.rs` |
 | ο-4 | feat(flowgraph/util,time): §3.4 `timer_interval` + time ノード 4 種 + unit test | `src/flowgraph/nodes/delay.rs` 既存パターン流用 / `src/flowgraph/nodes/time.rs` (new) / `registry.rs` |
 | ο-5 | feat(flowgraph/util,random,noise): §3.5 signal util 5 種 + §3.6 random/noise 5 種 | `src/flowgraph/nodes/signal.rs` (new) / `src/flowgraph/nodes/random.rs` (new) / `registry.rs` / `Cargo.toml`（`noise` 追加）|
@@ -276,11 +276,11 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 
 ### 6.2 ο-2 チェックリスト
 
-- [ ] `PropertySpec` に `choices: Option<Vec<String>>` が無ければ追加（GUI 側 property editor の dropdown hook）
-- [ ] curve 関数群（cubic / quad / sine / expo / elastic / bounce × in/out/inOut）を helper として実装
-- [ ] `flowgraph.easing.apply` ノード実装 + curve 名の string-to-fn 対応表 + unknown curve は error
-- [ ] `clamp_t` プロパティ反映
-- [ ] unit test で代表 curve の (0.0, 0.5, 1.0) 境界値確認
+- [x] `PropertySpec` に `choices: Option<Vec<String>>` を追加（serde `skip_serializing_if = "Option::is_none"` 付き / `with_choices` ビルダー）。GUI 側 (`gui/src/lib/types.ts` の `FlowgraphPropertySpec.choices?: string[]` + `FlowgraphPropertyEditor.svelte` で `cat === 'string' && choices` の場合 `<select>` 描画) の dropdown hook まで一緒に着地
+- [x] curve 関数群（linear + quad / cubic / sine / expo / elastic / bounce × in/out/inOut = 計 19 関数）を `apply_curve(Curve, f64) -> f64` helper として実装（Robert Penner 由来の定式）
+- [x] `flowgraph.easing.apply` ノード実装 + `Curve::from_name` による string-to-fn 対応表 + unknown curve は `NodeExecError::Generic` で即停止（エラーメッセージに候補一覧を含む）
+- [x] `clamp_t: bool = true` プロパティ反映（true 時は `t.clamp(0.0, 1.0)`、false 時は素通し → elastic/bounce の overshoot 観察用途）
+- [x] unit test 13 件（全 curve endpoint 不変、`*_inout` の (0.5, 0.5) 通過、quad_in / cubic_in の明示値、out = 1 − in(1 − t) ミラー、clamp_t 挙動、elastic overshoot、bounce_out 区分点、unknown curve error、default curve = linear、spec が choices を宣言しているか、enum 全 19 round trip）
 
 ### 6.3 ο-3 チェックリスト
 

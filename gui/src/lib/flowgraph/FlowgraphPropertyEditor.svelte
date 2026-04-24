@@ -190,14 +190,25 @@
          value={asNumber(item.value)}
          oninput={(e) => updateProp(item.p.name, parseFloat((e.target as HTMLInputElement).value || '0'))}
         />
-       {:else if cat === 'string'}
-        <input
-         id={`prop-${item.p.name}`}
-         type="text"
-         class="w-full rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1"
-         value={asString(item.value)}
-         oninput={(e) => updateProp(item.p.name, (e.target as HTMLInputElement).value)}
-        />
+      {:else if cat === 'string' && item.p.choices && item.p.choices.length > 0}
+       <select
+        id={`prop-${item.p.name}`}
+        class="w-full rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1"
+        value={asString(item.value)}
+        onchange={(e) => updateProp(item.p.name, (e.target as HTMLSelectElement).value)}
+       >
+        {#each item.p.choices as choice (choice)}
+         <option value={choice}>{choice}</option>
+        {/each}
+       </select>
+      {:else if cat === 'string'}
+       <input
+        id={`prop-${item.p.name}`}
+        type="text"
+        class="w-full rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1"
+        value={asString(item.value)}
+        oninput={(e) => updateProp(item.p.name, (e.target as HTMLInputElement).value)}
+       />
        {:else}
         <textarea
          id={`prop-${item.p.name}`}

@@ -717,6 +717,12 @@ export type FlowgraphPropertySpec = {
  validator?: string;
  /** `"json"` / `"wav_path"` 等、GUI エディタのヒント。型厳密には任意文字列。 */
  ui_hint?: string;
+ /**
+  * Phase ο-2: enum-style constraint. When present (and `ty === "string"`),
+  * the property editor renders a `<select>` dropdown instead of a plain text
+  * input. Server-side node impls still validate the value themselves.
+  */
+ choices?: string[];
 };
 
 export type FlowgraphNodeSpec = {

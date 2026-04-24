@@ -59,6 +59,7 @@ pub mod compare;
 pub mod convert;
 pub mod delay;
 pub mod dictionary;
+pub mod easing;
 pub mod flow;
 pub mod ingress;
 pub mod json_ops;

@@ -38,6 +38,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.dictionary.learn`](#flowgraph-dictionary-learn) — Dictionary Learn
   - [`flowgraph.dictionary.match`](#flowgraph-dictionary-match) — Dictionary Match
   - [`flowgraph.dictionary.replace`](#flowgraph-dictionary-replace) — Dictionary Replace
+- **easing**
+  - [`flowgraph.easing.apply`](#flowgraph-easing-apply) — Easing apply
 - **flow**
   - [`flowgraph.flow.branch`](#flowgraph-flow-branch) — Branch
   - [`flowgraph.flow.gate`](#flowgraph-flow-gate) — Gate
@@ -503,6 +505,25 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 |---|---|---|
 | `result` | `string` |  |
 | `applied_count` | `int` |  |
+
+## easing
+
+### `flowgraph.easing.apply`
+
+**Easing apply** — Map a scalar t (conventionally in [0, 1]) through an easing curve. Single node with a `curve` enum property (19 variants: linear, quad/cubic/sine/expo/elastic/bounce × in/out/inout). `clamp_t = true` (default) clamps input to [0, 1] before evaluation — set false to let elastic/bounce overshoot naturally.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `t` | `float` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `value` | `float` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `curve` | `string` | `"linear"` |  | Easing curve name. One of: linear, quad_in/out/inout, cubic_in/out/inout, sine_in/out/inout, expo_in/out/inout, elastic_in/out/inout, bounce_in/out/inout. |
+| `clamp_t` | `bool` | `true` |  | When true, t is clamped to [0, 1] before the curve is applied. Default true. |
 
 ## flow
 

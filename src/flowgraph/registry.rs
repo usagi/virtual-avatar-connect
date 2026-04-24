@@ -217,6 +217,9 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::math::FloatNormalizeAngleRad0To2piNode));
 	r.register_pure(Arc::new(nodes::math::FloatNormalizeAngleRadSignedNode));
 
+	// --- easing (Phase o-2) ---
+	r.register_pure(Arc::new(nodes::easing::EasingApplyNode));
+
 	// --- string_ops ---
 	r.register_pure(Arc::new(nodes::string_ops::StringConcatNode));
 	r.register_pure(Arc::new(nodes::string_ops::StringLenNode));
@@ -399,6 +402,7 @@ mod tests {
 			"flowgraph.math.deg_to_rad",
 			"flowgraph.math.normalize_angle_deg_0_360",
 			"flowgraph.math.normalize_angle_rad_signed",
+			"flowgraph.easing.apply",
 		] {
 			assert!(
 				r.contains(feature),

@@ -247,6 +247,12 @@ pub struct PropertySpec {
  pub validator: Option<String>,
  #[serde(default, skip_serializing_if = "Option::is_none")]
  pub ui_hint: Option<String>,
+ /// Phase ο-2: enum-style constraint. When set, the value must be one of these
+ /// strings (ty = String expected). The GUI property editor renders a `<select>`
+ /// dropdown; engine-side validation is still the node's responsibility
+ /// (mismatched values typically become `NodeExecError::Generic`).
+ #[serde(default, skip_serializing_if = "Option::is_none")]
+ pub choices: Option<Vec<String>>,
 }
 
 impl PropertySpec {
@@ -260,6 +266,7 @@ impl PropertySpec {
    description: None,
    validator: None,
    ui_hint: None,
+   choices: None,
   }
  }
  pub fn required(mut self) -> Self {
@@ -268,6 +275,15 @@ impl PropertySpec {
  }
  pub fn description(mut self, s: &str) -> Self {
   self.description = Some(s.into());
+  self
+ }
+ /// Phase ο-2: enum-style constraint. See field docs.
+ pub fn with_choices<I, S>(mut self, choices: I) -> Self
+ where
+  I: IntoIterator<Item = S>,
+  S: Into<String>,
+ {
+  self.choices = Some(choices.into_iter().map(Into::into).collect());
   self
  }
 }
