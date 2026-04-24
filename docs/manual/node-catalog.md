@@ -1529,7 +1529,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ### `flowgraph.math.sqrt`
 
-**Float sqrt** — Square root. Input must be dimensionless (general Quantity sqrt would require fractional exponents; use dimension-aware code if needed). Negative input yields NaN.
+**Float sqrt** — Square root. Dimension-aware: sqrt(m²) = m, sqrt(m²/s²) = m/s. All atom exponents must be even (the current type system only represents integer dimensions), so sqrt(m) is rejected — use flowgraph.unit.strip first if that was intentional. Absolute temperature (K) is rejected. Negative value yields NaN.
 
 | Input | Type | Default | Note |
 |---|---|---|---|

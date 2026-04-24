@@ -412,13 +412,6 @@ macro_rules! float_unary_dimless_node {
 }
 
 float_unary_dimless_node!(
-	FloatSqrtNode,
-	"flowgraph.math.sqrt",
-	"Float sqrt",
-	"Square root. Input must be dimensionless (general Quantity sqrt would require fractional exponents; use dimension-aware code if needed). Negative input yields NaN.",
-	|x: f64| x.sqrt()
-);
-float_unary_dimless_node!(
 	FloatExpNode,
 	"flowgraph.math.exp",
 	"Float exp",
@@ -488,6 +481,54 @@ float_unary_dimless_node!(
 	"Inverse hyperbolic tangent. Input must be dimensionless. |x| \u{2265} 1 yields \u{00B1}inf/NaN (std::f64).",
 	|x: f64| x.atanh()
 );
+
+// ============================================================================
+// Float sqrt (Phase o-1.1: dimension-aware via Quantity::try_sqrt)
+// ============================================================================
+
+/// `flowgraph.math.sqrt` — delegates to [`Quantity::try_sqrt`] so that
+/// dimension-aware square roots (sqrt(m\u{00B2}) = m, sqrt(m\u{00B2}/s\u{00B2}) = m/s)
+/// are supported natively. The underlying `Dimension` is an 8-component `i8`
+/// vector, so non-integer resulting exponents are rejected as a type error.
+///
+/// Accepted: dimensionless, and any Quantity whose atom exponents are all
+/// even (e.g. m\u{00B2}, m\u{2074}, m\u{00B2}\u{00B7}s\u{207B}\u{00B2}).
+///
+/// Rejected: odd-exponent inputs (`sqrt(m)` would require `L^(1/2)` which
+/// the integer-dimension type system cannot express; users who really want
+/// this must explicitly `flowgraph.unit.strip` first). Absolute temperature
+/// (K) is also rejected (handled inside `try_sqrt`).
+pub struct FloatSqrtNode;
+
+impl NodeDescriptor for FloatSqrtNode {
+	fn describe(&self) -> NodeSpec {
+		NodeSpec {
+			feature: "flowgraph.math.sqrt".into(),
+			title: "Float sqrt".into(),
+			category: "math".into(),
+			description: Some(
+				"Square root. Dimension-aware: sqrt(m\u{00B2}) = m, sqrt(m\u{00B2}/s\u{00B2}) = m/s. All atom exponents must be even (the current type system only represents integer dimensions), so sqrt(m) is rejected \u{2014} use flowgraph.unit.strip first if that was intentional. Absolute temperature (K) is rejected. Negative value yields NaN.".into(),
+			),
+			inputs: vec![PortSpec::input("x", "X", SocketType::Quantity)],
+			outputs: vec![PortSpec::output("result", "Result", SocketType::Quantity)],
+			properties: vec![],
+		}
+	}
+}
+
+#[async_trait]
+impl PureNode for FloatSqrtNode {
+	async fn compute(
+		&self,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
+		let q = get_required_quantity(inputs, "x")?;
+		let r = q.try_sqrt().map_err(|e| NodeExecError::Generic(anyhow::anyhow!(e)))?;
+		Ok(NodeOutput::new().set_data("result", SocketValue::Quantity(r)))
+	}
+}
 
 // ============================================================================
 // Float min/max (same-dimension binop)
@@ -1413,16 +1454,40 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn float_sqrt_requires_dimensionless() {
-		let m = Quantity::of(4.0, parse_unit("m").unwrap());
-		let inputs: InputMap = [("x".into(), SocketValue::Quantity(m))].into_iter().collect();
-		let e = FloatSqrtNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap_err();
-		assert!(matches!(e, NodeExecError::Generic(_)));
-
+	async fn float_sqrt_dimensionless() {
 		let d = Quantity::dimensionless(9.0);
 		let inputs: InputMap = [("x".into(), SocketValue::Quantity(d))].into_iter().collect();
 		let out = FloatSqrtNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 3.0).abs() < 1e-12);
+		assert!(unwrap_q(&out).is_dimensionless());
+	}
+
+	#[tokio::test]
+	async fn float_sqrt_m_squared_yields_length() {
+		let q = Quantity::of(9.0, parse_unit("m^2").unwrap());
+		let inputs: InputMap = [("x".into(), SocketValue::Quantity(q))].into_iter().collect();
+		let out = FloatSqrtNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		assert!((unwrap_q(&out).value - 3.0).abs() < 1e-12);
+		assert_eq!(unwrap_q(&out).dimension(), Dimension::LENGTH);
+	}
+
+	#[tokio::test]
+	async fn float_sqrt_velocity_squared_yields_velocity() {
+		// sqrt(m^2/s^2) = m/s
+		let q = Quantity::of(25.0, parse_unit("m^2/s^2").unwrap());
+		let inputs: InputMap = [("x".into(), SocketValue::Quantity(q))].into_iter().collect();
+		let out = FloatSqrtNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		assert!((unwrap_q(&out).value - 5.0).abs() < 1e-12);
+		assert_eq!(unwrap_q(&out).dimension(), Dimension::VELOCITY);
+	}
+
+	#[tokio::test]
+	async fn float_sqrt_odd_exponent_errors() {
+		// sqrt(m) would require fractional dimension L^(1/2), not representable in i8 Dimension.
+		let q = Quantity::of(4.0, parse_unit("m").unwrap());
+		let inputs: InputMap = [("x".into(), SocketValue::Quantity(q))].into_iter().collect();
+		let e = FloatSqrtNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap_err();
+		assert!(matches!(e, NodeExecError::Generic(_)));
 	}
 
 	#[tokio::test]

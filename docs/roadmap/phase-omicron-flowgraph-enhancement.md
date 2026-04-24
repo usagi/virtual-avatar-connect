@@ -75,7 +75,7 @@
 | `flowgraph.math.atan2` | (Float, Float) → Float | `y, x` → `result`。Phase ξ 着地後は Angle 次元を返す |
 | `flowgraph.math.sinh` / `.cosh` / `.tanh` | Float → Float | 双曲線関数。`f64::sinh` / `.cosh` / `.tanh` ラップ。Phase ξ では **dimensionless のみ受ける**（双曲線関数の数学的文脈では独立変数は無次元）|
 | `flowgraph.math.asinh` / `.acosh` / `.atanh` | Float → Float | 逆双曲線関数。`.acosh` は `x < 1` で NaN、`.atanh` は `|x| >= 1` で NaN（std::f64 準拠）|
-| `flowgraph.math.sqrt` | Float → Float | 負値は NaN（std::f64 準拠）| |
+| `flowgraph.math.sqrt` | Quantity → Quantity | `x` → `result` | **次元対応**: `sqrt(m²) = m`、`sqrt(m²/s²) = m/s`。全 atom exponent が偶数の場合に限り次元 sqrt を返す（`Quantity::try_sqrt` 委譲）。奇数 exponent（`sqrt(m)`）は integer-dimension 型システムの制約で error。絶対温度 K は禁止。負値は NaN（std::f64 準拠）。Phase ο-1.1 で dimensionless-only から昇格 |
 | `flowgraph.math.pow` | (Float, Float) → Float | `base, exp` | |
 | `flowgraph.math.exp` / `.ln` / `.log2` / `.log10` | Float → Float | | |
 | `flowgraph.math.sign_int` / `.sign_float` | X → X | -1 / 0 / 1 | float は NaN で 0 |
@@ -269,7 +269,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 - [x] **前提**: Phase ξ-3 (engine retrofit to Quantity) 着地済みであること。`SocketValue::Float` が `Quantity<Dimension>` を保持できる状態を前提に書く
 - [x] 1-入力系 / 3-入力系のマクロを `math.rs` に追加（既存 2-入力マクロを踏襲、Quantity-aware 版）
 - [x] **42 ノード**の `NodeDescriptor` + `PureNode::compute` 実装（内訳: abs/min/max/clamp/sign 系 int+float 合計 10 + lerp/inverse_lerp/remap/smoothstep 4 + trig 3 + arctrig 3 + atan2 1 + sqrt/pow/exp/ln/log2/log10 6 + floor/ceil/round 3 + deg_to_rad/rad_to_deg 2 + sinh/cosh/tanh 3 + asinh/acosh/atanh 3 + normalize_angle × 4）。ο-0 docs で "37 ノード" と誤記していたが、§3.1 の表を素直に列挙すると 42 ノードになる（ο-0 時点のカウントミス、実装時に再確認）
-- [x] 次元制約（実装方針）: `sin/cos/tan` は **Angle 次元または dimensionless 入力を許容**（pre-ξ の plain-float flows の互換のため dimensionless はそのまま rad として扱う）、`asin/acos/atan/atan2` は **出力に Angle (rad) を付ける**、`normalize_angle_deg_*` / `_rad_*` は **Angle または dimensionless を受ける**（dimensionless は target unit のまま扱う）、`sinh/cosh/tanh/asinh/acosh/atanh` / `sqrt/pow/exp/ln/log2/log10` は **dimensionless 必須**、`abs/min/max/clamp/floor/ceil/round/sign_*/lerp(a,b)/remap(out)` は **unit pass-through / 次元整合**、`inverse_lerp` / `smoothstep` は **入力同次元 → 出力 dimensionless**
+- [x] 次元制約（実装方針）: `sin/cos/tan` は **Angle 次元または dimensionless 入力を許容**（pre-ξ の plain-float flows の互換のため dimensionless はそのまま rad として扱う）、`asin/acos/atan/atan2` は **出力に Angle (rad) を付ける**、`normalize_angle_deg_*` / `_rad_*` は **Angle または dimensionless を受ける**（dimensionless は target unit のまま扱う）、`sinh/cosh/tanh/asinh/acosh/atanh` / `pow/exp/ln/log2/log10` は **dimensionless 必須**、`sqrt` は **`Quantity::try_sqrt` 委譲で次元対応**（全 atom exponent が偶数なら `sqrt(m\u{00B2}) = m` 等を返す、奇数 exponent は integer-dimension 制約で error、絶対温度 K も error; ο-1.1 で dimensionless-only から B 案へ格上げ）、`abs/min/max/clamp/floor/ceil/round/sign_*/lerp(a,b)/remap(out)` は **unit pass-through / 次元整合**、`inverse_lerp` / `smoothstep` は **入力同次元 → 出力 dimensionless**
 - [x] `registry.rs` に登録（`register_pure`）
 - [x] `cargo test --lib` の node 単体テストで各ノード 1-2 ケース（dimension mismatch error パスも含む、30 tests in `flowgraph::nodes::math::tests` 全緑）
 - [x] `BLESS_NODE_CATALOG=1 cargo test` で `docs/manual/node-catalog.md` を再生成し、ο-7 まで blessed diff を保持

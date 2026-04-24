@@ -244,6 +244,11 @@ Phase ξ では未対応（`K` と `ΔK` のみ）。摂氏はアフィン変換
 **Q. `round`（1 round = 360 deg = 2π rad）も欲しい。**
 人類あるあるですね。角度次元は第一級なので `round` のような別 atom を追加する余地はあります。ただし Phase ξ では `rad` / `deg` のみ。`round` が必要になったら issue で相談してください。
 
+**Q. `flowgraph.math.sqrt` / `pow` の単位の扱いは？**
+- **`sqrt` は次元対応**。`sqrt(9 m²) = 3 m`、`sqrt(25 m²/s²) = 5 m/s` は通ります（`Quantity::try_sqrt` 委譲、Phase ο-1.1 で dimensionless-only から格上げ）。ただし全 atom exponent が偶数であることが必要で、`sqrt(4 m)` のような「半整数次元 `L^(1/2)`」は `Dimension` が 8 成分の `i8` で構成されている関係上表現できず、engine error で止まります。これを本当にやりたいなら `flowgraph.unit.strip` で明示的に dimensionless に落としてから `sqrt` してください。絶対温度 K の sqrt も禁止（`try_sqrt` 内でガード）。
+- **`pow` は dimensionless-only**。`pow(2, 2.7)` のような非整数指数は出力次元を `D^2.7` のような半端な形にしてしまい、整数 Dimension では表現不能です。指数付き次元操作（`m³` を `m^(1/3)` に戻す等）は稀なので、必要なら `unit.strip` → `pow` → `unit.assign` の三段構えで明示するのが現行の方針。
+- 我々が観測する物理世界の次元はほぼ例外なく整数で閉じているため、この制約が実用上のボトルネックになる場面はまずありません（詳細な議論は phase doc を参照）。
+
 **Q. 性能は？**
 Flowgraph は pure + 遅延評価なので、同じ入力に対する単位計算は DAG のメモ化で一度しか走りません。ホット経路で `quantity` の四則演算が毎フレーム叩かれるケースでも、入力が変わらなければ再評価されないので、F# 言語ほどのコンパイル時除去ではないものの実用上問題にはなりません（詳細は phase doc §1.1）。
 
