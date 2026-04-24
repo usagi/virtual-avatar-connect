@@ -1,6 +1,6 @@
 # Phase π — DateTime Type System (jiff 採用 + chrono 全面置換)
 
-> **Status**: π-0 docs 着地 / π-1 jiff deps + smoke test (14 tests) 着地 / π-2 chrono→jiff 全面置換 (3 commit, 706 lib tests green, +11 new tests: 7 TTL boundary + 4 serde round-trip) 着地 / π-3 `Cargo.toml` から chrono 直接依存解除 (間接依存は twitch-irc v6.0.0 経由でのみ残存、π スコープ外) 着地 / π-4 (Flowgraph 型基盤) 着地: π-4a `DateTime` newtype (20 tests) / π-4b `SocketType::DateTime` + `SocketValue::DateTime` + engine String↔DateTime coerce (16 tests) / π-4c `FlowgraphInstanceConfig.default_timezone` + `parse_with_default_tz` + Conf wiring (28 tests)。lib 770 tests green。未着手 sub-phases: π-5 (nodes)、π-6 (docs / changelog / tick)。
+> **Status**: π-0 docs 着地 / π-1 jiff deps + smoke test (14 tests) / π-2 chrono→jiff 全面置換 / π-3 chrono 直接依存解除 / π-4 Flowgraph 型基盤（`DateTime` socket + `FlowgraphInstanceConfig` + naive parse）/ **π-5** `src/flowgraph/nodes/datetime.rs` に 8 ノード + `get_required_datetime` + unit test 30 本、lib **800** tests green / **π-6** CHANGELOG + `docs/manual/datetime-system.md` + `manual/index.md` + omicron phase doc 更新 + roadmap tick。complete。
 > 起点: [`../roadmap.md`](../roadmap.md) の "Phase π" セクション。依存関係: Phase ο-3 完了 → Phase π → Phase ο-4。
 
 ---
@@ -351,29 +351,21 @@ parse 対象文字列の TZ 情報の有無を以下で判定:
   - coerce DateTime → String (RFC3339 形式 snapshot)
   - config parse (valid offset / invalid IANA / empty)
 
-### π-5 — feat(flowgraph/nodes/datetime): 8 ノード
+### π-5 — feat(flowgraph/nodes/datetime): 8 ノード — [x] 完了
 
 - `src/flowgraph/nodes/datetime.rs` 新設
-- 8 ノード (§4) 実装
-- `nodes/mod.rs` / `registry.rs` 登録
-- `default_registry_contains_core_features` テストに代表 feature 追加
-- 各ノード最低 2 テスト (正常 + 異常)、合計 **18 tests 目標**
+- 8 ノード (§4) 実装 + `registry.rs` / `nodes/mod.rs` 登録 + `get_required_datetime` (`node.rs`)
+- `default_registry_contains_core_features` に 8 feature 追加
+- unit test **30** 本（§7.3 の網羅 + 境界）
 - `node-catalog.md` 再生成 (`BLESS_NODE_CATALOG=1 cargo test`)
 
-### π-6 — docs
+### π-6 — docs — [x] 完了
 
-- `CHANGELOG.md`:
-  - `### Phase π` セクション新設
-  - Breaking changes: なし (chrono 解除は内部 crate 依存の変更、wire format 互換は §5 で担保)
-  - Added: `SocketType::DateTime`, `FlowgraphInstanceConfig.default_timezone`, 8 datetime nodes
-  - Changed: chrono → jiff 全面移行
-- `docs/manual/datetime-system.md` 新設:
-  - 動機 / DateTime vs Duration の関係 / naive policy / 利用例 / FAQ
-- `docs/manual/index.md` 目次更新
-- `docs/roadmap/phase-omicron-flowgraph-enhancement.md`:
-  - ο-4 scope を `flowgraph.util.timer_interval` 単独に縮減
-  - 旧 `flowgraph.time.*` 4 種は π-5 吸収と注記
-- `docs/roadmap.md` tick
+- `CHANGELOG.md` の `[Unreleased]` に `### π: DateTime Type System` 節を追加
+- `docs/manual/datetime-system.md` 新設（動機 / DateTime vs `Quantity<time>` / ノード一覧 / conf / FAQ）
+- `docs/manual/index.md` 目次 + Socket 型表に `datetime` を追記
+- `docs/roadmap/phase-omicron-flowgraph-enhancement.md`: §3.4 / §5.4 / §5.5 / §6.4 を π-5 後の前提に更新
+- `docs/roadmap.md` の Phase π / Phase ο-4 の tick・文言更新
 
 ---
 

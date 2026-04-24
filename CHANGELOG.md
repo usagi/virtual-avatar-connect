@@ -43,6 +43,19 @@ Flowgraph の数値型に **SI 準拠の単位次元システム**を第一級�
   - `flowgraph.math.float_*` 4 種の output 型が `float` → `quantity` に変わったため、GUI 側で上流 / 下流の型マッチを厳密に描画しているコードを持つユーザは再確認推奨（engine の暗黙 coerce により実行は通る）。
 - **テスト結果**: `cargo test --lib` 636 passed / 0 failed / 1 ignored（ξ-1 で +30+、ξ-2 で +21、ξ-3 で +4、ξ-4 で +7 の新規 unit / integration test）。
 
+### π: DateTime Type System (π-0 .. π-6)
+
+Flowgraph に **第一級型 `DateTime`（`jiff::Timestamp` ラッパ、UTC 絶対時刻）**を導入し、**Duration は Phase ξ の `Quantity<time>`** に統一（新しい持続時間型は追加しない）。`chrono` crate の既存使用を **jiff へ全面置換**し、直接依存を `Cargo.toml` から解除（間接依存は `twitch-irc` 経由に限定）。IANA タイムゾーン / DST / 暦幅 `Span` は v0 非スコープ。設計: [`docs/roadmap/phase-pi-datetime-system.md`](docs/roadmap/phase-pi-datetime-system.md)、利用者向け: [`docs/manual/datetime-system.md`](docs/manual/datetime-system.md)。
+
+- **π-0 docs**: `phase-pi-datetime-system.md` 新設、roadmap の Phase 名繰り下げ（旧 π OSC 等 → ρ 以降）。
+- **π-1 deps + smoke**: `jiff` (serde) 追加、`tests/jiff_smoke.rs` で API 挙動を固定。
+- **π-2 chrono → jiff**: 全呼び出し箇所を jiff へ置換（3 batch commit）。serde / TTL / ログ等の wire format は RFC3339 互換範囲を維持（`+00:00` → `Z` 等）。
+- **π-3**: `chrono` 直接依存削除。
+- **π-4 型基盤**: `src/datetime/mod.rs` に `DateTime` newtype、`parse_with_default_tz`（naive + 固定オフセット）。`SocketType::DateTime` / `SocketValue::DateTime`、String↔DateTime 暗黙 coerce（naive は engine 層では厳格、`parse` ノードで opt-in）。`FlowgraphInstanceConfig` + `conf.toml` の `[flowgraph] default_timezone`（FixedOffset のみ、IANA は拒否）。`parse_offset_str` 独自パーサ。
+- **π-5 8 ノード** (`src/flowgraph/nodes/datetime.rs`): `flowgraph.datetime.now` / `.parse` / `.format` / `.add_duration` / `.sub_duration` / `.diff` / `.epoch_ms` / `.from_epoch_ms`。`get_required_datetime` ヘルパ。Phase ο-4 当初案の `flowgraph.time.*` 4 種の役割は本ノード群で代替（**ο-4 の残タスクは `flowgraph.util.timer_interval` のみ**）。lib test +30、`node-catalog.md` 再生成。
+- **π-6 docs**: 本 CHANGELOG 節、`docs/manual/datetime-system.md` 新設、`docs/manual/index.md` 目次、[`docs/roadmap/phase-omicron-flowgraph-enhancement.md`](docs/roadmap/phase-omicron-flowgraph-enhancement.md) の §3.4 / §5.4 / §6.4 を π-5 吸収後の記述に更新、`docs/roadmap.md` tick。
+- **Breaking（π）**: なし（chrono→jiff は内部表現。JSON 等の RFC3339 文字列は従来どおり解釈可能）。
+
 ### χ: OpenAI Responses API Migration (χ-0 .. χ-8)
 
 Chat Completions (`/v1/chat/completions`) 依存を完全撤去し、OpenAI **Responses API (`/v1/responses`)** を AI ペルソナの唯一の経路に統一した。reasoning model (gpt-5 系) 対応と将来的な hosted tools / encrypted reasoning 採用のための基盤整備。

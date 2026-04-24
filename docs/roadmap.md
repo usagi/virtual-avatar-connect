@@ -133,13 +133,13 @@ Flowgraph は pure-functional + 遅延評価のため runtime 単位評価コス
 
 ### Phase ο — Flowgraph Enhancement I (計算系 + 時間 + signal util + GUI 小改善)
 
-Flowgraph 機能向上の第 1 波。engine 内完結の Pure ノード群（math 拡張 / easing / vec2・vec3 / time・timer / signal util / random・noise、計 **78 ノード**: 42+1+20+5+5+5 — ο-0 の「76 (vec 18)」は `add/sub` 行数ミスで ο-3 実装時に 20 に修正）と GUI 小改善 3 項目（palette カテゴリ絞り込み / canvas drop-at-cursor / Ctrl+D duplicate）を narrow scope で追加する。外部 IO（HTTP / OBS / OSC / VMC / system metrics / process / window / Discord voice 等）と engine 大改修（Undo/Redo / subgraph / 物理）は明示的に次フェーズ（新 π は DateTime 基盤、ρ / σ / τ / υ / ω が旧 π〜υ を 1 文字繰り下げ）以降へ送る。Phase ξ (Dimensional Quantity System) の ξ-1〜ξ-4/ξ-6 着地済み → **ο-1 / ο-2 / ο-3 着地済み**、ο-4 以降は ξ-5 GUI と並行進行可。
+Flowgraph 機能向上の第 1 波。旧 ο-0 の本数想定 **78 (42+1+20+5+5+5)** では、§3.4 が **timer 1 + time 案 4 = 5** 本だった。time 4 種（旧 `flowgraph.time.*` 想定）は **Phase π** の `flowgraph.datetime.*` **8 ノード**に置換し、**ο-4 の残作業は `flowgraph.util.timer_interval`（Stateful）のみ**へ縮小した。合算では **(42+1+20+1+5+5+5) + 8 = 82 本**（= **Phase ο 側 74** + **π 8**）。残り（signal / random 各 5、GUI 3 点）は従来どおり。外部 IO 等は **ρ / σ / τ / υ / ω** 以降。Phase ξ 着地済み、**ο-1/ο-2/ο-3 および π（datetime 8 種）着地済み**、ο-4 は **timer_interval** 着手待ち、ο-5 以降は ξ-5 GUI と並行可。
 
 - [x] ο-0 docs: `phase-omicron-flowgraph-enhancement.md` 新設 + roadmap.md の Active 差し替え + backlog-nodes.md §1 を ο-4 昇格 pointer 化（+ 追補: angle normalization 4 / 双曲線 6 ノード追加 + Phase ξ 依存明記）
 - [x] ο-1 feat(flowgraph/math): §3.1 **42 ノード**追加（abs/min/max/clamp/lerp/inverse_lerp/remap/smoothstep/trig/arctrig/atan2/hyperbolic/arc-hyperbolic/sqrt/pow/exp/log/sign/floor/ceil/round/deg↔rad/normalize_angle × 4）。全 Quantity-aware、30 unit tests 全緑、node-catalog.md 再生成済み。ο-0 docs の「37」表記は実装時に 42 へ正確化
 - [x] ο-2 feat(flowgraph/easing): §3.2 `flowgraph.easing.apply` + curve enum 19 種 (linear + quad/cubic/sine/expo/elastic/bounce × in/out/inOut) + `PropertySpec.choices` 追加 + GUI `FlowgraphPropertyEditor` の `<select>` dropdown hook。13 unit tests 全緑、node-catalog.md 再生成済み
 - [x] ο-3 feat(flowgraph/vec): §3.3 vec2 / vec3 × 10 ノード ✕ 2 = **20 ノード**（make/unpack/add/sub/scale/dot/length/normalize/lerp/distance、JSON 配列表現）。`decode_vec::<N>` / `encode_vec::<N>` の `const N: usize` generic helper + 6 種マクロで型安全に実装、19 unit tests 全緑（round-trip / 零ベクトル normalize / 次元不一致 error / 非有限値 reject 含む）、node-catalog.md 再生成済み
-- [ ] ο-4 feat(flowgraph/util,time): §3.4 `flowgraph.util.timer_interval`（backlog §1 から昇格）+ `flowgraph.time.*` 4 種（now_rfc3339 / now_epoch_ms / format / since_ms）
+- [ ] ο-4 feat(flowgraph/util): §3.4 `flowgraph.util.timer_interval` のみ（[backlog-nodes.md §1](roadmap/backlog-nodes.md) 昇格）。**旧案 `flowgraph.time.*` 4 種は Phase π の `flowgraph.datetime.*` 8 ノードに置換済み**（[phase-pi-datetime-system.md](roadmap/phase-pi-datetime-system.md) §4.9 / [datetime-system.md](manual/datetime-system.md)）
 - [ ] ο-5 feat(flowgraph/util,random,noise): §3.5 signal util 5 種（edge_detect / prev_value / sample_hold / debounce / throttle）+ §3.6 random 3 種 + Perlin 1D/2D。`noise` crate 追加
 - [ ] ο-6 feat(gui): §3.7 palette カテゴリ絞り込みトグル + canvas drop-at-cursor + Ctrl+D duplicate + `flowgraph-canvas-basic.spec.ts` 回帰拡充
 - [ ] ο-7 docs: CHANGELOG + `manual/node-catalog.md` 再生成 + roadmap tick
@@ -157,8 +157,8 @@ Flowgraph engine に **絶対時刻を表す DateTime 型**を第一級概念と
 - [x] π-2 refactor(chrono->jiff): 既存 chrono 使用 21 箇所を jiff に全面置換（3 commit 構成: batch1 leaf 14 / batch2 dictionary TTL 境界 + 7 境界テスト / batch3 struct field 5 + 4 serde round-trip snapshot、計 702→706 lib tests all green）。wire format drift `+00:00` → `Z` は RFC3339 互換範囲として許容し commit message に明記
 - [x] π-3 chore(deps): `Cargo.toml` から `chrono` 直接依存を解除、`src/**` は `use chrono` ゼロ、`cargo tree -i chrono` で直接依存なしを確認（間接依存は `twitch-irc v6.0.0` 経由で残存、これは twitch-irc 側の内部実装で π スコープ外）、全 706 lib tests green
 - [x] π-4 feat(flowgraph/datetime): `SocketType::DateTime` + `SocketValue::DateTime` + engine 側 String ↔ DateTime 暗黙 coerce + `FlowgraphInstanceConfig.default_timezone: Option<String>`（未設定時 UTC、FixedOffset `+09:00` 形式のみ、IANA tz 非対応）+ naive datetime パース policy（config default tz 適用）。3 commit 構成: π-4a `DateTime` newtype (20 tests, 706→726) / π-4b SocketType/SocketValue::DateTime + engine String↔DateTime coerce (+16 tests, 742) / π-4c `FlowgraphInstanceConfig.default_timezone` + `DateTime::parse_with_default_tz` + Conf wiring (+28 tests, 770)。engine coerce は strict を維持し、naive parse は `parse_with_default_tz` 明示 API (π-5 の `flowgraph.datetime.parse` ノードが consume 予定)
-- [ ] π-5 feat(flowgraph/nodes/datetime): 8 ノード（`now` / `parse` / `format` / `add_duration` / `sub_duration` / `diff` / `epoch_ms` / `from_epoch_ms`）。Phase ο-4 当初案の `flowgraph.time.*` 4 種はここで吸収（ο-4 scope は `flowgraph.util.timer_interval` 単独に縮減）
-- [ ] π-6 docs: CHANGELOG + `docs/manual/datetime-system.md` 新設 + ο phase doc の時間ノード記述更新 + `manual/node-catalog.md` 再生成 + roadmap tick
+- [x] π-5 feat(flowgraph/nodes/datetime): 8 ノード（`now` / `parse` / `format` / `add_duration` / `sub_duration` / `diff` / `epoch_ms` / `from_epoch_ms`）+ `get_required_datetime` + lib test +30、`node-catalog` 再生成済
+- [x] π-6 docs: CHANGELOG + `docs/manual/datetime-system.md` 新設 + `docs/manual/index.md` + [phase-omicron-flowgraph-enhancement.md](roadmap/phase-omicron-flowgraph-enhancement.md) §3.4/§5.4/§6.4 更新 + roadmap 本節 tick（`node-catalog` は π-5 時点で更新済）
 - 仕様書: [`roadmap/phase-pi-datetime-system.md`](roadmap/phase-pi-datetime-system.md)
 - scope: chrono → jiff 全面移行 + Flowgraph DateTime 型新設の 2 軸に閉じる。Breaking change なし（wire format 互換死守、config 既定値で後方互換）。IANA tz / DST / Span（暦幅）/ 独自 affine 単位は π+ 扱い
 - 順序: **本フェーズ着地後に Phase ο-4 着手**。ξ-5 GUI は並行可
@@ -221,7 +221,8 @@ Phase ο の vec2/3 と signal util に直接乗る形で、音声反応と古�
 
 ### Unscheduled Flowgraph Nodes
 
-（Phase ο-4 で `flowgraph.util.timer_interval` は昇格済み。詳細は [`roadmap/backlog-nodes.md`](roadmap/backlog-nodes.md)）
+- **Phase π**: `flowgraph.datetime.*` 8 ノード（[`phase-pi-datetime-system.md`](roadmap/phase-pi-datetime-system.md) / [`manual/datetime-system.md`](manual/datetime-system.md)）**実装済み**。
+- **Phase ο-4 予定**: `flowgraph.util.timer_interval`（[`roadmap/backlog-nodes.md`](roadmap/backlog-nodes.md) §1 仕様、`phase-omicron` §3.4）。未昇格（実装待ち）
 
 ### Phase ψ+（TBD）
 
