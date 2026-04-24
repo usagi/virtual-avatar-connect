@@ -124,6 +124,8 @@ pub enum QuantityArithError {
 	DimensionMismatch(#[from] DimensionMismatch),
 	#[error("absolute temperature arithmetic not allowed: {context}")]
 	AbsoluteTemperature { context: &'static str },
+	#[error("division by zero")]
+	DivisionByZero,
 }
 
 // ---------------------------------------------------------------------------

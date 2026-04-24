@@ -66,6 +66,86 @@ impl SocketType {
  pub fn parse(s: &str) -> Result<Self, TypeParseError> {
   parse_type(s.trim())
  }
+
+ /// エッジ接続の際に 2 つの型が「互換」か判定する。
+ ///
+ /// Phase ξ-3 で追加。厳密な構造等価 (`==`) ではなく、以下の暗黙 coerce を許容する:
+ ///
+ /// - `Float ↔ Quantity`: Float は dimensionless Quantity として流せる / 逆も可（値は
+ ///   ランタイムで [`coerce_to_type`] が変換する）
+ /// - それ以外は `==` と同じ
+ ///
+ /// `List` / `Map` の inner は再帰的に `compatible_with` で判定する。
+ pub fn compatible_with(&self, other: &SocketType) -> bool {
+  use SocketType::*;
+  match (self, other) {
+   (Float, Quantity) | (Quantity, Float) => true,
+   (List(a), List(b)) => a.compatible_with(b),
+   (Map(a), Map(b)) => a.compatible_with(b),
+   (a, b) => a == b,
+  }
+ }
+}
+
+// ---------------------------------------------------------------------
+// 値レベルの暗黙 coerce（Float <-> Quantity）— Phase ξ-3
+// ---------------------------------------------------------------------
+
+/// 上流 port の出力値 `value` を下流 port の型 `target` に合わせて暗黙変換する。
+///
+/// Phase ξ-3 で追加。[`SocketType::compatible_with`] と対で運用し、エッジ接続時は
+/// 型互換性チェックが通り、ランタイム値配送時に本関数が呼ばれる。
+///
+/// - `Float → Quantity`: dimensionless Quantity としてラップ
+/// - `Quantity → Float`: dimensionless な場合に限り value を取り出す。非 dimensionless
+///   は `Err(CoerceError::NotDimensionless)`（明示的な `flowgraph.unit.strip` を要求）
+/// - それ以外で target に既に一致している値はそのまま返す
+/// - 型が不一致でかつ上記 coerce に該当しない場合は `Err(CoerceError::TypeMismatch)`
+pub fn coerce_to_type(value: SocketValue, target: &SocketType) -> Result<SocketValue, CoerceError> {
+	match (value, target) {
+		// Float -> Quantity: dimensionless 化
+		(SocketValue::Float(f), SocketType::Quantity) => Ok(SocketValue::Quantity(Quantity::dimensionless(f))),
+		// Quantity -> Float: dimensionless 限定
+		(SocketValue::Quantity(q), SocketType::Float) => {
+			if q.is_dimensionless() {
+				Ok(SocketValue::Float(q.value))
+			} else {
+				Err(CoerceError::NotDimensionless {
+					unit: q.unit.canonical(),
+				})
+			}
+		}
+		// List / Map: 要素再帰
+		(SocketValue::List(xs), SocketType::List(inner)) => {
+			let mut out = Vec::with_capacity(xs.len());
+			for x in xs {
+				out.push(coerce_to_type(x, inner)?);
+			}
+			Ok(SocketValue::List(out))
+		}
+		(SocketValue::Map(m), SocketType::Map(inner)) => {
+			let mut out = BTreeMap::new();
+			for (k, v) in m {
+				out.insert(k, coerce_to_type(v, inner)?);
+			}
+			Ok(SocketValue::Map(out))
+		}
+		// 既に一致しているならそのまま
+		(v, t) if v.matches(t) => Ok(v),
+		// どれでもなければミスマッチ
+		(v, t) => Err(CoerceError::TypeMismatch {
+			from: v.type_of(),
+			to: t.clone(),
+		}),
+	}
+}
+
+#[derive(Debug, Clone, Error)]
+pub enum CoerceError {
+	#[error("型不一致: {from} → {to}")]
+	TypeMismatch { from: SocketType, to: SocketType },
+	#[error("Quantity は非 dimensionless（unit={unit}）、Float へ暗黙変換不可。明示 strip を挟んでください")]
+	NotDimensionless { unit: String },
 }
 
 impl fmt::Display for SocketType {

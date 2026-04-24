@@ -881,55 +881,55 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ### `flowgraph.math.float_add`
 
-**Float +**
+**Float +** — Quantity 加算。dim 不一致はエラー。ΔK + K(abs) は許容、K + K はエラー（abs 同士加算禁止）。
 
 | Input | Type | Default | Note |
 |---|---|---|---|
-| `a` | `float` | — |  |
-| `b` | `float` | — |  |
+| `a` | `quantity` | — |  |
+| `b` | `quantity` | — |  |
 
 | Output | Type | Note |
 |---|---|---|
-| `result` | `float` |  |
+| `result` | `quantity` |  |
 
 ### `flowgraph.math.float_div`
 
-**Float /**
+**Float /** — Quantity 除算。dim は差分で組み立てられる（m / s = m·s⁻¹）。絶対温度の絡む除算や 0 除算はエラー。
 
 | Input | Type | Default | Note |
 |---|---|---|---|
-| `a` | `float` | — |  |
-| `b` | `float` | — |  |
+| `a` | `quantity` | — |  |
+| `b` | `quantity` | — |  |
 
 | Output | Type | Note |
 |---|---|---|
-| `result` | `float` |  |
+| `result` | `quantity` |  |
 
 ### `flowgraph.math.float_mul`
 
-**Float ***
+**Float *** — Quantity 乗算。dim は組み立てられる（m * s = m·s）。絶対温度を絡めた乗算は禁止。
 
 | Input | Type | Default | Note |
 |---|---|---|---|
-| `a` | `float` | — |  |
-| `b` | `float` | — |  |
+| `a` | `quantity` | — |  |
+| `b` | `quantity` | — |  |
 
 | Output | Type | Note |
 |---|---|---|
-| `result` | `float` |  |
+| `result` | `quantity` |  |
 
 ### `flowgraph.math.float_sub`
 
-**Float -**
+**Float -** — Quantity 減算。dim 不一致はエラー。K - K は ΔK を生成。
 
 | Input | Type | Default | Note |
 |---|---|---|---|
-| `a` | `float` | — |  |
-| `b` | `float` | — |  |
+| `a` | `quantity` | — |  |
+| `b` | `quantity` | — |  |
 
 | Output | Type | Note |
 |---|---|---|
-| `result` | `float` |  |
+| `result` | `quantity` |  |
 
 ### `flowgraph.math.int_add`
 

@@ -2,9 +2,13 @@
 //!
 //! `int_*` and `float_*` are split by type. No implicit conversion (spec 2.1).
 //! Division by zero halts with `NodeExecError::Generic` (delta-0 safety-first policy).
+//!
+//! Phase ξ-3: `float_*` ノードは `SocketType::Quantity` 入出力に移行した。
+//! 既存の `Float` エッジは engine 側（[`crate::flowgraph::socket::coerce_to_type`]）で
+//! dimensionless Quantity へ暗黙 wrap されるため、後方互換性は維持される。
 
 use crate::flowgraph::node::{
- get_required_float, get_required_int, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec,
+ get_required_int, get_required_quantity, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec,
  PortSpec, PureNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
@@ -67,10 +71,15 @@ int_binop_node!(IntModNode, "flowgraph.math.int_mod", "Int %", |a, b| {
  }
 });
 
-// ---- Float binary ops ------------------------------------------------------
+// ---- Float binary ops (Phase xi-3: Quantity-based) ------------------------
 
+/// `flowgraph.math.float_*` 系の共通実装。Quantity を入出力として次元計算を行う。
+///
+/// `$op` は `Quantity::try_add` 等の関数ポインタ。dim 不一致や
+/// K vs `\u{0394}`K のようなルール違反は `QuantityArithError` で返り、
+/// engine には `NodeExecError::Generic` として伝播する。
 macro_rules! float_binop_node {
- ($name:ident, $feature:literal, $title:literal, $fn:expr) => {
+ ($name:ident, $feature:literal, $title:literal, $desc:literal, $op:expr) => {
   pub struct $name;
   impl NodeDescriptor for $name {
    fn describe(&self) -> NodeSpec {
@@ -78,12 +87,12 @@ macro_rules! float_binop_node {
      feature: $feature.into(),
      title: $title.into(),
      category: "math".into(),
-     description: None,
+     description: Some($desc.into()),
      inputs: vec![
-      PortSpec::input("a", "A", SocketType::Float),
-      PortSpec::input("b", "B", SocketType::Float),
+      PortSpec::input("a", "A", SocketType::Quantity),
+      PortSpec::input("b", "B", SocketType::Quantity),
      ],
-     outputs: vec![PortSpec::output("result", "Result", SocketType::Float)],
+     outputs: vec![PortSpec::output("result", "Result", SocketType::Quantity)],
      properties: vec![],
     }
    }
@@ -96,19 +105,55 @@ macro_rules! float_binop_node {
     inputs: &InputMap,
     _fired: &ExecFireSet,
    ) -> Result<NodeOutput, NodeExecError> {
-    let a = get_required_float(inputs, "a")?;
-    let b = get_required_float(inputs, "b")?;
-    let op: fn(f64, f64) -> f64 = $fn;
-    Ok(NodeOutput::new().set_data("result", SocketValue::Float(op(a, b))))
+    let a = get_required_quantity(inputs, "a")?;
+    let b = get_required_quantity(inputs, "b")?;
+    let op: fn(
+     &crate::flowgraph::quantity::Quantity,
+     &crate::flowgraph::quantity::Quantity,
+    ) -> Result<
+     crate::flowgraph::quantity::Quantity,
+     crate::flowgraph::quantity::QuantityArithError,
+    > = $op;
+    let r = op(a, b).map_err(|e| NodeExecError::Generic(anyhow::anyhow!(e)))?;
+    Ok(NodeOutput::new().set_data("result", SocketValue::Quantity(r)))
    }
   }
  };
 }
 
-float_binop_node!(FloatAddNode, "flowgraph.math.float_add", "Float +", |a, b| a + b);
-float_binop_node!(FloatSubNode, "flowgraph.math.float_sub", "Float -", |a, b| a - b);
-float_binop_node!(FloatMulNode, "flowgraph.math.float_mul", "Float *", |a, b| a * b);
-float_binop_node!(FloatDivNode, "flowgraph.math.float_div", "Float /", |a, b| a / b);
+float_binop_node!(
+ FloatAddNode,
+ "flowgraph.math.float_add",
+ "Float +",
+ "Quantity 加算。dim 不一致はエラー。\u{0394}K + K(abs) は許容、K + K はエラー（abs 同士加算禁止）。",
+ |a, b| a.try_add(b)
+);
+float_binop_node!(
+ FloatSubNode,
+ "flowgraph.math.float_sub",
+ "Float -",
+ "Quantity 減算。dim 不一致はエラー。K - K は \u{0394}K を生成。",
+ |a, b| a.try_sub(b)
+);
+float_binop_node!(
+ FloatMulNode,
+ "flowgraph.math.float_mul",
+ "Float *",
+ "Quantity 乗算。dim は組み立てられる（m * s = m\u{00B7}s）。絶対温度を絡めた乗算は禁止。",
+ |a, b| a.try_mul(b)
+);
+float_binop_node!(
+ FloatDivNode,
+ "flowgraph.math.float_div",
+ "Float /",
+ "Quantity 除算。dim は差分で組み立てられる（m / s = m\u{00B7}s\u{207B}\u{00B9}）。絶対温度の絡む除算や 0 除算はエラー。",
+ |a, b| {
+  if b.value == 0.0 {
+   return Err(crate::flowgraph::quantity::QuantityArithError::DivisionByZero);
+  }
+  a.try_div(b)
+ }
+);
 
 #[cfg(test)]
 mod tests {
@@ -144,12 +189,63 @@ mod tests {
 
  #[tokio::test]
  async fn float_arithmetic() {
-  let inputs: InputMap =
-   [("a".into(), SocketValue::Float(1.5)), ("b".into(), SocketValue::Float(2.5))].into_iter().collect();
+  use crate::flowgraph::quantity::Quantity;
+  let inputs: InputMap = [
+   ("a".into(), SocketValue::Quantity(Quantity::dimensionless(1.5))),
+   ("b".into(), SocketValue::Quantity(Quantity::dimensionless(2.5))),
+  ]
+  .into_iter()
+  .collect();
   let out = FloatAddNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
-  assert_eq!(out.data.get("result"), Some(&SocketValue::Float(4.0)));
+  let Some(SocketValue::Quantity(q)) = out.data.get("result") else {
+   panic!("expected Quantity result");
+  };
+  assert!((q.value - 4.0).abs() < 1e-12);
+  assert!(q.is_dimensionless());
 
   let out = FloatMulNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
-  assert_eq!(out.data.get("result"), Some(&SocketValue::Float(3.75)));
+  let Some(SocketValue::Quantity(q)) = out.data.get("result") else {
+   panic!("expected Quantity result");
+  };
+  assert!((q.value - 3.75).abs() < 1e-12);
+ }
+
+ #[tokio::test]
+ async fn float_add_with_units_dim_mismatch_errors() {
+  use crate::flowgraph::quantity::{parse_unit, Quantity};
+  let m = Quantity::of(1.0, parse_unit("m").unwrap());
+  let s = Quantity::of(2.0, parse_unit("s").unwrap());
+  let inputs: InputMap =
+   [("a".into(), SocketValue::Quantity(m)), ("b".into(), SocketValue::Quantity(s))].into_iter().collect();
+  let e = FloatAddNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap_err();
+  assert!(matches!(e, NodeExecError::Generic(_)), "got {e:?}");
+ }
+
+ #[tokio::test]
+ async fn float_mul_composes_units() {
+  use crate::flowgraph::quantity::{parse_unit, Quantity};
+  let m = Quantity::of(3.0, parse_unit("m").unwrap());
+  let s = Quantity::of(4.0, parse_unit("s").unwrap());
+  let inputs: InputMap =
+   [("a".into(), SocketValue::Quantity(m)), ("b".into(), SocketValue::Quantity(s))].into_iter().collect();
+  let out = FloatMulNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+  let Some(SocketValue::Quantity(q)) = out.data.get("result") else {
+   panic!("expected Quantity result");
+  };
+  assert!((q.value - 12.0).abs() < 1e-12);
+  assert_eq!(q.unit.canonical(), "m\u{00B7}s");
+ }
+
+ #[tokio::test]
+ async fn float_div_by_zero_errors() {
+  use crate::flowgraph::quantity::Quantity;
+  let inputs: InputMap = [
+   ("a".into(), SocketValue::Quantity(Quantity::dimensionless(1.0))),
+   ("b".into(), SocketValue::Quantity(Quantity::dimensionless(0.0))),
+  ]
+  .into_iter()
+  .collect();
+  let e = FloatDivNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap_err();
+  assert!(matches!(e, NodeExecError::Generic(_)));
  }
 }

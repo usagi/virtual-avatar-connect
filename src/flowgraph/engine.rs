@@ -13,7 +13,7 @@
 use crate::flowgraph::node::{
  ExecCtx, ExecFireSet, InputMap, NodeExecError, NodeImpl, PortDirection, StatefulCtx, TriggerEvent, TriggerHandle,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{coerce_to_type, SocketType, SocketValue};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::future::Future;
 use thiserror::Error;
@@ -280,12 +280,14 @@ impl FlowgraphProgram {
     continue;
    }
    if let Some(v) = data_overrides.get(&port.name) {
-    inputs.insert(port.name.clone(), v.clone());
+    let coerced = coerce_input(node_id, &port.name, &port.ty, v.clone())?;
+    inputs.insert(port.name.clone(), coerced);
     continue;
    }
    match self.pull_input(node_id, &port.name, generation, ctx, run).await? {
     Some(v) => {
-     inputs.insert(port.name.clone(), v);
+     let coerced = coerce_input(node_id, &port.name, &port.ty, v)?;
+     inputs.insert(port.name.clone(), coerced);
     }
     None => {
      if !port.optional && port.default.is_none() {
@@ -440,7 +442,8 @@ impl FlowgraphProgram {
    }
    match Box::pin(self.pull_input(node_id, &port.name, generation, ctx, run)).await? {
     Some(v) => {
-     inputs.insert(port.name.clone(), v);
+     let coerced = coerce_input(node_id, &port.name, &port.ty, v)?;
+     inputs.insert(port.name.clone(), coerced);
     }
     None => {
      if !port.optional && port.default.is_none() {
@@ -551,7 +554,7 @@ fn build_program(raw_nodes: Vec<NodeInstance>, raw_edges: Vec<Edge>) -> Result<F
     to: e.to.clone(),
    })));
   }
-  if fp.ty != tp.ty {
+  if !fp.ty.compatible_with(&tp.ty) {
    return Err(BuildError::TypeMismatch(Box::new(TypeMismatchDetail {
     from: e.from.clone(),
     from_ty: fp.ty.clone(),
@@ -727,6 +730,26 @@ pub struct TypeMismatchDetail {
 pub struct ExecDataMixedDetail {
  pub from: PortRef,
  pub to: PortRef,
+}
+
+/// 入力値をポート型に合わせて暗黙 coerce（Float ↔ Quantity 等）。
+///
+/// Phase ξ-3 で追加。エッジ接続時の型互換は [`SocketType::compatible_with`] で許容
+/// しているため、ランタイム配送の直前に値を target port 型へ揃える必要がある。
+fn coerce_input(
+	node_id: &NodeId,
+	port_name: &str,
+	target_ty: &SocketType,
+	value: SocketValue,
+) -> Result<SocketValue, NodeExecError> {
+	coerce_to_type(value, target_ty).map_err(|e| {
+		NodeExecError::Generic(anyhow::anyhow!(
+			"ノード '{}' の入力 '{}' の coerce 失敗: {}",
+			node_id,
+			port_name,
+			e
+		))
+	})
 }
 
 // ---------------------------------------------------------------------

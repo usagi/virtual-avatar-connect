@@ -1,6 +1,6 @@
 # Phase ξ — Dimensional Quantity System (SI 準拠の単位次元システム)
 
-> **Status**: ξ-0 docs 完了 / ξ-1 core types (Dimension / Unit / Quantity / parser) 着地 / ξ-2 `SocketType::Quantity` + `SocketValue::Quantity` + `flowgraph.unit.*` ノード 7 種着地。次は ξ-3 で `SocketValue::Float` → `Quantity` の既存コード migration。
+> **Status**: ξ-0 docs 完了 / ξ-1 core types (Dimension / Unit / Quantity / parser) 着地 / ξ-2 `SocketType::Quantity` + `SocketValue::Quantity` + `flowgraph.unit.*` ノード 7 種着地 / ξ-3 engine edge 暗黙 coerce (Float ↔ Quantity) + `flowgraph.math.float_*` の Quantity 化 着地。次は ξ-4 で log / format 系の unit-aware 化。
 > 起点: [`../roadmap.md`](../roadmap.md) の "Phase ξ" セクション。
 
 ---
@@ -455,12 +455,13 @@ impl Quantity {
 
 ### 7.3 ξ-3 チェックリスト
 
-- [ ] `SocketValue::Quantity(Quantity)` バリアント追加（`Float` 並走、段階移行）
-- [ ] `SocketType::Quantity { dim: Option<Dimension> }` 型追加（`dim: None` = 任意次元受け、`Some(d)` = 固定次元要求）
-- [ ] 既存 `SocketValue::Float(f64)` の全使用箇所を audit、**内部的に dimensionless Quantity として扱う wrapper** を `SocketValueRepr` 変換に挟む
-- [ ] `json_ops` は Quantity 受け取り時に value だけ使う実装（pass-through 方針固定）
-- [ ] 既存 `flowgraph.math.*` の int_add 等は touched しない（Int は Quantity に乗らない）、float_add 等は Quantity 対応化
-- [ ] `cargo test --lib` 既存回帰テスト全緑、`gui/tests/e2e/` も全緑
+- [x] `SocketValue::Quantity(Quantity)` バリアント追加（`Float` 並走、段階移行） ← ξ-2 で前倒し着地
+- [~] `SocketType::Quantity { dim: Option<Dimension> }` 型追加（ξ-3 時点は unit variant のまま。`dim` 制約は ξ-3 では PortSpec 側で持たず、ノードが `Quantity::dimension()` を実行時検証する方針で簡潔化。struct variant 化は ο-1 以降で compile-time 制約が欲しくなった時点で再検討）
+- [x] 既存 `SocketValue::Float(f64)` の全使用箇所を audit、**エンジン側の暗黙 coerce** を `inputs.insert` 直前に挿入（`src/flowgraph/socket.rs` に `compatible_with` / `coerce_to_type` を新設、engine で呼び出し。`Float → Quantity` は dimensionless wrap、`Quantity → Float` は dimensionless のみ許容し非 dimensionless は `CoerceError::NotDimensionless` で明示 strip を要求）
+- [x] `json_ops` / `state` / `table_ops` / `collection` は Quantity 受け取り時に value だけ使う実装 ← ξ-2 の `socket_value_to_json` 更新で着地済み
+- [x] 既存 `flowgraph.math.*` の int_add 等は touched しない（Int は Quantity に乗らない）、float_add / sub / mul / div を Quantity 対応化（port 型 `Quantity`、内部は `try_add` / `try_sub` / `try_mul` / `try_div`、div-by-zero は `QuantityArithError::DivisionByZero` で明示）
+- [x] `cargo test --lib` 既存回帰テスト全緑（629 passed、unit mismatch / m·s 組み立て / div-by-zero の新規 test 込み）、`BLESS_NODE_CATALOG=1` で catalog 更新
+- [ ] `gui/tests/e2e/` 緑確認（GUI 側は float_* の output 型が `float` → `quantity` に変わった以外の影響はない想定、次セッション冒頭で playwright 実機確認）
 
 ### 7.4 ξ-4 チェックリスト
 
