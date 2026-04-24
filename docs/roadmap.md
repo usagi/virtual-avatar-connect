@@ -112,15 +112,80 @@ Playwright による E2E テスト基盤を `gui/` 配下に閉じ込めて導�
 
 ## Active Phases
 
-（現在 active な phase はありません。次候補は "Flowgraph 機能向上" / "ε-2 Tauri ネイティブウィンドウ化"、詳細は下記 Backlog / Future を参照）
+### Phase ο — Flowgraph Enhancement I (計算系 + 時間 + signal util + GUI 小改善)
+
+Flowgraph 機能向上の第 1 波。engine 内完結の Pure ノード群（math 拡張 / easing / vec2・vec3 / time・timer / signal util / random・noise、計 64 ノード）と GUI 小改善（palette カテゴリ絞り込み / canvas drop-at-cursor / Ctrl+D duplicate）を narrow scope で追加する。外部 IO（HTTP / OBS / OSC / VMC / system metrics / process / window / Discord voice 等）と engine 大改修（Undo/Redo / subgraph / 物理）は明示的に次フェーズ（π / ρ / σ / τ / υ）以降へ送る。
+
+- [x] ο-0 docs: `phase-omicron-flowgraph-enhancement.md` 新設 + roadmap.md の Active 差し替え + backlog-nodes.md §1 を ο-4 昇格 pointer 化
+- [ ] ο-1 feat(flowgraph/math): §3.1 27 ノード追加（abs/min/max/clamp/lerp/smoothstep/trig/sqrt/pow/exp/log/sign/floor/ceil/round/deg↔rad）
+- [ ] ο-2 feat(flowgraph/easing): §3.2 `flowgraph.easing.apply` + curve enum 18 種 (quad/cubic/sine/expo/elastic/bounce × in/out/inOut + linear)
+- [ ] ο-3 feat(flowgraph/vec): §3.3 vec2 / vec3 × 9 ノード（make/unpack/add/sub/scale/dot/length/normalize/lerp/distance、JSON 配列表現）
+- [ ] ο-4 feat(flowgraph/util,time): §3.4 `flowgraph.util.timer_interval`（backlog §1 から昇格）+ `flowgraph.time.*` 4 種（now_rfc3339 / now_epoch_ms / format / since_ms）
+- [ ] ο-5 feat(flowgraph/util,random,noise): §3.5 signal util 5 種（edge_detect / prev_value / sample_hold / debounce / throttle）+ §3.6 random 3 種 + Perlin 1D/2D。`noise` crate 追加
+- [ ] ο-6 feat(gui): §3.7 palette カテゴリ絞り込みトグル + canvas drop-at-cursor + Ctrl+D duplicate + `flowgraph-canvas-basic.spec.ts` 回帰拡充
+- [ ] ο-7 docs: CHANGELOG + `manual/node-catalog.md` 再生成 + roadmap tick
+- 仕様書: [`roadmap/phase-omicron-flowgraph-enhancement.md`](roadmap/phase-omicron-flowgraph-enhancement.md)
+- scope: narrow-scoped。engine 内完結 Pure ノード + GUI 小改善に閉じる。新規 crate 依存は `noise` 1 件のみ。Breaking change なし
 
 ---
 
 ## Backlog / Future
 
+### Phase π — OSC / VMC / VRC bridge (TBD)
+
+Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・VRChat・その他 OSC 対応ソフト（VTube Studio の一部 / LiveLinkFace 等）を制御する基盤。VAC を「独自 avatar renderer を持つ前に、既存アバターアプリを Flowgraph から総合制御するハブ」に格上げする phase。
+
+- [ ] `rosc` crate 追加 + `src/flowgraph/osc.rs` 基盤（UDP sender / receiver の ingress 型）
+- [ ] `flowgraph.osc.send`（address / args JSON / host / port）
+- [ ] `flowgraph.ingress.osc`（bind port + address filter → exec + args 展開）
+- [ ] VMC Protocol pose send（アバター姿勢データを VMC プロトコル準拠 OSC で送出）
+- [ ] VMC Protocol pose recv（iFacialMocap / 各種トラッカーからの VMC 受信 ingress）
+- [ ] VRChat OSC 専用ヘルパー（avatar param set / chatbox send / typing indicator）
+- scope: iFacialMocap 単独ノードは VMC bridge 経由で吸収できる前提で外す。足りなければ長期 backlog に再掲
+
+### Phase ρ — 外部連携 HTTP + OBS + System Metrics + Twitch Helix 拡張 (TBD)
+
+外部 API 系の横串拡張フェーズ。既存 `[src/flowgraph/nodes/twitch.rs](../src/flowgraph/nodes/twitch.rs)` の Helix / OAuth 基盤を流用しつつ、HTTP 汎用ノード / OBS WebSocket / system metrics を同じ phase に詰める。
+
+- [ ] `flowgraph.http.request`（GET/POST/PUT/DELETE/PATCH、headers / JSON body / timeout / status / body / retry policy）
+- [ ] `flowgraph.obs.*`（`obws` crate 想定、scene switch / source visibility / record start-stop / stream start-stop / current scene / studio mode transition）
+- [ ] `flowgraph.system.*`（`sysinfo` crate、cpu_usage / mem_used / mem_total / load_avg / process_list。GPU は NVML 依存で後回し）
+- [ ] `flowgraph.twitch.*` 拡張（ユーザ要求分）: `raid_start` / `raid_cancel` / `ad_run`（1 分広告）/ `chat_settings_update`（subscribers_only / followers_only / emote_only / slow / unique）/ `prediction_create` / `prediction_end` / `poll_create` / `poll_end` / `shield_mode_update`（防御モード）/ `stream_marker_create`（説明付き対応）/ `clip_create` / `channel_info_update` / `goals_get` / `chat_clear` / チャット履歴リフレッシュ
+- open question: ユーザ要求の「RAID を 1 時間停止する」は Twitch 側に 1:1 の Helix エンドポイントが無く、`blocked_terms` 運用か独自 state で "incoming raid 遮断" を表現する必要あり → phase doc 内で TBD として扱う
+
+### Phase σ — Process / Window 制御 (TBD)
+
+OS プロセス / ウィンドウ制御ノード群。Windows を第一級 target、他 OS は degrade policy を phase doc で固定する。
+
+- [ ] `flowgraph.process.spawn` / `.kill` / `.wait` / `.running`（PID / exe 名で条件判定）
+- [ ] `flowgraph.window.enum`（現在開いているウィンドウ一覧を Table で返す）
+- [ ] `flowgraph.window.move` / `.resize` / `.minimize` / `.maximize` / `.restore` / `.close` / `.foreground`
+- [ ] `flowgraph.window.pseudo_fullscreen` / `.pseudo_fullscreen_exit`（borderless + monitor-size 化 / 元サイズ復帰）
+- scope: 既存 `windows` crate を再利用。macOS / Linux は no-op + warn か、将来別 backend を追加するかを phase doc で決める
+
+### Phase τ — GUI 大物 (Undo/Redo + multi-select + subgraph) (TBD)
+
+Flowgraph editor の大規模 UX 改修。ν-β で送った "Svelte Flow handle drag edge の E2E" もここに合流させ、履歴モデルを第一級概念化する。
+
+- [ ] 汎用 Undo/Redo スタック（現状 "削除 1 段 snapshot" を command pattern に進化、add/delete/move/connect/disconnect/property-edit 全部対象）
+- [ ] 本物のマルチ選択（`selectedNodeIds: Set<string>` + 矩形選択 + shift-click + ctrl-click、property editor multi 表示 / 差異ハイライト）
+- [ ] Flowgraph subgraph / group（engine + GUI の両面で第一級概念化、入出力 port を再 export するカプセル化）
+- [ ] Svelte Flow handle drag edge の E2E 回帰（ν-β+ から昇格）
+
+### Phase υ — Audio-reactive + Physics (TBD)
+
+Phase ο の vec2/3 と signal util に直接乗る形で、音声反応と古典力学系を追加する。procedural avatar motion のコア。
+
+- [ ] `flowgraph.audio.play`（`rodio` crate 想定、SE ファイル再生 / 音量 / ピッチ）
+- [ ] `flowgraph.audio.envelope`（voice ingress 副産物から RMS / ピーク / 平滑化）
+- [ ] `flowgraph.audio.pitch`（voice ingress の fundamental frequency 抽出）
+- [ ] `flowgraph.physics.spring`（target + stiffness + damping + velocity state）
+- [ ] `flowgraph.physics.damper` / `.integrator` / `.gravity`（vec2/vec3 ベース）
+- scope: avatar renderer を持たない前提で、OSC / VMC 経由で外部 renderer に流すことを想定
+
 ### Unscheduled Flowgraph Nodes
 
-- [ ] `flowgraph.util.timer_interval`（周期タイマー、source ノード、details: [`roadmap/backlog-nodes.md`](roadmap/backlog-nodes.md) §1）
+（Phase ο-4 で `flowgraph.util.timer_interval` は昇格済み。詳細は [`roadmap/backlog-nodes.md`](roadmap/backlog-nodes.md)）
 
 ### Phase ψ+（TBD）
 
@@ -136,13 +201,19 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 - [ ] visual regression（`toHaveScreenshot`）
 - [ ] GitHub Actions 上での chromium / firefox / webkit マトリクス
 
-### Flowgraph 機能向上（TBD）
-
-ψ-α / ν 完了後の次フェーズ候補（ユーザー意向）。ν-β の canvas DnD E2E が足場になるので、小規模 UX 改善（node catalog 絞り込み / 配線補助）から engine 拡張（Table default coerce fix、新 node 追加）まで、phase doc を新設して具体サブフェーズを確定する予定。ν-β で発見済みの engine 修正 (`Table::empty()` default coerce) も取り込む。
-
 ### ε-2 Tauri ネイティブウィンドウ化
 
-ψ-α / ν / ν-β / Flowgraph 機能拡張の次に着手検討（ユーザー意向として "GUI の Tauri 化" を積んでいる）。仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
+ψ-α / ν / ν-β / Phase ο 以降の Flowgraph 拡張と並行、または一段落した後に検討（ユーザー意向として "GUI の Tauri 化" を積んでいる）。仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
+
+### 長期 backlog（phase 立て前の候補リスト）
+
+設計重量が大きい or VAC 現役ユースケースへの直結度を需要確認してから phase 化する候補群。各 1 行のみ、詳細は phase doc 化のタイミングで起こす。
+
+- [ ] **Discord voice ingress**（Discord bot + voice gateway + opus decode、大工事。独立 phase / または VAC とは別プロセスの bridge 化も視野）
+- [ ] **iFacialMocap 単独**（π の VMC bridge 経由で吸収できない場合のみ。需要次第）
+- [ ] **VTube Studio API**（WebSocket、表情 / パラメータ / Hotkey 制御。OSC と機能重複するため π 完了後に需要を再確認）
+- [ ] **Global hotkey / MIDI**（StreamDeck 互換、OS 横断の global hotkey listener + MIDI input ingress ノード）
+- [ ] **独自 avatar renderer**（VAC が OSC / VMC 経由で外部 renderer を制御する現行路線に対して、独自に renderer を内包する巨大フェーズ。ψ / η 規模、別軸）
 
 ---
 

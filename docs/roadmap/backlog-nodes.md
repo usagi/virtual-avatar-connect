@@ -11,6 +11,9 @@
 
 ## 1. `flowgraph.util.timer_interval` — 周期タイマー（新規、未実装）
 
+> **Status**: **Phase ο-4 として昇格予定**。以下の仕様ドラフトはそのまま再利用される。
+> 詳細とサブフェーズ位置づけ: [`phase-omicron-flowgraph-enhancement.md`](phase-omicron-flowgraph-enhancement.md) §3.4 / §6 ο-4。
+
 ### 1.1 背景
 
 現行 `flowgraph.util.delay` は **1-shot**（`exec_in` 発火から `delay_ms` 後に `exec_out` を 1 回発火）で、
