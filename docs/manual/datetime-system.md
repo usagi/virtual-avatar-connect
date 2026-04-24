@@ -56,7 +56,7 @@ default_timezone = "+09:00"   # 空 / 未指定 / "Z" / "UTC" は UTC
 
 旧 Phase ο-4 案の **`flowgraph.time.now_rfc3339` 等 4 種**は、上表の **now + format / now + epoch_ms / format / now + diff + unit.convert** の組合せに置き換えられます（π-5 で吸収）。
 
-**Phase ο-4** では、残り **`flowgraph.util.timer_interval`（Stateful）** の実装にスコープが縮減されます（別ノード; backlog 参照）。
+**Phase ο-4** では、残り **`flowgraph.util.timer_interval`（Stateful）** のみがスコープでした（別ノード; backlog 参照）。**ο-4 で実装済み**（`src/flowgraph/nodes/timer_interval.rs`）。
 
 ---
 

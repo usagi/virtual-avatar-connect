@@ -75,6 +75,7 @@ pub mod screenshot;
 pub mod state;
 pub mod string_ops;
 pub mod table_ops;
+pub mod timer_interval;
 pub mod translate_gas;
 pub mod translate_libre;
 pub mod tts;

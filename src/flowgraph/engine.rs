@@ -603,6 +603,12 @@ fn build_program(raw_nodes: Vec<NodeInstance>, raw_edges: Vec<Edge>) -> Result<F
  let mut sources: Vec<NodeId> = Vec::new();
  for (id, instance) in &nodes {
   let spec = instance.impl_.describe();
+  // `flowgraph.util.timer_interval`: Stateful だが data 入力があり lazy では初回 arm されない。
+  // `run_forever` の初回 `execute` で self-trigger を seed するため、exec 入力があっても source 集合に入れる。
+  if spec.feature == "flowgraph.util.timer_interval" && matches!(&instance.impl_, NodeImpl::Stateful { .. }) {
+   sources.push(id.clone());
+   continue;
+  }
   if !spec.inputs.is_empty() {
    continue;
   }

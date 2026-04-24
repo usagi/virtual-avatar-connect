@@ -52,9 +52,15 @@ Flowgraph に **第一級型 `DateTime`（`jiff::Timestamp` ラッパ、UTC 絶�
 - **π-2 chrono → jiff**: 全呼び出し箇所を jiff へ置換（3 batch commit）。serde / TTL / ログ等の wire format は RFC3339 互換範囲を維持（`+00:00` → `Z` 等）。
 - **π-3**: `chrono` 直接依存削除。
 - **π-4 型基盤**: `src/datetime/mod.rs` に `DateTime` newtype、`parse_with_default_tz`（naive + 固定オフセット）。`SocketType::DateTime` / `SocketValue::DateTime`、String↔DateTime 暗黙 coerce（naive は engine 層では厳格、`parse` ノードで opt-in）。`FlowgraphInstanceConfig` + `conf.toml` の `[flowgraph] default_timezone`（FixedOffset のみ、IANA は拒否）。`parse_offset_str` 独自パーサ。
-- **π-5 8 ノード** (`src/flowgraph/nodes/datetime.rs`): `flowgraph.datetime.now` / `.parse` / `.format` / `.add_duration` / `.sub_duration` / `.diff` / `.epoch_ms` / `.from_epoch_ms`。`get_required_datetime` ヘルパ。Phase ο-4 当初案の `flowgraph.time.*` 4 種の役割は本ノード群で代替（**ο-4 の残タスクは `flowgraph.util.timer_interval` のみ**）。lib test +30、`node-catalog.md` 再生成。
+- **π-5 8 ノード** (`src/flowgraph/nodes/datetime.rs`): `flowgraph.datetime.now` / `.parse` / `.format` / `.add_duration` / `.sub_duration` / `.diff` / `.epoch_ms` / `.from_epoch_ms`。`get_required_datetime` ヘルパ。Phase ο-4 当初案の `flowgraph.time.*` 4 種の役割は本ノード群で代替。lib test +30、`node-catalog.md` 再生成。
 - **π-6 docs**: 本 CHANGELOG 節、`docs/manual/datetime-system.md` 新設、`docs/manual/index.md` 目次、[`docs/roadmap/phase-omicron-flowgraph-enhancement.md`](docs/roadmap/phase-omicron-flowgraph-enhancement.md) の §3.4 / §5.4 / §6.4 を π-5 吸収後の記述に更新、`docs/roadmap.md` tick。
 - **Breaking（π）**: なし（chrono→jiff は内部表現。JSON 等の RFC3339 文字列は従来どおり解釈可能）。
+
+### ο: Flowgraph Enhancement I（進行中、ο-4 まで）
+
+Phase ο の残サブフェーズ（ο-5 以降）は [`docs/roadmap/phase-omicron-flowgraph-enhancement.md`](docs/roadmap/phase-omicron-flowgraph-enhancement.md) 参照。
+
+- **ο-4 `flowgraph.util.timer_interval`** (`src/flowgraph/nodes/timer_interval.rs`, new): Stateful 周期タイマー（`DelayNode` と同様の `ctx.trigger` + internal `__tick__`）。`enabled` / `interval_sec`（最小 0.01s、sleep 最小 10ms）/ stale tick id ドロップ。出力 `on_tick`（Exec）/`count`（Int）/`elapsed_sec`（Float）。lazy graph で初回から arm されるよう `engine.rs` の `sources` 収集で本 feature を例外扱い。lib test 4 件、`docs/manual/node-catalog.md` 再生成、roadmap / backlog / phase-omicron の ο-4 節を実装済みに更新。
 
 ### χ: OpenAI Responses API Migration (χ-0 .. χ-8)
 

@@ -313,9 +313,10 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_stateful(Arc::new(nodes::state::LatchNode));
 	r.register_stateful(Arc::new(nodes::state::AccumulatorNode));
 
-	// --- delay / rate_limit ---
+	// --- delay / rate_limit / timer_interval (Phase o-4) ---
 	r.register_stateful(Arc::new(nodes::delay::DelayNode));
 	r.register_stateful(Arc::new(nodes::rate_limit::RateLimitNode));
+	r.register_stateful(Arc::new(nodes::timer_interval::TimerIntervalNode));
 
 	// --- log (effectful) ---
 	r.register_effectful(Arc::new(nodes::log::LogNode));
@@ -396,6 +397,7 @@ mod tests {
 			"flowgraph.state.accumulator",
 			"flowgraph.util.delay",
 			"flowgraph.util.rate_limit",
+			"flowgraph.util.timer_interval",
 			"flowgraph.util.log",
 			"flowgraph.tts.speak",
 			"flowgraph.twitch.chat_send",

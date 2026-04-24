@@ -1,6 +1,6 @@
 # Phase ο — Flowgraph Enhancement I (計算系 + 時間 + signal util + GUI 小改善)
 
-> **Status**: ο-0 docs / ο-1 math (42 ノード) 着地済み。ο-2 以降は Phase ξ-5 (GUI) と並行進行可。
+> **Status**: ο-0 docs / ο-1 math (42 ノード) / ο-2 easing / ο-3 vec / **ο-4 `timer_interval`** 着地済み。ο-5 以降は Phase ξ-5 (GUI) と並行進行可。
 > 起点となるスコープ感は [`../roadmap.md`](../roadmap.md) の "Phase ο" を参照。依存する単位次元基盤は [`phase-ksi-dimensional-quantity-system.md`](phase-ksi-dimensional-quantity-system.md)。
 
 ---
@@ -23,7 +23,7 @@
 | アバター表情補間 | 口パク開閉度を [0, 1] に clamp → easing で整形 → VMC 送信 | clamp / easing ノードが無く、flow 側で二項算術の組合せで擬似再現 |
 | 数値演算全般 | 音量 dB → 線形振幅、RMS / ピーク算出、角度 ↔ ラジアン | sqrt / pow / log / exp / trig / deg↔rad ノードが無い |
 | procedural motion | 「首が Perlin ノイズで微小に揺れる」「呼吸でスケールが sin 波」 | noise / time / sin が無く source が無いので組めない |
-| 周期処理 | N 秒おきに state をチェック、デバッグ用に定期 tick | `flowgraph.util.timer_interval` が `docs/roadmap/backlog-nodes.md` §1 に仕様ドラフトだけある未実装状態 |
+| 周期処理 | N 秒おきに state をチェック、デバッグ用に定期 tick | **`flowgraph.util.timer_interval`**（ο-4、`timer_interval.rs` + `DelayNode` 系 self-trigger） |
 | 入力デバウンス | ボタン連打 / 音声検出の立ち上がりだけで発火したい | `rate_limit` は「量」制御で、`edge_detect` / `debounce`（値通過 + deadtime）は別モノなのに代替手段がない |
 | GUI editor | ノードを「ここに」追加したい / category を一括で隠したい / 選択ノードを複製したい | palette クリック追加は盤面中央 + 乱数、複製は TOML fragment copy-paste 経由 |
 
@@ -140,7 +140,7 @@
 | `format(epoch, fmt)` | `from_epoch_ms` → `format`（`custom` 等） |
 | `since_ms(t0)` | `datetime.now` + `diff` + 必要に応じ `flowgraph.unit.convert`（s→ms） |
 
-- **`flowgraph.util.timer_interval`**: 未着手。**[backlog-nodes.md §1](backlog-nodes.md) を ο-4 で昇格**（Stateful、既存 `DelayNode` パターン）。下記 §5.4 参照。
+- **`flowgraph.util.timer_interval`**: **実装済み（ο-4）**。Stateful + `ctx.trigger` 自己 re-arm（`DelayNode` パターン）。lazy graph の初回 bootstrap のため `feature == flowgraph.util.timer_interval` は engine の `sources` 判定で例外扱い。仕様の正本は [backlog-nodes.md §1](backlog-nodes.md) + 下記 §5.4。
 
 ### 3.5 signal util (`flowgraph.util.*`)
 
@@ -237,7 +237,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 **`flowgraph.datetime.now` は Pure 実装**（`Timestamp::now()`）。**非決定論**（毎回異なる）だが、I/O なし。spec 2.1 の「副作用なし」定義に合致。snapshot が必要なら `flowgraph.util.prev_value` 等（ο-5 予定）と組合せ。旧 §5.4 で検討していた `flowgraph.time.now_*` を Effectful にする案は、**`datetime` 型と π-5 ノード群導入により不要**。
 
 - **`datetime.parse` / `format` / `diff` / `add_duration` / `sub_duration` / `epoch_ms` / `from_epoch_ms`**: すべて **Pure**（§5.2 と同階層のノード分類）
-- **`flowgraph.util.timer_interval`**: backlog §1 通り **Stateful + self-trigger**（ο-4）
+- **`flowgraph.util.timer_interval`**: backlog §1 通り **Stateful + self-trigger**（ο-4 実装済み、[`../../src/flowgraph/nodes/timer_interval.rs`](../../src/flowgraph/nodes/timer_interval.rs)）
 
 ### 5.5 依存追加方針
 
@@ -255,7 +255,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 | ο-1 ✅ | feat(flowgraph/math): §3.1 **42 ノード**追加 + unit test（Quantity-aware）| `src/flowgraph/nodes/math.rs` / `src/flowgraph/registry.rs` |
 | ο-2 ✅ | feat(flowgraph/easing): §3.2 `apply` ノード + curve 関数群（19 curve）+ unit test 13 件 / `PropertySpec.choices` + GUI dropdown hook | `src/flowgraph/nodes/easing.rs` (new) / `src/flowgraph/nodes/mod.rs` / `src/flowgraph/registry.rs` / `src/flowgraph/node.rs`（`PropertySpec.choices` + `with_choices`）/ `gui/src/lib/types.ts` / `gui/src/lib/flowgraph/FlowgraphPropertyEditor.svelte` |
 | ο-3 ✅ | feat(flowgraph/vec): §3.3 **20 ノード**追加（vec2 10 + vec3 10。ο-0 の「18」は `add/sub` 1 行表記による行数ミス、実数は 20）+ unit test 19 件 | `src/flowgraph/nodes/vec.rs` (new) / `src/flowgraph/nodes/mod.rs` / `src/flowgraph/registry.rs` |
-| ο-4 | feat(flowgraph/util): §3.4 `timer_interval` + unit test（**time 4 種は Phase π の `datetime` 8 ノードに移管済み、本サブでは実装しない**） | `src/flowgraph/nodes/delay.rs` 既存パターン流用 / `timer` 実装用ファイル (new) / `registry.rs` |
+| ο-4 | feat(flowgraph/util): §3.4 `timer_interval` + unit test（**time 4 種は Phase π の `datetime` 8 ノードに移管済み、本サブでは実装しない**） | `src/flowgraph/nodes/timer_interval.rs` (new) / `delay.rs` パターン流用 / `engine.rs`（lazy 初回の `sources` 例外）/ `registry.rs` |
 | ο-5 | feat(flowgraph/util,random,noise): §3.5 signal util 5 種 + §3.6 random/noise 5 種 | `src/flowgraph/nodes/signal.rs` (new) / `src/flowgraph/nodes/random.rs` (new) / `registry.rs` / `Cargo.toml`（`noise` 追加）|
 | ο-6 | feat(gui): §3.7 palette カテゴリ絞り込み + canvas drop-at-cursor + Ctrl+D duplicate + E2E 回帰 | `gui/src/lib/flowgraph/FlowgraphPalette.svelte` / `FlowgraphCanvas.svelte` / `gui/src/lib/tabs/FlowgraphTab.svelte` / `gui/src/lib/flowgraphStore.svelte.ts` / `gui/tests/e2e/flowgraph-canvas-basic.spec.ts` |
 | ο-7 | docs: CHANGELOG + `docs/manual/node-catalog.md` 再生成 + `docs/roadmap.md` tick | `CHANGELOG.md` / `docs/manual/node-catalog.md`（`BLESS_NODE_CATALOG=1` で再生成）/ `docs/roadmap.md` |
@@ -294,10 +294,10 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 
 ### 6.4 ο-4 チェックリスト
 
-- [ ] `flowgraph.util.timer_interval`（[backlog-nodes.md §1](backlog-nodes.md) 仕様）: Stateful + `ctx.trigger` 自己 re-arm + stale id drop + enabled edge detect
-- [ ] timer_interval の jitter 許容テスト (tokio::time を mock せず run する integration style)
+- [x] `flowgraph.util.timer_interval`（[backlog-nodes.md §1](backlog-nodes.md) 仕様）: Stateful + `ctx.trigger` 自己 re-arm + stale id drop + `enabled` / `__pending_id__` の stale 扱い + lib test（`run_forever` 実時間・複数 tick 等、tokio mock なし）
+- [x] timer_interval: 実時間ベースの unit test（`run_forever` / interval clamp / enabled off / stale id。厳密な jitter 上限の数値 assert はスコープ外）
 - [x] **日時 4 種（旧 `flowgraph.time.*` 案）**: **Phase π-5** で `flowgraph.datetime.*` 8 ノード + `DateTime` socket として**代替完了**（本フェーズのスコープ外。§3.4 / [`phase-pi-datetime-system.md`](phase-pi-datetime-system.md) §4.9 参照）
-- [ ] `backlog-nodes.md` §1 から本 doc への pointer の最終整備（π 移管後の文言に合わせる）
+- [x] `backlog-nodes.md` §1 から本 doc への pointer の最終整備（π 移管後の文言に合わせる）
 
 ### 6.5 ο-5 チェックリスト
 
@@ -331,7 +331,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 | 大量の新ノード（ο: 42+1+20+1+5+5+5 = 74 想定＋ **Phase π の datetime 8** は別フェーズ、§3.4 / roadmap 参照）で `manual/node-catalog.md` の `BLESS_NODE_CATALOG=1` 再生成を ο-1 〜 ο-5 / π-5 ごとに忘れると、CRLF / LF 問題や diff 巨大化で cargo test が fail する | ο-1 / ο-2 / ο-3 / ο-4 / ο-5 / **π-5** の各 commit 前に `BLESS_NODE_CATALOG=1 cargo test` を必ず回し、blessed diff を commit に含める運用を phase doc 上で固定。ο-7 でまとめる誘惑に負けない |
 | `noise` crate の API が将来版で change breakage | `noise = "0.9"` で固定（minor 上げは許容 / major は opt-in）。`Perlin::new(seed)` 以外の機能は触らない。将来 `simplex` / `worley` 等に広げるなら独立 PR |
 | easing の `elastic` / `bounce` は `t ∈ [0, 1]` の外で発散 → テストのオーバーシュート判定で吸収するのを忘れると flaky | `clamp_t = true` を既定にし、代表 curve の "0.0 → 0.0、1.0 → 1.0" 境界値だけ assert する保守的テストに |
-| `flowgraph.util.timer_interval` は Phase δ の `DelayNode` パターンに依存するが、`ctx.trigger` の node_fq 取得が実は未整備 | backlog §1.4 末尾の注意書き通り、`DelayNode` と同じ経路で対応。`StatefulCtx` に `node_fq` が無ければ phase 途中で engine 側に 1 行追加する（ο-4 の判断ポイント） |
+| `flowgraph.util.timer_interval` は Phase δ の `DelayNode` パターンに依存するが、`ctx.trigger` の node_fq 取得が実は未整備 | **着地済み**: `DelayNode` と同一経路。lazy 初回 execute のため `sources` に timer_interval を含める engine 例外を追加（ο-4） |
 | GUI DnD drop は Svelte Flow の `screenToFlowPosition` が初期 viewport animation 中に呼ばれると座標が狂う | `FlowgraphAutoFit` の settle 完了を待つ flag を `flowgraphStore` に追加、drop 時に `if (!settled) return;` でハードフェイル（ν-β-2 と同様「flake 根源を殺す」方針） |
 | Twitch / OpenAI / TTS など外部依存の重いフェーズ（φ / χ）中に Phase ο が走ると、Cargo build が遅くなる（単純な node 追加でも workspace 全体の再コンパイル発生） | narrow scope で crate 追加を `noise` 1 件に抑える。`Cargo.lock` 確認を ο-5 のチェックリストに |
 | random / noise の "Pure vs Stateful" 議論が後付けで `SocketType::Seed` みたいな拡張に化ける | 今フェーズでは **Pure + thread_rng + 毎回違う値** で割り切り、seed 管理は Phase ο+ の TBD にする。phase doc §3.6 末尾に明記 |
@@ -343,7 +343,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 - [`../roadmap.md`](../roadmap.md) の "Phase ο" セクション
 - [`phase-ksi-dimensional-quantity-system.md`](phase-ksi-dimensional-quantity-system.md) — **Phase ξ（順序上の前提フェーズ）**。Quantity / Dimension / Unit 型、angle 疑似次元、strict default + 明示 escape hatch の設計元
 - [`phase-delta-spec.md`](phase-delta-spec.md) — Flowgraph 型システム / Pure・Stateful・Effectful 分類の元仕様
-- [`backlog-nodes.md`](backlog-nodes.md) — `flowgraph.util.timer_interval` 仕様ドラフト（ο-4 で昇格）
+- [`backlog-nodes.md`](backlog-nodes.md) — `flowgraph.util.timer_interval` 仕様（ο-4 実装と同期済みリファレンス）
 - [`phase-nu-gui-e2e-playwright.md`](phase-nu-gui-e2e-playwright.md) — E2E fixture / spec 運用の前例
 - [`../manual/node-catalog.md`](../manual/node-catalog.md) — 既存ノードカタログ（自動生成、ο-7 で再生成）
 - [`../../src/flowgraph/nodes/math.rs`](../../src/flowgraph/nodes/math.rs) — 既存 math 実装（macro パターンの元ネタ）

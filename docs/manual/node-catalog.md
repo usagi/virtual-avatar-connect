@@ -181,6 +181,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.util.format`](#flowgraph-util-format) — Format Quantity
   - [`flowgraph.util.log`](#flowgraph-util-log) — Log
   - [`flowgraph.util.rate_limit`](#flowgraph-util-rate-limit) — Rate Limit
+  - [`flowgraph.util.timer_interval`](#flowgraph-util-timer-interval) — Timer Interval
 - **vec**
   - [`flowgraph.vec2.add`](#flowgraph-vec2-add) — Vec2 add
   - [`flowgraph.vec2.distance`](#flowgraph-vec2-distance) — Vec2 distance
@@ -2349,6 +2350,23 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_allow` | `exec` (out) |  |
 | `on_deny` | `exec` (out) |  |
 | `remaining` | `int` |  |
+
+### `flowgraph.util.timer_interval`
+
+**Timer Interval** — Periodic timer: while `enabled` and `run_forever` trigger bus is active, fires `on_tick` every `interval_sec` (min 0.01s, sleep min 10ms). Outputs `count` (total ticks) and `elapsed_sec` (wall time since previous tick, or `interval_sec` on first tick). Stale wakeups are dropped. `execute()` one-shot mode does not arm (same as `util.delay`).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `enabled` | `bool` | `true` |  |
+| `interval_sec` | `float` | `1.0` |  |
+| `__tick__` | `exec` (in) | — |  |
+| `__pending_id__` | `int` | `-1` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_tick` | `exec` (out) |  |
+| `count` | `int` |  |
+| `elapsed_sec` | `float` |  |
 
 ## vec
 
