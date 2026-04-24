@@ -37,7 +37,7 @@ use std::time::Duration;
 
 pub mod app_specific;
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::Serialize;
 use tokio::sync::RwLock;
 
@@ -145,7 +145,7 @@ pub struct ManagedAppStatus {
  /// マッチした PID の一覧（代表 pid ではなく全部）。
  pub pids: Vec<u32>,
  /// 観測した時刻（RFC3339）。
- pub checked_at: DateTime<Utc>,
+ pub checked_at: Timestamp,
 }
 
 impl ManagedAppStatus {
@@ -154,7 +154,7 @@ impl ManagedAppStatus {
    id: id.to_string(),
    running: false,
    pids: Vec::new(),
-   checked_at: Utc::now(),
+   checked_at: Timestamp::now(),
   }
  }
 }
@@ -236,7 +236,7 @@ pub fn probe_all(specs: &[ManagedAppSpec]) -> HashMap<String, ManagedAppStatus> 
   false,
   ProcessRefreshKind::everything().without_cpu(),
  );
- let now = Utc::now();
+ let now = Timestamp::now();
 
  let mut out = HashMap::with_capacity(specs.len());
  for spec in specs {
@@ -333,7 +333,7 @@ pub async fn run_monitor(
     id: s.id.clone(),
     running: s.running,
     pids: s.pids.clone(),
-    checked_at: s.checked_at.to_rfc3339(),
+    checked_at: s.checked_at.to_string(),
    };
    if let Err(e) = event_tx.send(ev) {
     log::trace!("ManagedAppState の broadcast に失敗（受信者 0 件の可能性）: {e}");

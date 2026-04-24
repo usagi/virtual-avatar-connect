@@ -3,7 +3,7 @@ use crate::{Arc, ChannelData, ChannelDatum, RwLock, SharedChannelData, SharedSta
 use actix::{Actor, ActorContext, AsyncContext, Handler, Message, StreamHandler};
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 use tokio::time::Duration;
@@ -17,7 +17,7 @@ pub struct WsServerPayloadChannelDatum {
  #[serde(default)]
  pub flags: HashSet<String>,
  pub id: Option<u64>,
- pub datetime: Option<DateTime<Utc>>,
+ pub datetime: Option<Timestamp>,
 }
 
 impl WsServerPayloadChannelDatum {

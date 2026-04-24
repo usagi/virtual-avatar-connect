@@ -1,6 +1,6 @@
 use crate::state::channel_attach::{Attachment, DataSource};
 use crate::{Arc, RwLock};
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -28,7 +28,7 @@ pub struct ChannelDatum {
 
  #[serde(deserialize_with = "deserialize_and_reset_id_counter")]
  id: u64,
- datetime: DateTime<Utc>,
+ datetime: Timestamp,
 }
 
 pub type ChannelData = VecDeque<ChannelDatum>;
@@ -57,7 +57,7 @@ impl ChannelDatum {
    meta: BTreeMap::new(),
    attachments: Vec::new(),
    id: ID_COUNTER.fetch_add(1, Ordering::Relaxed) + 1,
-   datetime: Utc::now(),
+   datetime: Timestamp::now(),
   }
  }
 
@@ -70,7 +70,7 @@ impl ChannelDatum {
    meta: channel_datum.meta,
    attachments: channel_datum.attachments,
    id: ID_COUNTER.fetch_add(1, Ordering::Relaxed) + 1,
-   datetime: Utc::now(),
+   datetime: Timestamp::now(),
   }
  }
 
@@ -78,7 +78,7 @@ impl ChannelDatum {
   self.id
  }
 
- pub fn get_datetime(&self) -> DateTime<Utc> {
+ pub fn get_datetime(&self) -> Timestamp {
   self.datetime
  }
 
@@ -159,4 +159,83 @@ where
  let id = u64::deserialize(deserializer)?;
  ID_COUNTER.store(id, Ordering::Relaxed);
  Ok(id)
+}
+
+// -----------------------------------------------------------------------
+// Phase pi-2 batch3: serde round-trip snapshot tests for `datetime` field.
+// -----------------------------------------------------------------------
+//
+// jiff::Timestamp serialization differs from chrono::DateTime<Utc> in the
+// trailing tz spelling (`Z` vs `+00:00`). These tests pin the post-migration
+// wire format (`...Z`) and verify that inbound deserialization still accepts
+// both `Z` and `+HH:MM` offset suffixes (RFC3339 allows both, and some
+// clients may still be emitting `+00:00`).
+#[cfg(test)]
+mod datetime_wire_format_tests {
+ use super::*;
+
+ fn datum_with_fixed_datetime() -> ChannelDatum {
+  let mut cd = ChannelDatum {
+   channel: "main".to_string(),
+   content: "hello".to_string(),
+   flags: HashSet::new(),
+   source: None,
+   meta: BTreeMap::new(),
+   attachments: Vec::new(),
+   id: 0,
+   datetime: "2026-04-24T12:34:56.123456789Z".parse().unwrap(),
+  };
+  cd.flags.insert("is_final".to_string());
+  cd
+ }
+
+ #[test]
+ fn datetime_serializes_with_z_suffix() {
+  let cd = datum_with_fixed_datetime();
+  let json = serde_json::to_string(&cd).expect("serialize ChannelDatum");
+  assert!(
+   json.contains("\"datetime\":\"2026-04-24T12:34:56.123456789Z\""),
+   "expected Z-suffixed RFC3339 datetime, got: {json}"
+  );
+  assert!(!json.contains("+00:00"), "datetime should not carry +00:00 after jiff migration");
+ }
+
+ #[test]
+ fn datetime_roundtrip_preserves_nanoseconds() {
+  let cd = datum_with_fixed_datetime();
+  let json = serde_json::to_string(&cd).unwrap();
+  let back: ChannelDatum = serde_json::from_str(&json).unwrap();
+  assert_eq!(back.datetime, cd.datetime);
+  assert_eq!(back.content, cd.content);
+ }
+
+ #[test]
+ fn datetime_deserializes_plus_offset_spelling() {
+  // External clients may still emit `+00:00`; jiff accepts it and normalizes.
+  let raw = r#"{
+   "channel":"main",
+   "content":"hello",
+   "flags":[],
+   "id":0,
+   "datetime":"2026-04-24T12:34:56.123456789+00:00"
+  }"#;
+  let cd: ChannelDatum = serde_json::from_str(raw).unwrap();
+  let expected: Timestamp = "2026-04-24T12:34:56.123456789Z".parse().unwrap();
+  assert_eq!(cd.datetime, expected);
+ }
+
+ #[test]
+ fn datetime_deserializes_non_utc_offset_and_normalizes() {
+  // JST +09:00 is the same instant as `Z - 9h`. jiff::Timestamp normalizes to UTC absolute.
+  let raw = r#"{
+   "channel":"main",
+   "content":"hello",
+   "flags":[],
+   "id":0,
+   "datetime":"2026-04-24T21:34:56.123456789+09:00"
+  }"#;
+  let cd: ChannelDatum = serde_json::from_str(raw).unwrap();
+  let expected: Timestamp = "2026-04-24T12:34:56.123456789Z".parse().unwrap();
+  assert_eq!(cd.datetime, expected);
+ }
 }

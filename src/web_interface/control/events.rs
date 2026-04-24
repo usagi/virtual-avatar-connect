@@ -190,7 +190,7 @@ impl ControlEvent {
    channel: cd.channel.clone(),
    content: cd.content.clone(),
    flags: cd.flags.iter().cloned().collect(),
-   datetime: cd.get_datetime().to_rfc3339(),
+   datetime: cd.get_datetime().to_string(),
   }
  }
 }

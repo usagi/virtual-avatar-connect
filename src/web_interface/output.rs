@@ -89,7 +89,7 @@ async fn post(state: web::Data<SharedState>, request_paylaod: web::Json<OutputRe
   let channel_data_for_request = match &channel_request.retrieved_timestamp {
    Some(retrieved_timestamp) => channel_data_for_request
     .into_iter()
-    .filter(|cd| cd.get_datetime() > retrieved_timestamp.parse::<chrono::DateTime<chrono::Utc>>().unwrap())
+    .filter(|cd| cd.get_datetime() > retrieved_timestamp.parse::<jiff::Timestamp>().unwrap())
     .collect::<Vec<_>>(),
    None => channel_data_for_request,
   };
@@ -98,7 +98,7 @@ async fn post(state: web::Data<SharedState>, request_paylaod: web::Json<OutputRe
   for cd in channel_data_for_request {
    channel_data_for_response.push(ChannelDatum {
     id: Some(cd.get_id()),
-    datetime: Some(cd.get_datetime().to_rfc3339()),
+    datetime: Some(cd.get_datetime().to_string()),
     channel: Some(cd.channel.clone()),
     content: Some(cd.content.clone()),
     flags: cd.flags.clone(),

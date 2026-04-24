@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -14,7 +14,7 @@ pub struct Message {
  pub from: String,
  pub content: String,
  pub flags: HashSet<String>,
- pub datetime: DateTime<Utc>,
+ pub datetime: Timestamp,
 }
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(FIRST_ID);
@@ -35,7 +35,7 @@ impl Message {
    from: from.to_string(),
    content: content.to_string(),
    flags: HashSet::new(),
-   datetime: Utc::now(),
+   datetime: Timestamp::now(),
   }
  }
 
