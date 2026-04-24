@@ -80,3 +80,4 @@ pub mod tts;
 pub mod twitch;
 pub mod unit;
 pub mod util_format;
+pub mod vec;

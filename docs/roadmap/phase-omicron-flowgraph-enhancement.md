@@ -9,7 +9,7 @@
 
 - Phase ν-β クローズ後の次フェーズ。[docs/roadmap.md](../roadmap.md) の "Flowgraph 機能向上（TBD）" を 1 つの narrow フェーズとして具体化する。
 - 本フェーズは **engine 内完結の Pure ノード群 + GUI 小改善** に閉じる。外部連携（HTTP / OBS / OSC / VMC / system metrics / process / window）と engine の大改修（Undo/Redo / subgraph / 物理）は明示的に次フェーズ（π / ρ / σ / τ / υ）に送る（§4）。
-- 全 6 カテゴリ（math / easing / vec / time / signal util / random）× **76 ノード**（math 42 + easing 1 + vec 18 + time 5 + signal util 5 + random/noise 5）+ GUI 3 項目で構成。1 サブフェーズ = 1 commit 粒度に分解（§6）。
+- 全 6 カテゴリ（math / easing / vec / time / signal util / random）× **78 ノード**（math 42 + easing 1 + vec 20 + time 5 + signal util 5 + random/noise 5）+ GUI 3 項目で構成。1 サブフェーズ = 1 commit 粒度に分解（§6）。ο-0 docs では vec を 18 と記していたが、ο-3 実装時に行数と実ノード数のずれ（`add/sub` を 1 行で書いていた）を正確化して 20 に修正（math の 37 → 42 修正と同種）。
 - **依存**: [Phase ξ (Dimensional Quantity System)](phase-ksi-dimensional-quantity-system.md) 先行。ο-1 math / ο-2 easing / ο-3 vec / ο-4 time / ο-5 signal util のノード群は最初から `Quantity<Dimension>` 対応で実装する。ξ-0 / ξ-1 / ξ-2 / ξ-3 着地前に ο-1 を走らせると retrofit 地獄になるため、**順序ブロッカー**として固定する。
 
 ---
@@ -127,7 +127,7 @@
 | `flowgraph.vec2.distance` | (Json, Json) → Float | |
 | `flowgraph.vec3.*` | 上記 9 ノードの 3 次元版 | |
 
-計 18 ノード。内部で `[f64; N]` に取り出してから計算し、JSON 配列に戻す。不正な配列（要素数不足、非数値）は `NodeExecError::Generic` で即停止（既存 json_ops と同じポリシー）。
+計 20 ノード（vec2 10 + vec3 10。ο-3 実装時に `add / sub` を 1 行で書いていた行数 9 が実ノード数 10 と食い違っていた点を正確化）。内部で `[f64; N]` に取り出してから計算し、JSON 配列に戻す。不正な配列（要素数不足、非数値、非有限値）は `NodeExecError::Generic` で即停止（既存 json_ops と同じポリシー）。
 
 ### 3.4 time / timer (`flowgraph.util.*` / `flowgraph.time.*`)
 
@@ -252,7 +252,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 | ο-0 | docs: 本 phase doc + roadmap.md 再編 + backlog-nodes.md §1 の pointer 化（+ 後日 angle normalization / 双曲線 10 ノード追記 + Phase ξ 依存明記）| `docs/roadmap/phase-omicron-flowgraph-enhancement.md` ✅ / `docs/roadmap.md` ✅ / `docs/roadmap/backlog-nodes.md` ✅ |
 | ο-1 ✅ | feat(flowgraph/math): §3.1 **42 ノード**追加 + unit test（Quantity-aware）| `src/flowgraph/nodes/math.rs` / `src/flowgraph/registry.rs` |
 | ο-2 ✅ | feat(flowgraph/easing): §3.2 `apply` ノード + curve 関数群（19 curve）+ unit test 13 件 / `PropertySpec.choices` + GUI dropdown hook | `src/flowgraph/nodes/easing.rs` (new) / `src/flowgraph/nodes/mod.rs` / `src/flowgraph/registry.rs` / `src/flowgraph/node.rs`（`PropertySpec.choices` + `with_choices`）/ `gui/src/lib/types.ts` / `gui/src/lib/flowgraph/FlowgraphPropertyEditor.svelte` |
-| ο-3 | feat(flowgraph/vec): §3.3 18 ノード追加（vec2 9 + vec3 9）+ unit test | `src/flowgraph/nodes/vec.rs` (new) / `registry.rs` |
+| ο-3 ✅ | feat(flowgraph/vec): §3.3 **20 ノード**追加（vec2 10 + vec3 10。ο-0 の「18」は `add/sub` 1 行表記による行数ミス、実数は 20）+ unit test 19 件 | `src/flowgraph/nodes/vec.rs` (new) / `src/flowgraph/nodes/mod.rs` / `src/flowgraph/registry.rs` |
 | ο-4 | feat(flowgraph/util,time): §3.4 `timer_interval` + time ノード 4 種 + unit test | `src/flowgraph/nodes/delay.rs` 既存パターン流用 / `src/flowgraph/nodes/time.rs` (new) / `registry.rs` |
 | ο-5 | feat(flowgraph/util,random,noise): §3.5 signal util 5 種 + §3.6 random/noise 5 種 | `src/flowgraph/nodes/signal.rs` (new) / `src/flowgraph/nodes/random.rs` (new) / `registry.rs` / `Cargo.toml`（`noise` 追加）|
 | ο-6 | feat(gui): §3.7 palette カテゴリ絞り込み + canvas drop-at-cursor + Ctrl+D duplicate + E2E 回帰 | `gui/src/lib/flowgraph/FlowgraphPalette.svelte` / `FlowgraphCanvas.svelte` / `gui/src/lib/tabs/FlowgraphTab.svelte` / `gui/src/lib/flowgraphStore.svelte.ts` / `gui/tests/e2e/flowgraph-canvas-basic.spec.ts` |
@@ -284,10 +284,11 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 
 ### 6.3 ο-3 チェックリスト
 
-- [ ] JSON 配列（Number x 2 / x 3）↔ `[f64; 2/3]` の decode / encode helper
-- [ ] vec2 9 ノード + vec3 9 ノードを macro 化
-- [ ] `make` / `unpack` を含めた round-trip unit test
-- [ ] `normalize` で零ベクトル扱いのドキュメンテーション
+- [x] JSON 配列（Number × 2 / × 3）↔ `[f64; 2/3]` の decode / encode helper（`decode_vec::<N>` / `encode_vec::<N>`、非配列 / 長さ不一致 / 非数値 / 非有限値はすべて `NodeExecError::Generic` で即停止 — §3.3 安全方針通り）
+- [x] vec2 **10 ノード** + vec3 **10 ノード**（計 20 ノード）を `const N: usize` generic helper + 6 種類のマクロ（`vec_make_node!` / `vec_unpack_node!` / `vec_binop_node!` / `vec_scalar_out_binop_node!` / `vec_scale_node!` / `vec_unary_pure_node!` / `vec_lerp_node!`）で実装。ο-0 docs の「vec 18」表記は `add` / `sub` を 1 行で書いたため表上の行数と実ノード数が 9 vs 10 でずれていた（math の「37 → 42」修正と同種の行数ミス）。実際は `make / unpack / add / sub / scale / dot / length / normalize / lerp / distance` で 10 ノード × 2 次元 = **20 ノード**
+- [x] `make` / `unpack` を含めた round-trip unit test（vec2 / vec3 両方 / decode-encode 直接テストも含む）
+- [x] `normalize` で零ベクトル扱いのドキュメンテーション: `NodeSpec.description` に "Zero vector returns [0, 0]/[0, 0, 0] (not an error)." を明記、unit test (`vec2_normalize_zero_vector_stays_zero` / `vec3_normalize_zero_vector_stays_zero`) で仕様を固定
+- [x] `cargo test --lib flowgraph::nodes::vec` 19 tests 全緑、全体 695 tests 全緑、`BLESS_NODE_CATALOG=1 cargo test` で `docs/manual/node-catalog.md` 再生成
 
 ### 6.4 ο-4 チェックリスト
 

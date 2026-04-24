@@ -172,6 +172,27 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.util.format`](#flowgraph-util-format) — Format Quantity
   - [`flowgraph.util.log`](#flowgraph-util-log) — Log
   - [`flowgraph.util.rate_limit`](#flowgraph-util-rate-limit) — Rate Limit
+- **vec**
+  - [`flowgraph.vec2.add`](#flowgraph-vec2-add) — Vec2 add
+  - [`flowgraph.vec2.distance`](#flowgraph-vec2-distance) — Vec2 distance
+  - [`flowgraph.vec2.dot`](#flowgraph-vec2-dot) — Vec2 dot
+  - [`flowgraph.vec2.length`](#flowgraph-vec2-length) — Vec2 length
+  - [`flowgraph.vec2.lerp`](#flowgraph-vec2-lerp) — Vec2 lerp
+  - [`flowgraph.vec2.make`](#flowgraph-vec2-make) — Vec2 make
+  - [`flowgraph.vec2.normalize`](#flowgraph-vec2-normalize) — Vec2 normalize
+  - [`flowgraph.vec2.scale`](#flowgraph-vec2-scale) — Vec2 scale
+  - [`flowgraph.vec2.sub`](#flowgraph-vec2-sub) — Vec2 sub
+  - [`flowgraph.vec2.unpack`](#flowgraph-vec2-unpack) — Vec2 unpack
+  - [`flowgraph.vec3.add`](#flowgraph-vec3-add) — Vec3 add
+  - [`flowgraph.vec3.distance`](#flowgraph-vec3-distance) — Vec3 distance
+  - [`flowgraph.vec3.dot`](#flowgraph-vec3-dot) — Vec3 dot
+  - [`flowgraph.vec3.length`](#flowgraph-vec3-length) — Vec3 length
+  - [`flowgraph.vec3.lerp`](#flowgraph-vec3-lerp) — Vec3 lerp
+  - [`flowgraph.vec3.make`](#flowgraph-vec3-make) — Vec3 make
+  - [`flowgraph.vec3.normalize`](#flowgraph-vec3-normalize) — Vec3 normalize
+  - [`flowgraph.vec3.scale`](#flowgraph-vec3-scale) — Vec3 scale
+  - [`flowgraph.vec3.sub`](#flowgraph-vec3-sub) — Vec3 sub
+  - [`flowgraph.vec3.unpack`](#flowgraph-vec3-unpack) — Vec3 unpack
 
 ## channel
 
@@ -2211,4 +2232,266 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_allow` | `exec` (out) |  |
 | `on_deny` | `exec` (out) |  |
 | `remaining` | `int` |  |
+
+## vec
+
+### `flowgraph.vec2.add`
+
+**Vec2 add** — Componentwise vec2 addition
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `json` | — |  |
+| `b` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `json` |  |
+
+### `flowgraph.vec2.distance`
+
+**Vec2 distance** — Euclidean distance between two vec2s
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `json` | — |  |
+| `b` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `float` |  |
+
+### `flowgraph.vec2.dot`
+
+**Vec2 dot** — Vec2 dot product (returns scalar)
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `json` | — |  |
+| `b` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `float` |  |
+
+### `flowgraph.vec2.length`
+
+**Vec2 length** — Euclidean magnitude of a vec2: sqrt(x^2 + y^2)
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `v` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `float` |  |
+
+### `flowgraph.vec2.lerp`
+
+**Vec2 lerp** — Componentwise linear interpolation: a + (b - a) * t for 2-vectors. t is not clamped.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `json` | — |  |
+| `b` | `json` | — |  |
+| `t` | `float` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `json` |  |
+
+### `flowgraph.vec2.make`
+
+**Vec2 make** — Pack 2 floats into a JSON array [x, y]
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `float` | — |  |
+| `y` | `float` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `v` | `json` |  |
+
+### `flowgraph.vec2.normalize`
+
+**Vec2 normalize** — Scale a vec2 to unit length. Zero vector returns [0, 0] (not an error).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `v` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `json` |  |
+
+### `flowgraph.vec2.scale`
+
+**Vec2 scale** — Multiply every component of a 2-vector by scalar `k`
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `json` | — |  |
+| `k` | `float` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `json` |  |
+
+### `flowgraph.vec2.sub`
+
+**Vec2 sub** — Componentwise vec2 subtraction
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `json` | — |  |
+| `b` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `json` |  |
+
+### `flowgraph.vec2.unpack`
+
+**Vec2 unpack** — Unpack a 2-component JSON array into separate Float outputs
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `v` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `x` | `float` |  |
+| `y` | `float` |  |
+
+### `flowgraph.vec3.add`
+
+**Vec3 add** — Componentwise vec3 addition
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `json` | — |  |
+| `b` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `json` |  |
+
+### `flowgraph.vec3.distance`
+
+**Vec3 distance** — Euclidean distance between two vec3s
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `json` | — |  |
+| `b` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `float` |  |
+
+### `flowgraph.vec3.dot`
+
+**Vec3 dot** — Vec3 dot product (returns scalar)
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `json` | — |  |
+| `b` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `float` |  |
+
+### `flowgraph.vec3.length`
+
+**Vec3 length** — Euclidean magnitude of a vec3: sqrt(x^2 + y^2 + z^2)
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `v` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `float` |  |
+
+### `flowgraph.vec3.lerp`
+
+**Vec3 lerp** — Componentwise linear interpolation: a + (b - a) * t for 3-vectors. t is not clamped.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `json` | — |  |
+| `b` | `json` | — |  |
+| `t` | `float` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `json` |  |
+
+### `flowgraph.vec3.make`
+
+**Vec3 make** — Pack 3 floats into a JSON array [x, y, z]
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `float` | — |  |
+| `y` | `float` | — |  |
+| `z` | `float` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `v` | `json` |  |
+
+### `flowgraph.vec3.normalize`
+
+**Vec3 normalize** — Scale a vec3 to unit length. Zero vector returns [0, 0, 0] (not an error).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `v` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `json` |  |
+
+### `flowgraph.vec3.scale`
+
+**Vec3 scale** — Multiply every component of a 3-vector by scalar `k`
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `json` | — |  |
+| `k` | `float` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `json` |  |
+
+### `flowgraph.vec3.sub`
+
+**Vec3 sub** — Componentwise vec3 subtraction
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `json` | — |  |
+| `b` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `json` |  |
+
+### `flowgraph.vec3.unpack`
+
+**Vec3 unpack** — Unpack a 3-component JSON array into separate Float outputs
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `v` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `x` | `float` |  |
+| `y` | `float` |  |
+| `z` | `float` |  |
 

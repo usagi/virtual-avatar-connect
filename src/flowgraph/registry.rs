@@ -220,6 +220,28 @@ pub fn default_registry() -> NodeRegistry {
 	// --- easing (Phase o-2) ---
 	r.register_pure(Arc::new(nodes::easing::EasingApplyNode));
 
+	// --- vec (Phase o-3) ---
+	r.register_pure(Arc::new(nodes::vec::Vec2MakeNode));
+	r.register_pure(Arc::new(nodes::vec::Vec2UnpackNode));
+	r.register_pure(Arc::new(nodes::vec::Vec2AddNode));
+	r.register_pure(Arc::new(nodes::vec::Vec2SubNode));
+	r.register_pure(Arc::new(nodes::vec::Vec2ScaleNode));
+	r.register_pure(Arc::new(nodes::vec::Vec2DotNode));
+	r.register_pure(Arc::new(nodes::vec::Vec2LengthNode));
+	r.register_pure(Arc::new(nodes::vec::Vec2NormalizeNode));
+	r.register_pure(Arc::new(nodes::vec::Vec2LerpNode));
+	r.register_pure(Arc::new(nodes::vec::Vec2DistanceNode));
+	r.register_pure(Arc::new(nodes::vec::Vec3MakeNode));
+	r.register_pure(Arc::new(nodes::vec::Vec3UnpackNode));
+	r.register_pure(Arc::new(nodes::vec::Vec3AddNode));
+	r.register_pure(Arc::new(nodes::vec::Vec3SubNode));
+	r.register_pure(Arc::new(nodes::vec::Vec3ScaleNode));
+	r.register_pure(Arc::new(nodes::vec::Vec3DotNode));
+	r.register_pure(Arc::new(nodes::vec::Vec3LengthNode));
+	r.register_pure(Arc::new(nodes::vec::Vec3NormalizeNode));
+	r.register_pure(Arc::new(nodes::vec::Vec3LerpNode));
+	r.register_pure(Arc::new(nodes::vec::Vec3DistanceNode));
+
 	// --- string_ops ---
 	r.register_pure(Arc::new(nodes::string_ops::StringConcatNode));
 	r.register_pure(Arc::new(nodes::string_ops::StringLenNode));
@@ -403,6 +425,12 @@ mod tests {
 			"flowgraph.math.normalize_angle_deg_0_360",
 			"flowgraph.math.normalize_angle_rad_signed",
 			"flowgraph.easing.apply",
+			"flowgraph.vec2.make",
+			"flowgraph.vec2.length",
+			"flowgraph.vec2.normalize",
+			"flowgraph.vec3.make",
+			"flowgraph.vec3.dot",
+			"flowgraph.vec3.lerp",
 		] {
 			assert!(
 				r.contains(feature),
