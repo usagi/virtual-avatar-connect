@@ -318,6 +318,18 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_stateful(Arc::new(nodes::rate_limit::RateLimitNode));
 	r.register_stateful(Arc::new(nodes::timer_interval::TimerIntervalNode));
 
+	// --- signal util + random + noise (Phase o-5) ---
+	r.register_stateful(Arc::new(nodes::signal_util::EdgeDetectNode));
+	r.register_stateful(Arc::new(nodes::signal_util::PrevValueNode));
+	r.register_stateful(Arc::new(nodes::signal_util::SampleHoldNode));
+	r.register_stateful(Arc::new(nodes::signal_util::DebounceNode));
+	r.register_stateful(Arc::new(nodes::signal_util::ThrottleNode));
+	r.register_pure(Arc::new(nodes::random_noise::RandomUniformIntNode));
+	r.register_pure(Arc::new(nodes::random_noise::RandomUniformFloatNode));
+	r.register_pure(Arc::new(nodes::random_noise::RandomNormalNode));
+	r.register_pure(Arc::new(nodes::random_noise::NoisePerlin1dNode));
+	r.register_pure(Arc::new(nodes::random_noise::NoisePerlin2dNode));
+
 	// --- log (effectful) ---
 	r.register_effectful(Arc::new(nodes::log::LogNode));
 
@@ -398,6 +410,16 @@ mod tests {
 			"flowgraph.util.delay",
 			"flowgraph.util.rate_limit",
 			"flowgraph.util.timer_interval",
+			"flowgraph.util.edge_detect",
+			"flowgraph.util.prev_value",
+			"flowgraph.util.sample_hold",
+			"flowgraph.util.debounce",
+			"flowgraph.util.throttle",
+			"flowgraph.random.uniform_int",
+			"flowgraph.random.uniform_float",
+			"flowgraph.random.normal",
+			"flowgraph.noise.perlin_1d",
+			"flowgraph.noise.perlin_2d",
 			"flowgraph.util.log",
 			"flowgraph.tts.speak",
 			"flowgraph.twitch.chat_send",

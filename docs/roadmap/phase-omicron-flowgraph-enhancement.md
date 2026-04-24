@@ -1,6 +1,6 @@
 # Phase ο — Flowgraph Enhancement I (計算系 + 時間 + signal util + GUI 小改善)
 
-> **Status**: ο-0 docs / ο-1 math (42 ノード) / ο-2 easing / ο-3 vec / **ο-4 `timer_interval`** 着地済み。ο-5 以降は Phase ξ-5 (GUI) と並行進行可。
+> **Status**: ο-0 docs / ο-1 math (42 ノード) / ο-2 easing / ο-3 vec / **ο-4 `timer_interval`** / **ο-5 signal util + random + noise** 着地済み。ο-6 以降は Phase ξ-5 (GUI) と並行進行可。
 > 起点となるスコープ感は [`../roadmap.md`](../roadmap.md) の "Phase ο" を参照。依存する単位次元基盤は [`phase-ksi-dimensional-quantity-system.md`](phase-ksi-dimensional-quantity-system.md)。
 
 ---
@@ -148,7 +148,7 @@ Stateful。値系の「前値」「立ち上がり」「保持」「連打抑制
 
 | feature | 種別 | 仕様 |
 |---|---|---|
-| `flowgraph.util.edge_detect` | Stateful | 入力 `value: Bool`、プロパティ `mode: rising/falling/both`。前値と比較して変化時のみ `on_edge: Exec` 発火 + `edge_type: String`（`rising` / `falling`）出力 |
+| `flowgraph.util.edge_detect` | Stateful | 入力 `exec_in: Exec`（サンプルタイミング）+ `value: Bool`、プロパティ `mode: rising/falling/both`。`exec_in` ごとに前回値と比較し、条件を満たすときだけ `on_edge: Exec` + `edge_type: String`（`rising` / `falling`）。pull のみでは engine が exec 配送しないため `exec_in` 必須（例: `state.bool` の `changed` → `exec_in`） |
 | `flowgraph.util.prev_value` | Stateful | 入力 `value: Json`、出力 `prev: Json`（初回は `current` と同値） |
 | `flowgraph.util.sample_hold` | Stateful | 入力 `value: Json` + `sample_exec: Exec`、出力 `held: Json`。`sample_exec` 発火時だけ値を更新 |
 | `flowgraph.util.debounce` | Stateful | 入力 `value: Json` + `deadtime_ms: Int`、出力 `value_out: Json`。値が変化してから `deadtime_ms` 経過せず新しい変化が来たらリセット。`ctx.trigger` 経路 |
@@ -166,7 +166,7 @@ Stateful。値系の「前値」「立ち上がり」「保持」「連打抑制
 
 random 系は `rand::thread_rng()`（すでに推移依存で入ってる可能性高、Cargo.toml 確認事項）、noise 系は **`noise` crate を新規依存として追加**（§7 Risks）。
 
-どちらも「呼び出すたびに値が変わる」＝ Pure 定義を緩めるが、Flowgraph の Pure は「副作用なし」であって「冪等」は要求していないため（既存 `flowgraph.state.*` も状態を持つ Stateful で区別済み）、**Stateful 扱い**にして seed / 内部 RNG state を持たせる方が将来的な reproducibility に寄与する。初期実装は Pure + `thread_rng` で出し、ο+ で Stateful 化する余地を残す（doc に TBD）。
+どちらも「呼び出すたびに値が変わる」＝ 厳密な冪等性はないが、Flowgraph の Pure は「副作用なし」であって毎回同じ値である必要はない。**ο-5 実装**: `flowgraph.random.*` / `flowgraph.noise.*` はいずれも **PureNode**（`rand::random_range` / `noise::Perlin`）。seed 固定の再現性や Stateful 化は Phase ο+ TBD（§7 最終行の方針どおり）。
 
 ### 3.7 GUI 小改善
 
@@ -301,11 +301,11 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 
 ### 6.5 ο-5 チェックリスト
 
-- [ ] `Cargo.toml` に `noise = "0.9"`（以上）を追加し、`cargo build --release` が通ることを確認
-- [ ] signal util 5 ノード: state schema / ctx.trigger 使用箇所は `debounce` / `throttle` のみ
-- [ ] random 3 ノード: `thread_rng` 使用、seed 化は将来 TBD として doc に
-- [ ] noise 2 ノード: `Perlin::new(seed)` キャッシュ戦略（同一 seed は `OnceLock`）
-- [ ] signal util の最小 integration test（tokio 実時間）
+- [x] `Cargo.toml` に `noise = "0.9"` を追加し、`cargo build --release` 確認済み
+- [x] signal util 5 ノード（`signal_util.rs`）: `debounce` のみ `ctx.trigger`（`throttle` は同期リーディングエッジ、`edge_detect` / `prev_value` / `sample_hold` は trigger なし）
+- [x] random 3 ノード: `rand::random_range`（thread-local RNG）、seed 再現は ο+ TBD
+- [x] noise 2 ノード: `Perlin::new(seed)` を `Mutex<HashMap<u32, Perlin>>` でプロセス内キャッシュ
+- [x] signal util: `edge_detect` の `timer_interval` + `state.bool` + `log` 実時間 integration test、他ユニットテスト
 
 ### 6.6 ο-6 チェックリスト
 
@@ -334,7 +334,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 | `flowgraph.util.timer_interval` は Phase δ の `DelayNode` パターンに依存するが、`ctx.trigger` の node_fq 取得が実は未整備 | **着地済み**: `DelayNode` と同一経路。lazy 初回 execute のため `sources` に timer_interval を含める engine 例外を追加（ο-4） |
 | GUI DnD drop は Svelte Flow の `screenToFlowPosition` が初期 viewport animation 中に呼ばれると座標が狂う | `FlowgraphAutoFit` の settle 完了を待つ flag を `flowgraphStore` に追加、drop 時に `if (!settled) return;` でハードフェイル（ν-β-2 と同様「flake 根源を殺す」方針） |
 | Twitch / OpenAI / TTS など外部依存の重いフェーズ（φ / χ）中に Phase ο が走ると、Cargo build が遅くなる（単純な node 追加でも workspace 全体の再コンパイル発生） | narrow scope で crate 追加を `noise` 1 件に抑える。`Cargo.lock` 確認を ο-5 のチェックリストに |
-| random / noise の "Pure vs Stateful" 議論が後付けで `SocketType::Seed` みたいな拡張に化ける | 今フェーズでは **Pure + thread_rng + 毎回違う値** で割り切り、seed 管理は Phase ο+ の TBD にする。phase doc §3.6 末尾に明記 |
+| random / noise の "Pure vs Stateful" 議論が後付けで `SocketType::Seed` みたいな拡張に化ける | **ο-5 着地**: PureNode + `rand::random_range` + `noise::Perlin` キャッシュ。seed 固定再現は Phase ο+ TBD（§3.6 参照） |
 
 ---
 

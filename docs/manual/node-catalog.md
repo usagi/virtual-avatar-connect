@@ -133,8 +133,15 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.math.sqrt`](#flowgraph-math-sqrt) — Float sqrt
   - [`flowgraph.math.tan`](#flowgraph-math-tan) — Float tan
   - [`flowgraph.math.tanh`](#flowgraph-math-tanh) — Float tanh
+- **noise**
+  - [`flowgraph.noise.perlin_1d`](#flowgraph-noise-perlin-1d) — Perlin 1D
+  - [`flowgraph.noise.perlin_2d`](#flowgraph-noise-perlin-2d) — Perlin 2D
 - **ocr**
   - [`flowgraph.ocr.recognize`](#flowgraph-ocr-recognize) — OCR Recognize
+- **random**
+  - [`flowgraph.random.normal`](#flowgraph-random-normal) — Random normal
+  - [`flowgraph.random.uniform_float`](#flowgraph-random-uniform-float) — Random uniform (float)
+  - [`flowgraph.random.uniform_int`](#flowgraph-random-uniform-int) — Random uniform (int)
 - **regex**
   - [`flowgraph.regex.replace`](#flowgraph-regex-replace) — Regex Replace
 - **screenshot**
@@ -177,10 +184,15 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.unit.strip`](#flowgraph-unit-strip) — Unit Strip
   - [`flowgraph.unit.to_json`](#flowgraph-unit-to-json) — Unit -> JSON
 - **util**
+  - [`flowgraph.util.debounce`](#flowgraph-util-debounce) — Debounce
   - [`flowgraph.util.delay`](#flowgraph-util-delay) — Delay
+  - [`flowgraph.util.edge_detect`](#flowgraph-util-edge-detect) — Edge detect
   - [`flowgraph.util.format`](#flowgraph-util-format) — Format Quantity
   - [`flowgraph.util.log`](#flowgraph-util-log) — Log
+  - [`flowgraph.util.prev_value`](#flowgraph-util-prev-value) — Previous value
   - [`flowgraph.util.rate_limit`](#flowgraph-util-rate-limit) — Rate Limit
+  - [`flowgraph.util.sample_hold`](#flowgraph-util-sample-hold) — Sample & hold
+  - [`flowgraph.util.throttle`](#flowgraph-util-throttle) — Throttle
   - [`flowgraph.util.timer_interval`](#flowgraph-util-timer-interval) — Timer Interval
 - **vec**
   - [`flowgraph.vec2.add`](#flowgraph-vec2-add) — Vec2 add
@@ -1723,6 +1735,35 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 |---|---|---|
 | `result` | `quantity` |  |
 
+## noise
+
+### `flowgraph.noise.perlin_1d`
+
+**Perlin 1D** — 1D Perlin noise at coordinate `t` with integer `seed` (cached Perlin per seed).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `t` | `float` | — |  |
+| `seed` | `int` | `0` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `value` | `float` |  |
+
+### `flowgraph.noise.perlin_2d`
+
+**Perlin 2D** — 2D Perlin noise at `(x, y)` with integer `seed`.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `float` | — |  |
+| `y` | `float` | — |  |
+| `seed` | `int` | `0` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `value` | `float` |  |
+
 ## ocr
 
 ### `flowgraph.ocr.recognize`
@@ -1743,6 +1784,47 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `text` | `string` |  |
 | `error` | `string` |  |
+
+## random
+
+### `flowgraph.random.normal`
+
+**Random normal** — Gaussian sample (Box–Muller) with given mean and stddev. stddev must be non-negative; 0 yields mean.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `mean` | `float` | — |  |
+| `stddev` | `float` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `value` | `float` |  |
+
+### `flowgraph.random.uniform_float`
+
+**Random uniform (float)** — Uniform random float in [lo, hi) half-open interval.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `lo` | `float` | — |  |
+| `hi` | `float` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `value` | `float` |  |
+
+### `flowgraph.random.uniform_int`
+
+**Random uniform (int)** — Uniform random integer in [lo, hi] inclusive.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `lo` | `int` | — |  |
+| `hi` | `int` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `value` | `int` |  |
 
 ## regex
 
@@ -2287,6 +2369,21 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ## util
 
+### `flowgraph.util.debounce`
+
+**Debounce** — After `value` JSON stops changing for `deadtime_ms`, updates `value_out` to the stable value. Each change restarts the timer (`ctx.trigger` + `__resume__`). Requires `run_forever` for async debounce.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `json` | `null` |  |
+| `deadtime_ms` | `int` | `100` |  |
+| `__resume__` | `exec` (in) | — |  |
+| `__pending_id__` | `int` | `-1` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `value_out` | `json` |  |
+
 ### `flowgraph.util.delay`
 
 **Delay** — exec_in 発火で value を保持し、delay_ms 後に exec_out を発火
@@ -2303,6 +2400,24 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 |---|---|---|
 | `exec_out` | `exec` (out) |  |
 | `value` | `json` |  |
+
+### `flowgraph.util.edge_detect`
+
+**Edge detect** — On each `exec_in`, compares `value` to the previous sample and may fire `on_edge` with `edge_type` (`rising` / `falling`). Property `mode`: `rising` | `falling` | `both` (default). Pull-only reads return the last `edge_type` string (initially empty). Wire `exec_in` together with the signal you sample (e.g. `state.bool` `changed` exec).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `value` | `bool` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `edge_type` | `string` |  |
+| `on_edge` | `exec` (out) |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `mode` | `string` | `"both"` |  | rising: low→high only, falling: high→low only, both: either transition. |
 
 ### `flowgraph.util.format`
 
@@ -2335,6 +2450,18 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 |---|---|---|
 | `exec_out` | `exec` (out) |  |
 
+### `flowgraph.util.prev_value`
+
+**Previous value** — Each time `value` is evaluated, outputs `prev`: the **previous** input JSON. First sample: `prev` equals the current `value`.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `json` | `null` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `prev` | `json` |  |
+
 ### `flowgraph.util.rate_limit`
 
 **Rate Limit** — N 回 / X ms のトークンバケットで exec_in をゲートする（超過時は on_deny）
@@ -2350,6 +2477,32 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_allow` | `exec` (out) |  |
 | `on_deny` | `exec` (out) |  |
 | `remaining` | `int` |  |
+
+### `flowgraph.util.sample_hold`
+
+**Sample & hold** — While `sample_exec` fires, captures the current `value` JSON into `held`. Between samples, `held` stays constant.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `sample_exec` | `exec` (in) | — |  |
+| `value` | `json` | `null` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `held` | `json` |  |
+
+### `flowgraph.util.throttle`
+
+**Throttle** — Leading-edge throttle on JSON `value`: when the value **differs** from the last emitted one, emit immediately only if at least `interval_ms` has passed since the last emit; otherwise drop the update. Identical consecutive values are passed through without resetting the timer.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `json` | `null` |  |
+| `interval_ms` | `int` | `100` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `value_out` | `json` |  |
 
 ### `flowgraph.util.timer_interval`
 

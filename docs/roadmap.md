@@ -133,14 +133,14 @@ Flowgraph は pure-functional + 遅延評価のため runtime 単位評価コス
 
 ### Phase ο — Flowgraph Enhancement I (計算系 + 時間 + signal util + GUI 小改善)
 
-Flowgraph 機能向上の第 1 波。旧 ο-0 の本数想定 **78 (42+1+20+5+5+5)** では、§3.4 が **timer 1 + time 案 4 = 5** 本だった。time 4 種（旧 `flowgraph.time.*` 想定）は **Phase π** の `flowgraph.datetime.*` **8 ノード**に置換し、**ο-4** は **`flowgraph.util.timer_interval`（Stateful）** の実装にスコープを縮小して完了した。合算では **(42+1+20+1+5+5+5) + 8 = 82 本**（= **Phase ο 側 74** + **π 8**）。残り（signal / random 各 5、GUI 3 点）は従来どおり。外部 IO 等は **ρ / σ / τ / υ / ω** 以降。Phase ξ 着地済み、**ο-1/ο-2/ο-3/ο-4（`timer_interval`）および π（datetime 8 種）着地済み**、ο-5 以降は ξ-5 GUI と並行可。
+Flowgraph 機能向上の第 1 波。旧 ο-0 の本数想定 **78 (42+1+20+5+5+5)** では、§3.4 が **timer 1 + time 案 4 = 5** 本だった。time 4 種（旧 `flowgraph.time.*` 想定）は **Phase π** の `flowgraph.datetime.*` **8 ノード**に置換し、**ο-4** は **`flowgraph.util.timer_interval`（Stateful）** の実装にスコープを縮小して完了した。合算では **(42+1+20+1+5+5+5) + 8 = 82 本**（= **Phase ο 側 74** + **π 8**）。残り（signal / random 各 5、GUI 3 点）は従来どおり。外部 IO 等は **ρ / σ / τ / υ / ω** 以降。Phase ξ 着地済み、**ο-1/ο-2/ο-3/ο-4/ο-5 および π（datetime 8 種）着地済み**、ο-6 以降は ξ-5 GUI と並行可。
 
 - [x] ο-0 docs: `phase-omicron-flowgraph-enhancement.md` 新設 + roadmap.md の Active 差し替え + backlog-nodes.md §1 を ο-4 昇格 pointer 化（+ 追補: angle normalization 4 / 双曲線 6 ノード追加 + Phase ξ 依存明記）
 - [x] ο-1 feat(flowgraph/math): §3.1 **42 ノード**追加（abs/min/max/clamp/lerp/inverse_lerp/remap/smoothstep/trig/arctrig/atan2/hyperbolic/arc-hyperbolic/sqrt/pow/exp/log/sign/floor/ceil/round/deg↔rad/normalize_angle × 4）。全 Quantity-aware、30 unit tests 全緑、node-catalog.md 再生成済み。ο-0 docs の「37」表記は実装時に 42 へ正確化
 - [x] ο-2 feat(flowgraph/easing): §3.2 `flowgraph.easing.apply` + curve enum 19 種 (linear + quad/cubic/sine/expo/elastic/bounce × in/out/inOut) + `PropertySpec.choices` 追加 + GUI `FlowgraphPropertyEditor` の `<select>` dropdown hook。13 unit tests 全緑、node-catalog.md 再生成済み
 - [x] ο-3 feat(flowgraph/vec): §3.3 vec2 / vec3 × 10 ノード ✕ 2 = **20 ノード**（make/unpack/add/sub/scale/dot/length/normalize/lerp/distance、JSON 配列表現）。`decode_vec::<N>` / `encode_vec::<N>` の `const N: usize` generic helper + 6 種マクロで型安全に実装、19 unit tests 全緑（round-trip / 零ベクトル normalize / 次元不一致 error / 非有限値 reject 含む）、node-catalog.md 再生成済み
 - [x] ο-4 feat(flowgraph/util): §3.4 `flowgraph.util.timer_interval`（[backlog-nodes.md §1](roadmap/backlog-nodes.md)）。Stateful + `ctx.trigger`、lazy 初回の `sources` engine 例外、lib test + `node-catalog`。**旧案 `flowgraph.time.*` 4 種は Phase π の `flowgraph.datetime.*` 8 ノードに置換済み**（[phase-pi-datetime-system.md](roadmap/phase-pi-datetime-system.md) §4.9 / [datetime-system.md](manual/datetime-system.md)）
-- [ ] ο-5 feat(flowgraph/util,random,noise): §3.5 signal util 5 種（edge_detect / prev_value / sample_hold / debounce / throttle）+ §3.6 random 3 種 + Perlin 1D/2D。`noise` crate 追加
+- [x] ο-5 feat(flowgraph/util,random,noise): §3.5 signal util 5 種 + §3.6 random 3 + Perlin 1D/2D（`noise = 0.9`）、`node-catalog` 再生成、lib test +10、`edge_detect` 実時間 integration（`timer_interval` + `state.bool` + `log`）
 - [ ] ο-6 feat(gui): §3.7 palette カテゴリ絞り込みトグル + canvas drop-at-cursor + Ctrl+D duplicate + `flowgraph-canvas-basic.spec.ts` 回帰拡充
 - [ ] ο-7 docs: CHANGELOG + `manual/node-catalog.md` 再生成 + roadmap tick
 - 仕様書: [`roadmap/phase-omicron-flowgraph-enhancement.md`](roadmap/phase-omicron-flowgraph-enhancement.md)

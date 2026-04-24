@@ -61,6 +61,7 @@ Flowgraph に **第一級型 `DateTime`（`jiff::Timestamp` ラッパ、UTC 絶�
 Phase ο の残サブフェーズ（ο-5 以降）は [`docs/roadmap/phase-omicron-flowgraph-enhancement.md`](docs/roadmap/phase-omicron-flowgraph-enhancement.md) 参照。
 
 - **ο-4 `flowgraph.util.timer_interval`** (`src/flowgraph/nodes/timer_interval.rs`, new): Stateful 周期タイマー（`DelayNode` と同様の `ctx.trigger` + internal `__tick__`）。`enabled` / `interval_sec`（最小 0.01s、sleep 最小 10ms）/ stale tick id ドロップ。出力 `on_tick`（Exec）/`count`（Int）/`elapsed_sec`（Float）。lazy graph で初回から arm されるよう `engine.rs` の `sources` 収集で本 feature を例外扱い。lib test 4 件、`docs/manual/node-catalog.md` 再生成、roadmap / backlog / phase-omicron の ο-4 節を実装済みに更新。
+- **ο-5 signal util + random + noise** (`src/flowgraph/nodes/signal_util.rs`, `random_noise.rs`, new): Stateful で `edge_detect`（`exec_in` + `value` + `mode`）/ `prev_value` / `sample_hold` / `debounce`（`ctx.trigger`）/ `throttle`（リーディングエッジ）。Pure で `flowgraph.random.uniform_int|uniform_float|normal`（Box–Muller）、`flowgraph.noise.perlin_1d|perlin_2d`（`noise` 0.9、`Perlin` を seed ごとにキャッシュ）。lib test +10（`edge_detect` の `run_forever` 統合含む）、`node-catalog` 再生成、phase-omicron §3.5–3.6 / §6.5 / roadmap tick。
 
 ### χ: OpenAI Responses API Migration (χ-0 .. χ-8)
 
