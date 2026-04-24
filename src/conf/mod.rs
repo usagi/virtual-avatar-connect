@@ -4,6 +4,7 @@ pub use anyhow::{bail, Result};
 pub use processor_conf::*;
 
 use crate::ai::AiConf;
+use crate::flowgraph::FlowgraphInstanceConfig;
 use crate::{utility::bool_true, Arc, Args, RwLock};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -506,6 +507,21 @@ pub struct Conf {
  /// 「ノード 0・診断 0」の空ランタイムとして見える（opt-in）。
  #[serde(default = "default_flowgraph_dir")]
  pub flowgraph_dir: Option<PathBuf>,
+
+ /// Phase π-4c: Flowgraph ランタイム instance スコープの config。
+ ///
+ /// conf.toml 上は `[flowgraph]` テーブルで指定する:
+ ///
+ /// ```toml
+ /// [flowgraph]
+ /// default_timezone = "+09:00"
+ /// ```
+ ///
+ /// 現状は `default_timezone` のみ保持（未指定時 UTC）。π-5 の
+ /// `flowgraph.datetime.parse` ノードが naive datetime を解釈する際の既定 TZ として
+ /// 参照する。将来のロケール設定 / 単位系好み等もここに集約予定。
+ #[serde(default, skip_serializing_if = "Option::is_none", rename = "flowgraph")]
+ pub flowgraph_config: Option<FlowgraphInstanceConfig>,
 
  #[serde(default)]
  pub run_with: Vec<RunWith>,
@@ -1314,5 +1330,33 @@ mod tests {
 			let _conf: Conf = toml::from_str(&text)
 				.unwrap_or_else(|e| panic!("{name} の TOML パースに失敗: {e}"));
 		}
+	}
+
+	/// Phase π-4c: `[flowgraph]` テーブル経由の FlowgraphInstanceConfig 取り込み確認。
+	///
+	/// conf.toml に `[flowgraph] default_timezone = "+09:00"` を書けば
+	/// `Conf.flowgraph_config.default_timezone` に乗り、さらに resolve して Offset が取れること。
+	#[test]
+	fn conf_flowgraph_default_timezone_wires_through() {
+		use jiff::tz::Offset;
+		let src = r#"
+[flowgraph]
+default_timezone = "+09:00"
+"#;
+		let conf: Conf = toml::from_str(src).unwrap();
+		let fc = conf
+			.flowgraph_config
+			.as_ref()
+			.expect("[flowgraph] should deserialize into flowgraph_config");
+		assert_eq!(fc.default_timezone.as_deref(), Some("+09:00"));
+		assert_eq!(fc.resolve_default_timezone().unwrap(), Offset::constant(9));
+	}
+
+	/// `[flowgraph]` 未指定時は `flowgraph_config` が `None` のままで既存 conf.toml と互換性がある。
+	#[test]
+	fn conf_without_flowgraph_table_keeps_backward_compat() {
+		let src = ""; // 空 conf
+		let conf: Conf = toml::from_str(src).unwrap();
+		assert!(conf.flowgraph_config.is_none());
 	}
 }

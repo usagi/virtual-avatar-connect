@@ -10,6 +10,7 @@
 //!   `FlowgraphProgram` 構築。単一ファイル / ディレクトリ両対応。
 //! - [`runtime`] (δ-6): ロード結果を `State` から共有するためのハンドル（`FlowgraphRuntime`）。
 
+pub mod config;
 pub mod docs;
 pub mod engine;
 pub mod fragment;
@@ -24,6 +25,7 @@ pub mod spawn;
 pub mod table;
 pub mod tts;
 
+pub use config::{parse_offset_str, ConfigError as FlowgraphConfigError, FlowgraphInstanceConfig};
 pub use engine::{
  BuildError, Edge, FlowgraphBuilder, FlowgraphProgram, NodeId, NodeInstance, PortName, PortRef, ProgramRun,
 };
