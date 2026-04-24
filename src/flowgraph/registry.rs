@@ -220,6 +220,16 @@ pub fn default_registry() -> NodeRegistry {
 	// --- easing (Phase o-2) ---
 	r.register_pure(Arc::new(nodes::easing::EasingApplyNode));
 
+	// --- datetime (Phase pi-5) ---
+	r.register_pure(Arc::new(nodes::datetime::DateTimeNowNode));
+	r.register_pure(Arc::new(nodes::datetime::DateTimeParseNode));
+	r.register_pure(Arc::new(nodes::datetime::DateTimeFormatNode));
+	r.register_pure(Arc::new(nodes::datetime::DateTimeAddDurationNode));
+	r.register_pure(Arc::new(nodes::datetime::DateTimeSubDurationNode));
+	r.register_pure(Arc::new(nodes::datetime::DateTimeDiffNode));
+	r.register_pure(Arc::new(nodes::datetime::DateTimeEpochMsNode));
+	r.register_pure(Arc::new(nodes::datetime::DateTimeFromEpochMsNode));
+
 	// --- vec (Phase o-3) ---
 	r.register_pure(Arc::new(nodes::vec::Vec2MakeNode));
 	r.register_pure(Arc::new(nodes::vec::Vec2UnpackNode));
@@ -425,6 +435,15 @@ mod tests {
 			"flowgraph.math.normalize_angle_deg_0_360",
 			"flowgraph.math.normalize_angle_rad_signed",
 			"flowgraph.easing.apply",
+			// Phase pi-5: datetime nodes
+			"flowgraph.datetime.now",
+			"flowgraph.datetime.parse",
+			"flowgraph.datetime.format",
+			"flowgraph.datetime.add_duration",
+			"flowgraph.datetime.sub_duration",
+			"flowgraph.datetime.diff",
+			"flowgraph.datetime.epoch_ms",
+			"flowgraph.datetime.from_epoch_ms",
 			"flowgraph.vec2.make",
 			"flowgraph.vec2.length",
 			"flowgraph.vec2.normalize",

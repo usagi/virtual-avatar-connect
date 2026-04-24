@@ -33,6 +33,15 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.convert.int_to_string`](#flowgraph-convert-int-to-string) — Int → String
   - [`flowgraph.convert.string_to_float`](#flowgraph-convert-string-to-float) — String → Float
   - [`flowgraph.convert.string_to_int`](#flowgraph-convert-string-to-int) — String → Int
+- **datetime**
+  - [`flowgraph.datetime.add_duration`](#flowgraph-datetime-add-duration) — DateTime + Duration
+  - [`flowgraph.datetime.diff`](#flowgraph-datetime-diff) — DateTime - DateTime
+  - [`flowgraph.datetime.epoch_ms`](#flowgraph-datetime-epoch-ms) — DateTime -> Epoch ms
+  - [`flowgraph.datetime.format`](#flowgraph-datetime-format) — DateTime Format
+  - [`flowgraph.datetime.from_epoch_ms`](#flowgraph-datetime-from-epoch-ms) — Epoch ms -> DateTime
+  - [`flowgraph.datetime.now`](#flowgraph-datetime-now) — DateTime Now
+  - [`flowgraph.datetime.parse`](#flowgraph-datetime-parse) — DateTime Parse
+  - [`flowgraph.datetime.sub_duration`](#flowgraph-datetime-sub-duration) — DateTime - Duration
 - **dictionary**
   - [`flowgraph.dictionary.forget`](#flowgraph-dictionary-forget) — Dictionary Forget
   - [`flowgraph.dictionary.learn`](#flowgraph-dictionary-learn) — Dictionary Learn
@@ -439,6 +448,114 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `result` | `int` |  |
+
+## datetime
+
+### `flowgraph.datetime.add_duration`
+
+**DateTime + Duration** — Add a duration (Quantity<time>) to a DateTime. Dimensionless Quantity (Float の ξ-3 coerce 経由) は「秒」と解釈される。次元不一致 (例: length) は error。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `datetime` | `datetime` | — |  |
+| `duration` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `datetime` |  |
+
+### `flowgraph.datetime.diff`
+
+**DateTime - DateTime** — Compute `lhs - rhs` as a Quantity<time> (unit: seconds, nanosecond precision). 結果は正負 OK。`flowgraph.unit.convert` で ms / us / ns に変換可能。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `lhs` | `datetime` | — |  |
+| `rhs` | `datetime` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `duration` | `quantity` |  |
+
+### `flowgraph.datetime.epoch_ms`
+
+**DateTime -> Epoch ms** — Return Unix epoch milliseconds as a Quantity (unit: ms, dim: time). Negative for pre-1970 timestamps. 他の時間単位へは `flowgraph.unit.convert` で変換。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `datetime` | `datetime` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `millis` | `quantity` |  |
+
+### `flowgraph.datetime.format`
+
+**DateTime Format** — Format a DateTime as a string. `rfc3339`: `"2026-04-24T12:34:56.123Z"` 形式 (UTC または `timezone` 指定時は offset 表示)。 `iso8601_compact`: `"20260424T123456Z"` 形式 (ファイル名向け)。 `unix_seconds` / `unix_millis`: 整数文字列。 `custom`: `custom_format` プロパティの strftime パターンを適用 (jiff::Zoned::strftime)。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `datetime` | `datetime` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `text` | `string` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `format` | `string` | `"rfc3339"` |  | Output shape. `rfc3339` / `iso8601_compact` / `unix_seconds` / `unix_millis` / `custom`. |
+| `custom_format` | `string` | `""` |  | strftime pattern used when `format = "custom"`. See jiff::fmt::strtime. Example: `"%Y-%m-%d %H:%M:%S"`. |
+| `timezone` | `string` | `""` |  | Fixed offset for display (`""` / `"Z"` / `"UTC"` = UTC, `"+09:00"` etc.). Applies to rfc3339 / iso8601_compact / custom. unix_* are always UTC-absolute and ignore this. |
+
+### `flowgraph.datetime.from_epoch_ms`
+
+**Epoch ms -> DateTime** — Construct a DateTime from Unix epoch milliseconds. Quantity<time> (任意の時間単位) は SI 秒 → ms に正規化されて受理される。 Dimensionless Quantity (Float の ξ-3 coerce 経由) は「ms の数値」として解釈される。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `millis` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `datetime` | `datetime` |  |
+
+### `flowgraph.datetime.now`
+
+**DateTime Now** — Emit the current wall-clock time as a DateTime (UTC absolute, nanosecond precision). 非決定性 (呼び出しごとに異なる結果) なので、すなゆく sample する用途では状態化ノード (prev_value 等) と組み合わせること。
+
+| Output | Type | Note |
+|---|---|---|
+| `datetime` | `datetime` |  |
+
+### `flowgraph.datetime.parse`
+
+**DateTime Parse** — Parse an RFC3339 / ISO 8601 string into a DateTime. Accepts both aware ("...Z" / "...+09:00") and naive ("2026-04-24T12:34:56") inputs. Naive 入力は `default_timezone` プロパティ (空なら UTC) で解釈される。`require_timezone = true` のときは naive を拒否する strict モード。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `s` | `string` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `datetime` | `datetime` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `require_timezone` | `bool` | `false` |  | When true, naive (no-timezone) inputs are rejected. Default false: naive inputs are interpreted with `default_timezone` (or UTC). |
+| `default_timezone` | `string` | `""` |  | Fixed offset to apply when the input has no timezone info. Accepts `""` / `"Z"` / `"UTC"` (= UTC), `"+09:00"`, `"-05:30"`. IANA zones (`"Asia/Tokyo"`) are rejected (v0 is fixed-offset only). |
+
+### `flowgraph.datetime.sub_duration`
+
+**DateTime - Duration** — Subtract a duration (Quantity<time>) from a DateTime. Dimensionless Quantity は「秒」と解釈される (ξ-3 coerce)。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `datetime` | `datetime` | — |  |
+| `duration` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `datetime` |  |
 
 ## dictionary
 

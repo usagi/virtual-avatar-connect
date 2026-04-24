@@ -57,6 +57,7 @@ pub mod collection;
 pub mod command;
 pub mod compare;
 pub mod convert;
+pub mod datetime;
 pub mod delay;
 pub mod dictionary;
 pub mod easing;

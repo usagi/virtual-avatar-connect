@@ -367,6 +367,12 @@ pub fn get_required_string(inputs: &InputMap, key: &str) -> Result<String, NodeE
  v.as_str().map(str::to_owned).map_err(|_| type_err(key, SocketType::String, v.type_of()))
 }
 
+/// Phase π-5: DateTime 入力取得。`flowgraph.datetime.*` ノードで使用。
+pub fn get_required_datetime(inputs: &InputMap, key: &str) -> Result<crate::datetime::DateTime, NodeExecError> {
+ let v = inputs.get(key).ok_or_else(|| NodeExecError::MissingRequiredInput(key.into()))?;
+ v.as_datetime().copied().map_err(|_| type_err(key, SocketType::DateTime, v.type_of()))
+}
+
 pub fn get_required_json<'a>(
  inputs: &'a InputMap,
  key: &str,
