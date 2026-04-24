@@ -4,8 +4,9 @@ description = """
 Phase ν Playwright E2E で使う最小 flowgraph。
 - `in`  (web_input) → `log` は §3.5 の ingress → WS 配信経路を保つ
 - `learn` / `forget` は §3.4 Live Quick-Add の trigger 対象（外部入力でだけ発火）
-- `dict_src` は Pure な空 Table 供給源（learn/forget の `dictionary` 入力を満たすための
-  プレースホルダ）。E2E は trigger の往復検証が目的なので永続化は行わない。
+
+ν-β-3 以降、`dictionary` 入力 (Table) の default は engine 側で `Table::empty()` に coerce
+されるため、補助ノード (`flowgraph.table.from_json`) なしで trigger 経路が成立する。
 """
 tags = ["fixture", "e2e", "ν"]
 
@@ -29,18 +30,11 @@ to = "log:exec_in"
 from = "in:content"
 to = "log:value"
 
-# --- §3.4 Live Quick-Add 用 Pure チェーン ---
+# --- §3.4 Live Quick-Add 用 trigger ターゲット ---
 #
-# `flowgraph.table.from_json` は List<Json> から Table を作る Pure ノードで、
-# 入力省略時は空 List→空 Table を返す。これを learn/forget の `dictionary`
-# 入力に配線することで、trigger の pull 評価中に Table 入力を解決できる。
-# （Table の default 値は現状 engine 側で coerce に失敗することがあり、
-#  `MissingRequiredInput("...:dictionary")` を招くため Pure ノード経由で補う。）
-
-[[nodes]]
-id = "dict_src"
-feature = "flowgraph.table.from_json"
-position = [340, 440]
+# ν-β-3 時点で `dictionary` 入力の default coerce が engine 側で通るため、補助の
+# `flowgraph.table.from_json` ノードは不要。trigger 経路の pull 評価中に `Table::empty()`
+# が default として注入され、`learn:dictionary` / `forget:dictionary` が満たされる。
 
 [[nodes]]
 id = "learn"
@@ -51,11 +45,3 @@ position = [620, 400]
 id = "forget"
 feature = "flowgraph.dictionary.forget"
 position = [620, 520]
-
-[[edges]]
-from = "dict_src:table"
-to = "learn:dictionary"
-
-[[edges]]
-from = "dict_src:table"
-to = "forget:dictionary"

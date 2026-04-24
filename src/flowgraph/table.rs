@@ -231,13 +231,22 @@ impl Table {
 	}
 
 	/// 既存の JSON 配列 + 任意スキーマから Table を構築。スキーマ未指定なら先頭 object から推論。
+	///
+	/// 空配列 + スキーマ未指定の場合は `Table::empty()` 相当を返す（推論不能でエラーにしない）。
+	/// これにより `PortSpec::with_default(SocketValue::Table(Table::empty()))` → JSON `[]` →
+	/// `to_socket_value` の round-trip が成立する（ν-β-3）。
 	pub fn from_json_array(
 		array: &[JsonValue],
 		schema: Option<TableSchema>,
 	) -> Result<Self, TableFromJsonError> {
 		let schema = match schema {
 			Some(s) => s,
-			None => infer_schema(array)?,
+			None => {
+				if array.is_empty() {
+					return Ok(Self::empty());
+				}
+				infer_schema(array)?
+			}
 		};
 		let mut rows = Vec::with_capacity(array.len());
 		for (i, v) in array.iter().enumerate() {
@@ -374,6 +383,30 @@ mod tests {
 		let t = Table::from_json_array(arr.as_array().unwrap(), None).unwrap();
 		assert_eq!(t.schema().len(), 2);
 		assert_eq!(t.len(), 2);
+	}
+
+	/// ν-β-3 regression: 空配列 + schema 未指定で `Table::empty()` 同等を返す。
+	/// これにより `PortSpec::with_default(SocketValue::Table(Table::empty()))` の round-trip
+	/// (empty Table → `to_json_array()` (`[]`) → `json_to_socket_value(SocketType::Table, [])`)
+	/// が `MissingRequiredInput` で死なずに空 Table に戻る。
+	#[test]
+	fn from_empty_json_without_schema_returns_empty_table() {
+		let empty: Vec<JsonValue> = Vec::new();
+		let t = Table::from_json_array(&empty, None).expect("empty array + no schema must succeed");
+		assert_eq!(t.len(), 0);
+		assert_eq!(t.schema().len(), 0);
+	}
+
+	/// ν-β-3 regression: empty Table → JSON → Table round-trip が idempotent に成り立つ。
+	#[test]
+	fn empty_table_json_roundtrip_is_idempotent() {
+		let original = Table::empty();
+		let arr = original.to_json_array();
+		assert_eq!(arr, JsonValue::Array(Vec::new()));
+		let back = Table::from_json_array(arr.as_array().unwrap(), None)
+			.expect("round-trip of empty table must succeed");
+		assert_eq!(back.len(), 0);
+		assert_eq!(back.schema().len(), 0);
 	}
 
 	#[test]

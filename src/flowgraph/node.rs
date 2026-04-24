@@ -720,4 +720,26 @@ mod tests {
   let p = p.required();
   assert!(p.required);
  }
+
+ /// ν-β-3 regression: Table 型 default の round-trip が engine 側で coerce できること。
+ ///
+ /// `PortSpec::with_default(SocketValue::Table(Table::empty()))` は `SocketValueRepr` 経由で
+ /// JSON `[]` として保存される。これを engine が pull 評価時に `def.to_socket_value(&port.ty)`
+ /// で Table に戻すとき、空配列 + schema 未指定でも `Table::empty()` が得られる必要がある。
+ /// ν-2.4 実装中に踏んだ `MissingRequiredInput("...:dictionary")` の根治パス。
+ #[test]
+ fn port_default_table_empty_round_trip() {
+  use crate::flowgraph::table::Table;
+  let port = PortSpec::input("dictionary", "Dictionary", SocketType::Table)
+   .with_default(SocketValue::Table(Table::empty()));
+  let def = port.default.as_ref().expect("with_default must set default");
+  let sv = def.to_socket_value(&port.ty).expect("empty Table default must coerce back");
+  match sv {
+   SocketValue::Table(t) => {
+    assert_eq!(t.len(), 0, "coerced Table should be empty");
+    assert_eq!(t.schema().len(), 0, "coerced Table should have empty schema");
+   }
+   other => panic!("expected SocketValue::Table, got {:?}", other),
+  }
+ }
 }
