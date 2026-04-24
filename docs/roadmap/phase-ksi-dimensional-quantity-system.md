@@ -18,7 +18,7 @@
 VAC は現時点では avatar / stream / twitch / dictionary が主なユースケースだが、作者意向として:
 
 - 物理シミュレーションベースのシェーダー背景描画 / メガデモ的ビジュアル出力
-- 光学・音響・古典力学の procedural アニメーション（Phase υ）
+- 光学・音響・古典力学の procedural アニメーション（Phase ω）
 - Flowgraph を **汎用ノードベースプログラミング言語処理系**（Dr.USAGI ツール群の一般化）として発展
 
 を射程に持つ。これらの文脈では「数値が何を表すか」を人間の暗黙知に頼ると、事故が **物理的・数学的に無意味な値の伝搬**として発現する:
@@ -70,7 +70,7 @@ VAC は現時点では avatar / stream / twitch / dictionary が主なユース�
 - 温度の Celsius / Fahrenheit 単位表示（v0 は K / ΔK のみ、アフィン変換は ξ+）
 - Angle 単位 `round` / `turn` / `grad` / `arcsec` / `arcmin`（v0 は rad / deg のみ、ξ+ で追加候補）
 - ユーザ定義カスタム次元 / 単位（v0 は SI + Angle 固定、将来 `conf.toml` で宣言可能にする ξ+）
-- GUI エディタ上での unit インライン入力 UX（property editor の手動テキスト入力で足りる v0、visual UX は Phase τ 合流候補）
+- GUI エディタ上での unit インライン入力 UX（property editor の手動テキスト入力で足りる v0、visual UX は Phase υ 合流候補）
 - 複合単位の見た目（`kg·m/s²` vs `N` 表示切替）の UI 規則（v0 は "assign 時のユーザ指定名を優先、代数計算結果は分数形式" とシンプルに）
 
 ---
@@ -305,8 +305,8 @@ impl Quantity {
 | Celsius / Fahrenheit の単位表記 | **Phase ξ+**（独立ノードとして追加）| アフィン変換は乗算変換と意味論が違い、`convert` 一般経路に混ぜると設計が濁る |
 | 非 rad/deg の Angle 単位（round, turn, grad, arcmin, arcsec）| **Phase ξ+ / user-defined** | v0 は rad + deg で VAC 現役ユースケースを網羅できる |
 | ユーザ定義カスタム次元 / 単位（`conf.toml` で宣言） | **Phase ξ+** | エコシステムが成熟してから。当面は SI 固定で十分 |
-| GUI で unit をインライン編集（ポート chip をクリックして dropdown） | **Phase τ 合流候補** | τ の Undo/Redo / multi-select と同じ画面操作レイヤ |
-| unit 記号の代替表記（`kg·m·s^-2` vs `N`）の UI 切替 | **Phase ξ+** or **Phase τ** | 表示の冗長性 vs 可読性のトレードオフ、実使用してから決める |
+| GUI で unit をインライン編集（ポート chip をクリックして dropdown） | **Phase υ 合流候補** | υ の Undo/Redo / multi-select と同じ画面操作レイヤ |
+| unit 記号の代替表記（`kg·m·s^-2` vs `N`）の UI 切替 | **Phase ξ+** or **Phase υ** | 表示の冗長性 vs 可読性のトレードオフ、実使用してから決める |
 | 有効数字 / 精度の propagation（`(5.0 ± 0.1) m` 系の誤差伝搬）| **長期 backlog** | 科学計算用途に寄るが VAC 現役文脈では over-engineering |
 | 単位 x 複数の `value` をまとめた `Vector<Quantity>` 型 | **Phase ο の vec2/vec3 に吸収** | vec2/vec3 は成分ごとに Quantity を持つ（成分全員同一 Dimension） |
 
@@ -387,7 +387,7 @@ impl Quantity {
 - `FlowgraphNodeCard.svelte` のポート chip に **unit バッジ**を追加（unit が dimensionless 以外なら表示）
 - 色分け: Dimension family ごとに色カテゴリ（Length=緑、Time=青、Mass=紫、Angle=黄、Temperature=赤、... とシンプルなマッピング）
 - hover tooltip で Dimension canonical 表記（`L·T^-2` 等）
-- property editor の unit フィールドは **text input**（v0）、dropdown 化は Phase τ の範疇
+- property editor の unit フィールドは **text input**（v0）、dropdown 化は Phase υ の範疇
 
 ### 6.6 Strict default + explicit escape hatch（D4）
 

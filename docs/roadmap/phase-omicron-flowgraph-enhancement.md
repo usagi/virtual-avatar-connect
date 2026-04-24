@@ -8,7 +8,7 @@
 ## 0. Status
 
 - Phase ν-β クローズ後の次フェーズ。[docs/roadmap.md](../roadmap.md) の "Flowgraph 機能向上（TBD）" を 1 つの narrow フェーズとして具体化する。
-- 本フェーズは **engine 内完結の Pure ノード群 + GUI 小改善** に閉じる。外部連携（HTTP / OBS / OSC / VMC / system metrics / process / window）と engine の大改修（Undo/Redo / subgraph / 物理）は明示的に次フェーズ（π / ρ / σ / τ / υ）に送る（§4）。
+- 本フェーズは **engine 内完結の Pure ノード群 + GUI 小改善** に閉じる。外部連携（HTTP / OBS / OSC / VMC / system metrics / process / window）と engine の大改修（Undo/Redo / subgraph / 物理）は明示的に次フェーズ（Phase π で DateTime 基盤、続く ρ / σ / τ / υ / ω が旧 π〜υ を 1 文字繰り下げ）に送る（§4）。
 - 全 6 カテゴリ（math / easing / vec / time / signal util / random）× **78 ノード**（math 42 + easing 1 + vec 20 + time 5 + signal util 5 + random/noise 5）+ GUI 3 項目で構成。1 サブフェーズ = 1 commit 粒度に分解（§6）。ο-0 docs では vec を 18 と記していたが、ο-3 実装時に行数と実ノード数のずれ（`add/sub` を 1 行で書いていた）を正確化して 20 に修正（math の 37 → 42 修正と同種）。
 - **依存**: [Phase ξ (Dimensional Quantity System)](phase-ksi-dimensional-quantity-system.md) 先行。ο-1 math / ο-2 easing / ο-3 vec / ο-4 time / ο-5 signal util のノード群は最初から `Quantity<Dimension>` 対応で実装する。ξ-0 / ξ-1 / ξ-2 / ξ-3 着地前に ο-1 を走らせると retrofit 地獄になるため、**順序ブロッカー**として固定する。
 
@@ -181,11 +181,11 @@ random 系は `rand::thread_rng()`（すでに推移依存で入ってる可能�
 
 | 項目 | 送り先 | 理由 |
 |---|---|---|
-| OSC send/recv / VMC / VRC / iFacialMocap | **Phase π** | UDP socket 管理・protocol 仕様依存があり、engine 外の非同期ランタイム / conf スキーマ拡張も絡む |
-| 汎用 HTTP (`flowgraph.http.request`) / OBS WebSocket / system metrics (`sysinfo` / NVML) / Twitch Helix 拡張（RAID / Ad / chat settings / prediction / poll / shield / marker / clip / channel info / goals / chat clear） | **Phase ρ** | 外部 API + auth + retry + timeout の横串、および既存 `[src/flowgraph/nodes/twitch.rs](../../src/flowgraph/nodes/twitch.rs)` の Helix 基盤を拡張する一連の作業として束ねた方が整理しやすい |
-| process spawn / kill / wait / window enum / move / resize / minimize / maximize / close / foreground / pseudo fullscreen | **Phase σ** | OS 依存（Windows 中心）で、非 Windows の degrade policy を doc レベルで決める必要あり |
-| 汎用 Undo/Redo stack / 本物のマルチ選択 / Flowgraph subgraph (group) の第一級概念化 / ν-β で送った Svelte Flow handle drag edge E2E | **Phase τ** | 現行 flowgraphStore の履歴モデル（削除 1 段 snapshot）を全面改修する必要があり、単独フェーズが妥当 |
-| 物理 (spring / damper / integrator / gravity) / audio SE 再生 / 音量 envelope / ピッチ抽出 | **Phase υ** | ο の vec2/3 と signal util に直接乗る形で組めるため、ο 完了後が着手タイミング |
+| OSC send/recv / VMC / VRC / iFacialMocap | **Phase ρ** | UDP socket 管理・protocol 仕様依存があり、engine 外の非同期ランタイム / conf スキーマ拡張も絡む（旧 Phase π、π は DateTime 基盤に割当られたため 1 文字繰り下げ） |
+| 汎用 HTTP (`flowgraph.http.request`) / OBS WebSocket / system metrics (`sysinfo` / NVML) / Twitch Helix 拡張（RAID / Ad / chat settings / prediction / poll / shield / marker / clip / channel info / goals / chat clear） | **Phase σ** | 外部 API + auth + retry + timeout の横串、および既存 `[src/flowgraph/nodes/twitch.rs](../../src/flowgraph/nodes/twitch.rs)` の Helix 基盤を拡張する一連の作業として束ねた方が整理しやすい（旧 Phase ρ） |
+| process spawn / kill / wait / window enum / move / resize / minimize / maximize / close / foreground / pseudo fullscreen | **Phase τ** | OS 依存（Windows 中心）で、非 Windows の degrade policy を doc レベルで決める必要あり（旧 Phase σ） |
+| 汎用 Undo/Redo stack / 本物のマルチ選択 / Flowgraph subgraph (group) の第一級概念化 / ν-β で送った Svelte Flow handle drag edge E2E | **Phase υ** | 現行 flowgraphStore の履歴モデル（削除 1 段 snapshot）を全面改修する必要があり、単独フェーズが妥当（旧 Phase τ） |
+| 物理 (spring / damper / integrator / gravity) / audio SE 再生 / 音量 envelope / ピッチ抽出 | **Phase ω** | ο の vec2/3 と signal util に直接乗る形で組めるため、ο 完了後が着手タイミング（旧 Phase υ） |
 | Discord voice ingress / iFacialMocap 単独 / VTube Studio API / Global hotkey / MIDI / 独自 avatar renderer | **長期 backlog** | 単独で phase 立てるほど設計重量があり、かつ VAC の現役ユースケースに直結するかどうかも需要確認が必要 |
 
 ---

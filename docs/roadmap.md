@@ -126,14 +126,14 @@ Flowgraph は pure-functional + 遅延評価のため runtime 単位評価コス
 - [ ] ξ-5 feat(gui): `FlowgraphNodeCard.svelte` ポート chip に unit バッジ + Dimension family 色分け + hover tooltip + property editor の unit text input
 - [x] ξ-6 docs: CHANGELOG + `docs/manual/dimensional-quantity-system.md` 新設（ユーザ向け解説: 動機 / 使える単位 / parser / ノード紹介 / よくあるパターン / FAQ）+ `manual/index.md` 目次 + Socket 型列に `quantity` / `table` 追記 + roadmap tick
 - 仕様書: [`roadmap/phase-ksi-dimensional-quantity-system.md`](roadmap/phase-ksi-dimensional-quantity-system.md)
-- scope: 外部依存ゼロ（自作、`uom` crate は runtime vs compile-time の性質不一致で採用見送り）。既存 flow 完全後方互換（dimensionless fallback）。IO 系は pass-through。非対応: Celsius/Fahrenheit（ξ+）/ 非 rad-deg Angle 単位 / ユーザ定義次元 / GUI unit インライン編集（τ 合流候補）
+- scope: 外部依存ゼロ（自作、`uom` crate は runtime vs compile-time の性質不一致で採用見送り）。既存 flow 完全後方互換（dimensionless fallback）。IO 系は pass-through。非対応: Celsius/Fahrenheit（ξ+）/ 非 rad-deg Angle 単位 / ユーザ定義次元 / GUI unit インライン編集（υ 合流候補）
 - 順序: **本フェーズ着地後に Phase ο-1 着手**。math / easing / vec / time / signal util ノード群は最初から `Quantity<Dimension>` 対応で実装する
 
 ---
 
 ### Phase ο — Flowgraph Enhancement I (計算系 + 時間 + signal util + GUI 小改善)
 
-Flowgraph 機能向上の第 1 波。engine 内完結の Pure ノード群（math 拡張 / easing / vec2・vec3 / time・timer / signal util / random・noise、計 **78 ノード**: 42+1+20+5+5+5 — ο-0 の「76 (vec 18)」は `add/sub` 行数ミスで ο-3 実装時に 20 に修正）と GUI 小改善 3 項目（palette カテゴリ絞り込み / canvas drop-at-cursor / Ctrl+D duplicate）を narrow scope で追加する。外部 IO（HTTP / OBS / OSC / VMC / system metrics / process / window / Discord voice 等）と engine 大改修（Undo/Redo / subgraph / 物理）は明示的に次フェーズ（π / ρ / σ / τ / υ）以降へ送る。Phase ξ (Dimensional Quantity System) の ξ-1〜ξ-4/ξ-6 着地済み → **ο-1 / ο-2 / ο-3 着地済み**、ο-4 以降は ξ-5 GUI と並行進行可。
+Flowgraph 機能向上の第 1 波。engine 内完結の Pure ノード群（math 拡張 / easing / vec2・vec3 / time・timer / signal util / random・noise、計 **78 ノード**: 42+1+20+5+5+5 — ο-0 の「76 (vec 18)」は `add/sub` 行数ミスで ο-3 実装時に 20 に修正）と GUI 小改善 3 項目（palette カテゴリ絞り込み / canvas drop-at-cursor / Ctrl+D duplicate）を narrow scope で追加する。外部 IO（HTTP / OBS / OSC / VMC / system metrics / process / window / Discord voice 等）と engine 大改修（Undo/Redo / subgraph / 物理）は明示的に次フェーズ（新 π は DateTime 基盤、ρ / σ / τ / υ / ω が旧 π〜υ を 1 文字繰り下げ）以降へ送る。Phase ξ (Dimensional Quantity System) の ξ-1〜ξ-4/ξ-6 着地済み → **ο-1 / ο-2 / ο-3 着地済み**、ο-4 以降は ξ-5 GUI と並行進行可。
 
 - [x] ο-0 docs: `phase-omicron-flowgraph-enhancement.md` 新設 + roadmap.md の Active 差し替え + backlog-nodes.md §1 を ο-4 昇格 pointer 化（+ 追補: angle normalization 4 / 双曲線 6 ノード追加 + Phase ξ 依存明記）
 - [x] ο-1 feat(flowgraph/math): §3.1 **42 ノード**追加（abs/min/max/clamp/lerp/inverse_lerp/remap/smoothstep/trig/arctrig/atan2/hyperbolic/arc-hyperbolic/sqrt/pow/exp/log/sign/floor/ceil/round/deg↔rad/normalize_angle × 4）。全 Quantity-aware、30 unit tests 全緑、node-catalog.md 再生成済み。ο-0 docs の「37」表記は実装時に 42 へ正確化
@@ -148,9 +148,26 @@ Flowgraph 機能向上の第 1 波。engine 内完結の Pure ノード群（mat
 
 ---
 
+### Phase π — DateTime Type System (jiff 採用 + chrono 全面置換)
+
+Flowgraph engine に **絶対時刻を表す DateTime 型**を第一級概念として導入する基盤フェーズ。Phase ξ の単位次元システムと同じ「型は事故を防ぐ砦」哲学を時刻にも適用する。同時に `chrono` crate を `jiff` crate (BurntSushi 作、TC39 Temporal 準拠) で全面置換し、既存 21 箇所の chrono 依存を解除して crate 依存を剥がす。`Duration` は Phase ξ で導入済の `Quantity<time>` で兼務、新しい型は追加しない。**Phase ο-4 (time nodes) の前提**。
+
+- [ ] π-0 docs: `phase-pi-datetime-system.md` 新設 + roadmap.md の Active 差し替え（旧 π/ρ/σ/τ/υ を 1 文字繰り下げて ρ/σ/τ/υ/ω に、DateTime を新 π に割り当て）+ cross-reference 修正
+- [ ] π-1 feat(deps): `jiff = { features = ["serde"] }` 追加 + smoke test（`Timestamp::now()` / `Timestamp::from_str`）
+- [ ] π-2 refactor(*): 既存 chrono 使用 21 箇所を jiff に全面置換（ファイル単位 commit、serde snapshot / 文字列一致テスト / TTL 境界テストで回帰検知）
+- [ ] π-3 chore(deps): `chrono` 依存を Cargo.toml から解除、`cargo tree \| rg chrono` で間接依存確認、全テスト green
+- [ ] π-4 feat(flowgraph/datetime): `SocketType::DateTime` + `SocketValue::DateTime` + engine 側 String ↔ DateTime 暗黙 coerce + `FlowgraphInstanceConfig.default_timezone: Option<String>`（未設定時 UTC、FixedOffset `+09:00` 形式のみ、IANA tz 非対応）+ naive datetime パース policy（config default tz 適用）
+- [ ] π-5 feat(flowgraph/nodes/datetime): 8 ノード（`now` / `parse` / `format` / `add_duration` / `sub_duration` / `diff` / `epoch_ms` / `from_epoch_ms`）。Phase ο-4 当初案の `flowgraph.time.*` 4 種はここで吸収（ο-4 scope は `flowgraph.util.timer_interval` 単独に縮減）
+- [ ] π-6 docs: CHANGELOG + `docs/manual/datetime-system.md` 新設 + ο phase doc の時間ノード記述更新 + `manual/node-catalog.md` 再生成 + roadmap tick
+- 仕様書: [`roadmap/phase-pi-datetime-system.md`](roadmap/phase-pi-datetime-system.md)
+- scope: chrono → jiff 全面移行 + Flowgraph DateTime 型新設の 2 軸に閉じる。Breaking change なし（wire format 互換死守、config 既定値で後方互換）。IANA tz / DST / Span（暦幅）/ 独自 affine 単位は π+ 扱い
+- 順序: **本フェーズ着地後に Phase ο-4 着手**。ξ-5 GUI は並行可
+
+---
+
 ## Backlog / Future
 
-### Phase π — OSC / VMC / VRC bridge (TBD)
+### Phase ρ — OSC / VMC / VRC bridge (TBD)
 
 Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・VRChat・その他 OSC 対応ソフト（VTube Studio の一部 / LiveLinkFace 等）を制御する基盤。VAC を「独自 avatar renderer を持つ前に、既存アバターアプリを Flowgraph から総合制御するハブ」に格上げする phase。
 
@@ -162,7 +179,7 @@ Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・
 - [ ] VRChat OSC 専用ヘルパー（avatar param set / chatbox send / typing indicator）
 - scope: iFacialMocap 単独ノードは VMC bridge 経由で吸収できる前提で外す。足りなければ長期 backlog に再掲
 
-### Phase ρ — 外部連携 HTTP + OBS + System Metrics + Twitch Helix 拡張 (TBD)
+### Phase σ — 外部連携 HTTP + OBS + System Metrics + Twitch Helix 拡張 (TBD)
 
 外部 API 系の横串拡張フェーズ。既存 `[src/flowgraph/nodes/twitch.rs](../src/flowgraph/nodes/twitch.rs)` の Helix / OAuth 基盤を流用しつつ、HTTP 汎用ノード / OBS WebSocket / system metrics を同じ phase に詰める。
 
@@ -172,7 +189,7 @@ Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・
 - [ ] `flowgraph.twitch.*` 拡張（ユーザ要求分）: `raid_start` / `raid_cancel` / `ad_run`（1 分広告）/ `chat_settings_update`（subscribers_only / followers_only / emote_only / slow / unique）/ `prediction_create` / `prediction_end` / `poll_create` / `poll_end` / `shield_mode_update`（防御モード）/ `stream_marker_create`（説明付き対応）/ `clip_create` / `channel_info_update` / `goals_get` / `chat_clear` / チャット履歴リフレッシュ
 - open question: ユーザ要求の「RAID を 1 時間停止する」は Twitch 側に 1:1 の Helix エンドポイントが無く、`blocked_terms` 運用か独自 state で "incoming raid 遮断" を表現する必要あり → phase doc 内で TBD として扱う
 
-### Phase σ — Process / Window 制御 (TBD)
+### Phase τ — Process / Window 制御 (TBD)
 
 OS プロセス / ウィンドウ制御ノード群。Windows を第一級 target、他 OS は degrade policy を phase doc で固定する。
 
@@ -182,7 +199,7 @@ OS プロセス / ウィンドウ制御ノード群。Windows を第一級 targe
 - [ ] `flowgraph.window.pseudo_fullscreen` / `.pseudo_fullscreen_exit`（borderless + monitor-size 化 / 元サイズ復帰）
 - scope: 既存 `windows` crate を再利用。macOS / Linux は no-op + warn か、将来別 backend を追加するかを phase doc で決める
 
-### Phase τ — GUI 大物 (Undo/Redo + multi-select + subgraph) (TBD)
+### Phase υ — GUI 大物 (Undo/Redo + multi-select + subgraph) (TBD)
 
 Flowgraph editor の大規模 UX 改修。ν-β で送った "Svelte Flow handle drag edge の E2E" もここに合流させ、履歴モデルを第一級概念化する。
 
@@ -191,7 +208,7 @@ Flowgraph editor の大規模 UX 改修。ν-β で送った "Svelte Flow handle
 - [ ] Flowgraph subgraph / group（engine + GUI の両面で第一級概念化、入出力 port を再 export するカプセル化）
 - [ ] Svelte Flow handle drag edge の E2E 回帰（ν-β+ から昇格）
 
-### Phase υ — Audio-reactive + Physics (TBD)
+### Phase ω — Audio-reactive + Physics (TBD)
 
 Phase ο の vec2/3 と signal util に直接乗る形で、音声反応と古典力学系を追加する。procedural avatar motion のコア。
 
@@ -229,8 +246,8 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 設計重量が大きい or VAC 現役ユースケースへの直結度を需要確認してから phase 化する候補群。各 1 行のみ、詳細は phase doc 化のタイミングで起こす。
 
 - [ ] **Discord voice ingress**（Discord bot + voice gateway + opus decode、大工事。独立 phase / または VAC とは別プロセスの bridge 化も視野）
-- [ ] **iFacialMocap 単独**（π の VMC bridge 経由で吸収できない場合のみ。需要次第）
-- [ ] **VTube Studio API**（WebSocket、表情 / パラメータ / Hotkey 制御。OSC と機能重複するため π 完了後に需要を再確認）
+- [ ] **iFacialMocap 単独**（ρ の VMC bridge 経由で吸収できない場合のみ。需要次第）
+- [ ] **VTube Studio API**（WebSocket、表情 / パラメータ / Hotkey 制御。OSC と機能重複するため ρ 完了後に需要を再確認）
 - [ ] **Global hotkey / MIDI**（StreamDeck 互換、OS 横断の global hotkey listener + MIDI input ingress ノード）
 - [ ] **独自 avatar renderer**（VAC が OSC / VMC 経由で外部 renderer を制御する現行路線に対して、独自に renderer を内包する巨大フェーズ。ψ / η 規模、別軸）
 
