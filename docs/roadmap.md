@@ -154,8 +154,8 @@ Flowgraph engine に **絶対時刻を表す DateTime 型**を第一級概念と
 
 - [x] π-0 docs: `phase-pi-datetime-system.md` 新設 + roadmap.md の Active 差し替え（旧 π/ρ/σ/τ/υ を 1 文字繰り下げて ρ/σ/τ/υ/ω に、DateTime を新 π に割り当て）+ cross-reference 修正
 - [x] π-1 feat(deps): `jiff = "0.2.24"` (features: `serde` + デフォルト `tz-system` / `tzdb-*`) 追加 + `tests/jiff_smoke.rs` 14 tests 全緑（Timestamp / SignedDuration / Offset / Zoned / serde round-trip）。副産物: `Offset` は `FromStr` 非実装、`DateTimeParser::parse_time_zone` は bare `Z` を拒否する仕様を pin 止め（phase doc §3.5 更新）
-- [ ] π-2 refactor(*): 既存 chrono 使用 21 箇所を jiff に全面置換（ファイル単位 commit、serde snapshot / 文字列一致テスト / TTL 境界テストで回帰検知）
-- [ ] π-3 chore(deps): `chrono` 依存を Cargo.toml から解除、`cargo tree \| rg chrono` で間接依存確認、全テスト green
+- [x] π-2 refactor(chrono->jiff): 既存 chrono 使用 21 箇所を jiff に全面置換（3 commit 構成: batch1 leaf 14 / batch2 dictionary TTL 境界 + 7 境界テスト / batch3 struct field 5 + 4 serde round-trip snapshot、計 702→706 lib tests all green）。wire format drift `+00:00` → `Z` は RFC3339 互換範囲として許容し commit message に明記
+- [x] π-3 chore(deps): `Cargo.toml` から `chrono` 直接依存を解除、`src/**` は `use chrono` ゼロ、`cargo tree -i chrono` で直接依存なしを確認（間接依存は `twitch-irc v6.0.0` 経由で残存、これは twitch-irc 側の内部実装で π スコープ外）、全 706 lib tests green
 - [ ] π-4 feat(flowgraph/datetime): `SocketType::DateTime` + `SocketValue::DateTime` + engine 側 String ↔ DateTime 暗黙 coerce + `FlowgraphInstanceConfig.default_timezone: Option<String>`（未設定時 UTC、FixedOffset `+09:00` 形式のみ、IANA tz 非対応）+ naive datetime パース policy（config default tz 適用）
 - [ ] π-5 feat(flowgraph/nodes/datetime): 8 ノード（`now` / `parse` / `format` / `add_duration` / `sub_duration` / `diff` / `epoch_ms` / `from_epoch_ms`）。Phase ο-4 当初案の `flowgraph.time.*` 4 種はここで吸収（ο-4 scope は `flowgraph.util.timer_interval` 単独に縮減）
 - [ ] π-6 docs: CHANGELOG + `docs/manual/datetime-system.md` 新設 + ο phase doc の時間ノード記述更新 + `manual/node-catalog.md` 再生成 + roadmap tick

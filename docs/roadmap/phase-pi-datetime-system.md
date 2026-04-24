@@ -1,6 +1,6 @@
 # Phase π — DateTime Type System (jiff 採用 + chrono 全面置換)
 
-> **Status**: π-0 docs 着地 / π-1 jiff deps + smoke test (14 tests) 着地。未着手 sub-phases: π-2 (migration)、π-3 (chrono 解除)、π-4 (Flowgraph 型基盤)、π-5 (nodes)、π-6 (docs / changelog / tick)。
+> **Status**: π-0 docs 着地 / π-1 jiff deps + smoke test (14 tests) 着地 / π-2 chrono→jiff 全面置換 (3 commit, 706 lib tests green, +11 new tests: 7 TTL boundary + 4 serde round-trip) 着地 / π-3 `Cargo.toml` から chrono 直接依存解除 (間接依存は twitch-irc v6.0.0 経由でのみ残存、π スコープ外) 着地。未着手 sub-phases: π-4 (Flowgraph 型基盤)、π-5 (nodes)、π-6 (docs / changelog / tick)。
 > 起点: [`../roadmap.md`](../roadmap.md) の "Phase π" セクション。依存関係: Phase ο-3 完了 → Phase π → Phase ο-4。
 
 ---
