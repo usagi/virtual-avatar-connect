@@ -2,6 +2,7 @@ pub(crate) mod ai;
 mod args;
 pub(crate) mod bridges;
 mod conf;
+pub(crate) mod datetime;
 mod error;
 mod logger;
 mod libretranslate;
