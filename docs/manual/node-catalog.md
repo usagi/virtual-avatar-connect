@@ -125,6 +125,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.unit.to_json`](#flowgraph-unit-to-json) — Unit -> JSON
 - **util**
   - [`flowgraph.util.delay`](#flowgraph-util-delay) — Delay
+  - [`flowgraph.util.format`](#flowgraph-util-format) — Format Quantity
   - [`flowgraph.util.log`](#flowgraph-util-log) — Log
   - [`flowgraph.util.rate_limit`](#flowgraph-util-rate-limit) — Rate Limit
 
@@ -132,7 +133,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ### `flowgraph.channel.emit`
 
-**Channel Emit** — State.channel_data に ChannelDatum を push。WS クライアント / browser-output に届く終端ノード。
+**Channel Emit** — State.channel_data に ChannelDatum を push。WS クライアント / browser-output に届く終端ノード。`content` / `channel` / `source_actor` は `String`。`Quantity` を配線した場合は engine 側で`"{value} {unit}"` 形式に自動文字列化される。単位を含めたくない場合は手前で`flowgraph.util.format` (include_unit=false) か `flowgraph.unit.strip` を挟む。
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1577,9 +1578,27 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `exec_out` | `exec` (out) |  |
 | `value` | `json` |  |
 
+### `flowgraph.util.format`
+
+**Format Quantity** — Quantity → String with explicit include_unit / precision / unit_override control. Default output is "{value} {unit}" matching the engine-level Quantity → String coerce.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `string` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `include_unit` | `bool` | `true` |  | Append " {unit}" suffix when the value is non-dimensionless. |
+| `precision` | `int` | `-1` |  | Decimal places for the numeric part. -1 means use the default Display formatter (no forced precision). |
+| `unit_override` | `string` | `""` |  | If non-empty, convert the Quantity to this unit before formatting (same-dimension only, errors otherwise). Useful for rendering in a different unit than upstream. |
+
 ### `flowgraph.util.log`
 
-**Log** — value 入力を trace に書き出し exec_out を発火
+**Log** — value 入力を trace に書き出し exec_out を発火。`Quantity` を流した場合は engine 側で `"{value} {unit}"` 形式に自動文字列化される（dimensionless は数値のみ）。精度や単位の ON/OFF を制御したい場合は `flowgraph.util.format` を挟む。
 
 | Input | Type | Default | Note |
 |---|---|---|---|

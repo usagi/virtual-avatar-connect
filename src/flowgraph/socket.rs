@@ -67,12 +67,19 @@ impl SocketType {
   parse_type(s.trim())
  }
 
- /// エッジ接続の際に 2 つの型が「互換」か判定する。
+ /// エッジ接続の際に 2 つの型が「互換」か判定する。`self` (upstream) が
+ /// `other` (downstream) に流し込めるなら `true`。
  ///
- /// Phase ξ-3 で追加。厳密な構造等価 (`==`) ではなく、以下の暗黙 coerce を許容する:
+ /// Phase ξ-3 で追加、ξ-4 で拡張。厳密な構造等価 (`==`) ではなく、以下の暗黙
+ /// coerce を許容する:
  ///
- /// - `Float ↔ Quantity`: Float は dimensionless Quantity として流せる / 逆も可（値は
- ///   ランタイムで [`coerce_to_type`] が変換する）
+ /// - `Float ↔ Quantity`: Float は dimensionless Quantity として流せる / 逆も可
+ ///   （値はランタイムで [`coerce_to_type`] が変換する。非 dimensionless な
+ ///   Quantity → Float は実行時にエラーを出し、明示 strip を促す）
+ /// - `Quantity → String`: [`Quantity`] の Display 実装（`"{value} {unit}"` ないし
+ ///   dimensionless なら `"{value}"`）で自動文字列化。ξ-4 で `flowgraph.util.log`
+ ///   や `flowgraph.channel.emit` に Quantity を直接流せるようにするために導入。
+ ///   逆方向 (`String → Quantity`) は任意文字列を確実に parse できないため非許容。
  /// - それ以外は `==` と同じ
  ///
  /// `List` / `Map` の inner は再帰的に `compatible_with` で判定する。
@@ -80,6 +87,7 @@ impl SocketType {
   use SocketType::*;
   match (self, other) {
    (Float, Quantity) | (Quantity, Float) => true,
+   (Quantity, String) => true,
    (List(a), List(b)) => a.compatible_with(b),
    (Map(a), Map(b)) => a.compatible_with(b),
    (a, b) => a == b,
@@ -115,6 +123,8 @@ pub fn coerce_to_type(value: SocketValue, target: &SocketType) -> Result<SocketV
 				})
 			}
 		}
+		// Quantity -> String: Display impl で "{value} {unit}" へ（Phase xi-4）
+		(SocketValue::Quantity(q), SocketType::String) => Ok(SocketValue::String(format!("{}", q))),
 		// List / Map: 要素再帰
 		(SocketValue::List(xs), SocketType::List(inner)) => {
 			let mut out = Vec::with_capacity(xs.len());

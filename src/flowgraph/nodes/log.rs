@@ -3,6 +3,13 @@
 //! - 入力: `exec_in` (Exec), `value` (String)
 //! - 出力: `exec_out` (Exec)
 //! - 発火契機: `exec_in`
+//!
+//! Phase \u{3be}-4 以降: `value` ポートは `String` のままだが、engine レベルの暗黙
+//! coerce ([`crate::flowgraph::socket::coerce_to_type`]) により `Quantity` を
+//! そのまま配線できる。配信される文字列は [`crate::flowgraph::quantity::Quantity`]
+//! の `Display` 実装による `"{value} {unit}"` 形式（dimensionless なら `"{value}"`
+//! のみ）。単位を外したい / 精度を制御したい場合は `flowgraph.util.format` を
+//! 手前に挟む。
 
 use crate::flowgraph::node::{
  EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
@@ -18,7 +25,12 @@ impl NodeDescriptor for LogNode {
    feature: "flowgraph.util.log".into(),
    title: "Log".into(),
    category: "util".into(),
-   description: Some("value 入力を trace に書き出し exec_out を発火".into()),
+   description: Some(
+    "value 入力を trace に書き出し exec_out を発火。`Quantity` を流した場合は \
+     engine 側で `\"{value} {unit}\"` 形式に自動文字列化される（dimensionless は数値のみ）。\
+     精度や単位の ON/OFF を制御したい場合は `flowgraph.util.format` を挟む。"
+     .into(),
+   ),
    inputs: vec![
     PortSpec::exec_input("exec_in", "Exec"),
     PortSpec::input("value", "Value", SocketType::String),

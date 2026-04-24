@@ -39,7 +39,10 @@ impl NodeDescriptor for ChannelEmitNode {
 			title: "Channel Emit".into(),
 			category: "channel".into(),
 			description: Some(
-				"State.channel_data に ChannelDatum を push。WS クライアント / browser-output に届く終端ノード。"
+				"State.channel_data に ChannelDatum を push。WS クライアント / browser-output に届く終端ノード。\
+				 `content` / `channel` / `source_actor` は `String`。`Quantity` を配線した場合は engine 側で\
+				 `\"{value} {unit}\"` 形式に自動文字列化される。単位を含めたくない場合は手前で\
+				 `flowgraph.util.format` (include_unit=false) か `flowgraph.unit.strip` を挟む。"
 					.into(),
 			),
 			inputs: vec![

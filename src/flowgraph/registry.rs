@@ -160,6 +160,9 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::unit::UnitSameDimensionNode));
 	r.register_pure(Arc::new(nodes::unit::UnitToJsonNode));
 
+	// --- util.format (xi-4) ---
+	r.register_pure(Arc::new(nodes::util_format::UtilFormatNode));
+
 	// --- math ---
 	r.register_pure(Arc::new(nodes::math::IntAddNode));
 	r.register_pure(Arc::new(nodes::math::IntSubNode));
@@ -338,6 +341,7 @@ mod tests {
 			"flowgraph.unit.get_dim_string",
 			"flowgraph.unit.same_dimension",
 			"flowgraph.unit.to_json",
+			"flowgraph.util.format",
 		] {
 			assert!(
 				r.contains(feature),

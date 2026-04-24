@@ -853,6 +853,37 @@ mod tests {
   assert!(ctx.trace[2].contains("#3"));
  }
 
+ /// Phase \u{3be}-4: Quantity 出力を String ポート（LogNode.value）へ繋ぐと、
+ /// engine レベルの暗黙 coerce が `"{value} {unit}"` に自動変換して trace に流す。
+ #[tokio::test]
+ async fn log_receives_quantity_as_formatted_string() {
+  use crate::flowgraph::nodes::literal::FloatLiteralNode;
+  use crate::flowgraph::nodes::unit::UnitAssignNode;
+  let mut b = FlowgraphBuilder::new();
+  b.add_node("seq", NodeImpl::pure(Arc::new(SequenceNode::new(1))), InputMap::new());
+  b.add_node("log", NodeImpl::effectful(Arc::new(LogNode)), InputMap::new());
+  b.add_node(
+   "speed",
+   NodeImpl::pure(Arc::new(FloatLiteralNode)),
+   [("value".into(), SocketValue::Float(9.81))].into_iter().collect(),
+  );
+  b.add_node(
+   "assign",
+   NodeImpl::pure(Arc::new(UnitAssignNode)),
+   [("unit".into(), SocketValue::String("m/s^2".into()))].into_iter().collect(),
+  );
+  b.connect_exec(PortRef::new("seq", "exec_1"), PortRef::new("log", "exec_in"));
+  b.connect(PortRef::new("speed", "value"), PortRef::new("assign", "value"));
+  b.connect(PortRef::new("assign", "result"), PortRef::new("log", "value"));
+  let mut prog = b.build().unwrap();
+  let mut ctx = ExecCtx::default();
+  let _run = prog.execute(&mut ctx).await.unwrap();
+  assert_eq!(ctx.trace.len(), 1, "exactly one log line");
+  let line = &ctx.trace[0];
+  assert!(line.contains("9.81"), "value present: {line}");
+  assert!(line.contains("m") && line.contains("s"), "unit (m/s^2 canonical form) present: {line}");
+ }
+
  #[tokio::test]
  async fn string_literal_pulls_lazily_for_log() {
   let mut b = FlowgraphBuilder::new();

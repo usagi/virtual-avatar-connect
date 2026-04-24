@@ -1,6 +1,6 @@
 # Phase ξ — Dimensional Quantity System (SI 準拠の単位次元システム)
 
-> **Status**: ξ-0 docs 完了 / ξ-1 core types (Dimension / Unit / Quantity / parser) 着地 / ξ-2 `SocketType::Quantity` + `SocketValue::Quantity` + `flowgraph.unit.*` ノード 7 種着地 / ξ-3 engine edge 暗黙 coerce (Float ↔ Quantity) + `flowgraph.math.float_*` の Quantity 化 着地。次は ξ-4 で log / format 系の unit-aware 化。
+> **Status**: ξ-0 docs 完了 / ξ-1 core types (Dimension / Unit / Quantity / parser) 着地 / ξ-2 `SocketType::Quantity` + `SocketValue::Quantity` + `flowgraph.unit.*` ノード 7 種着地 / ξ-3 engine edge 暗黙 coerce (Float ↔ Quantity) + `flowgraph.math.float_*` の Quantity 化 着地 / ξ-4 Quantity → String 自動 coerce + `flowgraph.util.format` ノード + log / channel.emit の unit-aware 化 着地。次は ξ-5 で GUI ポート chip の unit バッジ / 色分け / tooltip。
 > 起点: [`../roadmap.md`](../roadmap.md) の "Phase ξ" セクション。
 
 ---
@@ -465,10 +465,11 @@ impl Quantity {
 
 ### 7.4 ξ-4 チェックリスト
 
-- [ ] `flowgraph.util.log` default format: `"{value} {unit}"`
-- [ ] `flowgraph.util.format` property `include_unit: bool = true`
-- [ ] channel post 時の stringify は value のみ（明示 strip 推奨のドキュメント注記）
-- [ ] unit test + integration test
+- [x] `flowgraph.util.log` default format: `"{value} {unit}"`（engine レベルの `Quantity → String` 暗黙 coerce で実現。`Quantity` の `Display` 実装 (`"{value} {unit}"` / dimensionless なら `"{value}"`) を `coerce_to_type` が適用、`log.value` の `String` 型ポートに直接 Quantity を配線可能に。`SocketType::compatible_with` は逆方向 `String → Quantity` は禁止）
+- [x] `flowgraph.util.format` ノード新設 (`src/flowgraph/nodes/util_format.rs`)。プロパティ: `include_unit: Bool = true` / `precision: Int = -1`（-1 = default Display）/ `unit_override: String = ""`（同次元への事前変換、空なら変換なし）。Quantity → String で精度・単位表示・表示単位を明示的にコントロール
+- [x] `channel.emit` stringify ルール: `content` などの String ポートに Quantity を繋いだ場合は自動で `"{value} {unit}"` 形式。value のみ欲しい場合は手前で `flowgraph.unit.strip` か `flowgraph.util.format` (`include_unit=false`) を挟む運用を description に明記
+- [x] unit test: `util_format` の 6 ケース（default / include_unit=false / precision / unit_override (deg→rad) / dim mismatch error / dimensionless）+ integration test: engine 経由で `Float → UnitAssign (Quantity) → Log` が `"{value} {unit}"` を trace に書くことを確認 (`log_receives_quantity_as_formatted_string`)
+- [x] `BLESS_NODE_CATALOG=1 cargo test` で catalog 再生成（`flowgraph.util.format` を追加、`log` / `channel.emit` の description 変更を反映）
 
 ### 7.5 ξ-5 チェックリスト
 
