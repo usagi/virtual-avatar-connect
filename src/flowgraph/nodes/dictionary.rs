@@ -63,19 +63,19 @@ fn row_bool(table: &Table, row: &Row, name: &str, default: bool) -> bool {
 	row_get(table, row, name).and_then(|v| v.as_bool()).unwrap_or(default)
 }
 
-fn is_expired(row: &Row, table: &Table, now: &chrono::DateTime<chrono::Utc>) -> bool {
+fn is_expired(row: &Row, table: &Table, now: &jiff::Timestamp) -> bool {
 	let Some(s) = row_opt_str(table, row, col::EXPIRES_AT) else { return false };
 	if s.is_empty() {
 		return false;
 	}
-	match chrono::DateTime::parse_from_rfc3339(s) {
-		Ok(dt) => dt.with_timezone(&chrono::Utc) <= *now,
+	match s.parse::<jiff::Timestamp>() {
+		Ok(dt) => dt <= *now,
 		Err(_) => false,
 	}
 }
 
 fn current_utc_rfc3339() -> String {
-	chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+	jiff::Timestamp::now().strftime("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
 // ---------------------------------------------------------------------
@@ -101,7 +101,7 @@ struct CompiledDictionary {
 impl CompiledDictionary {
 	/// Table → CompiledDictionary。enabled && !expired だけを採用、priority desc → created_at desc でソート。
 	fn compile(table: &Table) -> Self {
-		let now = chrono::Utc::now();
+		let now = jiff::Timestamp::now();
 		let mut indexed: Vec<(usize, &Row)> = table.rows().iter().enumerate().collect();
 		indexed.retain(|(_, r)| {
 			row_bool(table, r, col::ENABLED, true) && !is_expired(r, table, &now)
@@ -633,7 +633,7 @@ impl PureNode for DictionaryLearnNode {
 		let mut table = ensure_dictionary_schema(base_table);
 
 		// duplicate 検出: (source, replacement, kind) が完全一致 & enabled & !expired
-		let now = chrono::Utc::now();
+		let now = jiff::Timestamp::now();
 		let is_duplicate = table.rows().iter().any(|r| {
 			row_bool(&table, r, col::ENABLED, true)
 				&& !is_expired(r, &table, &now)
@@ -1165,5 +1165,89 @@ mod tests {
 		let t2 = ensure_dictionary_schema(custom);
 		assert_eq!(t2.schema().len(), 11);
 		assert_eq!(t2.len(), 0);
+	}
+
+	// ----- is_expired boundary tests (Phase pi-2 batch2) -----
+	//
+	// `is_expired(row, table, now)` は `expires_at <= now` を「期限切れ」とみなす。
+	// jiff 移行後も chrono と同じ境界 (equal = expired) を保つことを回帰で守る。
+
+	fn single_row_table_with_expires(expires_at: Option<&str>) -> Table {
+		let schema = dictionary_schema();
+		let row = dict_row(
+			"src",
+			"dst",
+			"literal",
+			0,
+			false,
+			true,
+			"test",
+			"2026-04-01T00:00:00Z",
+			expires_at,
+		);
+		Table::new(schema, vec![row])
+	}
+
+	fn now_fixed() -> jiff::Timestamp {
+		"2026-04-24T12:00:00Z".parse().unwrap()
+	}
+
+	#[test]
+	fn is_expired_returns_false_when_expires_at_is_absent() {
+		let t = single_row_table_with_expires(None);
+		let row = &t.rows()[0];
+		assert!(!is_expired(row, &t, &now_fixed()));
+	}
+
+	#[test]
+	fn is_expired_returns_false_when_expires_at_is_empty_string() {
+		let t = single_row_table_with_expires(Some(""));
+		let row = &t.rows()[0];
+		assert!(!is_expired(row, &t, &now_fixed()));
+	}
+
+	#[test]
+	fn is_expired_returns_false_for_unparseable_expires_at() {
+		let t = single_row_table_with_expires(Some("not-a-timestamp"));
+		let row = &t.rows()[0];
+		assert!(!is_expired(row, &t, &now_fixed()));
+	}
+
+	#[test]
+	fn is_expired_returns_true_when_expires_at_is_in_the_past() {
+		let t = single_row_table_with_expires(Some("2026-04-24T11:59:59Z"));
+		let row = &t.rows()[0];
+		assert!(is_expired(row, &t, &now_fixed()));
+	}
+
+	#[test]
+	fn is_expired_returns_true_when_expires_at_equals_now() {
+		// 境界: expires_at == now は「期限切れ」扱い (dt <= now)。
+		// chrono 実装と一致する半開区間 (now, ∞) を保つ。
+		let t = single_row_table_with_expires(Some("2026-04-24T12:00:00Z"));
+		let row = &t.rows()[0];
+		assert!(is_expired(row, &t, &now_fixed()));
+	}
+
+	#[test]
+	fn is_expired_returns_false_when_expires_at_is_in_the_future() {
+		let t = single_row_table_with_expires(Some("2026-04-24T12:00:01Z"));
+		let row = &t.rows()[0];
+		assert!(!is_expired(row, &t, &now_fixed()));
+	}
+
+	#[test]
+	fn is_expired_respects_non_utc_offset_in_expires_at() {
+		// "2026-04-24T21:00:00+09:00" == "2026-04-24T12:00:00Z" (same instant).
+		// jiff は RFC3339 を任意オフセットで受理し、Timestamp は UTC absolute に正規化する。
+		// 境界 (equal) なので expired と判定される。
+		let t = single_row_table_with_expires(Some("2026-04-24T21:00:00+09:00"));
+		let row = &t.rows()[0];
+		assert!(is_expired(row, &t, &now_fixed()));
+
+		// JST +09:00 で 1 ミリ秒未来は not expired。
+		let t2 = single_row_table_with_expires(Some("2026-04-24T21:00:00.001+09:00"));
+		let row2 = &t2.rows()[0];
+		assert!(!is_expired(row2, &t2, &now_fixed()));
 	}
 }

@@ -119,9 +119,9 @@ impl OAuthSessionInternal {
 }
 
 fn system_time_to_rfc3339(t: SystemTime) -> String {
- use chrono::{DateTime, Utc};
- let dt: DateTime<Utc> = t.into();
- dt.to_rfc3339()
+ jiff::Timestamp::try_from(t)
+  .map(|ts| ts.to_string())
+  .unwrap_or_default()
 }
 
 /// Session map. `State` holds an `Arc` of this.
