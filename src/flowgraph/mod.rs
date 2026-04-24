@@ -16,6 +16,7 @@ pub mod fragment;
 pub mod loader;
 pub mod node;
 pub mod nodes;
+pub mod quantity;
 pub mod registry;
 pub mod runtime;
 pub mod socket;
