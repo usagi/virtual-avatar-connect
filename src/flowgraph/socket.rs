@@ -5,6 +5,7 @@
 //! - 型表記のパース/整形（`"list<string>"` / `"map<json>"` など）
 //! - 暗黙変換は行わない。`as_*()` は型が一致した場合のみ値を返す。
 
+use crate::flowgraph::quantity::{parse_unit, Quantity, Unit};
 use crate::flowgraph::table::Table;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -29,6 +30,11 @@ pub enum SocketType {
  /// 辞書、scene registry、credential store、Twitch user list 等の汎用プリミティブ。
  /// 詳細は `docs/roadmap/phase-eta-dictionary-unification.md` §5 参照。
  Table,
+ /// 単位次元を持つ数値（Phase ξ）。`dimensionless` の場合は [`SocketType::Float`] と
+ /// 等価だが、明示的に `quantity` ポートを宣言すると unit-aware な経路（`flowgraph.unit.*`
+ /// ノード群）と型適合する。ξ-2 時点では dim 制約なしの「任意次元受け」。
+ /// 厳密な dim 制約付き variant は ξ-3 以降で追加予定。
+ Quantity,
 }
 
 impl SocketType {
@@ -49,6 +55,7 @@ impl SocketType {
    SocketType::Map(_) => Some(SocketValue::Map(BTreeMap::new())),
    SocketType::Exec => None,
    SocketType::Table => Some(SocketValue::Table(Table::empty())),
+   SocketType::Quantity => Some(SocketValue::Quantity(Quantity::dimensionless(0.0))),
   }
  }
 
@@ -73,6 +80,7 @@ impl fmt::Display for SocketType {
    SocketType::Map(inner) => write!(f, "map<{inner}>"),
    SocketType::Exec => f.write_str("exec"),
    SocketType::Table => f.write_str("table"),
+   SocketType::Quantity => f.write_str("quantity"),
   }
  }
 }
@@ -125,6 +133,7 @@ fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
   "json" => return Ok(SocketType::Json),
   "exec" => return Ok(SocketType::Exec),
   "table" => return Ok(SocketType::Table),
+  "quantity" => return Ok(SocketType::Quantity),
   _ => {}
  }
  // 複合型: list<T> / map<T> / map<string, T>
@@ -204,6 +213,9 @@ pub enum SocketValue {
  Map(BTreeMap<String, SocketValue>),
  /// 汎用表形式データ（η フェーズ追加）。Arc 共有 + COW mutation。
  Table(Table),
+ /// 単位次元付き数値（Phase ξ）。`dimensionless` は `Float` と数値的に等価だが、
+ /// `flowgraph.unit.*` ノード群の入出力として明示的に unit を伴う経路を形成する。
+ Quantity(Quantity),
  // Exec は値を持たないので variant なし。
 }
 
@@ -226,6 +238,7 @@ impl SocketValue {
     SocketType::Map(Box::new(inner))
    }
    SocketValue::Table(_) => SocketType::Table,
+   SocketValue::Quantity(_) => SocketType::Quantity,
   }
  }
 
@@ -277,6 +290,12 @@ impl SocketValue {
    _ => Err(ValueCastError::Mismatch { expected: "table", actual: self.type_of() }),
   }
  }
+ pub fn as_quantity(&self) -> Result<&Quantity, ValueCastError> {
+  match self {
+   SocketValue::Quantity(q) => Ok(q),
+   _ => Err(ValueCastError::Mismatch { expected: "quantity", actual: self.type_of() }),
+  }
+ }
 
  /// 値の型が指定の `SocketType` に適合するかの軽量チェック。
  /// `List`/`Map` の内部型は空の場合はパスとみなす。
@@ -287,7 +306,8 @@ impl SocketValue {
    | (SocketValue::Float(_), SocketType::Float)
    | (SocketValue::String(_), SocketType::String)
    | (SocketValue::Json(_), SocketType::Json)
-   | (SocketValue::Table(_), SocketType::Table) => true,
+   | (SocketValue::Table(_), SocketType::Table)
+   | (SocketValue::Quantity(_), SocketType::Quantity) => true,
    (SocketValue::List(xs), SocketType::List(inner)) => xs.iter().all(|v| v.matches(inner)),
    (SocketValue::Map(m), SocketType::Map(inner)) => m.values().all(|v| v.matches(inner)),
    _ => false,
@@ -329,6 +349,15 @@ pub fn from_toml_value(expected: &SocketType, v: &toml::Value) -> Result<SocketV
    }
    Ok(SocketValue::Map(out))
   }
+  (SocketType::Quantity, toml::Value::Float(f)) => Ok(SocketValue::Quantity(Quantity::dimensionless(*f))),
+  (SocketType::Quantity, toml::Value::Integer(i)) => Ok(SocketValue::Quantity(Quantity::dimensionless(*i as f64))),
+  (SocketType::Quantity, toml::Value::String(s)) => parse_quantity_string(s)
+   .map(SocketValue::Quantity)
+   .map_err(|e| FromTomlError::Mismatch {
+    expected: "quantity (\"<value> <unit>\" string form)".into(),
+    actual: format!("parse error: {e}"),
+   }),
+  (SocketType::Quantity, toml::Value::Table(tbl)) => quantity_from_toml_table(tbl).map(SocketValue::Quantity),
   (SocketType::Exec, _) => Err(FromTomlError::ExecHasNoValue),
   (SocketType::Table, toml::Value::Array(arr)) => {
    // TOML 配列から Table を復元（スキーマは先頭 object から推論）
@@ -382,6 +411,79 @@ pub enum FromTomlError {
  ExecHasNoValue,
  #[error("TOML 型ミスマッチ: expected {expected}, actual {actual}")]
  Mismatch { expected: String, actual: String },
+}
+
+// ---------------------------------------------------------------------
+// Quantity literal 解釈ヘルパ（Phase ξ TOML wire format §6.3 案 A+B）
+// ---------------------------------------------------------------------
+
+/// `"42.5 m/s^2"` / `"9.8"` / `"1 km"` などの文字列から [`Quantity`] を組み立てる。
+///
+/// 仕様:
+/// - 先頭 token を数値としてパース、残りを単位文字列として [`parse_unit`] に渡す。
+/// - 数値のみなら dimensionless。単位のみ（数値なし）は error。
+pub fn parse_quantity_string(s: &str) -> Result<Quantity, String> {
+	let s = s.trim();
+	if s.is_empty() {
+		return Err("empty quantity literal".into());
+	}
+	// 先頭数値を取り出す: whitespace で分割、先頭を f64::from_str で試す。
+	// 単位部分にスペースが含まれる（例: "kg m/s^2"）ケースは現状未対応だが、
+	// parse_unit が `·` / `*` / space を全て product separator として扱うので
+	// 単位部分は本メソッドでは first whitespace で split した残り全体を一塊として渡す。
+	let (num_part, unit_part) = match s.split_once(char::is_whitespace) {
+		Some((n, u)) => (n.trim(), u.trim()),
+		None => (s, ""),
+	};
+	let value: f64 = num_part.parse().map_err(|e| format!("invalid numeric prefix '{num_part}': {e}"))?;
+	if unit_part.is_empty() {
+		return Ok(Quantity::dimensionless(value));
+	}
+	let unit = parse_unit(unit_part).map_err(|e| format!("invalid unit '{unit_part}': {e}"))?;
+	Ok(Quantity::of(value, unit))
+}
+
+/// TOML inline table `{value = 42.5, unit = "m/s^2"}` から [`Quantity`] を組み立てる。
+///
+/// `unit` が省略 or 空文字なら dimensionless。`value` は Float / Integer を受理。
+fn quantity_from_toml_table(tbl: &toml::map::Map<String, toml::Value>) -> Result<Quantity, FromTomlError> {
+	let value = match tbl.get("value") {
+		Some(toml::Value::Float(f)) => *f,
+		Some(toml::Value::Integer(i)) => *i as f64,
+		Some(other) => {
+			return Err(FromTomlError::Mismatch {
+				expected: "quantity.value (number)".into(),
+				actual: format!("{other:?}"),
+			});
+		}
+		None => {
+			return Err(FromTomlError::Mismatch {
+				expected: "quantity table with 'value' field".into(),
+				actual: "missing 'value'".into(),
+			});
+		}
+	};
+	let unit: Unit = match tbl.get("unit") {
+		Some(toml::Value::String(s)) => {
+			let s = s.trim();
+			if s.is_empty() {
+				Unit::dimensionless()
+			} else {
+				parse_unit(s).map_err(|e| FromTomlError::Mismatch {
+					expected: "valid unit string".into(),
+					actual: format!("parse error on '{s}': {e}"),
+				})?
+			}
+		}
+		Some(other) => {
+			return Err(FromTomlError::Mismatch {
+				expected: "quantity.unit (string)".into(),
+				actual: format!("{other:?}"),
+			});
+		}
+		None => Unit::dimensionless(),
+	};
+	Ok(Quantity::of(value, unit))
 }
 
 // ---------------------------------------------------------------------

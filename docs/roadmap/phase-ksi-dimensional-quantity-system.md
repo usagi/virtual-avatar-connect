@@ -1,6 +1,6 @@
 # Phase ξ — Dimensional Quantity System (SI 準拠の単位次元システム)
 
-> **Status**: ξ-0 docs を起草中。`Quantity<Dimension>` を engine に組み込み、数値に付ける「単位」を第一級概念化する。Phase ο 以降の計算ノード群は本フェーズの上に乗る前提。
+> **Status**: ξ-0 docs 完了 / ξ-1 core types (Dimension / Unit / Quantity / parser) 着地 / ξ-2 `SocketType::Quantity` + `SocketValue::Quantity` + `flowgraph.unit.*` ノード 7 種着地。次は ξ-3 で `SocketValue::Float` → `Quantity` の既存コード migration。
 > 起点: [`../roadmap.md`](../roadmap.md) の "Phase ξ" セクション。
 
 ---
@@ -443,10 +443,15 @@ impl Quantity {
 
 ### 7.2 ξ-2 チェックリスト
 
-- [ ] `flowgraph.unit.assign` / `.convert` / `.strip` / `.get_unit_string` / `.get_dimension_string` / `.same_dimension` / `.dimensionless`（候補、`strip` と統合するか議論の上で）
-- [ ] 各ノード unit test（`assign` dimensionless 以外は error 系も含む）
-- [ ] `registry.rs` に登録
-- [ ] `BLESS_NODE_CATALOG=1 cargo test` で blessed diff
+- [x] `flowgraph.unit.assign` / `.convert` / `.strip` / `.get_unit_string` / `.get_dim_string` / `.same_dimension` / `.to_json`
+      （`.dimensionless` は `.strip` と統合し別名化せず、`.to_json` が §6.4 internal form の明示出口として追加）
+- [x] 各ノード unit test（`assign` 不正単位 / `convert` 次元不一致 / `convert` K⇄ΔK 拒否 / `convert` target_unit 必須 等 error 系含む）
+- [x] `registry.rs` に登録 + `default_registry_contains_core_features` に 7 feature 追加
+- [x] `BLESS_NODE_CATALOG=1 cargo test` で blessed diff（ξ-2 commit に同梱）
+- [x] `SocketType::Quantity` + `SocketValue::Quantity(Quantity)` variant を socket.rs / node.rs / collection / state / table_ops に伝播（§6.2 が ξ-1 に置いていた "variant 追加" を ξ-2 冒頭で着地）
+- [x] TOML wire format A + B 両対応（plain float → dimensionless / inline table `{value, unit}` / quoted string `"42.5 m/s^2"`）
+- [x] JSON wire format internal `{value, unit}` encode + decode、`json_ops` / `table_ops` / `state` の pass-through 側は value-only（§6.4）
+- [x] `Unit::to_si_base` / `from_si_base` を atom-canonical 係数込みで拡張（`Degree` → `Radian × π/180` 等、`convert deg rad` が正しく動くように）
 
 ### 7.3 ξ-3 チェックリスト
 

@@ -315,6 +315,20 @@ impl Quantity {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Display: "{value} {unit}" 形式で出力、dimensionless は数値のみ
+// ---------------------------------------------------------------------------
+
+impl std::fmt::Display for Quantity {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		if self.is_dimensionless() {
+			write!(f, "{}", self.value)
+		} else {
+			write!(f, "{} {}", self.value, self.unit.canonical())
+		}
+	}
+}
+
 /// 加減算時の「prefix_hint が大きい方」継承。
 /// atoms が異なる場合は self の unit を優先（表現上の多様性を維持）。
 fn pick_larger_prefix_unit(a: &Unit, b: &Unit) -> Unit {

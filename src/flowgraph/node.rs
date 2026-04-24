@@ -15,7 +15,8 @@
 //! - `EffectfulNode` のみ `ExecCtx` を通じて副作用を起こせる。
 //! - `StatefulNode` は `&mut Any` で内部状態に書けるが、engine の I/O 資源には触れない。
 
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::quantity::{parse_unit, Quantity};
+use crate::flowgraph::socket::{parse_quantity_string, SocketType, SocketValue};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::any::Any;
@@ -148,6 +149,7 @@ impl SocketValueRepr {
     serde_json::Value::Object(obj)
    }
    SocketValue::Table(t) => t.to_json_array(),
+   SocketValue::Quantity(q) => quantity_to_json(q),
   })
  }
 
@@ -183,8 +185,48 @@ pub(crate) fn json_to_socket_value(ty: &SocketType, v: &serde_json::Value) -> Op
     .ok()
     .map(SocketValue::Table)
   }
+  (SocketType::Quantity, J::Number(n)) => n.as_f64().map(|f| SocketValue::Quantity(Quantity::dimensionless(f))),
+  (SocketType::Quantity, J::String(s)) => parse_quantity_string(s).ok().map(SocketValue::Quantity),
+  (SocketType::Quantity, J::Object(obj)) => quantity_from_json_object(obj).map(SocketValue::Quantity),
   _ => None,
  }
+}
+
+/// Quantity の JSON internal 形式（`{"value": f64, "unit": "m/s^2"}`）へのエンコード。
+///
+/// `SocketValueRepr` で Flowgraph 内や gui の wire 経路を通る際の正規表現。
+/// 外部 IO（`flowgraph.json.stringify` 等）からは Phase ξ §6.4 に従って value のみを取り出す
+/// pass-through を行うため、当該コンバータは `flowgraph.unit.*` ノードや loader/TOML 復元で
+/// のみ使われる。
+pub(crate) fn quantity_to_json(q: &Quantity) -> serde_json::Value {
+	let unit_str = q.unit.canonical();
+	serde_json::json!({
+		"value": q.value,
+		"unit": unit_str,
+	})
+}
+
+/// `{"value": number, "unit": "<unit string>"}` 形式の JSON object を [`Quantity`] に復元。
+///
+/// `unit` フィールド不在は dimensionless 扱い、`unit` が文字列でない場合や unit パース失敗は `None`。
+pub(crate) fn quantity_from_json_object(obj: &serde_json::Map<String, serde_json::Value>) -> Option<Quantity> {
+	let value = match obj.get("value")? {
+		serde_json::Value::Number(n) => n.as_f64()?,
+		_ => return None,
+	};
+	let unit = match obj.get("unit") {
+		Some(serde_json::Value::String(s)) => {
+			let s = s.trim();
+			if s.is_empty() {
+				crate::flowgraph::quantity::Unit::dimensionless()
+			} else {
+				parse_unit(s).ok()?
+			}
+		}
+		None => crate::flowgraph::quantity::Unit::dimensionless(),
+		_ => return None,
+	};
+	Some(Quantity::of(value, unit))
 }
 
 // ---------------------------------------------------------------------
@@ -288,6 +330,12 @@ pub fn get_required_int(inputs: &InputMap, key: &str) -> Result<i64, NodeExecErr
 pub fn get_required_float(inputs: &InputMap, key: &str) -> Result<f64, NodeExecError> {
  let v = inputs.get(key).ok_or_else(|| NodeExecError::MissingRequiredInput(key.into()))?;
  v.as_f64().map_err(|_| type_err(key, SocketType::Float, v.type_of()))
+}
+
+/// Quantity を要求する入力取得。`flowgraph.unit.*` ノードで使用される。
+pub fn get_required_quantity<'a>(inputs: &'a InputMap, key: &str) -> Result<&'a Quantity, NodeExecError> {
+ let v = inputs.get(key).ok_or_else(|| NodeExecError::MissingRequiredInput(key.into()))?;
+ v.as_quantity().map_err(|_| type_err(key, SocketType::Quantity, v.type_of()))
 }
 
 pub fn get_required_string(inputs: &InputMap, key: &str) -> Result<String, NodeExecError> {

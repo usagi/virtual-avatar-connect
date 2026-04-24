@@ -151,6 +151,15 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::compare::FloatLtNode));
 	r.register_pure(Arc::new(nodes::compare::FloatGtNode));
 
+	// --- unit (Phase ξ-2) ---
+	r.register_pure(Arc::new(nodes::unit::UnitAssignNode));
+	r.register_pure(Arc::new(nodes::unit::UnitConvertNode));
+	r.register_pure(Arc::new(nodes::unit::UnitStripNode));
+	r.register_pure(Arc::new(nodes::unit::UnitGetUnitStringNode));
+	r.register_pure(Arc::new(nodes::unit::UnitGetDimensionStringNode));
+	r.register_pure(Arc::new(nodes::unit::UnitSameDimensionNode));
+	r.register_pure(Arc::new(nodes::unit::UnitToJsonNode));
+
 	// --- math ---
 	r.register_pure(Arc::new(nodes::math::IntAddNode));
 	r.register_pure(Arc::new(nodes::math::IntSubNode));
@@ -322,6 +331,13 @@ mod tests {
 			"flowgraph.ingress.twitch_eventsub",
 			"flowgraph.ingress.channel_subscribe",
 			"flowgraph.channel.emit",
+			"flowgraph.unit.assign",
+			"flowgraph.unit.convert",
+			"flowgraph.unit.strip",
+			"flowgraph.unit.get_unit_string",
+			"flowgraph.unit.get_dim_string",
+			"flowgraph.unit.same_dimension",
+			"flowgraph.unit.to_json",
 		] {
 			assert!(
 				r.contains(feature),

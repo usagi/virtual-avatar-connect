@@ -90,6 +90,21 @@ impl BaseUnitId {
 			BaseUnitId::KelvinDelta => "ΔK",
 		}
 	}
+
+	/// SI canonical 換算係数。同一次元内で「SI の代表 atom」に対する倍率を返す。
+	///
+	/// ほとんどの atom は自身が SI 基本なので 1.0。例外:
+	/// - `Degree` = `Radian × π/180`
+	/// - `KelvinDelta` = `Kelvin × 1.0`（サイズは同じ、意味論だけ違う）
+	///
+	/// [`Unit::to_si_base`] / [`Unit::from_si_base`] で atoms の冪乗込みで掛け合わせて
+	/// 「同次元・異 atom」間の convert を可能にする（§Phase ξ-2 追加）。
+	pub fn si_canonical_factor(&self) -> f64 {
+		match self {
+			BaseUnitId::Degree => std::f64::consts::PI / 180.0,
+			_ => 1.0,
+		}
+	}
 }
 
 /// 単位。atoms(基本単位 × 指数) + SI 換算係数 + 表示 prefix hint の 3 組。
@@ -170,14 +185,32 @@ impl Unit {
 		self.dimension() == other.dimension()
 	}
 
-	/// SI base 値を返す（入力数値 × si_factor）。
+	/// 全 atoms を SI canonical atom に揃えた値を返す。prefix / 非 SI factor / 原子固有の
+	/// 換算（Degree → Radian の π/180 等）を全て込みで適用する。
+	///
+	/// ξ-2 で「同次元・異 atom」の convert を可能にするために拡張（以前は `value × si_factor`
+	/// しか掛けていなかった）。
 	pub fn to_si_base(&self, value: f64) -> f64 {
-		value * self.si_factor
+		let mut v = value * self.si_factor;
+		for (atom, exp) in &self.atoms {
+			let f = atom.si_canonical_factor();
+			if f != 1.0 {
+				v *= f.powi(*exp as i32);
+			}
+		}
+		v
 	}
 
-	/// SI base 値から self unit 表現へ変換した数値（`value_in_si / si_factor`）。
+	/// SI canonical 値から self unit 表現への逆変換。
 	pub fn from_si_base(&self, si_value: f64) -> f64 {
-		si_value / self.si_factor
+		let mut v = si_value;
+		for (atom, exp) in &self.atoms {
+			let f = atom.si_canonical_factor();
+			if f != 1.0 {
+				v /= f.powi(*exp as i32);
+			}
+		}
+		v / self.si_factor
 	}
 
 	/// 乗算: atoms は指数を合算、si_factor は積。0 exponent の atom は削除。
@@ -519,6 +552,22 @@ mod tests {
 	fn from_si_base_reverses_factor() {
 		let km = Unit::metre().with_prefix(SIPrefix::Kilo);
 		assert_eq!(km.from_si_base(5000.0), 5.0);
+	}
+
+	#[test]
+	fn degree_to_si_base_uses_pi_over_180() {
+		// 180 deg = π rad
+		let deg = Unit::degree();
+		let pi = std::f64::consts::PI;
+		assert!((deg.to_si_base(180.0) - pi).abs() < 1e-12);
+	}
+
+	#[test]
+	fn radian_from_si_base_after_degree_to_si_base() {
+		// round-trip: 180 deg --to_si-> π --radian.from_si-> π rad
+		let si = Unit::degree().to_si_base(180.0);
+		let rad_val = Unit::radian().from_si_base(si);
+		assert!((rad_val - std::f64::consts::PI).abs() < 1e-12);
 	}
 
 	#[test]

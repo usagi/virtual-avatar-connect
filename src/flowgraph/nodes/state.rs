@@ -321,6 +321,10 @@ fn socket_value_to_json(v: &SocketValue) -> JsonValue {
    JsonValue::Object(m.iter().map(|(k, v)| (k.clone(), socket_value_to_json(v))).collect())
   }
   SocketValue::Table(t) => t.to_json_array(),
+  // Phase ξ §6.4: pass-through (value only) outside unit-aware nodes.
+  SocketValue::Quantity(q) => serde_json::Number::from_f64(q.value)
+   .map(JsonValue::Number)
+   .unwrap_or(JsonValue::Null),
  }
 }
 

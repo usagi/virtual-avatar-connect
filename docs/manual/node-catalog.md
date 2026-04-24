@@ -115,6 +115,14 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.twitch.timeout`](#flowgraph-twitch-timeout) — Twitch: Timeout User
   - [`flowgraph.twitch.user_id_by_login`](#flowgraph-twitch-user-id-by-login) — Twitch: User ID by Login
   - [`flowgraph.twitch.validate_token`](#flowgraph-twitch-validate-token) — Twitch: Validate Token
+- **unit**
+  - [`flowgraph.unit.assign`](#flowgraph-unit-assign) — Unit Assign
+  - [`flowgraph.unit.convert`](#flowgraph-unit-convert) — Unit Convert
+  - [`flowgraph.unit.get_dim_string`](#flowgraph-unit-get-dim-string) — Dimension -> String
+  - [`flowgraph.unit.get_unit_string`](#flowgraph-unit-get-unit-string) — Unit -> String
+  - [`flowgraph.unit.same_dimension`](#flowgraph-unit-same-dimension) — Same Dimension?
+  - [`flowgraph.unit.strip`](#flowgraph-unit-strip) — Unit Strip
+  - [`flowgraph.unit.to_json`](#flowgraph-unit-to-json) — Unit -> JSON
 - **util**
   - [`flowgraph.util.delay`](#flowgraph-util-delay) — Delay
   - [`flowgraph.util.log`](#flowgraph-util-log) — Log
@@ -1454,6 +1462,101 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `login` | `string` |  |
 | `client_id` | `string` |  |
 | `error` | `string` |  |
+
+## unit
+
+### `flowgraph.unit.assign`
+
+**Unit Assign** — Attach a unit to a dimensionless Float and produce a Quantity.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `float` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `unit` | `string` | `""` |  | SI-compatible unit string, e.g. "m/s^2", "Hz", "kg". Empty = dimensionless. |
+
+### `flowgraph.unit.convert`
+
+**Unit Convert** — Convert a Quantity to the target unit. Errors if dimensions differ or K/ΔK semantics mismatch.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `target_unit` | `string` | `""` | ✔ | Target unit string. Must match the input dimension. |
+
+### `flowgraph.unit.get_dim_string`
+
+**Dimension -> String** — Return the canonical dimension string (e.g. "L·T^-2").
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `dim` | `string` |  |
+
+### `flowgraph.unit.get_unit_string`
+
+**Unit -> String** — Return the canonical unit string (e.g. "m/s^2", "Hz").
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `name` | `string` |  |
+
+### `flowgraph.unit.same_dimension`
+
+**Same Dimension?** — True iff both inputs carry the same physical dimension.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `quantity` | — |  |
+| `b` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `bool` |  |
+
+### `flowgraph.unit.strip`
+
+**Unit Strip** — Explicit escape hatch: discard the unit and emit the raw numeric value as Float.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `float` |  |
+
+### `flowgraph.unit.to_json`
+
+**Unit -> JSON** — Serialize Quantity to JSON with `value`, `unit`, `dimension` fields (internal form).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `json` | `json` |  |
 
 ## util
 
