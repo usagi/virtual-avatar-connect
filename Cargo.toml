@@ -101,6 +101,7 @@ eventsource-stream = "0.2"
 # χ-2: `sse::stream_events` の公開シグネチャで `bytes::Bytes` を名前付きで使うため直接依存を宣言。
 # reqwest / eventsource-stream が推移的に依存しているので追加コストは実質ゼロ。
 bytes = "1"
+jiff = { version = "0.2.24", features = ["serde"] }
 
 [dependencies.vosk]
 version = "0.3.1"

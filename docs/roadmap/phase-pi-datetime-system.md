@@ -1,6 +1,6 @@
 # Phase π — DateTime Type System (jiff 採用 + chrono 全面置換)
 
-> **Status**: π-0 docs 起草中。未着手 sub-phases: π-1 (deps)、π-2 (migration)、π-3 (chrono 解除)、π-4 (Flowgraph 型基盤)、π-5 (nodes)、π-6 (docs / changelog / tick)。
+> **Status**: π-0 docs 着地 / π-1 jiff deps + smoke test (14 tests) 着地。未着手 sub-phases: π-2 (migration)、π-3 (chrono 解除)、π-4 (Flowgraph 型基盤)、π-5 (nodes)、π-6 (docs / changelog / tick)。
 > 起点: [`../roadmap.md`](../roadmap.md) の "Phase π" セクション。依存関係: Phase ο-3 完了 → Phase π → Phase ο-4。
 
 ---
@@ -162,7 +162,13 @@ pub struct FlowgraphInstanceConfig {
 ```
 
 - **パース形式**: `"+09:00"` / `"-05:30"` / `"Z"` / `"+00:00"`。RFC3339 offset 形式のみ。IANA tz (`"Asia/Tokyo"`) は v0 では **error**
-- **評価タイミング**: config load 時に `jiff::tz::Offset::from_str` でパース検証、失敗時は warn ログ + UTC fallback (起動は続行)
+- **評価タイミング**: config load 時に独自パーサで検証、失敗時は warn ログ + UTC fallback (起動は続行)
+  - **π-1 で判明**: `jiff::tz::Offset` は `FromStr` を実装しない。`jiff::fmt::temporal::DateTimeParser::parse_time_zone` は `"+09:00"` / `"-05:30"` を `TimeZone` として受理するが、**bare `"Z"` は拒否**し、IANA zone (`"Asia/Tokyo"`) は受理してしまう
+  - よって config 層で以下の独自パーサを書く (π-4 で実装):
+    1. 入力 `s` が `"Z"` / `"UTC"` / `""` → `Offset::UTC`
+    2. `DateTimeParser::new().parse_time_zone(s)` で `TimeZone` を得る → `.to_fixed_offset()` で `Offset` を取り出す
+    3. `to_fixed_offset()` が失敗 (IANA だった) → config error として reject
+  - `tests/jiff_smoke.rs::datetime_parser_parse_time_zone` で上記 API 挙動を pin 止め
 - **適用先**: naive datetime 文字列の parse 時のみ。既に TZ 情報を持つ RFC3339 文字列はそのまま尊重
 
 ### 3.6 naive datetime の取り扱い

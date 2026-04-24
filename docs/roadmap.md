@@ -152,8 +152,8 @@ Flowgraph 機能向上の第 1 波。engine 内完結の Pure ノード群（mat
 
 Flowgraph engine に **絶対時刻を表す DateTime 型**を第一級概念として導入する基盤フェーズ。Phase ξ の単位次元システムと同じ「型は事故を防ぐ砦」哲学を時刻にも適用する。同時に `chrono` crate を `jiff` crate (BurntSushi 作、TC39 Temporal 準拠) で全面置換し、既存 21 箇所の chrono 依存を解除して crate 依存を剥がす。`Duration` は Phase ξ で導入済の `Quantity<time>` で兼務、新しい型は追加しない。**Phase ο-4 (time nodes) の前提**。
 
-- [ ] π-0 docs: `phase-pi-datetime-system.md` 新設 + roadmap.md の Active 差し替え（旧 π/ρ/σ/τ/υ を 1 文字繰り下げて ρ/σ/τ/υ/ω に、DateTime を新 π に割り当て）+ cross-reference 修正
-- [ ] π-1 feat(deps): `jiff = { features = ["serde"] }` 追加 + smoke test（`Timestamp::now()` / `Timestamp::from_str`）
+- [x] π-0 docs: `phase-pi-datetime-system.md` 新設 + roadmap.md の Active 差し替え（旧 π/ρ/σ/τ/υ を 1 文字繰り下げて ρ/σ/τ/υ/ω に、DateTime を新 π に割り当て）+ cross-reference 修正
+- [x] π-1 feat(deps): `jiff = "0.2.24"` (features: `serde` + デフォルト `tz-system` / `tzdb-*`) 追加 + `tests/jiff_smoke.rs` 14 tests 全緑（Timestamp / SignedDuration / Offset / Zoned / serde round-trip）。副産物: `Offset` は `FromStr` 非実装、`DateTimeParser::parse_time_zone` は bare `Z` を拒否する仕様を pin 止め（phase doc §3.5 更新）
 - [ ] π-2 refactor(*): 既存 chrono 使用 21 箇所を jiff に全面置換（ファイル単位 commit、serde snapshot / 文字列一致テスト / TTL 境界テストで回帰検知）
 - [ ] π-3 chore(deps): `chrono` 依存を Cargo.toml から解除、`cargo tree \| rg chrono` で間接依存確認、全テスト green
 - [ ] π-4 feat(flowgraph/datetime): `SocketType::DateTime` + `SocketValue::DateTime` + engine 側 String ↔ DateTime 暗黙 coerce + `FlowgraphInstanceConfig.default_timezone: Option<String>`（未設定時 UTC、FixedOffset `+09:00` 形式のみ、IANA tz 非対応）+ naive datetime パース policy（config default tz 適用）
