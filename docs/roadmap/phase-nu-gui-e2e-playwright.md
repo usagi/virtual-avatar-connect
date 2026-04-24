@@ -1,9 +1,11 @@
 # Phase ν — GUI E2E testing with Playwright
 
-> **Status**: ν-0 / ν-1 / ν-2 (部分) 完了。初期 5 ケースのうち 3 ケース (§3.1 / §3.4 /
-> §3.5) を着地させ、残り 2 ケース (§3.2 flowgraph-canvas-basic / §3.3
-> dictionary-editor-409-merge) は **ν-β** として後続フェーズに分離する。
-> 起点となるスコープ感は [`../roadmap.md`](../roadmap.md) の "Phase ν" を参照。
+> **Status**: ν / ν-β ともに **完了**。初期 5 ケース全 5 通し（§3.1 control-panel-smoke /
+> §3.2 flowgraph-canvas-basic / §3.3 dictionary-editor-409-merge / §3.4
+> live-quick-add-learn-undo / §3.5 channels-ws-live-update）、engine 側の
+> `Table::empty()` default coerce 修正 (ν-β-3) も着地済み。ローカル `npx playwright
+> test` が **5 specs / 1 worker / ~9 s** で全緑。
+> 起点となるスコープ感は [`../roadmap.md`](../roadmap.md) の "Phase ν" / "Phase ν-β" を参照。
 
 ---
 
@@ -63,34 +65,57 @@
   3. `/api/v1/control/channels` が 200 を返す（HTTP 直叩きで認証を確認）。
 - 失敗条件: 500 / 401 / Tab が表示されない / `ToastLayer` に fatal トーストが残る。
 
-### 3.2 `flowgraph-canvas-basic.spec.ts` — **ν-β deferred**
+### 3.2 `flowgraph-canvas-basic.spec.ts` — **完了 (ν-β-2)**
 
-- 目的: γ-4a の dirty tracking + Ctrl+S が壊れていないこと。
-- シナリオ（予定）:
-  1. Flowgraph タブに移動し fixture 同梱の `sample.flowgraph.toml` を開く。
-  2. Palette からノードを 1 つ dnd し、既存ノードと接続する。
-  3. Save-dirty badge が立つ、Ctrl+S で dirty 解消を確認。
-  4. ページ reload 直前の `beforeunload` ガードが発火しないこと（dirty が無い状態で reload しても alert 無し）。
-- 失敗条件: dirty が立たない / Ctrl+S で save 呼び出しが無い / reload 直後にノードが消える。
-- **deferred 理由**: Svelte Flow (`@xyflow/svelte`) の DnD は座標計算と合成イベント
-  (HTML5 DnD ではなく mouse down/move/up で自前エミュレート) の両面で Playwright 自動化
-  が鬼門として知られる。ν のゴール "E2E 基盤の敷設" からは距離があり、γ-4 系機能が
-  安定してから改めて手を入れる方が効率的。代替として §3.1 / §3.4 の通過で Flowgraph
-  リード / trigger API 経路はカバーできている。
+- 目的: γ-4a の dirty tracking + Ctrl+S + fixture 往復の生存確認。
+- 実装:
+  1. 事前に `GET /api/v1/control/flowgraph/file/sample` で TOML を snapshot。
+  2. Flowgraph タブ → ファイルツリーの `sample` を開き、`.svelte-flow` + `#in` /
+     `#log` の可視を確認。
+  3. Save ボタン label が `Save`（clean）であることを確認。
+  4. Palette の検索入力に `util.log` を入れ、`flowgraph.util.log` のみに絞ってから
+     クリック → `log_2` が追加される（FlowgraphPalette は dblclick 的 click-add で、
+     HTML5 DnD 経路は使わない）。
+  5. Save ボタン label が `Save *`（dirty）へ遷移。
+  6. `Ctrl+S` で `PUT /api/v1/control/flowgraph/file/sample` 200 → request body に
+     `id = "log_2"` と `flowgraph.util.log` が含まれることを確認。
+  7. Save ボタンが `Save` に戻る + 再 GET で `log_2` が永続化されている。
+  8. `finally` で snapshot TOML を `PUT` し直し、fixture を汚さない。
+- 非スコープ:
+  - Svelte Flow 内の **handle drag による edge 接続** と **`beforeunload` ガードの
+    発火確認**。前者は pointer event 合成と `getViewport()` の初期アニメ絡みで
+    Playwright からは flake りやすく、後者は Chromium が `runBeforeUnload=true`
+    の場合だけ dialog を投げる仕様のため、ν-β のスコープからは除外。ν+（将来
+    フェーズ）で扱う。
+- spec: `gui/tests/e2e/flowgraph-canvas-basic.spec.ts`
 
-### 3.3 `dictionary-editor-409-merge.spec.ts` — **ν-β deferred**
+### 3.3 `dictionary-editor-409-merge.spec.ts` — **完了 (ν-β-1)**
 
 - 目的: φ-3d の 3-way merge ダイアログが **実際の 409** で機能すること。
-- シナリオ（予定）:
-  1. Setup → Dictionary Editor で fixture の 1 エントリを編集（revision = 1）。
-  2. Control API を **別クライアントとして HTTP 直叩き**し、同エントリを revision=1 → 2 に更新（baseline を動かす）。
-  3. GUI で保存 → 409 を期待 → `DictionaryConflictDialog` が開き、3-way merge で 1 カラムを mine 側に倒して確定。
-  4. 最終 revision = 3 が GUI 上と API 上で一致。
-- 失敗条件: ダイアログが出ない / merge 結果が silently overwrite される / 後続 409 が連鎖する。
-- **deferred 理由**: `DictionaryEditorPane` の state machine (load → dirty → conflict →
-  merge → save) を E2E 視点で成立させるには fixture だけでなくセレクタ網 (行/列/セル
-  単位) を追加する必要があり、§3.4 の Quick-Add より UI 依存度が高い。同じテーブル
-  fixture が使えるので §3.4 完了後なら増量コストは相対的に低い → ν-β 最優先候補。
+- 実装:
+  1. Preflight: `GET /api/v1/control/table/sample_dict` で現在値を取り、
+     `Dr.USAGI` 行の replacement が `ドクターウサギ` でなければ先に戻す（中断した
+     前回 run の自己治癒）。
+  2. Live タブ（既定表示）の `Dictionary Editor` を `<h3>` + `xpath=ancestor::section[1]`
+     で掴み、検索入力で `Dr.USAGI` 行に絞って [編集] を開く。
+  3. 編集フォーム内で `replacement` を `MINE-<nonce>` に書き換える。
+  4. **別クライアント (Playwright `request`)** で同じ row を `PATCH` し、
+     `If-Match: b3:<current_hash>` で `SERVER-<nonce>` を書き込んで server 側 hash を進める。
+  5. GUI で「更新する」→ `PATCH` が **409 `optimistic_lock_failed`** で返ることを
+     `waitForResponse` で確認。編集フォームは閉じる。
+  6. `DictionaryConflictDialog`（aria-label `/辞書編集で競合/`）が開き、3-way 表に
+     `MINE-<nonce>` / `SERVER-<nonce>` の両方と `replacement` カラム名が並ぶこと。
+  7. 「自分の編集を強制」→ fresh hash で `PATCH` 200 → ダイアログが閉じる。
+  8. `GET /api/v1/control/table/sample_dict` で `replacement === MINE-<nonce>` を最終確認。
+  9. Cleanup: replacement を `ドクターウサギ` に `PATCH` で戻し、`sample.dict.tsv`
+     に差分を残さない（line-ending は `.gitattributes` で `eol=lf` 固定済み）。
+- spec: `gui/tests/e2e/dictionary-editor-409-merge.spec.ts`
+- 実装メモ:
+  - API 上 `revision` 番号は存在せず、`If-Match: b3:<content_hash>` による
+    optimistic lock が実体。409 レスポンス body は diff 情報を持たないので
+    GUI は再 GET で 3-way を構築する。
+  - `data-testid` を増やさず、`getByLabel(/^replacement/)` と role dialog 名で
+    すべてのセレクタを accessible name 経路に寄せた（§5.3）。
 
 ### 3.4 `live-quick-add-learn-undo.spec.ts` — **完了 (ν-2.4)**
 
@@ -227,22 +252,22 @@ webServer: [
 - [x] §3.1 `control-panel-smoke.spec.ts`（accessible name のみ）
 - [x] §3.4 `live-quick-add-learn-undo.spec.ts`（placeholder + role button + `waitForRequest`）
 - [x] §3.5 `channels-ws-live-update.spec.ts`（`page.waitForEvent('websocket')` で frame 検証）
-- [ ] §3.2 `flowgraph-canvas-basic.spec.ts` **→ ν-β へ延期**
-- [ ] §3.3 `dictionary-editor-409-merge.spec.ts` **→ ν-β へ延期**
-- [x] 全 spec が `npx playwright test` でローカル緑（3 specs / 1 worker で 8.4s）
-- [ ] 残 2 spec の Linux / WSL 相互確認（ν-β で取り組む）
+- [x] §3.2 `flowgraph-canvas-basic.spec.ts` **→ ν-β-2 で着地**
+- [x] §3.3 `dictionary-editor-409-merge.spec.ts` **→ ν-β-1 で着地**
+- [x] 全 spec が `npx playwright test` でローカル緑（5 specs / 1 worker で 9.3s）
+- [ ] 5 spec の Linux / WSL 相互確認（ν+ で取り組む、Windows 側は本フェーズで確認済み）
 
 ### 6.3 ν-3 チェックリスト
 
-- [ ] CHANGELOG: `### ν: GUI E2E testing with Playwright` 節に ν-2 (3 specs) + ν-β 延期を追記
-- [ ] `docs/manual/` に `tutorials/gui-e2e.md` 相当（run 手順 + 失敗時の切り分け）
-- [ ] `docs/roadmap.md` の Phase ν を "Active" → "Completed" に移し、ν-β を backlog に起こす
+- [x] CHANGELOG: `### ν: GUI E2E testing with Playwright` 節に ν-2 (3 specs) + ν-β 延期を追記（commit `4f8b15d`）
+- [x] `docs/manual/` に `tutorials/gui-e2e.md` 相当（run 手順 + 失敗時の切り分け、commit `4f8b15d`）
+- [x] `docs/roadmap.md` の Phase ν を "Active" → "Completed" に移し、ν-β を separate phase として起こす（commit `4f8b15d`、ν-β 側は本フェーズで Completed に再移動）
 
-### 6.4 ν-β チェックリスト（後続フェーズ）
+### 6.4 ν-β チェックリスト（後続フェーズ） — **完了**
 
-- [ ] §3.2 Flowgraph Canvas DnD: Svelte Flow ノード追加 / edge 作成 / Ctrl+S / beforeunload
-- [ ] §3.3 Dictionary Editor 409 merge: 別クライアントで revision を進めた上で merge dialog
-- [ ] engine の `Table::empty()` default coerce 失敗 (§3.4 実装中に遭遇) を Flowgraph 側で修正 → fixture flowgraph から `table.from_json` 補助ノードを除去
+- [x] §3.3 Dictionary Editor 409 merge: 別クライアントで hash を進めた上で merge dialog、force mine で解決（ν-β-1、commit `05b6a46`）
+- [x] engine の `Table::empty()` default coerce 失敗を `Table::from_json_array(&[], None) → Table::empty()` で修正 + `PortSpec::with_default` round-trip test + fixture flowgraph から `dict_src` (`flowgraph.table.from_json`) を除去（ν-β-3、commit `e25b34d`）
+- [x] §3.2 Flowgraph Canvas editor: Palette click-add + Save-dirty + Ctrl+S + PUT 往復（ν-β-2、commit `f31af7e`）。edge drag / beforeunload は ν+ へ送る
 
 ---
 

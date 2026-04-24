@@ -77,11 +77,30 @@ GUI の自動回帰テストをゼロから構築。Playwright を `gui/` 配下
   - **§3.5 `channels-ws-live-update`**: `page.waitForEvent('websocket')` で `/api/v1/control/events` への接続を掴み、`POST /api/v1/control/ingress` で投入したユニーク content が `channel_datum` フレームとして同じ session に配信されることを `framereceived` で検証。`ControlEvent::ChannelDatum` が flat struct (`channel`/`content` が top-level) である点に合わせて predicate を確定。
   - **§3.4 `live-quick-add-learn-undo`**: `DictionaryLiveQuickAdd` 経由で `POST /flowgraph/default/trigger/sample::learn` を `waitForRequest` 捕捉（body に `source`/`replacement`/`kind=literal`/`by=gui:quick_add`）→ 履歴カウンタが (1) へ → [履歴] 展開して [Undo] で `sample::forget` が `mode=latest` で飛ぶ → 行 label が "Undone" に遷移、までの UX を検証。trigger は 202 Accepted を期待。
   - 実行時間: 3 specs / 1 worker で **8.4s**（chromium headless, cold `cargo run --release` は `reuseExistingServer` で回避）。
-- **ν-β に分離したもの**
+- **ν-β に分離したもの**（**ν-β で着地済み**、下の節を参照）
   - §3.2 `flowgraph-canvas-basic`（Svelte Flow の DnD 自動化は座標ベース合成イベントが鬼門で ν のスコープを外れる）
   - §3.3 `dictionary-editor-409-merge`（editor state machine + 別クライアントで revision を進める race condition + conflict dialog の UI セレクタが §3.4 より UI 依存度が高い）
   - ν-2.4 実装中に engine 側の `PortSpec::with_default(SocketValue::Table(Table::empty()))` が `MissingRequiredInput` を吐く現象を回避するため fixture に `flowgraph.table.from_json` を挟んでいる。ν-β で engine 側を直し、fixture の補助ノードを除去する計画。
 - **Breaking（ν）**: なし。既存 conf / runtime / GUI 経路に一切手を入れていない（`gui/` 配下の新規ファイルと `conf.fixture.e2e.toml` / `gui/tests/e2e/fixtures/` の追加のみ）。
+
+### ν-β: Flowgraph Canvas + Dictionary Editor E2E (ν-β-1 .. ν-β-3)
+
+ν-2 から分離していた残 2 spec と、道連れで見つかっていた engine 側バグをまとめて着地。最終的に `npx playwright test` は **5 specs / 1 worker / ~9 s** で全緑。詳細: [`docs/roadmap/phase-nu-gui-e2e-playwright.md`](docs/roadmap/phase-nu-gui-e2e-playwright.md) §3.2 / §3.3 / §6.4。
+
+- **ν-β-3 fix(flowgraph/table)** (`src/flowgraph/table.rs` / `src/flowgraph/node.rs` / `gui/tests/e2e/fixtures/flowgraph/sample.flowgraph.toml`)
+  - `Table::from_json_array(&[], None)` が「空配列 + スキーマ未指定」でスキーマ推論に失敗していた挙動を修正。空入力時は早期に `Table::empty()` を返すようにし、`PortSpec::with_default(SocketValue::Table(Table::empty()))` → JSON `[]` → `to_socket_value` の round-trip を成立させた。これにより `dictionary` 入力 (Table) の default が coerce 経路で `MissingRequiredInput` にならなくなる。
+  - fixture flowgraph から補助ノード `dict_src` (`flowgraph.table.from_json`) と関連 edge を削除し、`in / log / learn / forget` の 4 ノード最小構成に戻した（コメントで「default coerce が engine 側で通るため補助ノードは不要」と明示）。
+  - ユニットテスト 3 本追加: `from_empty_json_without_schema_returns_empty_table` / `empty_table_json_roundtrip_is_idempotent` / `port_default_table_empty_round_trip`（port default → `to_socket_value` の型一致確認）。
+- **ν-β-1 test(gui): §3.3 `dictionary-editor-409-merge.spec.ts`** (`gui/tests/e2e/dictionary-editor-409-merge.spec.ts` / `.gitattributes`)
+  - 実 409 `optimistic_lock_failed` を踏ませるシナリオ: GUI が「更新する」を押す直前に、Playwright `request` で同じ row を `If-Match: b3:<hash>` 付きで PATCH → GUI 側 hash が stale 化 → 409 → `DictionaryConflictDialog` 起動 → 3-way 表で mine / server 両方の replacement と `replacement` カラム名の並びを確認 → 「自分の編集を強制」で fresh hash で 200 書き戻し。最終的に API 直叩きで mine 値に確定していることを確認。
+  - Preflight / cleanup で `Dr.USAGI` 行の replacement を `ドクターウサギ` に戻し、`sample.dict.tsv` に差分を残さない（自己治癒 + 繰り返し実行に耐える）。
+  - `.gitattributes` 新設: `gui/tests/e2e/fixtures/**/*.tsv` を `text eol=lf` で固定し、Windows の `core.autocrlf=true` 環境で VAC が LF で書き戻した TSV が CRLF 差分として `git status` に出続けるノイズを潰した。
+- **ν-β-2 test(gui): §3.2 `flowgraph-canvas-basic.spec.ts`** (`gui/tests/e2e/flowgraph-canvas-basic.spec.ts` / `.gitignore`)
+  - Flowgraph タブ → `sample` を開き、Palette の検索に `util.log` を入れて `flowgraph.util.log` を 1 件に絞ってからクリック → `log_2` を追加 → Save ボタンが `Save` → `Save *` に遷移 → `Ctrl+S` → `PUT /api/v1/control/flowgraph/file/sample` 200 → label が `Save` に戻る、までの往復を `waitForResponse` で検証。PUT body に `id = "log_2"` と `flowgraph.util.log` が含まれることも assert。
+  - Svelte Flow の **handle drag による edge 接続** と **`beforeunload` ガードの発火** は pointer event 合成と Chromium の dialog 仕様が絡んで flake 要因が強いため、spec 冒頭にコメントで意図を明記した上でスコープ外に置いた（ν+ へ送る）。
+  - `try / finally` で preflight snapshot の TOML を `PUT` し直し、fixture を汚さない。
+  - VAC の write 系 API が毎回生成する `*.bak-YYYYMMDD-HHmmSS` バックアップをリポジトリ外に落とすため `.gitignore` に `**/*.bak-[0-9]*` を追加（flowgraph / conf / profiles 全経路で共有の命名なので広めにマッチ）。
+- **Breaking（ν-β）**: なし。engine 側の fix は従来 error だった経路を success にするだけの緩和、GUI / conf / wire format は一切変更なし。
 
 ### η: Dictionary/Table Unification (η-0 .. η-6)
 

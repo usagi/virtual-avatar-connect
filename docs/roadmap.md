@@ -92,23 +92,27 @@ Playwright による E2E テスト基盤を `gui/` 配下に閉じ込めて導�
 - [x] ν-0 docs: `phase-nu-gui-e2e-playwright.md` 本文書き下ろし + 5 ケース仕様 + fixture 設計 + webServer 戦略 + セレクタ規約確定
 - [x] ν-1 chore(gui): `@playwright/test` 追加 + `playwright.config.ts` + `gui/tests/e2e/` + `conf.fixture.e2e.toml`（外部 IO ゼロ）+ fixture flowgraph 同梱
 - [x] ν-2 test(gui): 3 ケース実装完了（`control-panel-smoke` / `channels-ws-live-update` / `live-quick-add-learn-undo`）— §3.2 / §3.3 は ν-β へ分離
-- [ ] ν-3 docs: CHANGELOG / manual 追記（run 手順 + CI optional 方針）+ roadmap tick（本行の tick 化含む）
+- [x] ν-3 docs: CHANGELOG / manual 追記（run 手順 + CI optional 方針）+ roadmap tick（commit `4f8b15d`）
 - 仕様書: [`roadmap/phase-nu-gui-e2e-playwright.md`](roadmap/phase-nu-gui-e2e-playwright.md)
 - scope: narrow-scoped。`gui/` 配下に閉じ、Rust 側 `Cargo.toml` や CI には一切触れない。visual regression / 多ブラウザ matrix / component testing は ν+ に送る
 - Linux / Windows どちらでも手元で回せることが必須。CI 化は optional（ν-β 以降で検討）
 
 ---
 
-## Active Phases
-
 ### Phase ν-β — Flowgraph Canvas + Dictionary Editor E2E
 
-ν-2 から分離した後続フェーズ。Svelte Flow の DnD 自動化と Dictionary Editor の 409 race condition を Playwright で着地させる。同時に ν-2.4 実装中に踏んだ engine 側の Table default coerce 失敗 (`MissingRequiredInput`) を Flowgraph コア側で修正し、fixture flowgraph から `table.from_json` 補助ノードを除去するクリーンアップも含める。
+ν-2 から分離した後続フェーズ。Dictionary Editor の 409 race condition、Flowgraph Canvas の編集 → Ctrl+S 往復、engine 側の Table default coerce 失敗 (`MissingRequiredInput`) の 3 点を一気に着地させた。最終的に `gui/tests/e2e/` は **5 specs / 1 worker / ~9 s** で全通し、fixture flowgraph は `table.from_json` 補助ノードを外して `in/log/learn/forget` の 4 ノード最小構成に戻せた（§6.4 の追補条件が全部成立）。
 
-- [ ] ν-β-1 test(gui): §3.3 `dictionary-editor-409-merge.spec.ts`（editor state machine + 409 → 3-way merge）
-- [ ] ν-β-2 test(gui): §3.2 `flowgraph-canvas-basic.spec.ts`（Svelte Flow DnD + Ctrl+S + beforeunload）
-- [ ] ν-β-3 fix(flowgraph/engine): `PortSpec::with_default(SocketValue::Table(Table::empty()))` の coerce 失敗を修正 + fixture flowgraph 簡素化
+- [x] ν-β-3 fix(flowgraph/table): `Table::from_json_array(&[], None) → Table::empty()` で空 Table default の coerce 経路を通す + `PortSpec::with_default` の round-trip test + fixture から `dict_src` 削除
+- [x] ν-β-1 test(gui): §3.3 `dictionary-editor-409-merge.spec.ts`（PATCH 409 → `DictionaryConflictDialog` 3-way merge → 自分の編集を強制 → cleanup）
+- [x] ν-β-2 test(gui): §3.2 `flowgraph-canvas-basic.spec.ts`（Palette click-add → dirty badge → Ctrl+S → PUT 200 → clean、edge drag / beforeunload は ν-β+ に送る）
 - 仕様書: [`roadmap/phase-nu-gui-e2e-playwright.md`](roadmap/phase-nu-gui-e2e-playwright.md) §3.2〜§3.3 および §6.4
+
+---
+
+## Active Phases
+
+（現在 active な phase はありません。次候補は "Flowgraph 機能向上" / "ε-2 Tauri ネイティブウィンドウ化"、詳細は下記 Backlog / Future を参照）
 
 ---
 
