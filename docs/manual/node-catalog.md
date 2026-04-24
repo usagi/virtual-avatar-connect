@@ -71,15 +71,57 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.map.has`](#flowgraph-map-has) — Map Has
   - [`flowgraph.map.keys`](#flowgraph-map-keys) — Map Keys
 - **math**
+  - [`flowgraph.math.abs_float`](#flowgraph-math-abs-float) — Float abs
+  - [`flowgraph.math.abs_int`](#flowgraph-math-abs-int) — Int abs
+  - [`flowgraph.math.acos`](#flowgraph-math-acos) — Float acos
+  - [`flowgraph.math.acosh`](#flowgraph-math-acosh) — Float acosh
+  - [`flowgraph.math.asin`](#flowgraph-math-asin) — Float asin
+  - [`flowgraph.math.asinh`](#flowgraph-math-asinh) — Float asinh
+  - [`flowgraph.math.atan`](#flowgraph-math-atan) — Float atan
+  - [`flowgraph.math.atan2`](#flowgraph-math-atan2) — Float atan2
+  - [`flowgraph.math.atanh`](#flowgraph-math-atanh) — Float atanh
+  - [`flowgraph.math.ceil`](#flowgraph-math-ceil) — Float ceil
+  - [`flowgraph.math.clamp_float`](#flowgraph-math-clamp-float) — Float clamp
+  - [`flowgraph.math.clamp_int`](#flowgraph-math-clamp-int) — Int clamp
+  - [`flowgraph.math.cos`](#flowgraph-math-cos) — Float cos
+  - [`flowgraph.math.cosh`](#flowgraph-math-cosh) — Float cosh
+  - [`flowgraph.math.deg_to_rad`](#flowgraph-math-deg-to-rad) — Float deg → rad
+  - [`flowgraph.math.exp`](#flowgraph-math-exp) — Float exp
   - [`flowgraph.math.float_add`](#flowgraph-math-float-add) — Float +
   - [`flowgraph.math.float_div`](#flowgraph-math-float-div) — Float /
   - [`flowgraph.math.float_mul`](#flowgraph-math-float-mul) — Float *
   - [`flowgraph.math.float_sub`](#flowgraph-math-float-sub) — Float -
+  - [`flowgraph.math.floor`](#flowgraph-math-floor) — Float floor
   - [`flowgraph.math.int_add`](#flowgraph-math-int-add) — Int +
   - [`flowgraph.math.int_div`](#flowgraph-math-int-div) — Int /
+  - [`flowgraph.math.int_max`](#flowgraph-math-int-max) — Int max
+  - [`flowgraph.math.int_min`](#flowgraph-math-int-min) — Int min
   - [`flowgraph.math.int_mod`](#flowgraph-math-int-mod) — Int %
   - [`flowgraph.math.int_mul`](#flowgraph-math-int-mul) — Int *
   - [`flowgraph.math.int_sub`](#flowgraph-math-int-sub) — Int -
+  - [`flowgraph.math.inverse_lerp`](#flowgraph-math-inverse-lerp) — Float inverse_lerp
+  - [`flowgraph.math.lerp`](#flowgraph-math-lerp) — Float lerp
+  - [`flowgraph.math.ln`](#flowgraph-math-ln) — Float ln
+  - [`flowgraph.math.log10`](#flowgraph-math-log10) — Float log10
+  - [`flowgraph.math.log2`](#flowgraph-math-log2) — Float log2
+  - [`flowgraph.math.max_float`](#flowgraph-math-max-float) — Float max
+  - [`flowgraph.math.min_float`](#flowgraph-math-min-float) — Float min
+  - [`flowgraph.math.normalize_angle_deg_0_360`](#flowgraph-math-normalize-angle-deg-0-360) — Normalize angle [0, 360) deg
+  - [`flowgraph.math.normalize_angle_deg_signed`](#flowgraph-math-normalize-angle-deg-signed) — Normalize angle [-180, 180) deg
+  - [`flowgraph.math.normalize_angle_rad_0_2pi`](#flowgraph-math-normalize-angle-rad-0-2pi) — Normalize angle [0, 2π) rad
+  - [`flowgraph.math.normalize_angle_rad_signed`](#flowgraph-math-normalize-angle-rad-signed) — Normalize angle [-π, π) rad
+  - [`flowgraph.math.pow`](#flowgraph-math-pow) — Float pow
+  - [`flowgraph.math.rad_to_deg`](#flowgraph-math-rad-to-deg) — Float rad → deg
+  - [`flowgraph.math.remap`](#flowgraph-math-remap) — Float remap
+  - [`flowgraph.math.round`](#flowgraph-math-round) — Float round
+  - [`flowgraph.math.sign_float`](#flowgraph-math-sign-float) — Float sign
+  - [`flowgraph.math.sign_int`](#flowgraph-math-sign-int) — Int sign
+  - [`flowgraph.math.sin`](#flowgraph-math-sin) — Float sin
+  - [`flowgraph.math.sinh`](#flowgraph-math-sinh) — Float sinh
+  - [`flowgraph.math.smoothstep`](#flowgraph-math-smoothstep) — Float smoothstep
+  - [`flowgraph.math.sqrt`](#flowgraph-math-sqrt) — Float sqrt
+  - [`flowgraph.math.tan`](#flowgraph-math-tan) — Float tan
+  - [`flowgraph.math.tanh`](#flowgraph-math-tanh) — Float tanh
 - **ocr**
   - [`flowgraph.ocr.recognize`](#flowgraph-ocr-recognize) — OCR Recognize
 - **regex**
@@ -880,9 +922,206 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ## math
 
+### `flowgraph.math.abs_float`
+
+**Float abs** — Absolute value. Unit is preserved (abs(-5 m) = 5 m). NaN input yields NaN output.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.abs_int`
+
+**Int abs** — Integer absolute value. i64::MIN overflow is handled via wrapping_abs (returns i64::MIN).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `int` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `int` |  |
+
+### `flowgraph.math.acos`
+
+**Float acos** — Inverse cosine. Input dimensionless. Output Angle (rad). |x| > 1 yields NaN.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.acosh`
+
+**Float acosh** — Inverse hyperbolic cosine. Input must be dimensionless. x < 1 yields NaN (std::f64).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.asin`
+
+**Float asin** — Inverse sine. Input dimensionless. Output Angle (rad). |x| > 1 yields NaN (std::f64).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.asinh`
+
+**Float asinh** — Inverse hyperbolic sine. Input must be dimensionless. Defined for all real x.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.atan`
+
+**Float atan** — Inverse tangent. Input dimensionless. Output Angle (rad) in (-π/2, π/2).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.atan2`
+
+**Float atan2** — Two-argument arctangent. y and x must share a dimension (so their ratio is dimensionless). Output is Angle (rad) in (-π, π].
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `y` | `quantity` | — |  |
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.atanh`
+
+**Float atanh** — Inverse hyperbolic tangent. Input must be dimensionless. |x| ≥ 1 yields ±inf/NaN (std::f64).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.ceil`
+
+**Float ceil** — Smallest integer ≥ x (f64::ceil). Unit is preserved.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.clamp_float`
+
+**Float clamp** — Clamp value to [lo, hi] on Quantity. All three inputs must share a dimension. If lo > hi after unit-normalizing into value's unit, they are swapped. Result unit follows the value input.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `quantity` | — |  |
+| `lo` | `quantity` | — |  |
+| `hi` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.clamp_int`
+
+**Int clamp** — Clamp value to [lo, hi]. If lo > hi, they are swapped before clamping.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `int` | — |  |
+| `lo` | `int` | — |  |
+| `hi` | `int` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `int` |  |
+
+### `flowgraph.math.cos`
+
+**Float cos** — Cosine. Input is Angle (rad/deg) or dimensionless (treated as radians). Output is dimensionless.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.cosh`
+
+**Float cosh** — Hyperbolic cosine. Input must be dimensionless.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.deg_to_rad`
+
+**Float deg → rad** — Convert degrees to radians. Angle-dimensioned input is converted via flowgraph.unit.convert semantics. Dimensionless input is scaled by π/180 and tagged with rad unit. Other dimensions are rejected.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.exp`
+
+**Float exp** — e^x. Input must be dimensionless.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
 ### `flowgraph.math.float_add`
 
-**Float +** — Quantity 加算。dim 不一致はエラー。ΔK + K(abs) は許容、K + K はエラー（abs 同士加算禁止）。
+**Float +** — Quantity addition. Dimension mismatch is an error. ΔK + K(abs) is allowed; K + K is rejected.
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -895,7 +1134,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ### `flowgraph.math.float_div`
 
-**Float /** — Quantity 除算。dim は差分で組み立てられる（m / s = m·s⁻¹）。絶対温度の絡む除算や 0 除算はエラー。
+**Float /** — Quantity division. Dimensions are composed (m / s = m·s⁻¹). Absolute-temperature division and division by zero are rejected.
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -908,7 +1147,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ### `flowgraph.math.float_mul`
 
-**Float *** — Quantity 乗算。dim は組み立てられる（m * s = m·s）。絶対温度を絡めた乗算は禁止。
+**Float *** — Quantity multiplication. Dimensions are composed (m * s = m·s). Absolute-temperature multiplication is rejected.
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -921,12 +1160,24 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ### `flowgraph.math.float_sub`
 
-**Float -** — Quantity 減算。dim 不一致はエラー。K - K は ΔK を生成。
+**Float -** — Quantity subtraction. Dimension mismatch is an error. K - K yields ΔK.
 
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `quantity` | — |  |
 | `b` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.floor`
+
+**Float floor** — Largest integer ≤ x (f64::floor). Unit is preserved.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
 
 | Output | Type | Note |
 |---|---|---|
@@ -948,6 +1199,32 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.int_div`
 
 **Int /**
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `int` | — |  |
+| `b` | `int` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `int` |  |
+
+### `flowgraph.math.int_max`
+
+**Int max**
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `int` | — |  |
+| `b` | `int` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `int` |  |
+
+### `flowgraph.math.int_min`
+
+**Int min**
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -996,6 +1273,295 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `result` | `int` |  |
+
+### `flowgraph.math.inverse_lerp`
+
+**Float inverse_lerp** — Inverse of lerp: (v - a) / (b - a). All three inputs share a dimension. If a == b (after unit normalization), returns 0.0. Result is dimensionless.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `quantity` | — |  |
+| `b` | `quantity` | — |  |
+| `v` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.lerp`
+
+**Float lerp** — Linear interpolation: a + (b - a) * t. a and b share a dimension; t is dimensionless. t is not clamped (extrapolation allowed). Result unit follows a.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `quantity` | — |  |
+| `b` | `quantity` | — |  |
+| `t` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.ln`
+
+**Float ln** — Natural logarithm. Input must be dimensionless. x ≤ 0 yields -inf/NaN per std::f64.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.log10`
+
+**Float log10** — Base-10 logarithm. Input must be dimensionless.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.log2`
+
+**Float log2** — Base-2 logarithm. Input must be dimensionless.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.max_float`
+
+**Float max** — Maximum of two same-dimension Quantity values. Result keeps A's unit. NaN follows f64::max semantics.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `quantity` | — |  |
+| `b` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.min_float`
+
+**Float min** — Minimum of two same-dimension Quantity values. Result keeps A's unit. NaN follows f64::min semantics (NaN propagates to other operand).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `a` | `quantity` | — |  |
+| `b` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.normalize_angle_deg_0_360`
+
+**Normalize angle [0, 360) deg** — Normalize Angle into [0, 360) degrees. 1357.33 → 277.33. Angle-dim input is converted to deg first; dimensionless is treated as deg.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.normalize_angle_deg_signed`
+
+**Normalize angle [-180, 180) deg** — Normalize Angle into [-180, +180) degrees. 277.33 → -82.67. Angle-dim input is converted to deg first; dimensionless is treated as deg.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.normalize_angle_rad_0_2pi`
+
+**Normalize angle [0, 2π) rad** — Normalize Angle into [0, 2π) radians. Angle-dim input is converted to rad first; dimensionless is treated as rad.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.normalize_angle_rad_signed`
+
+**Normalize angle [-π, π) rad** — Normalize Angle into [-π, +π) radians. Angle-dim input is converted to rad first; dimensionless is treated as rad.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.pow`
+
+**Float pow** — base^exp. Both base and exp must be dimensionless (general Quantity pow requires an integer exponent for dimension algebra; for that use flowgraph.unit.* + custom). NaN and ±inf follow f64::powf semantics.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `base` | `quantity` | — |  |
+| `exp` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.rad_to_deg`
+
+**Float rad → deg** — Convert radians to degrees. Angle-dimensioned input is converted via flowgraph.unit.convert semantics. Dimensionless input is scaled by 180/π and tagged with deg unit. Other dimensions are rejected.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.remap`
+
+**Float remap** — Remap value from [in_lo, in_hi] to [out_lo, out_hi]. value/in_lo/in_hi share a dimension; out_lo/out_hi share another dimension. If in_lo == in_hi, out_lo is returned. Result unit follows out_lo.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `quantity` | — |  |
+| `in_lo` | `quantity` | — |  |
+| `in_hi` | `quantity` | — |  |
+| `out_lo` | `quantity` | — |  |
+| `out_hi` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.round`
+
+**Float round** — Round half away from zero (f64::round std default). Unit is preserved.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.sign_float`
+
+**Float sign** — Sign classifier: -1 / 0 / +1 (value only, unit preserved). NaN yields 0. Note: the SI meaning of a unit-bearing sign is unusual but kept for pass-through consistency.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.sign_int`
+
+**Int sign** — Integer sign: -1 for x<0, 0 for x==0, +1 for x>0.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `int` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `int` |  |
+
+### `flowgraph.math.sin`
+
+**Float sin** — Sine. Input is Angle (rad/deg) or dimensionless (treated as radians for pre-ξ compatibility). Output is dimensionless.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.sinh`
+
+**Float sinh** — Hyperbolic sine. Input must be dimensionless (hyperbolic functions take unitless arguments in their SI-compatible form).
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.smoothstep`
+
+**Float smoothstep** — GLSL smoothstep: t = clamp((x - edge0) / (edge1 - edge0), 0, 1); returns t*t*(3 - 2*t). All three inputs share a dimension. If edge0 == edge1, returns 0.0. Result is dimensionless in [0, 1].
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `edge0` | `quantity` | — |  |
+| `edge1` | `quantity` | — |  |
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.sqrt`
+
+**Float sqrt** — Square root. Input must be dimensionless (general Quantity sqrt would require fractional exponents; use dimension-aware code if needed). Negative input yields NaN.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.tan`
+
+**Float tan** — Tangent. Input is Angle (rad/deg) or dimensionless (treated as radians). Output is dimensionless. ±(π/2) yields large finite values per std::f64.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
+
+### `flowgraph.math.tanh`
+
+**Float tanh** — Hyperbolic tangent. Input must be dimensionless.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `x` | `quantity` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `quantity` |  |
 
 ## ocr
 

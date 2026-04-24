@@ -1,6 +1,6 @@
 # Phase ο — Flowgraph Enhancement I (計算系 + 時間 + signal util + GUI 小改善)
 
-> **Status**: ο-0 docs 着地済み。**ο-1 以降は Phase ξ (Dimensional Quantity System) 着地後に着手**。
+> **Status**: ο-0 docs / ο-1 math (42 ノード) 着地済み。ο-2 以降は Phase ξ-5 (GUI) と並行進行可。
 > 起点となるスコープ感は [`../roadmap.md`](../roadmap.md) の "Phase ο" を参照。依存する単位次元基盤は [`phase-ksi-dimensional-quantity-system.md`](phase-ksi-dimensional-quantity-system.md)。
 
 ---
@@ -9,7 +9,7 @@
 
 - Phase ν-β クローズ後の次フェーズ。[docs/roadmap.md](../roadmap.md) の "Flowgraph 機能向上（TBD）" を 1 つの narrow フェーズとして具体化する。
 - 本フェーズは **engine 内完結の Pure ノード群 + GUI 小改善** に閉じる。外部連携（HTTP / OBS / OSC / VMC / system metrics / process / window）と engine の大改修（Undo/Redo / subgraph / 物理）は明示的に次フェーズ（π / ρ / σ / τ / υ）に送る（§4）。
-- 全 6 カテゴリ（math / easing / vec / time / signal util / random）× **71 ノード**（math 37 + easing 1 + vec 18 + time 5 + signal util 5 + random/noise 5）+ GUI 3 項目で構成。1 サブフェーズ = 1 commit 粒度に分解（§6）。
+- 全 6 カテゴリ（math / easing / vec / time / signal util / random）× **76 ノード**（math 42 + easing 1 + vec 18 + time 5 + signal util 5 + random/noise 5）+ GUI 3 項目で構成。1 サブフェーズ = 1 commit 粒度に分解（§6）。
 - **依存**: [Phase ξ (Dimensional Quantity System)](phase-ksi-dimensional-quantity-system.md) 先行。ο-1 math / ο-2 easing / ο-3 vec / ο-4 time / ο-5 signal util のノード群は最初から `Quantity<Dimension>` 対応で実装する。ξ-0 / ξ-1 / ξ-2 / ξ-3 着地前に ο-1 を走らせると retrofit 地獄になるため、**順序ブロッカー**として固定する。
 
 ---
@@ -86,7 +86,7 @@
 | `flowgraph.math.normalize_angle_rad_0_2pi` | Float → Float | `x.rem_euclid(2π)`。`[0, 2π)` に正規化 |
 | `flowgraph.math.normalize_angle_rad_signed` | Float → Float | `[-π, +π)` に正規化 |
 
-計 **37 ノード**（2026-04-24 拡張: 双曲線 6 + 角度正規化 4）。既存 `int_binop_node!` / `float_binop_node!` マクロを参考に、1 入力 / 3 入力系のマクロを増設する方針。
+計 **42 ノード**（2026-04-24 拡張: 双曲線 6 + 角度正規化 4、ο-1 着手時に表の行を素直に列挙して 42 に正確化。ο-0 docs での「37」表記は誤記）。既存 `int_binop_node!` / `float_binop_node!` マクロを参考に、1 入力 / 3 入力系のマクロを増設する方針。
 
 > **Note (Phase ξ 依存)**: 本フェーズのこれらの math ノードは **Phase ξ (Dimensional Quantity System) 着地後の ο-1 着手**が前提。ο-1 以降の実装では最初から `Quantity<Dimension>` を受ける形で書き、Phase ξ が提供する Angle 次元 + rad/deg unit を trig / arctrig / normalize_angle に型制約として載せる。sinh/cosh/tanh 系は **dimensionless のみ**（双曲線関数の引数に物理単位を持たせると SI 上の意味を失う）。`deg_to_rad` / `rad_to_deg` は ξ 着地後は単に `flowgraph.unit.convert{to: "rad"}` / `{to: "deg"}` の薄いラッパーに退化する可能性があり、deprecation policy を ξ-3 retrofit 時に再整理する。
 
@@ -196,7 +196,7 @@ random 系は `rand::thread_rng()`（すでに推移依存で入ってる可能�
 
 ο-1..ο-5 のノードは **Phase ξ 着地後**に着手する。plain-float で先行着地させて ξ-3 で全数 retrofit する案を検討したが、以下の理由で却下:
 
-- ο-1 時点で 37 ノード分の `PortSpec` / テスト / `node-catalog.md` 定義を書くことになり、ξ-3 で **二度同じ分量**を書き直す作業が発生する
+- ο-1 時点で 42 ノード分の `PortSpec` / テスト / `node-catalog.md` 定義を書くことになり、ξ-3 で **二度同じ分量**を書き直す作業が発生する
 - retrofit によって既存 flow の TOML 定義が「値は同じだが型シグネチャだけ変わる」という **semantics-silent breakage** を起こす。deprecation cycle が増える
 - trig / arctrig / normalize_angle は Phase ξ の Angle 次元がなければ **型安全性のうま味が一切取れない**。後付けで「Angle 次元必須」に変えた瞬間に既存 flow が動かなくなる（= ξ-3 が breaking change 化する）
 - 最初から `Quantity<Dimension>` 対応で書けば、各ノードで `Quantity::new(result, input.unit())` で unit pass-through / `Quantity::dimensionless(result)` で無次元化を **ノードローカルに** 書けば済む。retrofit より実装コストが低い
@@ -250,7 +250,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 | sub | 内容 | 触るもの |
 |---|---|---|
 | ο-0 | docs: 本 phase doc + roadmap.md 再編 + backlog-nodes.md §1 の pointer 化（+ 後日 angle normalization / 双曲線 10 ノード追記 + Phase ξ 依存明記）| `docs/roadmap/phase-omicron-flowgraph-enhancement.md` ✅ / `docs/roadmap.md` ✅ / `docs/roadmap/backlog-nodes.md` ✅ |
-| ο-1 | feat(flowgraph/math): §3.1 **37 ノード**追加 + unit test（Quantity-aware）| `src/flowgraph/nodes/math.rs` / `src/flowgraph/registry.rs` |
+| ο-1 ✅ | feat(flowgraph/math): §3.1 **42 ノード**追加 + unit test（Quantity-aware）| `src/flowgraph/nodes/math.rs` / `src/flowgraph/registry.rs` |
 | ο-2 | feat(flowgraph/easing): §3.2 `apply` ノード + curve 関数群 + unit test | `src/flowgraph/nodes/easing.rs` (new) / `registry.rs` / 場合により `node.rs`（`PropertySpec.choices` 追加）|
 | ο-3 | feat(flowgraph/vec): §3.3 18 ノード追加（vec2 9 + vec3 9）+ unit test | `src/flowgraph/nodes/vec.rs` (new) / `registry.rs` |
 | ο-4 | feat(flowgraph/util,time): §3.4 `timer_interval` + time ノード 4 種 + unit test | `src/flowgraph/nodes/delay.rs` 既存パターン流用 / `src/flowgraph/nodes/time.rs` (new) / `registry.rs` |
@@ -266,13 +266,13 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 
 ### 6.1 ο-1 チェックリスト
 
-- [ ] **前提**: Phase ξ-3 (engine retrofit to Quantity) 着地済みであること。`SocketValue::Float` が `Quantity<Dimension>` を保持できる状態を前提に書く
-- [ ] 1-入力系 / 3-入力系のマクロを `math.rs` に追加（既存 2-入力マクロを踏襲、Quantity-aware 版）
-- [ ] **37 ノード**の `NodeDescriptor` + `PureNode::compute` 実装（内訳: abs/min/max/clamp/sign 系 int+float 合計 10 + lerp/inverse_lerp/remap/smoothstep 4 + trig 3 + arctrig 3 + atan2 + sqrt/pow/exp/ln/log2/log10 6 + floor/ceil/round 3 + deg_to_rad/rad_to_deg 2 + sinh/cosh/tanh 3 + asinh/acosh/atanh 3 + normalize_angle × 4）
-- [ ] 次元制約: `sin/cos/tan` は **Angle 次元入力必須**、`asin/acos/atan/atan2` は **Angle 次元出力**、`normalize_angle_deg_*` は **deg unit 必須**、`normalize_angle_rad_*` は **rad unit 必須**、`sinh/cosh/tanh/asinh/acosh/atanh` は **dimensionless 必須**、`pow` / `exp` / `ln` / `log2` / `log10` は指数 / 真数が dimensionless 必須、`sqrt` は次元 `D` を `D^(1/2)` にするが整数次元しか持たない現行では **dimensionless のみ受け付ける**（spec として doc 化）、`abs/min/max/clamp/lerp/inverse_lerp/remap/smoothstep/floor/ceil/round/sign_*` は **unit pass-through**（入力と同じ unit を出力）
-- [ ] `registry.rs` に登録（`register_pure`）
-- [ ] `cargo test --lib` の node 単体テストで各ノード 1-2 ケース（dimension mismatch error パスも含む）
-- [ ] `BLESS_NODE_CATALOG=1 cargo test` で `docs/manual/node-catalog.md` を再生成し、ο-7 まで blessed diff を保持
+- [x] **前提**: Phase ξ-3 (engine retrofit to Quantity) 着地済みであること。`SocketValue::Float` が `Quantity<Dimension>` を保持できる状態を前提に書く
+- [x] 1-入力系 / 3-入力系のマクロを `math.rs` に追加（既存 2-入力マクロを踏襲、Quantity-aware 版）
+- [x] **42 ノード**の `NodeDescriptor` + `PureNode::compute` 実装（内訳: abs/min/max/clamp/sign 系 int+float 合計 10 + lerp/inverse_lerp/remap/smoothstep 4 + trig 3 + arctrig 3 + atan2 1 + sqrt/pow/exp/ln/log2/log10 6 + floor/ceil/round 3 + deg_to_rad/rad_to_deg 2 + sinh/cosh/tanh 3 + asinh/acosh/atanh 3 + normalize_angle × 4）。ο-0 docs で "37 ノード" と誤記していたが、§3.1 の表を素直に列挙すると 42 ノードになる（ο-0 時点のカウントミス、実装時に再確認）
+- [x] 次元制約（実装方針）: `sin/cos/tan` は **Angle 次元または dimensionless 入力を許容**（pre-ξ の plain-float flows の互換のため dimensionless はそのまま rad として扱う）、`asin/acos/atan/atan2` は **出力に Angle (rad) を付ける**、`normalize_angle_deg_*` / `_rad_*` は **Angle または dimensionless を受ける**（dimensionless は target unit のまま扱う）、`sinh/cosh/tanh/asinh/acosh/atanh` / `sqrt/pow/exp/ln/log2/log10` は **dimensionless 必須**、`abs/min/max/clamp/floor/ceil/round/sign_*/lerp(a,b)/remap(out)` は **unit pass-through / 次元整合**、`inverse_lerp` / `smoothstep` は **入力同次元 → 出力 dimensionless**
+- [x] `registry.rs` に登録（`register_pure`）
+- [x] `cargo test --lib` の node 単体テストで各ノード 1-2 ケース（dimension mismatch error パスも含む、30 tests in `flowgraph::nodes::math::tests` 全緑）
+- [x] `BLESS_NODE_CATALOG=1 cargo test` で `docs/manual/node-catalog.md` を再生成し、ο-7 まで blessed diff を保持
 
 ### 6.2 ο-2 チェックリスト
 
@@ -326,7 +326,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 
 | risk | 対策 |
 |---|---|
-| 37 + 1 + 18 + 5 + 5 + 5 = **71 新ノード追加** で `manual/node-catalog.md` の `BLESS_NODE_CATALOG=1` 再生成を ο-1 〜 ο-5 ごとに忘れると、CRLF / LF 問題や diff 巨大化で cargo test が fail する | ο-1 / ο-2 / ο-3 / ο-4 / ο-5 の各 commit 前に `BLESS_NODE_CATALOG=1 cargo test` を必ず回し、blessed diff を commit に含める運用を phase doc 上で固定。ο-7 でまとめる誘惑に負けない |
+| 42 + 1 + 18 + 5 + 5 + 5 = **76 新ノード追加** で `manual/node-catalog.md` の `BLESS_NODE_CATALOG=1` 再生成を ο-1 〜 ο-5 ごとに忘れると、CRLF / LF 問題や diff 巨大化で cargo test が fail する | ο-1 / ο-2 / ο-3 / ο-4 / ο-5 の各 commit 前に `BLESS_NODE_CATALOG=1 cargo test` を必ず回し、blessed diff を commit に含める運用を phase doc 上で固定。ο-7 でまとめる誘惑に負けない |
 | `noise` crate の API が将来版で change breakage | `noise = "0.9"` で固定（minor 上げは許容 / major は opt-in）。`Perlin::new(seed)` 以外の機能は触らない。将来 `simplex` / `worley` 等に広げるなら独立 PR |
 | easing の `elastic` / `bounce` は `t ∈ [0, 1]` の外で発散 → テストのオーバーシュート判定で吸収するのを忘れると flaky | `clamp_t = true` を既定にし、代表 curve の "0.0 → 0.0、1.0 → 1.0" 境界値だけ assert する保守的テストに |
 | `flowgraph.util.timer_interval` は Phase δ の `DelayNode` パターンに依存するが、`ctx.trigger` の node_fq 取得が実は未整備 | backlog §1.4 末尾の注意書き通り、`DelayNode` と同じ経路で対応。`StatefulCtx` に `node_fq` が無ければ phase 途中で engine 側に 1 行追加する（ο-4 の判断ポイント） |

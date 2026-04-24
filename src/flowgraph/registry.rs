@@ -173,6 +173,49 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::math::FloatSubNode));
 	r.register_pure(Arc::new(nodes::math::FloatMulNode));
 	r.register_pure(Arc::new(nodes::math::FloatDivNode));
+	// Phase o-1: math 42-node expansion
+	r.register_pure(Arc::new(nodes::math::IntMinNode));
+	r.register_pure(Arc::new(nodes::math::IntMaxNode));
+	r.register_pure(Arc::new(nodes::math::IntAbsNode));
+	r.register_pure(Arc::new(nodes::math::IntSignNode));
+	r.register_pure(Arc::new(nodes::math::IntClampNode));
+	r.register_pure(Arc::new(nodes::math::FloatAbsNode));
+	r.register_pure(Arc::new(nodes::math::FloatSignNode));
+	r.register_pure(Arc::new(nodes::math::FloatFloorNode));
+	r.register_pure(Arc::new(nodes::math::FloatCeilNode));
+	r.register_pure(Arc::new(nodes::math::FloatRoundNode));
+	r.register_pure(Arc::new(nodes::math::FloatSqrtNode));
+	r.register_pure(Arc::new(nodes::math::FloatExpNode));
+	r.register_pure(Arc::new(nodes::math::FloatLnNode));
+	r.register_pure(Arc::new(nodes::math::FloatLog2Node));
+	r.register_pure(Arc::new(nodes::math::FloatLog10Node));
+	r.register_pure(Arc::new(nodes::math::FloatSinhNode));
+	r.register_pure(Arc::new(nodes::math::FloatCoshNode));
+	r.register_pure(Arc::new(nodes::math::FloatTanhNode));
+	r.register_pure(Arc::new(nodes::math::FloatAsinhNode));
+	r.register_pure(Arc::new(nodes::math::FloatAcoshNode));
+	r.register_pure(Arc::new(nodes::math::FloatAtanhNode));
+	r.register_pure(Arc::new(nodes::math::FloatMinNode));
+	r.register_pure(Arc::new(nodes::math::FloatMaxNode));
+	r.register_pure(Arc::new(nodes::math::FloatClampNode));
+	r.register_pure(Arc::new(nodes::math::FloatSinNode));
+	r.register_pure(Arc::new(nodes::math::FloatCosNode));
+	r.register_pure(Arc::new(nodes::math::FloatTanNode));
+	r.register_pure(Arc::new(nodes::math::FloatAsinNode));
+	r.register_pure(Arc::new(nodes::math::FloatAcosNode));
+	r.register_pure(Arc::new(nodes::math::FloatAtanNode));
+	r.register_pure(Arc::new(nodes::math::FloatAtan2Node));
+	r.register_pure(Arc::new(nodes::math::FloatPowNode));
+	r.register_pure(Arc::new(nodes::math::FloatLerpNode));
+	r.register_pure(Arc::new(nodes::math::FloatInverseLerpNode));
+	r.register_pure(Arc::new(nodes::math::FloatRemapNode));
+	r.register_pure(Arc::new(nodes::math::FloatSmoothstepNode));
+	r.register_pure(Arc::new(nodes::math::FloatDegToRadNode));
+	r.register_pure(Arc::new(nodes::math::FloatRadToDegNode));
+	r.register_pure(Arc::new(nodes::math::FloatNormalizeAngleDeg0To360Node));
+	r.register_pure(Arc::new(nodes::math::FloatNormalizeAngleDegSignedNode));
+	r.register_pure(Arc::new(nodes::math::FloatNormalizeAngleRad0To2piNode));
+	r.register_pure(Arc::new(nodes::math::FloatNormalizeAngleRadSignedNode));
 
 	// --- string_ops ---
 	r.register_pure(Arc::new(nodes::string_ops::StringConcatNode));
@@ -342,6 +385,20 @@ mod tests {
 			"flowgraph.unit.same_dimension",
 			"flowgraph.unit.to_json",
 			"flowgraph.util.format",
+			// Phase o-1 representative samples
+			"flowgraph.math.abs_float",
+			"flowgraph.math.clamp_float",
+			"flowgraph.math.lerp",
+			"flowgraph.math.smoothstep",
+			"flowgraph.math.sin",
+			"flowgraph.math.atan2",
+			"flowgraph.math.sqrt",
+			"flowgraph.math.pow",
+			"flowgraph.math.sinh",
+			"flowgraph.math.asinh",
+			"flowgraph.math.deg_to_rad",
+			"flowgraph.math.normalize_angle_deg_0_360",
+			"flowgraph.math.normalize_angle_rad_signed",
 		] {
 			assert!(
 				r.contains(feature),

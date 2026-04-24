@@ -133,10 +133,10 @@ Flowgraph は pure-functional + 遅延評価のため runtime 単位評価コス
 
 ### Phase ο — Flowgraph Enhancement I (計算系 + 時間 + signal util + GUI 小改善)
 
-Flowgraph 機能向上の第 1 波。engine 内完結の Pure ノード群（math 拡張 / easing / vec2・vec3 / time・timer / signal util / random・noise、計 **71 ノード**: 37+1+18+5+5+5）と GUI 小改善 3 項目（palette カテゴリ絞り込み / canvas drop-at-cursor / Ctrl+D duplicate）を narrow scope で追加する。外部 IO（HTTP / OBS / OSC / VMC / system metrics / process / window / Discord voice 等）と engine 大改修（Undo/Redo / subgraph / 物理）は明示的に次フェーズ（π / ρ / σ / τ / υ）以降へ送る。**Phase ξ (Dimensional Quantity System) 着地後に ο-1 着手**。
+Flowgraph 機能向上の第 1 波。engine 内完結の Pure ノード群（math 拡張 / easing / vec2・vec3 / time・timer / signal util / random・noise、計 **76 ノード**: 42+1+18+5+5+5）と GUI 小改善 3 項目（palette カテゴリ絞り込み / canvas drop-at-cursor / Ctrl+D duplicate）を narrow scope で追加する。外部 IO（HTTP / OBS / OSC / VMC / system metrics / process / window / Discord voice 等）と engine 大改修（Undo/Redo / subgraph / 物理）は明示的に次フェーズ（π / ρ / σ / τ / υ）以降へ送る。Phase ξ (Dimensional Quantity System) の ξ-1〜ξ-4/ξ-6 着地済み → **ο-1 着手済み**、ο-2 以降は ξ-5 GUI と並行進行可。
 
 - [x] ο-0 docs: `phase-omicron-flowgraph-enhancement.md` 新設 + roadmap.md の Active 差し替え + backlog-nodes.md §1 を ο-4 昇格 pointer 化（+ 追補: angle normalization 4 / 双曲線 6 ノード追加 + Phase ξ 依存明記）
-- [ ] ο-1 feat(flowgraph/math): §3.1 **37 ノード**追加（abs/min/max/clamp/lerp/smoothstep/trig/arctrig/hyperbolic/arc-hyperbolic/sqrt/pow/exp/log/sign/floor/ceil/round/deg↔rad/normalize_angle × 4）
+- [x] ο-1 feat(flowgraph/math): §3.1 **42 ノード**追加（abs/min/max/clamp/lerp/inverse_lerp/remap/smoothstep/trig/arctrig/atan2/hyperbolic/arc-hyperbolic/sqrt/pow/exp/log/sign/floor/ceil/round/deg↔rad/normalize_angle × 4）。全 Quantity-aware、30 unit tests 全緑、node-catalog.md 再生成済み。ο-0 docs の「37」表記は実装時に 42 へ正確化
 - [ ] ο-2 feat(flowgraph/easing): §3.2 `flowgraph.easing.apply` + curve enum 18 種 (quad/cubic/sine/expo/elastic/bounce × in/out/inOut + linear)
 - [ ] ο-3 feat(flowgraph/vec): §3.3 vec2 / vec3 × 9 ノード（make/unpack/add/sub/scale/dot/length/normalize/lerp/distance、JSON 配列表現）
 - [ ] ο-4 feat(flowgraph/util,time): §3.4 `flowgraph.util.timer_interval`（backlog §1 から昇格）+ `flowgraph.time.*` 4 種（now_rfc3339 / now_epoch_ms / format / since_ms）
