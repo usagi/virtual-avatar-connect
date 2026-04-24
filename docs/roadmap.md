@@ -112,6 +112,25 @@ Playwright による E2E テスト基盤を `gui/` 配下に閉じ込めて導�
 
 ## Active Phases
 
+### Phase ξ — Dimensional Quantity System (SI 準拠の単位次元システム)
+
+Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念として導入する基盤フェーズ。数値に unit を付与、unit は次元（L·M·T·I·Θ·N·J + 疑似次元 Angle の 8 成分）を持つ。strict default（次元不一致は engine error）+ 明示 escape hatch（`flowgraph.unit.strip`）の方針。IO 系ノードは pass-through（wire format 互換を死守、次元強制は個別 opt-in）。既存 flow は dimensionless fallback で完全後方互換。
+
+Flowgraph は pure-functional + 遅延評価のため runtime 単位評価コストが DAG 枝刈り / memoization で自然に償却される — これが「工学系出身者が自作アプリに求める単位安全性」を現実的コストで提供できる根拠（詳細 [`roadmap/phase-ksi-dimensional-quantity-system.md`](roadmap/phase-ksi-dimensional-quantity-system.md) §1.1）。本フェーズは **Phase ο (Flowgraph Enhancement I) の順序上の前提**。
+
+- [x] ξ-0 docs: `phase-ksi-dimensional-quantity-system.md` 新設 + roadmap.md への Phase ξ 追加 + Phase ο doc の依存注記
+- [ ] ξ-1 feat(flowgraph/quantity): `Dimension` / `Unit` / `Quantity` 型 + SI 基本 7 単位 + 主要誘導単位 + SI 接頭辞 20 種 + Angle 疑似次元（rad / deg）+ 温度 delta 分離 (K / ΔK) + unit 文字列 parser + unit test 30+
+- [ ] ξ-2 feat(flowgraph/nodes/unit): `flowgraph.unit.*` 操作ノード 6-7 種（assign / convert / strip / get_unit_string / get_dimension_string / same_dimension / dimensionless）
+- [ ] ξ-3 refactor(flowgraph): `SocketValue::Float` → `Quantity` migration + 既存ノード dimensionless fallback + 演算 trait + 既存テスト全緑維持
+- [ ] ξ-4 feat(flowgraph/util): `flowgraph.util.log` / `.format` の unit-aware 化 + channel stringify ルール確定
+- [ ] ξ-5 feat(gui): `FlowgraphNodeCard.svelte` ポート chip に unit バッジ + Dimension family 色分け + hover tooltip + property editor の unit text input
+- [ ] ξ-6 docs: CHANGELOG + `docs/manual/dimensional-quantity-system.md` 新設 + `node-catalog.md` 再生成（Dimension 列追加）+ roadmap tick
+- 仕様書: [`roadmap/phase-ksi-dimensional-quantity-system.md`](roadmap/phase-ksi-dimensional-quantity-system.md)
+- scope: 外部依存ゼロ（自作、`uom` crate は runtime vs compile-time の性質不一致で採用見送り）。既存 flow 完全後方互換（dimensionless fallback）。IO 系は pass-through。非対応: Celsius/Fahrenheit（ξ+）/ 非 rad-deg Angle 単位 / ユーザ定義次元 / GUI unit インライン編集（τ 合流候補）
+- 順序: **本フェーズ着地後に Phase ο-1 着手**。math / easing / vec / time / signal util ノード群は最初から `Quantity<Dimension>` 対応で実装する
+
+---
+
 ### Phase ο — Flowgraph Enhancement I (計算系 + 時間 + signal util + GUI 小改善)
 
 Flowgraph 機能向上の第 1 波。engine 内完結の Pure ノード群（math 拡張 / easing / vec2・vec3 / time・timer / signal util / random・noise、計 **71 ノード**: 37+1+18+5+5+5）と GUI 小改善 3 項目（palette カテゴリ絞り込み / canvas drop-at-cursor / Ctrl+D duplicate）を narrow scope で追加する。外部 IO（HTTP / OBS / OSC / VMC / system metrics / process / window / Discord voice 等）と engine 大改修（Undo/Redo / subgraph / 物理）は明示的に次フェーズ（π / ρ / σ / τ / υ）以降へ送る。**Phase ξ (Dimensional Quantity System) 着地後に ο-1 着手**。
