@@ -36,3 +36,10 @@ gui/*.log
 gui/.env
 gui/.env.*
 !gui/.env.example
+
+# Phase ν-β-2: flowgraph / conf の書き込み系 API が残す `.bak-YYYYMMDD-HHmmSS`
+# バックアップ（VAC が PUT / DELETE の度に自動生成）。E2E fixture は test 側で
+# 本体を原形復帰させるが、.bak だけは毎回新しい timestamp で増えていくので
+# fixture ディレクトリ配下のものは ignore する。repo 外の運用プロファイルの .bak
+# も誤って track しないよう広めにマッチさせる。
+**/*.bak-[0-9]*
