@@ -1,0 +1,5 @@
+# Phase ν-β-1: E2E fixture TSV は VAC の `control_api.tables` PATCH で
+# 書き戻される。VAC が LF で write するため、Windows の `core.autocrlf=true`
+# 環境では毎回 CRLF→LF の phantom modification が `git status` に出てしまう。
+# 当該ディレクトリだけ LF 固定にしてこのノイズを消す。
+gui/tests/e2e/fixtures/**/*.tsv text eol=lf
