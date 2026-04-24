@@ -119,12 +119,12 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 Flowgraph は pure-functional + 遅延評価のため runtime 単位評価コストが DAG 枝刈り / memoization で自然に償却される — これが「工学系出身者が自作アプリに求める単位安全性」を現実的コストで提供できる根拠（詳細 [`roadmap/phase-ksi-dimensional-quantity-system.md`](roadmap/phase-ksi-dimensional-quantity-system.md) §1.1）。本フェーズは **Phase ο (Flowgraph Enhancement I) の順序上の前提**。
 
 - [x] ξ-0 docs: `phase-ksi-dimensional-quantity-system.md` 新設 + roadmap.md への Phase ξ 追加 + Phase ο doc の依存注記
-- [ ] ξ-1 feat(flowgraph/quantity): `Dimension` / `Unit` / `Quantity` 型 + SI 基本 7 単位 + 主要誘導単位 + SI 接頭辞 20 種 + Angle 疑似次元（rad / deg）+ 温度 delta 分離 (K / ΔK) + unit 文字列 parser + unit test 30+
-- [ ] ξ-2 feat(flowgraph/nodes/unit): `flowgraph.unit.*` 操作ノード 6-7 種（assign / convert / strip / get_unit_string / get_dimension_string / same_dimension / dimensionless）
-- [ ] ξ-3 refactor(flowgraph): `SocketValue::Float` → `Quantity` migration + 既存ノード dimensionless fallback + 演算 trait + 既存テスト全緑維持
-- [ ] ξ-4 feat(flowgraph/util): `flowgraph.util.log` / `.format` の unit-aware 化 + channel stringify ルール確定
+- [x] ξ-1 feat(flowgraph/quantity): `Dimension` / `Unit` / `Quantity` 型 + SI 基本 7 単位 + 主要誘導単位 + SI 接頭辞 20 種 + Angle 疑似次元（rad / deg）+ 温度 delta 分離 (K / ΔK) + unit 文字列 parser + unit test 30+
+- [x] ξ-2 feat(flowgraph/nodes/unit): `flowgraph.unit.*` 操作ノード 7 種（assign / convert / strip / get_unit_string / get_dim_string / same_dimension / to_json）+ `SocketType::Quantity` / `SocketValue::Quantity` 追加 + TOML / JSON wire format 対応 + `Unit::to_si_base` atom-canonical 係数込み
+- [x] ξ-3 refactor(flowgraph): engine 側に `Float ↔ Quantity` 暗黙 coerce を新設（`SocketType::compatible_with` / `coerce_to_type`）。`flowgraph.math.float_*` 4 種を Quantity 演算化（`try_add` / `try_sub` / `try_mul` / `try_div`、div-by-zero / 次元不一致は明示エラー）。既存フローは dimensionless fallback で完全後方互換
+- [x] ξ-4 feat(flowgraph/util): engine 側に `Quantity → String` 暗黙 coerce 追加（Display 実装経由、一方向のみ）。`flowgraph.util.format` 新設（`include_unit` / `precision` / `unit_override` プロパティ）。`flowgraph.util.log` / `flowgraph.channel.emit` は port 型そのままで stringify が unit-aware に
 - [ ] ξ-5 feat(gui): `FlowgraphNodeCard.svelte` ポート chip に unit バッジ + Dimension family 色分け + hover tooltip + property editor の unit text input
-- [ ] ξ-6 docs: CHANGELOG + `docs/manual/dimensional-quantity-system.md` 新設 + `node-catalog.md` 再生成（Dimension 列追加）+ roadmap tick
+- [x] ξ-6 docs: CHANGELOG + `docs/manual/dimensional-quantity-system.md` 新設（ユーザ向け解説: 動機 / 使える単位 / parser / ノード紹介 / よくあるパターン / FAQ）+ `manual/index.md` 目次 + Socket 型列に `quantity` / `table` 追記 + roadmap tick
 - 仕様書: [`roadmap/phase-ksi-dimensional-quantity-system.md`](roadmap/phase-ksi-dimensional-quantity-system.md)
 - scope: 外部依存ゼロ（自作、`uom` crate は runtime vs compile-time の性質不一致で採用見送り）。既存 flow 完全後方互換（dimensionless fallback）。IO 系は pass-through。非対応: Celsius/Fahrenheit（ξ+）/ 非 rad-deg Angle 単位 / ユーザ定義次元 / GUI unit インライン編集（τ 合流候補）
 - 順序: **本フェーズ着地後に Phase ο-1 着手**。math / easing / vec / time / signal util ノード群は最初から `Quantity<Dimension>` 対応で実装する

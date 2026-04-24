@@ -5,6 +5,44 @@
 
 ## [Unreleased]
 
+### ξ: Dimensional Quantity System (ξ-0 .. ξ-4, ξ-6)
+
+Flowgraph の数値型に **SI 準拠の単位次元システム**を第一級概念として導入。数値に unit を付与、unit は 8 成分次元（Length · Mass · Time · Current · Temperature · Amount · Luminous + 疑似次元 Angle）を持つ。strict default（次元不一致は engine error）+ 明示 escape hatch（`flowgraph.unit.strip`）の方針。既存フローは暗黙 coerce（`Float → dimensionless Quantity`）で完全後方互換。設計詳細: [`docs/roadmap/phase-ksi-dimensional-quantity-system.md`](docs/roadmap/phase-ksi-dimensional-quantity-system.md)、ユーザ向け解説: [`docs/manual/dimensional-quantity-system.md`](docs/manual/dimensional-quantity-system.md)。
+
+- **ξ-0 設計**: phase doc 新設。F# / Haskell の units-of-measure を Flowgraph の pure + 遅延評価エンジンに乗せる方針、SI 準拠 + Angle 疑似次元 + `K` / `ΔK` 分離 + SI 接頭辞 compositional + strict default、を確定。D1-D4 設計決定をユーザ合意のもと文書化。
+- **ξ-1 core types** (`src/flowgraph/quantity/*.rs`, 新規モジュール)
+  - `Dimension` (8 成分 i8 tuple)、`Unit` (BTreeMap<BaseUnitId, i8> + si_factor + prefix_hint)、`Quantity` (value + unit)、`SIPrefix` enum (Yotta .. Yocto + None)、`BaseUnitId` enum (`Meter` / `Kilogram` / `Second` / `Ampere` / `Kelvin` / `Mole` / `Candela` / `Radian` / `Degree` / `KelvinDelta`) を実装。
+  - `parse_unit("m/s^2")` / `parse_unit("kg·m/s^2")` / `parse_unit("μs")` / `parse_unit("MHz")` / `parse_unit("dK")` を自作 parser で処理（外部 crate 依存ゼロ、`uom` crate は compile-time vs runtime の性質不一致で採用見送り）。
+  - `Quantity::try_add` / `try_sub` / `try_mul` / `try_div` の演算 API。絶対温度 vs 温度差の semantics は教科書準拠（`K + K` 禁止、`K - K = dK`、`K + dK = K` 等）。
+  - unit test 30+ ケース: dimension 代数 / prefix 正規化 / SI base-derived round-trip / parser / convert_to 同次元・異次元エラー / K + ΔK 演算。
+- **ξ-2 socket integration + unit nodes** (`src/flowgraph/socket.rs` / `node.rs` / `nodes/unit.rs` (new) / `nodes/collection.rs` / `nodes/state.rs` / `nodes/table_ops.rs` / `registry.rs`)
+  - `SocketType::Quantity` / `SocketValue::Quantity(Quantity)` を第一級 variant として追加。`type_of` / `matches` / `as_quantity` 等のアクセサ、`default_value` を整備。
+  - `flowgraph.unit.*` PureNode 7 種を実装: `assign` (Float + unit → Quantity) / `convert` (Quantity + target_unit → Quantity、同次元限定、K ⇄ ΔK 拒否) / `strip` (Quantity → Float、明示 escape hatch) / `get_unit_string` / `get_dim_string` / `same_dimension` / `to_json` (`{value, unit, dimension}` の internal form 出口)。全て registry に登録、`default_registry_contains_core_features` に追加。
+  - TOML wire format: plain float (dimensionless)、inline table (`{value, unit}`)、quoted string (`"42.5 m/s^2"`) の 3 形式対応。JSON wire format: internal は `{value, unit, dimension}`、外部 IO / pass-through 系（`json_ops` / `state` / `table_ops` / `collection`）は value-only（unit は捨てる、互換性維持）。
+  - `Unit::to_si_base` / `from_si_base` を atom-canonical 係数込みで拡張（`Degree` → `Radian × π/180` などの同次元・異 atom 変換を正しく扱えるよう修正）。
+- **ξ-3 engine coerce + math migration** (`src/flowgraph/socket.rs` / `engine.rs` / `nodes/math.rs` / `quantity/quantity.rs`)
+  - `SocketType::compatible_with(other)` と `coerce_to_type(value, target)` を新設。`Float ↔ Quantity` の暗黙 coerce をエッジ build / runtime 配送の両段で処理。`Float → Quantity` は dimensionless wrap、`Quantity → Float` は dimensionless のみ許容（非 dimensionless は `CoerceError::NotDimensionless` で明示 strip を要求）。
+  - `flowgraph.math.float_add` / `float_sub` / `float_mul` / `float_div` を Quantity 演算化。port 型 `Float → Quantity`、内部は `try_add` / `try_sub` / `try_mul` / `try_div`、div-by-zero は `QuantityArithError::DivisionByZero` で明示。次元組み立て（`m * s = m·s`）や次元不一致エラーの unit test を追加。
+  - `flowgraph.math.int_*` は「Int は Quantity に乗らない」原則で touched せず。
+  - 既存 629 tests 全緑、`BLESS_NODE_CATALOG=1` で catalog 再生成。
+  - **(保留)** `SocketType::Quantity { dim: Option<Dimension> }` の struct variant 化は ο-1 以降で compile-time 制約が欲しくなった時点で再評価。ξ-3 時点は unit variant のまま（`dim` 制約は実行時検証）。
+- **ξ-4 stringify + format node** (`src/flowgraph/socket.rs` / `nodes/util_format.rs` (new) / `nodes/log.rs` / `nodes/channel.rs` / `registry.rs` / `engine.rs`)
+  - `coerce_to_type` / `compatible_with` に `Quantity → String` の一方向暗黙 coerce を追加。`Quantity` の `Display` 実装（`"{value} {unit}"` / dimensionless なら `"{value}"`）を流用。逆方向 `String → Quantity` は非許容（任意文字列の unit parse は不可能）。結果、`flowgraph.util.log` や `flowgraph.channel.emit` の String ポートに Quantity を直接配線できるようになった。
+  - `flowgraph.util.format` PureNode 新設。プロパティ: `include_unit: Bool = true` / `precision: Int = -1`（-1 = default Display）/ `unit_override: String = ""`（同次元への事前変換）。精度 / 単位表示 ON/OFF / 表示単位の差し替えを明示制御。
+  - `log` / `channel.emit` の node description に stringify ルール（Quantity は自動 `"{value} {unit}"` 化、value-only 欲しければ `strip` か `format(include_unit=false)`）を明記。
+  - Integration test `log_receives_quantity_as_formatted_string`: `Float → UnitAssign(m/s^2) → Log` を engine 経由で実行し trace に integrated 表示が載ることを確認。
+- **ξ-5 GUI**: 未着手。`FlowgraphNodeCard.svelte` に unit バッジ + Dimension family 色分け + hover tooltip、property editor の unit text input + parse error 表示、e2e 拡充を予定。ο-1 以降と並行実施可。
+- **ξ-6 ドキュメント** (`docs/manual/dimensional-quantity-system.md` (new) / `docs/manual/index.md` / `docs/roadmap.md` / `CHANGELOG.md` / `docs/manual/node-catalog.md`)
+  - ユーザ向け解説ドキュメント `dimensional-quantity-system.md` を新設。動機 / Quantity と Unit の基本 / 使える単位 7 + 10 + 接頭辞 / 単位文字列 parser 文法 / `flowgraph.unit.*` 7 種と `flowgraph.util.format` / 暗黙 coerce ルール / flow TOML リテラル 3 形式 / よくあるパターン 5 件 / FAQ 7 件。
+  - `manual/index.md` 目次に追加、Flowgraph 用語の Socket 型列に `quantity` と `table` を追記。
+  - `docs/roadmap.md` の Phase ξ ticks を更新、`CHANGELOG.md` に本節を追記。
+  - `node-catalog.md` への Dimension 列追加は Phase ο-1 以降（物理計算ノードで次元ラベルが意味を持つ段階）に送る。ξ-6 時点では ξ-2 / ξ-3 / ξ-4 各コミットで blessed 済みの内容で出荷。
+- **Breaking（ξ）**: なし。
+  - 既存フロー TOML は全て dimensionless `Quantity` として評価され、動作は bit-for-bit 同一。
+  - `SocketType::Quantity` variant の追加により、この enum に non-exhaustive match を書いている外部クレート（あれば）は match arm の追加が必要。
+  - `flowgraph.math.float_*` 4 種の output 型が `float` → `quantity` に変わったため、GUI 側で上流 / 下流の型マッチを厳密に描画しているコードを持つユーザは再確認推奨（engine の暗黙 coerce により実行は通る）。
+- **テスト結果**: `cargo test --lib` 636 passed / 0 failed / 1 ignored（ξ-1 で +30+、ξ-2 で +21、ξ-3 で +4、ξ-4 で +7 の新規 unit / integration test）。
+
 ### χ: OpenAI Responses API Migration (χ-0 .. χ-8)
 
 Chat Completions (`/v1/chat/completions`) 依存を完全撤去し、OpenAI **Responses API (`/v1/responses`)** を AI ペルソナの唯一の経路に統一した。reasoning model (gpt-5 系) 対応と将来的な hosted tools / encrypted reasoning 採用のための基盤整備。

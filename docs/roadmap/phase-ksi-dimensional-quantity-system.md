@@ -1,6 +1,6 @@
 # Phase ξ — Dimensional Quantity System (SI 準拠の単位次元システム)
 
-> **Status**: ξ-0 docs 完了 / ξ-1 core types (Dimension / Unit / Quantity / parser) 着地 / ξ-2 `SocketType::Quantity` + `SocketValue::Quantity` + `flowgraph.unit.*` ノード 7 種着地 / ξ-3 engine edge 暗黙 coerce (Float ↔ Quantity) + `flowgraph.math.float_*` の Quantity 化 着地 / ξ-4 Quantity → String 自動 coerce + `flowgraph.util.format` ノード + log / channel.emit の unit-aware 化 着地。次は ξ-5 で GUI ポート chip の unit バッジ / 色分け / tooltip。
+> **Status**: ξ-0 docs 完了 / ξ-1 core types (Dimension / Unit / Quantity / parser) 着地 / ξ-2 `SocketType::Quantity` + `SocketValue::Quantity` + `flowgraph.unit.*` ノード 7 種着地 / ξ-3 engine edge 暗黙 coerce (Float ↔ Quantity) + `flowgraph.math.float_*` の Quantity 化 着地 / ξ-4 Quantity → String 自動 coerce + `flowgraph.util.format` ノード + log / channel.emit の unit-aware 化 着地 / ξ-6 docs (`docs/manual/dimensional-quantity-system.md` 新設 + CHANGELOG + roadmap tick) 着地。**残りは ξ-5 (GUI) のみ**。ο-1 以降と並行で進められる。
 > 起点: [`../roadmap.md`](../roadmap.md) の "Phase ξ" セクション。
 
 ---
@@ -481,10 +481,11 @@ impl Quantity {
 
 ### 7.6 ξ-6 チェックリスト
 
-- [ ] `CHANGELOG.md` `### ξ: Dimensional Quantity System (ξ-0 .. ξ-6)` 節
-- [ ] `docs/manual/dimensional-quantity-system.md` 新設（ユーザ向け解説: 動機、使い方、unit 指定方法、よくあるパターン、FAQ）
-- [ ] `docs/manual/node-catalog.md` 再生成（Dimension 列追加、ο 依存）
-- [ ] `docs/roadmap.md` tick
+- [x] `CHANGELOG.md` `### ξ: Dimensional Quantity System (ξ-0 .. ξ-4, ξ-6)` 節を追記（ξ-5 は未着手として明記、ο 並行実施可）。Breaking change 注意（`SocketType::Quantity` variant 追加 / `flowgraph.math.float_*` の output 型が `float → quantity` に）を併記。
+- [x] `docs/manual/dimensional-quantity-system.md` 新設。動機 / Quantity と Unit の基本 / 使える単位（SI 基本 7 + Angle + ΔK + 誘導単位 + SI 接頭辞）/ 単位文字列 parser 文法 / `flowgraph.unit.*` 7 種と `flowgraph.util.format` / 暗黙 coerce ルール / flow TOML リテラル 3 形式 / よくあるパターン 5 件 / FAQ 7 件。
+- [x] `docs/manual/index.md` 目次に追加、Flowgraph 用語の Socket 型列に `quantity` / `table` を追記（これまで `table` も欠落していたのでついでに直した）。
+- [~] `docs/manual/node-catalog.md` Dimension 列追加は Phase ο-1 以降に送る（物理計算ノードで Dimension ラベルが意味を持つ段階、ξ 単独では既存 `blessed` 内容で十分）。
+- [x] `docs/roadmap.md` の Phase ξ ticks 更新（ξ-1 / ξ-2 / ξ-3 / ξ-4 / ξ-6 完了、ξ-5 のみ未着手）。
 
 ---
 

@@ -14,6 +14,7 @@ v2 では「チャンネル名で繋ぐ v1 プロセッサー列」から **Flow
 - [Quickstart](./quickstart.md) — v2 の初回起動から「発話 → 字幕 → TTS」まで 5 分で動かす
 - [conf.toml リファレンス](./conf-reference.md) — v2 配布 `conf.toml` のキー一覧
 - [Node Catalog](./node-catalog.md) — 組み込みノードの全ポート・全プロパティ（自動生成）
+- [Dimensional Quantity System](./dimensional-quantity-system.md) — SI 準拠の単位次元システム（Phase ξ）。数値に単位を貼り付け、次元不一致をエンジンで検知する
 
 ### Tutorials（各 `flowgraph.example/` の解説）
 
@@ -68,7 +69,7 @@ v2 では「チャンネル名で繋ぐ v1 プロセッサー列」から **Flow
 | 用語 | 意味 |
 |---|---|
 | **Feature** | ノードの種類を示す文字列 ID。例: `flowgraph.tts.speak` |
-| **Socket** | 入出力端子。型は `bool` / `int` / `float` / `string` / `json` / `list<T>` / `map<T>` / `exec` |
+| **Socket** | 入出力端子。型は `bool` / `int` / `float` / `string` / `json` / `list<T>` / `map<T>` / `table` / `quantity` / `exec`。`quantity` は [Dimensional Quantity System](./dimensional-quantity-system.md) |
 | **Port** | ノードに所属する個別のソケット（name + type + exec/data）|
 | **Edge** | `from = "node_id:port"` → `to = "node_id:port"` の TOML 記述 |
 | **Exec 線** | 処理の発火タイミングを伝える制御フロー（`exec_in` / `exec_out`）|
