@@ -150,6 +150,9 @@ impl SocketValueRepr {
    }
    SocketValue::Table(t) => t.to_json_array(),
    SocketValue::Quantity(q) => quantity_to_json(q),
+   // Phase π: DateTime は RFC3339 (Z suffix) 文字列として wire に載せる。
+   // 受信側 `json_to_socket_value` はこの文字列を parse して DateTime に復元する。
+   SocketValue::DateTime(dt) => serde_json::Value::String(dt.to_rfc3339()),
   })
  }
 
@@ -188,6 +191,11 @@ pub(crate) fn json_to_socket_value(ty: &SocketType, v: &serde_json::Value) -> Op
   (SocketType::Quantity, J::Number(n)) => n.as_f64().map(|f| SocketValue::Quantity(Quantity::dimensionless(f))),
   (SocketType::Quantity, J::String(s)) => parse_quantity_string(s).ok().map(SocketValue::Quantity),
   (SocketType::Quantity, J::Object(obj)) => quantity_from_json_object(obj).map(SocketValue::Quantity),
+  // Phase π: JSON 文字列 → DateTime。parse 失敗は `None`（呼び出し側で
+  // `SocketValueRepr::to_socket_value` が default 値 fallback するなど既存挙動に合流）。
+  (SocketType::DateTime, J::String(s)) => crate::datetime::DateTime::from_rfc3339(s)
+   .ok()
+   .map(SocketValue::DateTime),
   _ => None,
  }
 }

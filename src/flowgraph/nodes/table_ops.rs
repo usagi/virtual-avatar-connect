@@ -40,6 +40,8 @@ fn sv_to_json(v: &SocketValue) -> JsonValue {
 		SocketValue::Quantity(q) => serde_json::Number::from_f64(q.value)
 			.map(JsonValue::Number)
 			.unwrap_or(JsonValue::Null),
+		// Phase π: Table セル内 DateTime は RFC3339 (Z suffix) 文字列として格納。
+		SocketValue::DateTime(dt) => JsonValue::String(dt.to_rfc3339()),
 	}
 }
 

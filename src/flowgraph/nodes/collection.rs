@@ -230,6 +230,8 @@ fn socket_value_to_json(v: &SocketValue) -> serde_json::Value {
   // Phase ξ §6.4: 外部 JSON 境界では value のみ（pass-through）。
   // unit を維持したい場合は `flowgraph.unit.to_json` を使う。
   SocketValue::Quantity(q) => serde_json::json!(q.value),
+  // Phase π: DateTime は RFC3339 (Z suffix) 文字列として pass-through。
+  SocketValue::DateTime(dt) => serde_json::Value::String(dt.to_rfc3339()),
  }
 }
 

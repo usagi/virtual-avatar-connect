@@ -5,6 +5,7 @@
 //! - 型表記のパース/整形（`"list<string>"` / `"map<json>"` など）
 //! - 暗黙変換は行わない。`as_*()` は型が一致した場合のみ値を返す。
 
+use crate::datetime::DateTime;
 use crate::flowgraph::quantity::{parse_unit, Quantity, Unit};
 use crate::flowgraph::table::Table;
 use serde::{Deserialize, Serialize};
@@ -35,6 +36,10 @@ pub enum SocketType {
  /// ノード群）と型適合する。ξ-2 時点では dim 制約なしの「任意次元受け」。
  /// 厳密な dim 制約付き variant は ξ-3 以降で追加予定。
  Quantity,
+ /// 絶対時刻の boundary 型（Phase π）。内部表現は [`crate::datetime::DateTime`]
+ /// (= `jiff::Timestamp` の newtype)。文字列ポートとの暗黙 coerce は
+ /// [`coerce_to_type`] で RFC3339 往復によって行われる。
+ DateTime,
 }
 
 impl SocketType {
@@ -56,6 +61,7 @@ impl SocketType {
    SocketType::Exec => None,
    SocketType::Table => Some(SocketValue::Table(Table::empty())),
    SocketType::Quantity => Some(SocketValue::Quantity(Quantity::dimensionless(0.0))),
+   SocketType::DateTime => Some(SocketValue::DateTime(DateTime::default())),
   }
  }
 
@@ -88,6 +94,10 @@ impl SocketType {
   match (self, other) {
    (Float, Quantity) | (Quantity, Float) => true,
    (Quantity, String) => true,
+   // Phase π: String ↔ DateTime は RFC3339 を介して双方向に coerce 可能。
+   // parse 失敗はランタイムに [`coerce_to_type`] が [`CoerceError::DateTimeParseError`]
+   // として伝搬する（接続時点では型互換とみなす）。
+   (String, DateTime) | (DateTime, String) => true,
    (List(a), List(b)) => a.compatible_with(b),
    (Map(a), Map(b)) => a.compatible_with(b),
    (a, b) => a == b,
@@ -125,6 +135,17 @@ pub fn coerce_to_type(value: SocketValue, target: &SocketType) -> Result<SocketV
 		}
 		// Quantity -> String: Display impl で "{value} {unit}" へ（Phase xi-4）
 		(SocketValue::Quantity(q), SocketType::String) => Ok(SocketValue::String(format!("{}", q))),
+		// Phase π: DateTime -> String: RFC3339 (Z suffix, subsecond-preserving) 文字列化。
+		// 常に成功する（jiff::Timestamp は任意の値で valid な RFC3339 を出せる）。
+		(SocketValue::DateTime(dt), SocketType::String) => Ok(SocketValue::String(dt.to_rfc3339())),
+		// Phase π: String -> DateTime: RFC3339 parse。失敗は明示 error を返し、
+		// ノード実装側で runtime error に昇格させる（strict stance, Phase ξ D4 と同じ哲学）。
+		(SocketValue::String(s), SocketType::DateTime) => DateTime::from_rfc3339(&s)
+			.map(SocketValue::DateTime)
+			.map_err(|e| CoerceError::DateTimeParseError {
+				input: s,
+				reason: e.to_string(),
+			}),
 		// List / Map: 要素再帰
 		(SocketValue::List(xs), SocketType::List(inner)) => {
 			let mut out = Vec::with_capacity(xs.len());
@@ -156,6 +177,8 @@ pub enum CoerceError {
 	TypeMismatch { from: SocketType, to: SocketType },
 	#[error("Quantity は非 dimensionless（unit={unit}）、Float へ暗黙変換不可。明示 strip を挟んでください")]
 	NotDimensionless { unit: String },
+	#[error("String → DateTime 変換失敗: '{input}' ({reason})")]
+	DateTimeParseError { input: String, reason: String },
 }
 
 impl fmt::Display for SocketType {
@@ -171,6 +194,7 @@ impl fmt::Display for SocketType {
    SocketType::Exec => f.write_str("exec"),
    SocketType::Table => f.write_str("table"),
    SocketType::Quantity => f.write_str("quantity"),
+   SocketType::DateTime => f.write_str("datetime"),
   }
  }
 }
@@ -224,6 +248,7 @@ fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
   "exec" => return Ok(SocketType::Exec),
   "table" => return Ok(SocketType::Table),
   "quantity" => return Ok(SocketType::Quantity),
+  "datetime" => return Ok(SocketType::DateTime),
   _ => {}
  }
  // 複合型: list<T> / map<T> / map<string, T>
@@ -306,6 +331,9 @@ pub enum SocketValue {
  /// 単位次元付き数値（Phase ξ）。`dimensionless` は `Float` と数値的に等価だが、
  /// `flowgraph.unit.*` ノード群の入出力として明示的に unit を伴う経路を形成する。
  Quantity(Quantity),
+ /// 絶対時刻（Phase π）。内部は [`DateTime`] = `jiff::Timestamp` の newtype。
+ /// 文字列ポートとの暗黙 coerce は RFC3339 経由で双方向に行われる。
+ DateTime(DateTime),
  // Exec は値を持たないので variant なし。
 }
 
@@ -329,6 +357,7 @@ impl SocketValue {
    }
    SocketValue::Table(_) => SocketType::Table,
    SocketValue::Quantity(_) => SocketType::Quantity,
+   SocketValue::DateTime(_) => SocketType::DateTime,
   }
  }
 
@@ -386,6 +415,12 @@ impl SocketValue {
    _ => Err(ValueCastError::Mismatch { expected: "quantity", actual: self.type_of() }),
   }
  }
+ pub fn as_datetime(&self) -> Result<&DateTime, ValueCastError> {
+  match self {
+   SocketValue::DateTime(dt) => Ok(dt),
+   _ => Err(ValueCastError::Mismatch { expected: "datetime", actual: self.type_of() }),
+  }
+ }
 
  /// 値の型が指定の `SocketType` に適合するかの軽量チェック。
  /// `List`/`Map` の内部型は空の場合はパスとみなす。
@@ -397,7 +432,8 @@ impl SocketValue {
    | (SocketValue::String(_), SocketType::String)
    | (SocketValue::Json(_), SocketType::Json)
    | (SocketValue::Table(_), SocketType::Table)
-   | (SocketValue::Quantity(_), SocketType::Quantity) => true,
+   | (SocketValue::Quantity(_), SocketType::Quantity)
+   | (SocketValue::DateTime(_), SocketType::DateTime) => true,
    (SocketValue::List(xs), SocketType::List(inner)) => xs.iter().all(|v| v.matches(inner)),
    (SocketValue::Map(m), SocketType::Map(inner)) => m.values().all(|v| v.matches(inner)),
    _ => false,
@@ -448,6 +484,21 @@ pub fn from_toml_value(expected: &SocketType, v: &toml::Value) -> Result<SocketV
     actual: format!("parse error: {e}"),
    }),
   (SocketType::Quantity, toml::Value::Table(tbl)) => quantity_from_toml_table(tbl).map(SocketValue::Quantity),
+  // Phase π: DateTime は TOML native Datetime / RFC3339 文字列を受理。
+  // naive (tz-less) な TOML Datetime は π-4a 層では `Err`（π-4c 以降、
+  // `FlowgraphInstanceConfig.default_timezone` と組み合わせて受容する予定）。
+  (SocketType::DateTime, toml::Value::Datetime(dt)) => DateTime::from_rfc3339(&dt.to_string())
+   .map(SocketValue::DateTime)
+   .map_err(|e| FromTomlError::Mismatch {
+    expected: "datetime (RFC3339 with tz offset)".into(),
+    actual: format!("toml datetime '{dt}' parse error: {e}"),
+   }),
+  (SocketType::DateTime, toml::Value::String(s)) => DateTime::from_rfc3339(s)
+   .map(SocketValue::DateTime)
+   .map_err(|e| FromTomlError::Mismatch {
+    expected: "datetime (RFC3339 string)".into(),
+    actual: format!("parse error on '{s}': {e}"),
+   }),
   (SocketType::Exec, _) => Err(FromTomlError::ExecHasNoValue),
   (SocketType::Table, toml::Value::Array(arr)) => {
    // TOML 配列から Table を復元（スキーマは先頭 object から推論）
@@ -711,5 +762,150 @@ mod tests {
   assert_eq!(s, "\"map<json>\"");
   let back: SocketType = serde_json::from_str(&s).unwrap();
   assert_eq!(back, t);
+ }
+
+ // ---------------------------------------------------------------------
+ // Phase π: DateTime socket type / value
+ // ---------------------------------------------------------------------
+
+ #[test]
+ fn datetime_type_parse_display_roundtrip() {
+  assert_eq!(SocketType::parse("datetime").unwrap(), SocketType::DateTime);
+  assert_eq!(SocketType::DateTime.to_string(), "datetime");
+  let j = serde_json::to_string(&SocketType::DateTime).unwrap();
+  assert_eq!(j, "\"datetime\"");
+  let back: SocketType = serde_json::from_str(&j).unwrap();
+  assert_eq!(back, SocketType::DateTime);
+ }
+
+ #[test]
+ fn datetime_type_default_is_unix_epoch() {
+  let dv = SocketType::DateTime.default_value().unwrap();
+  let SocketValue::DateTime(dt) = dv else { panic!("expected DateTime") };
+  assert_eq!(dt, DateTime::unix_epoch());
+ }
+
+ #[test]
+ fn datetime_type_carries_value() {
+  assert!(SocketType::DateTime.carries_value());
+ }
+
+ #[test]
+ fn datetime_value_type_of_and_matches() {
+  let dt = DateTime::from_rfc3339("2026-04-24T12:34:56Z").unwrap();
+  let v = SocketValue::DateTime(dt);
+  assert_eq!(v.type_of(), SocketType::DateTime);
+  assert!(v.matches(&SocketType::DateTime));
+  assert!(!v.matches(&SocketType::String));
+ }
+
+ #[test]
+ fn datetime_as_datetime_happy_and_mismatch() {
+  let dt = DateTime::from_rfc3339("2026-04-24T12:34:56Z").unwrap();
+  let v = SocketValue::DateTime(dt);
+  assert_eq!(v.as_datetime().unwrap(), &dt);
+  assert!(matches!(SocketValue::Int(0).as_datetime(), Err(ValueCastError::Mismatch { .. })));
+ }
+
+ // --- compatible_with ---
+
+ #[test]
+ fn datetime_compat_string_bidirectional() {
+  assert!(SocketType::String.compatible_with(&SocketType::DateTime));
+  assert!(SocketType::DateTime.compatible_with(&SocketType::String));
+  assert!(SocketType::DateTime.compatible_with(&SocketType::DateTime));
+ }
+
+ #[test]
+ fn datetime_compat_rejects_unrelated_types() {
+  assert!(!SocketType::DateTime.compatible_with(&SocketType::Int));
+  assert!(!SocketType::DateTime.compatible_with(&SocketType::Float));
+  assert!(!SocketType::DateTime.compatible_with(&SocketType::Quantity));
+  assert!(!SocketType::DateTime.compatible_with(&SocketType::Json));
+ }
+
+ // --- coerce_to_type ---
+
+ #[test]
+ fn coerce_datetime_to_string_is_rfc3339() {
+  let dt = DateTime::from_rfc3339("2026-04-24T12:34:56.123Z").unwrap();
+  let out = coerce_to_type(SocketValue::DateTime(dt), &SocketType::String).unwrap();
+  assert_eq!(out, SocketValue::String("2026-04-24T12:34:56.123Z".into()));
+ }
+
+ #[test]
+ fn coerce_string_to_datetime_happy() {
+  let out = coerce_to_type(
+   SocketValue::String("2026-04-24T21:34:56+09:00".into()),
+   &SocketType::DateTime,
+  )
+  .unwrap();
+  let expected = DateTime::from_rfc3339("2026-04-24T12:34:56Z").unwrap();
+  assert_eq!(out, SocketValue::DateTime(expected));
+ }
+
+ #[test]
+ fn coerce_string_to_datetime_parse_error() {
+  let err = coerce_to_type(SocketValue::String("not-a-datetime".into()), &SocketType::DateTime)
+   .unwrap_err();
+  match err {
+   CoerceError::DateTimeParseError { input, .. } => assert_eq!(input, "not-a-datetime"),
+   other => panic!("unexpected error variant: {other:?}"),
+  }
+ }
+
+ #[test]
+ fn coerce_string_naive_to_datetime_errs_at_pi_4b_layer() {
+  // naive (tz 無し) 文字列は π-4b 層では常に parse error。
+  // π-4c で config.default_timezone 経由の opt-in pathway を追加予定。
+  let err = coerce_to_type(SocketValue::String("2026-04-24T12:34:56".into()), &SocketType::DateTime)
+   .unwrap_err();
+  assert!(matches!(err, CoerceError::DateTimeParseError { .. }));
+ }
+
+ #[test]
+ fn coerce_datetime_identity_passthrough() {
+  let dt = DateTime::from_rfc3339("2026-04-24T12:34:56Z").unwrap();
+  let out = coerce_to_type(SocketValue::DateTime(dt), &SocketType::DateTime).unwrap();
+  assert_eq!(out, SocketValue::DateTime(dt));
+ }
+
+ #[test]
+ fn coerce_datetime_to_int_is_type_mismatch() {
+  let dt = DateTime::from_rfc3339("2026-04-24T12:34:56Z").unwrap();
+  let err = coerce_to_type(SocketValue::DateTime(dt), &SocketType::Int).unwrap_err();
+  assert!(matches!(err, CoerceError::TypeMismatch { .. }));
+ }
+
+ // --- TOML from_toml_value ---
+
+ #[test]
+ fn from_toml_datetime_string_literal() {
+  let v = toml::Value::String("2026-04-24T12:34:56Z".into());
+  let out = from_toml_value(&SocketType::DateTime, &v).unwrap();
+  assert_eq!(
+   out,
+   SocketValue::DateTime(DateTime::from_rfc3339("2026-04-24T12:34:56Z").unwrap())
+  );
+ }
+
+ #[test]
+ fn from_toml_datetime_native_offset_datetime() {
+  // TOML spec の offset-datetime リテラル。`toml::from_str` で document として parse する。
+  let parsed: toml::Table = toml::from_str("ts = 2026-04-24T21:34:56+09:00").unwrap();
+  let v = parsed.get("ts").unwrap();
+  assert!(matches!(v, toml::Value::Datetime(_)), "expected Datetime, got {v:?}");
+  let out = from_toml_value(&SocketType::DateTime, v).unwrap();
+  let expected = DateTime::from_rfc3339("2026-04-24T12:34:56Z").unwrap();
+  assert_eq!(out, SocketValue::DateTime(expected));
+ }
+
+ #[test]
+ fn from_toml_datetime_naive_rejected_at_pi_4b_layer() {
+  // local-datetime (tz 無し) は π-4b 層では常に reject。π-4c で config 経由で opt-in。
+  let parsed: toml::Table = toml::from_str("ts = 2026-04-24T12:34:56").unwrap();
+  let v = parsed.get("ts").unwrap();
+  assert!(matches!(v, toml::Value::Datetime(_)));
+  assert!(from_toml_value(&SocketType::DateTime, v).is_err());
  }
 }
