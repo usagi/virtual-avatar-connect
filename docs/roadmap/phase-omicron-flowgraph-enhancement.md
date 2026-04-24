@@ -1,7 +1,7 @@
 # Phase ο — Flowgraph Enhancement I (計算系 + 時間 + signal util + GUI 小改善)
 
-> **Status**: ο-0 docs 着地済み。ο-1 以降のコード実装は次セッション以降でサブフェーズ単位に落とす。
-> 起点となるスコープ感は [`../roadmap.md`](../roadmap.md) の "Phase ο" を参照。
+> **Status**: ο-0 docs 着地済み。**ο-1 以降は Phase ξ (Dimensional Quantity System) 着地後に着手**。
+> 起点となるスコープ感は [`../roadmap.md`](../roadmap.md) の "Phase ο" を参照。依存する単位次元基盤は [`phase-ksi-dimensional-quantity-system.md`](phase-ksi-dimensional-quantity-system.md)。
 
 ---
 
@@ -9,7 +9,8 @@
 
 - Phase ν-β クローズ後の次フェーズ。[docs/roadmap.md](../roadmap.md) の "Flowgraph 機能向上（TBD）" を 1 つの narrow フェーズとして具体化する。
 - 本フェーズは **engine 内完結の Pure ノード群 + GUI 小改善** に閉じる。外部連携（HTTP / OBS / OSC / VMC / system metrics / process / window）と engine の大改修（Undo/Redo / subgraph / 物理）は明示的に次フェーズ（π / ρ / σ / τ / υ）に送る（§4）。
-- 全 6 カテゴリ（math / easing / vec / time / signal util / random）× 30+ ノード程度 + GUI 3 項目で構成。1 サブフェーズ = 1 commit 粒度に分解（§6）。
+- 全 6 カテゴリ（math / easing / vec / time / signal util / random）× **71 ノード**（math 37 + easing 1 + vec 18 + time 5 + signal util 5 + random/noise 5）+ GUI 3 項目で構成。1 サブフェーズ = 1 commit 粒度に分解（§6）。
+- **依存**: [Phase ξ (Dimensional Quantity System)](phase-ksi-dimensional-quantity-system.md) 先行。ο-1 math / ο-2 easing / ο-3 vec / ο-4 time / ο-5 signal util のノード群は最初から `Quantity<Dimension>` 対応で実装する。ξ-0 / ξ-1 / ξ-2 / ξ-3 着地前に ο-1 を走らせると retrofit 地獄になるため、**順序ブロッカー**として固定する。
 
 ---
 
@@ -40,6 +41,7 @@
 - 既存ノード動作は変更しない。`flowgraph.math.*` は完全後方互換（new node 追加のみ）。
 - GUI 改善は `FlowgraphPalette.svelte` / `FlowgraphCanvas.svelte` / `FlowgraphTab.svelte` に閉じ、他タブには波及させない。
 - Breaking change を作らない（`CHANGELOG.md` の `### Breaking changes (ο)` が空で終わる状態を狙う）。
+- **Phase ξ 依存**: ο-1〜ο-5 のノードは **最初から `Quantity<Dimension>` 対応**で書く（ο を先に plain-float で実装して ξ-3 で全数 retrofit する案は却下、理由は§5.0）。trig / arctrig / normalize_angle は Angle 次元を、sinh/cosh/tanh は dimensionless を型制約として要求する。vec2/vec3 の成分は同一 Dimension を持つ必要があり、`flowgraph.vec2.add` などは両辺の次元一致を engine error で担保する。
 
 以下は **非スコープ**（明示的に §4 で次フェーズへ送る）:
 
@@ -68,17 +70,25 @@
 | `flowgraph.math.inverse_lerp` | (Float, Float, Float) → Float | `a, b, v` → `result` | `a == b` は 0.0 を返す |
 | `flowgraph.math.remap` | (Float × 5) → Float | `value, in_lo, in_hi, out_lo, out_hi` → `result` | `in_lo == in_hi` は `out_lo` |
 | `flowgraph.math.smoothstep` | (Float × 3) → Float | `edge0, edge1, x` → `result` | GLSL 準拠 |
-| `flowgraph.math.sin` / `.cos` / `.tan` | Float → Float | ラジアン入力 | |
-| `flowgraph.math.asin` / `.acos` / `.atan` | Float → Float | | |
-| `flowgraph.math.atan2` | (Float, Float) → Float | `y, x` → `result` | |
+| `flowgraph.math.sin` / `.cos` / `.tan` | Float → Float | ラジアン入力。Phase ξ 着地後は **Angle 次元必須** |
+| `flowgraph.math.asin` / `.acos` / `.atan` | Float → Float | Phase ξ 着地後は **Angle 次元を返す** |
+| `flowgraph.math.atan2` | (Float, Float) → Float | `y, x` → `result`。Phase ξ 着地後は Angle 次元を返す |
+| `flowgraph.math.sinh` / `.cosh` / `.tanh` | Float → Float | 双曲線関数。`f64::sinh` / `.cosh` / `.tanh` ラップ。Phase ξ では **dimensionless のみ受ける**（双曲線関数の数学的文脈では独立変数は無次元）|
+| `flowgraph.math.asinh` / `.acosh` / `.atanh` | Float → Float | 逆双曲線関数。`.acosh` は `x < 1` で NaN、`.atanh` は `|x| >= 1` で NaN（std::f64 準拠）|
 | `flowgraph.math.sqrt` | Float → Float | 負値は NaN（std::f64 準拠）| |
 | `flowgraph.math.pow` | (Float, Float) → Float | `base, exp` | |
 | `flowgraph.math.exp` / `.ln` / `.log2` / `.log10` | Float → Float | | |
 | `flowgraph.math.sign_int` / `.sign_float` | X → X | -1 / 0 / 1 | float は NaN で 0 |
 | `flowgraph.math.floor` / `.ceil` / `.round` | Float → Float | `round` は half-away-from-zero（std 既定）| |
-| `flowgraph.math.deg_to_rad` / `.rad_to_deg` | Float → Float | | |
+| `flowgraph.math.deg_to_rad` / `.rad_to_deg` | Float → Float | 数値としての scale 変換。Phase ξ 着地後は `flowgraph.unit.convert` と共存（単位変換の明示 UI が ο-1 時点では `deg_to_rad` / `rad_to_deg` のみ提供）|
+| `flowgraph.math.normalize_angle_deg_0_360` | Float → Float | `1357.33` → `277.33`（`x.rem_euclid(360.0)`）。`[0, 360)` に正規化。Phase ξ 着地後は **Angle 次元 + deg 単位必須** |
+| `flowgraph.math.normalize_angle_deg_signed` | Float → Float | `277.33` → `-82.67`（`((x + 180) mod 360) - 180`）。`[-180, +180)` に正規化 |
+| `flowgraph.math.normalize_angle_rad_0_2pi` | Float → Float | `x.rem_euclid(2π)`。`[0, 2π)` に正規化 |
+| `flowgraph.math.normalize_angle_rad_signed` | Float → Float | `[-π, +π)` に正規化 |
 
-計 27 ノード。既存 `int_binop_node!` / `float_binop_node!` マクロを参考に、1 入力 / 3 入力系のマクロを増設する方針。
+計 **37 ノード**（2026-04-24 拡張: 双曲線 6 + 角度正規化 4）。既存 `int_binop_node!` / `float_binop_node!` マクロを参考に、1 入力 / 3 入力系のマクロを増設する方針。
+
+> **Note (Phase ξ 依存)**: 本フェーズのこれらの math ノードは **Phase ξ (Dimensional Quantity System) 着地後の ο-1 着手**が前提。ο-1 以降の実装では最初から `Quantity<Dimension>` を受ける形で書き、Phase ξ が提供する Angle 次元 + rad/deg unit を trig / arctrig / normalize_angle に型制約として載せる。sinh/cosh/tanh 系は **dimensionless のみ**（双曲線関数の引数に物理単位を持たせると SI 上の意味を失う）。`deg_to_rad` / `rad_to_deg` は ξ 着地後は単に `flowgraph.unit.convert{to: "rad"}` / `{to: "deg"}` の薄いラッパーに退化する可能性があり、deprecation policy を ξ-3 retrofit 時に再整理する。
 
 ### 3.2 easing (`flowgraph.easing.*`)
 
@@ -182,6 +192,15 @@ random 系は `rand::thread_rng()`（すでに推移依存で入ってる可能�
 
 ## 5. Architecture 判断
 
+### 5.0 Phase ξ 先行（順序ブロッカー）
+
+ο-1..ο-5 のノードは **Phase ξ 着地後**に着手する。plain-float で先行着地させて ξ-3 で全数 retrofit する案を検討したが、以下の理由で却下:
+
+- ο-1 時点で 37 ノード分の `PortSpec` / テスト / `node-catalog.md` 定義を書くことになり、ξ-3 で **二度同じ分量**を書き直す作業が発生する
+- retrofit によって既存 flow の TOML 定義が「値は同じだが型シグネチャだけ変わる」という **semantics-silent breakage** を起こす。deprecation cycle が増える
+- trig / arctrig / normalize_angle は Phase ξ の Angle 次元がなければ **型安全性のうま味が一切取れない**。後付けで「Angle 次元必須」に変えた瞬間に既存 flow が動かなくなる（= ξ-3 が breaking change 化する）
+- 最初から `Quantity<Dimension>` 対応で書けば、各ノードで `Quantity::new(result, input.unit())` で unit pass-through / `Quantity::dimensionless(result)` で無次元化を **ノードローカルに** 書けば済む。retrofit より実装コストが低い
+
 ### 5.1 int 版 / float 版の分離を維持
 
 既存 `flowgraph.math.int_add` / `.float_add` の二元体系は継続する。追加する `abs` / `min` / `max` / `clamp` / `sign` も **int 版と float 版を別 feature として登録**する。理由:
@@ -226,12 +245,12 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 
 ## 6. Sub-phase Breakdown
 
-各サブは 1 commit 1 トピック（Commit Granularity Rule）。
+各サブは 1 commit 1 トピック（Commit Granularity Rule）。**ο-1 以降はすべて Phase ξ (ξ-0 〜 ξ-6) 着地を前提**（§5.0）。
 
 | sub | 内容 | 触るもの |
 |---|---|---|
-| ο-0 | docs: 本 phase doc + roadmap.md 再編 + backlog-nodes.md §1 の pointer 化 | `docs/roadmap/phase-omicron-flowgraph-enhancement.md` ✅ / `docs/roadmap.md` ✅ / `docs/roadmap/backlog-nodes.md` ✅（本セッションで着地） |
-| ο-1 | feat(flowgraph/math): §3.1 27 ノード追加 + unit test | `src/flowgraph/nodes/math.rs` / `src/flowgraph/registry.rs` |
+| ο-0 | docs: 本 phase doc + roadmap.md 再編 + backlog-nodes.md §1 の pointer 化（+ 後日 angle normalization / 双曲線 10 ノード追記 + Phase ξ 依存明記）| `docs/roadmap/phase-omicron-flowgraph-enhancement.md` ✅ / `docs/roadmap.md` ✅ / `docs/roadmap/backlog-nodes.md` ✅ |
+| ο-1 | feat(flowgraph/math): §3.1 **37 ノード**追加 + unit test（Quantity-aware）| `src/flowgraph/nodes/math.rs` / `src/flowgraph/registry.rs` |
 | ο-2 | feat(flowgraph/easing): §3.2 `apply` ノード + curve 関数群 + unit test | `src/flowgraph/nodes/easing.rs` (new) / `registry.rs` / 場合により `node.rs`（`PropertySpec.choices` 追加）|
 | ο-3 | feat(flowgraph/vec): §3.3 18 ノード追加（vec2 9 + vec3 9）+ unit test | `src/flowgraph/nodes/vec.rs` (new) / `registry.rs` |
 | ο-4 | feat(flowgraph/util,time): §3.4 `timer_interval` + time ノード 4 種 + unit test | `src/flowgraph/nodes/delay.rs` 既存パターン流用 / `src/flowgraph/nodes/time.rs` (new) / `registry.rs` |
@@ -247,10 +266,12 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 
 ### 6.1 ο-1 チェックリスト
 
-- [ ] 1-入力系 / 3-入力系のマクロを `math.rs` に追加（既存 2-入力マクロを踏襲）
-- [ ] 27 ノードの `NodeDescriptor` + `PureNode::compute` 実装
+- [ ] **前提**: Phase ξ-3 (engine retrofit to Quantity) 着地済みであること。`SocketValue::Float` が `Quantity<Dimension>` を保持できる状態を前提に書く
+- [ ] 1-入力系 / 3-入力系のマクロを `math.rs` に追加（既存 2-入力マクロを踏襲、Quantity-aware 版）
+- [ ] **37 ノード**の `NodeDescriptor` + `PureNode::compute` 実装（内訳: abs/min/max/clamp/sign 系 int+float 合計 10 + lerp/inverse_lerp/remap/smoothstep 4 + trig 3 + arctrig 3 + atan2 + sqrt/pow/exp/ln/log2/log10 6 + floor/ceil/round 3 + deg_to_rad/rad_to_deg 2 + sinh/cosh/tanh 3 + asinh/acosh/atanh 3 + normalize_angle × 4）
+- [ ] 次元制約: `sin/cos/tan` は **Angle 次元入力必須**、`asin/acos/atan/atan2` は **Angle 次元出力**、`normalize_angle_deg_*` は **deg unit 必須**、`normalize_angle_rad_*` は **rad unit 必須**、`sinh/cosh/tanh/asinh/acosh/atanh` は **dimensionless 必須**、`pow` / `exp` / `ln` / `log2` / `log10` は指数 / 真数が dimensionless 必須、`sqrt` は次元 `D` を `D^(1/2)` にするが整数次元しか持たない現行では **dimensionless のみ受け付ける**（spec として doc 化）、`abs/min/max/clamp/lerp/inverse_lerp/remap/smoothstep/floor/ceil/round/sign_*` は **unit pass-through**（入力と同じ unit を出力）
 - [ ] `registry.rs` に登録（`register_pure`）
-- [ ] `cargo test --lib` の node 単体テストで各ノード 1-2 ケース
+- [ ] `cargo test --lib` の node 単体テストで各ノード 1-2 ケース（dimension mismatch error パスも含む）
 - [ ] `BLESS_NODE_CATALOG=1 cargo test` で `docs/manual/node-catalog.md` を再生成し、ο-7 まで blessed diff を保持
 
 ### 6.2 ο-2 チェックリスト
@@ -305,7 +326,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 
 | risk | 対策 |
 |---|---|
-| 27 + 18 + 5 + 5 + 5 + 4 = **64 新ノード追加** で `manual/node-catalog.md` の `BLESS_NODE_CATALOG=1` 再生成を ο-1 〜 ο-5 ごとに忘れると、CRLF / LF 問題や diff 巨大化で cargo test が fail する | ο-1 / ο-2 / ο-3 / ο-4 / ο-5 の各 commit 前に `BLESS_NODE_CATALOG=1 cargo test` を必ず回し、blessed diff を commit に含める運用を phase doc 上で固定。ο-7 でまとめる誘惑に負けない |
+| 37 + 1 + 18 + 5 + 5 + 5 = **71 新ノード追加** で `manual/node-catalog.md` の `BLESS_NODE_CATALOG=1` 再生成を ο-1 〜 ο-5 ごとに忘れると、CRLF / LF 問題や diff 巨大化で cargo test が fail する | ο-1 / ο-2 / ο-3 / ο-4 / ο-5 の各 commit 前に `BLESS_NODE_CATALOG=1 cargo test` を必ず回し、blessed diff を commit に含める運用を phase doc 上で固定。ο-7 でまとめる誘惑に負けない |
 | `noise` crate の API が将来版で change breakage | `noise = "0.9"` で固定（minor 上げは許容 / major は opt-in）。`Perlin::new(seed)` 以外の機能は触らない。将来 `simplex` / `worley` 等に広げるなら独立 PR |
 | easing の `elastic` / `bounce` は `t ∈ [0, 1]` の外で発散 → テストのオーバーシュート判定で吸収するのを忘れると flaky | `clamp_t = true` を既定にし、代表 curve の "0.0 → 0.0、1.0 → 1.0" 境界値だけ assert する保守的テストに |
 | `flowgraph.util.timer_interval` は Phase δ の `DelayNode` パターンに依存するが、`ctx.trigger` の node_fq 取得が実は未整備 | backlog §1.4 末尾の注意書き通り、`DelayNode` と同じ経路で対応。`StatefulCtx` に `node_fq` が無ければ phase 途中で engine 側に 1 行追加する（ο-4 の判断ポイント） |
@@ -318,6 +339,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 ## 8. References
 
 - [`../roadmap.md`](../roadmap.md) の "Phase ο" セクション
+- [`phase-ksi-dimensional-quantity-system.md`](phase-ksi-dimensional-quantity-system.md) — **Phase ξ（順序上の前提フェーズ）**。Quantity / Dimension / Unit 型、angle 疑似次元、strict default + 明示 escape hatch の設計元
 - [`phase-delta-spec.md`](phase-delta-spec.md) — Flowgraph 型システム / Pure・Stateful・Effectful 分類の元仕様
 - [`backlog-nodes.md`](backlog-nodes.md) — `flowgraph.util.timer_interval` 仕様ドラフト（ο-4 で昇格）
 - [`phase-nu-gui-e2e-playwright.md`](phase-nu-gui-e2e-playwright.md) — E2E fixture / spec 運用の前例
