@@ -1,7 +1,7 @@
 # Phase π — DateTime Type System (jiff 採用 + chrono 全面置換)
 
 > **Status**: π-0 docs 着地 / π-1 jiff deps + smoke test (14 tests) / π-2 chrono→jiff 全面置換 / π-3 chrono 直接依存解除 / π-4 Flowgraph 型基盤（`DateTime` socket + `FlowgraphInstanceConfig` + naive parse）/ **π-5** `src/flowgraph/nodes/datetime.rs` に 8 ノード + `get_required_datetime` + unit test 30 本、lib **800** tests green / **π-6** CHANGELOG + `docs/manual/datetime-system.md` + `manual/index.md` + omicron phase doc 更新 + roadmap tick。complete。
-> 起点: [`../roadmap.md`](../roadmap.md) の "Phase π" セクション。依存関係: Phase ο-3 完了 → Phase π → Phase ο-4。
+> 起点: [`../roadmap.md`](../roadmap.md) の **Completed Phases** 内「Phase π」節。実装順のメモ: Phase ο-3 完了 → Phase π → Phase ο-4（いずれも完了済み）。
 
 ---
 

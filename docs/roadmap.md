@@ -123,6 +123,21 @@ Flowgraph 機能向上の第 1 波。旧 ο-0 の本数想定 **78 (42+1+20+5+5+
 - 仕様書: [`roadmap/phase-omicron-flowgraph-enhancement.md`](roadmap/phase-omicron-flowgraph-enhancement.md)
 - scope: narrow-scoped。engine 内完結 Pure ノード + GUI 小改善に閉じる。新規 crate 依存は `noise` 1 件のみ。Breaking change なし
 
+### Phase π — DateTime Type System (jiff 採用 + chrono 全面置換)
+
+Flowgraph engine に **絶対時刻を表す `DateTime` 型**を第一級概念として導入した基盤フェーズ（**完了**）。Phase ξ の単位次元と同じ「型は事故を防ぐ砦」哲学。`chrono` 直接依存を撤去し **`jiff`** に全面置換。`Duration` は ξ の `Quantity<time>` に統一。設計上の先決条件（ο-4 `timer_interval` など）を満たしたうえで実装された。
+
+- [x] π-0 docs: `phase-pi-datetime-system.md` 新設 + roadmap.md の phase 名・順序の再編（旧 π/ρ/σ/τ/υ を 1 文字繰り下げて ρ/σ/τ/υ/ω に、DateTime を新 π に割り当て）+ cross-reference 修正
+- [x] π-1 feat(deps): `jiff = "0.2.24"` (features: `serde` + デフォルト `tz-system` / `tzdb-*`) 追加 + `tests/jiff_smoke.rs` 14 tests 全緑（Timestamp / SignedDuration / Offset / Zoned / serde round-trip）。副産物: `Offset` は `FromStr` 非実装、`DateTimeParser::parse_time_zone` は bare `Z` を拒否する仕様を pin 止め（phase doc §3.5 更新）
+- [x] π-2 refactor(chrono->jiff): 既存 chrono 使用 21 箇所を jiff に全面置換（3 commit 構成: batch1 leaf 14 / batch2 dictionary TTL 境界 + 7 境界テスト / batch3 struct field 5 + 4 serde round-trip snapshot、計 702→706 lib tests all green）。wire format drift `+00:00` → `Z` は RFC3339 互換範囲として許容し commit message に明記
+- [x] π-3 chore(deps): `Cargo.toml` から `chrono` 直接依存を解除、`src/**` は `use chrono` ゼロ、`cargo tree -i chrono` で直接依存なしを確認（間接依存は `twitch-irc v6.0.0` 経由で残存、これは twitch-irc 側の内部実装で π スコープ外）、全 706 lib tests green
+- [x] π-4 feat(flowgraph/datetime): `SocketType::DateTime` + `SocketValue::DateTime` + engine 側 String ↔ DateTime 暗黙 coerce + `FlowgraphInstanceConfig.default_timezone: Option<String>`（未設定時 UTC、FixedOffset `+09:00` 形式のみ、IANA tz 非対応）+ naive datetime パース policy（config default tz 適用）
+- [x] π-5 feat(flowgraph/nodes/datetime): 8 ノード（`now` / `parse` / `format` / `add_duration` / `sub_duration` / `diff` / `epoch_ms` / `from_epoch_ms`）+ `get_required_datetime` + lib test +30、`node-catalog` 再生成済
+- [x] π-6 docs: CHANGELOG + `docs/manual/datetime-system.md` 新設 + `docs/manual/index.md` + [phase-omicron-flowgraph-enhancement.md](roadmap/phase-omicron-flowgraph-enhancement.md) §3.4/§5.4/§6.4 更新 + roadmap 本節 tick（`node-catalog` は π-5 時点で更新済）
+- 仕様書: [`roadmap/phase-pi-datetime-system.md`](roadmap/phase-pi-datetime-system.md)
+- scope: chrono → jiff 全面移行 + Flowgraph `DateTime` 型。Breaking change なし（wire 互換・config 既定で後方互換）。IANA tz / DST / `Span`（暦幅）/ 独自 affine 単位は **π+** 扱い
+- 順序: **π-0..π-6 完了**。`flowgraph.datetime.*` による日時ワイヤは本フェーズで揃い、**ρ → σ → τ → υ → ω** backlog とは独立
+
 ---
 
 ## Active Phases
@@ -142,24 +157,7 @@ Flowgraph は pure-functional + 遅延評価のため runtime 単位評価コス
 - [x] ξ-6 docs: CHANGELOG + `docs/manual/dimensional-quantity-system.md` 新設（ユーザ向け解説: 動機 / 使える単位 / parser / ノード紹介 / よくあるパターン / FAQ）+ `manual/index.md` 目次 + Socket 型列に `quantity` / `table` 追記 + roadmap tick
 - 仕様書: [`roadmap/phase-ksi-dimensional-quantity-system.md`](roadmap/phase-ksi-dimensional-quantity-system.md)
 - scope: 外部依存ゼロ（自作、`uom` crate は runtime vs compile-time の性質不一致で採用見送り）。既存 flow 完全後方互換（dimensionless fallback）。IO 系は pass-through。非対応: Celsius/Fahrenheit（ξ+）/ 非 rad-deg Angle 単位 / ユーザ定義次元 / GUI unit インライン編集（υ 合流候補）
-- 順序: **Phase ο（ο-0..ο-7）は Completed**。math / easing / vec / signal util / random / noise / timer_interval は ξ 前提で `Quantity<Dimension>` 対応済み
-
----
-
-### Phase π — DateTime Type System (jiff 採用 + chrono 全面置換)
-
-Flowgraph engine に **絶対時刻を表す DateTime 型**を第一級概念として導入する基盤フェーズ。Phase ξ の単位次元システムと同じ「型は事故を防ぐ砦」哲学を時刻にも適用する。同時に `chrono` crate を `jiff` crate (BurntSushi 作、TC39 Temporal 準拠) で全面置換し、既存 21 箇所の chrono 依存を解除して crate 依存を剥がす。`Duration` は Phase ξ で導入済の `Quantity<time>` で兼務、新しい型は追加しない。**Phase ο-4 (time nodes) の前提**。
-
-- [x] π-0 docs: `phase-pi-datetime-system.md` 新設 + roadmap.md の Active 差し替え（旧 π/ρ/σ/τ/υ を 1 文字繰り下げて ρ/σ/τ/υ/ω に、DateTime を新 π に割り当て）+ cross-reference 修正
-- [x] π-1 feat(deps): `jiff = "0.2.24"` (features: `serde` + デフォルト `tz-system` / `tzdb-*`) 追加 + `tests/jiff_smoke.rs` 14 tests 全緑（Timestamp / SignedDuration / Offset / Zoned / serde round-trip）。副産物: `Offset` は `FromStr` 非実装、`DateTimeParser::parse_time_zone` は bare `Z` を拒否する仕様を pin 止め（phase doc §3.5 更新）
-- [x] π-2 refactor(chrono->jiff): 既存 chrono 使用 21 箇所を jiff に全面置換（3 commit 構成: batch1 leaf 14 / batch2 dictionary TTL 境界 + 7 境界テスト / batch3 struct field 5 + 4 serde round-trip snapshot、計 702→706 lib tests all green）。wire format drift `+00:00` → `Z` は RFC3339 互換範囲として許容し commit message に明記
-- [x] π-3 chore(deps): `Cargo.toml` から `chrono` 直接依存を解除、`src/**` は `use chrono` ゼロ、`cargo tree -i chrono` で直接依存なしを確認（間接依存は `twitch-irc v6.0.0` 経由で残存、これは twitch-irc 側の内部実装で π スコープ外）、全 706 lib tests green
-- [x] π-4 feat(flowgraph/datetime): `SocketType::DateTime` + `SocketValue::DateTime` + engine 側 String ↔ DateTime 暗黙 coerce + `FlowgraphInstanceConfig.default_timezone: Option<String>`（未設定時 UTC、FixedOffset `+09:00` 形式のみ、IANA tz 非対応）+ naive datetime パース policy（config default tz 適用）。3 commit 構成: π-4a `DateTime` newtype (20 tests, 706→726) / π-4b SocketType/SocketValue::DateTime + engine String↔DateTime coerce (+16 tests, 742) / π-4c `FlowgraphInstanceConfig.default_timezone` + `DateTime::parse_with_default_tz` + Conf wiring (+28 tests, 770)。engine coerce は strict を維持し、naive parse は `parse_with_default_tz` 明示 API (π-5 の `flowgraph.datetime.parse` ノードが consume 予定)
-- [x] π-5 feat(flowgraph/nodes/datetime): 8 ノード（`now` / `parse` / `format` / `add_duration` / `sub_duration` / `diff` / `epoch_ms` / `from_epoch_ms`）+ `get_required_datetime` + lib test +30、`node-catalog` 再生成済
-- [x] π-6 docs: CHANGELOG + `docs/manual/datetime-system.md` 新設 + `docs/manual/index.md` + [phase-omicron-flowgraph-enhancement.md](roadmap/phase-omicron-flowgraph-enhancement.md) §3.4/§5.4/§6.4 更新 + roadmap 本節 tick（`node-catalog` は π-5 時点で更新済）
-- 仕様書: [`roadmap/phase-pi-datetime-system.md`](roadmap/phase-pi-datetime-system.md)
-- scope: chrono → jiff 全面移行 + Flowgraph DateTime 型新設の 2 軸に閉じる。Breaking change なし（wire format 互換死守、config 既定値で後方互換）。IANA tz / DST / Span（暦幅）/ 独自 affine 単位は π+ 扱い
-- 順序: **本フェーズは Phase ο-4 の前提を満たした**（ο-4 は `timer_interval` 実装済み）。ξ-5 GUI は並行可
+- 順序: **Phase ο / π（engine 面）は Completed**。未完了は主に ξ-5（Quantity 単位の GUI）と backlog（ρ 以降）。`flowgraph.math.*` / `datetime.*` 等は `Quantity<Dimension>` / `DateTime` 前提で実装済み
 
 ---
 
