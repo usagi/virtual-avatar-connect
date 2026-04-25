@@ -1,6 +1,6 @@
 # Phase ο — Flowgraph Enhancement I (計算系 + 時間 + signal util + GUI 小改善)
 
-> **Status**: ο-0 docs / ο-1 math (42 ノード) / ο-2 easing / ο-3 vec / **ο-4 `timer_interval`** / **ο-5 signal util + random + noise** / **ο-6 GUI（palette カテゴリ / DnD / 複製 + E2E）** 着地済み。ο-7 は docs 締め。Phase ξ-5 (GUI) と並行進行可。
+> **Status**: **Phase ο 完了（ο-0 .. ο-7）**。ο-7: CHANGELOG 総括、`node-catalog` bless 確認、roadmap で Phase ο を Completed へ。Phase ξ-5 (Quantity GUI) は backlog と並行可。
 > 起点となるスコープ感は [`../roadmap.md`](../roadmap.md) の "Phase ο" を参照。依存する単位次元基盤は [`phase-ksi-dimensional-quantity-system.md`](phase-ksi-dimensional-quantity-system.md)。
 
 ---
@@ -176,7 +176,7 @@ random 系は `rand::thread_rng()`（すでに推移依存で入ってる可能�
 2. **canvas drop-at-cursor**: [`FlowgraphCanvas.svelte`](../../gui/src/lib/flowgraph/FlowgraphCanvas.svelte) に `ondragover`（`preventDefault`）と `ondrop` を追加。Palette 側は `dragstart` で feature 名を `dataTransfer` に入れる（既に `draggable="true"` はある）。drop 位置は `@xyflow/svelte` の `screenToFlowPosition` で flow 座標に変換。既存 `flowgraphStore.addNode` と `FlowgraphPalette.onAdd` を共通化。
 3. **Ctrl+D duplicate**: [`FlowgraphTab.svelte`](../../gui/src/lib/tabs/FlowgraphTab.svelte) の `window keydown` handler に `Ctrl+D` / `Cmd+D` を追加。選択中 1 ノード（`flowgraphStore.selectedNodeId`）の feature / properties をコピーし、`uniqueId` で新 id を発番、position を `(+24, +24)` オフセットして `addNode` → 新 id を selection に移す。ブラウザ既定の "bookmark this tab" を `ev.preventDefault()` でキャンセルする点に注意。
 
-ν-β-2 の [`gui/tests/e2e/flowgraph-canvas-basic.spec.ts`](../../gui/tests/e2e/flowgraph-canvas-basic.spec.ts) に assertion を増量して 3 項目の回帰検知を追加する（ο-6 の作業）。
+ν-β-2 の [`gui/tests/e2e/flowgraph-canvas-basic.spec.ts`](../../gui/tests/e2e/flowgraph-canvas-basic.spec.ts) に assertion を増量して 3 項目の回帰検知を追加した（ο-6 着地済み）。
 
 ---
 
@@ -258,7 +258,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 | ο-4 | feat(flowgraph/util): §3.4 `timer_interval` + unit test（**time 4 種は Phase π の `datetime` 8 ノードに移管済み、本サブでは実装しない**） | `src/flowgraph/nodes/timer_interval.rs` (new) / `delay.rs` パターン流用 / `engine.rs`（lazy 初回の `sources` 例外）/ `registry.rs` |
 | ο-5 | feat(flowgraph/util,random,noise): §3.5 signal util 5 種 + §3.6 random/noise 5 種 | `src/flowgraph/nodes/signal.rs` (new) / `src/flowgraph/nodes/random.rs` (new) / `registry.rs` / `Cargo.toml`（`noise` 追加）|
 | ο-6 ✅ | feat(gui): §3.7 palette カテゴリ非表示 + pane DnD drop + Ctrl/Cmd+D duplicate + E2E 回帰 | `FlowgraphPalette.svelte` / `FlowgraphCanvas.svelte` / `FlowgraphPaneDropBridge.svelte` / `FlowgraphNodeCard.svelte` / `FlowgraphTab.svelte` / `flowgraphStore.svelte.ts` / `flowgraph-canvas-basic.spec.ts` |
-| ο-7 | docs: CHANGELOG + `docs/manual/node-catalog.md` 再生成 + `docs/roadmap.md` tick | `CHANGELOG.md` / `docs/manual/node-catalog.md`（`BLESS_NODE_CATALOG=1` で再生成）/ `docs/roadmap.md` |
+| ο-7 ✅ | docs: CHANGELOG ο 節総括 + `node_catalog_md_up_to_date` で catalog 整合 + roadmap Phase ο を Completed へ | `CHANGELOG.md` / `docs/manual/node-catalog.md`（bless テスト）/ `docs/roadmap.md` / 本 doc §6.7 |
 
 ### 6.0 ο-0 チェックリスト（本セッション成果物）
 
@@ -317,10 +317,10 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 
 ### 6.7 ο-7 チェックリスト
 
-- [ ] `CHANGELOG.md` の Unreleased に `### ο: Flowgraph Enhancement I (ο-0 .. ο-7)` 節を追加。カテゴリ別にノード一覧とサブフェーズの実装要約を記載
-- [ ] `BLESS_NODE_CATALOG=1 cargo test flowgraph::docs::docs_tests::node_catalog_md_up_to_date` で `docs/manual/node-catalog.md` を最終更新
-- [ ] `docs/roadmap.md` の Phase ο を "Active" から Completed に移動、π/ρ/σ/τ/υ の順序を見直し
-- [ ] `svelte-check` / `cargo test --lib` / `npx playwright test` が全緑
+- [x] `CHANGELOG.md` の Unreleased に `### ο: Flowgraph Enhancement I（ο-0 .. ο-7、完了）` 節を追加。カテゴリ別（math / easing / vec / timer / signal+random+noise / GUI / docs 締め）の要約を記載
+- [x] `BLESS_NODE_CATALOG=1 cargo test --lib node_catalog_md_up_to_date` で `docs/manual/node-catalog.md` を最終確認（差分なしで通過すれば再生成不要）
+- [x] `docs/roadmap.md` の Phase ο を Completed に移動。backlog の **ρ → σ → τ → υ → ω** の順序を roadmap の Backlog 節と揃えて明記
+- [x] `npm run check`（svelte-check）/ `cargo test --lib` / `npx playwright test` が全緑
 
 ---
 

@@ -56,13 +56,18 @@ Flowgraph に **第一級型 `DateTime`（`jiff::Timestamp` ラッパ、UTC 絶�
 - **π-6 docs**: 本 CHANGELOG 節、`docs/manual/datetime-system.md` 新設、`docs/manual/index.md` 目次、[`docs/roadmap/phase-omicron-flowgraph-enhancement.md`](docs/roadmap/phase-omicron-flowgraph-enhancement.md) の §3.4 / §5.4 / §6.4 を π-5 吸収後の記述に更新、`docs/roadmap.md` tick。
 - **Breaking（π）**: なし（chrono→jiff は内部表現。JSON 等の RFC3339 文字列は従来どおり解釈可能）。
 
-### ο: Flowgraph Enhancement I（進行中、ο-6 まで）
+### ο: Flowgraph Enhancement I（ο-0 .. ο-7、完了）
 
-Phase ο の残サブフェーズ（ο-7）は [`docs/roadmap/phase-omicron-flowgraph-enhancement.md`](docs/roadmap/phase-omicron-flowgraph-enhancement.md) 参照。
+engine 内完結の **計算・補間・ベクトル・周期タイマー・signal・乱数・ノイズ** ノード群と、**Flowgraph エディタの小さな UX 改善**を 1 フェーズに束ねた。旧案の日時 4 ノードは **Phase π** の `flowgraph.datetime.*` 8 ノードへ移管。外部 OSC/HTTP/プロセス制御等は **ρ / σ / τ / υ / ω** backlog。設計の正本は [`docs/roadmap/phase-omicron-flowgraph-enhancement.md`](docs/roadmap/phase-omicron-flowgraph-enhancement.md)。**Breaking change なし**（新規 crate 依存は `noise = 0.9` のみ）。
 
-- **ο-4 `flowgraph.util.timer_interval`** (`src/flowgraph/nodes/timer_interval.rs`, new): Stateful 周期タイマー（`DelayNode` と同様の `ctx.trigger` + internal `__tick__`）。`enabled` / `interval_sec`（最小 0.01s、sleep 最小 10ms）/ stale tick id ドロップ。出力 `on_tick`（Exec）/`count`（Int）/`elapsed_sec`（Float）。lazy graph で初回から arm されるよう `engine.rs` の `sources` 収集で本 feature を例外扱い。lib test 4 件、`docs/manual/node-catalog.md` 再生成、roadmap / backlog / phase-omicron の ο-4 節を実装済みに更新。
-- **ο-5 signal util + random + noise** (`src/flowgraph/nodes/signal_util.rs`, `random_noise.rs`, new): Stateful で `edge_detect`（`exec_in` + `value` + `mode`）/ `prev_value` / `sample_hold` / `debounce`（`ctx.trigger`）/ `throttle`（リーディングエッジ）。Pure で `flowgraph.random.uniform_int|uniform_float|normal`（Box–Muller）、`flowgraph.noise.perlin_1d|perlin_2d`（`noise` 0.9、`Perlin` を seed ごとにキャッシュ）。lib test +10（`edge_detect` の `run_forever` 統合含む）、`node-catalog` 再生成、phase-omicron §3.5–3.6 / §6.5 / roadmap tick。
-- **ο-6 GUI** (`gui/src/lib/flowgraph/FlowgraphPalette.svelte`, `FlowgraphCanvas.svelte`, `FlowgraphPaneDropBridge.svelte`, `FlowgraphNodeCard.svelte`, `gui/src/lib/tabs/FlowgraphTab.svelte`, `flowgraphStore.svelte.ts`): パレットのカテゴリ非表示トグル（`localStorage` 永続化）、パレットからキャンバスへの HTML5 DnD（ドロップ位置にノード追加）、`Ctrl/Cmd+D` で選択ノードをオフセット複製（エッジはコピーしない）。E2E `flowgraph-canvas-basic.spec.ts` に上記 3 点の回帰を追加（`gui/dist` 配信のため E2E 前に `npm run build`）。phase-omicron §6.6 / roadmap tick。
+- **ο-0 docs**: phase doc 新設、`docs/roadmap.md` の Active 再編、`backlog-nodes.md` §1 の `timer_interval` pointer、angle normalization / 双曲線ノード追記、Phase ξ 依存の明記。
+- **ο-1 math（`flowgraph.math.*` 42）**: int/float 別の `abs` / `min` / `max` / `clamp`；float の `lerp` / `inverse_lerp` / `remap` / `smoothstep`；三角・逆三角・`atan2`；双曲線・逆双曲線；`sqrt` / `pow` / `exp` / `log`；`sign` / `floor` / `ceil` / `round`；deg↔rad；`normalize_angle` 系 4。いずれも Quantity-aware。`node-catalog` 各サブフェーズで再生成。
+- **ο-2 easing（1）**: `flowgraph.easing.apply` + `curve` enum（linear + quad/cubic/sine/expo/elastic/bounce × in/out/inOut）。`PropertySpec.choices` + GUI dropdown。
+- **ο-3 vec（20）**: `flowgraph.vec2.*` / `flowgraph.vec3.*` 各 `make` / `unpack` / `add` / `sub` / `scale` / `dot` / `length` / `normalize` / `lerp` / `distance`（JSON `[x,y]` / `[x,y,z]`）。
+- **ο-4 util timer（1）**: `flowgraph.util.timer_interval`（Stateful、`ctx.trigger`、lazy `sources` 例外）。日時ワイヤは π へ。
+- **ο-5 signal + random + noise（10）**: Stateful `edge_detect` / `prev_value` / `sample_hold` / `debounce` / `throttle`；Pure `random.uniform_int|uniform_float|normal`；Pure `noise.perlin_1d|perlin_2d`（`Perlin` を seed ごとキャッシュ）。
+- **ο-6 GUI**: パレットカテゴリ非表示（`localStorage`）、キャンバス pane への DnD ドロップ、`Ctrl/Cmd+D` 複製、Playwright 回帰（`gui` は E2E 前に `npm run build`）。
+- **ο-7 docs 締め**: 本 CHANGELOG 節の総括、`BLESS_NODE_CATALOG=1 cargo test --lib node_catalog_md_up_to_date` で `docs/manual/node-catalog.md` を最終確認、`docs/roadmap.md` で Phase ο を Completed へ移動、phase doc §6.7 完了、`npm run check` / `cargo test --lib` / `npx playwright test` 緑。
 
 ### χ: OpenAI Responses API Migration (χ-0 .. χ-8)
 
