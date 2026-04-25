@@ -183,6 +183,85 @@ class FlowgraphStore {
   this.draftNodes = [...this.draftNodes, node];
  }
 
+ /**
+  * Phase ο-6: カタログのノードを 1 つ draft に追加（パレット click / canvas drop 共通）。
+  * `position` が null のときは既存ノード重心付近へランダムオフセット（従来パレット挙動）。
+  */
+ addCatalogNodeAt(spec: FlowgraphNodeSpec, position: [number, number] | null): boolean {
+  if (!this.currentFq) {
+   toastStore.warn('ファイル未選択', '先にファイルを選択してください。');
+   return false;
+  }
+  if (!this.draftNodes) this.draftNodes = [];
+  const nodes = this.draftNodes;
+  const xy = position ?? this.#pickNewNodePositionNearCentroid(nodes);
+  const id = this.#makeUniqueNodeId(spec.feature, nodes);
+  const node: FlowgraphDraftNode = {
+   id,
+   feature: spec.feature,
+   position: [Math.round(xy[0]), Math.round(xy[1])],
+   properties: this.#defaultPropertiesForSpec(spec),
+  };
+  this.addNode(node);
+  this.selectedNodeId = node.id;
+  return true;
+ }
+
+ /** Phase ο-6: 選択中ノードを (+24,+24) オフセットで複製（エッジはコピーしない）。 */
+ duplicateSelectedNode(): boolean {
+  if (!this.selectedNodeId || !this.draftNodes) return false;
+  const src = this.draftNodes.find((n) => n.id === this.selectedNodeId);
+  if (!src) return false;
+  const id = this.#makeUniqueNodeId(src.feature, this.draftNodes);
+  const basePos = src.position ?? [100, 100];
+  const dup: FlowgraphDraftNode = {
+   id,
+   feature: src.feature,
+   position: [Math.round(basePos[0] + 24), Math.round(basePos[1] + 24)],
+   properties: { ...src.properties },
+  };
+  this.addNode(dup);
+  this.selectedNodeId = dup.id;
+  return true;
+ }
+
+ #defaultPropertiesForSpec(spec: FlowgraphNodeSpec): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const p of spec.properties) {
+   if (p.required) {
+    out[p.name] = p.default;
+   }
+  }
+  return out;
+ }
+
+ #makeUniqueNodeId(feature: string, existing: FlowgraphDraftNode[]): string {
+  const base = feature.replace(/^.*\./, '').replace(/[^a-zA-Z0-9_]/g, '_');
+  let i = 1;
+  let id = base;
+  const used = new Set(existing.map((n) => n.id));
+  while (used.has(id)) {
+   i += 1;
+   id = `${base}_${i}`;
+  }
+  return id;
+ }
+
+ #pickNewNodePositionNearCentroid(nodes: FlowgraphDraftNode[]): [number, number] {
+  let x = 100;
+  let y = 100;
+  if (nodes.length > 0) {
+   const withPos = nodes.filter((n) => n.position);
+   if (withPos.length > 0) {
+    const cx = withPos.reduce((s, n) => s + n.position![0], 0) / withPos.length;
+    const cy = withPos.reduce((s, n) => s + n.position![1], 0) / withPos.length;
+    x = cx + (Math.random() - 0.5) * 160;
+    y = cy + (Math.random() - 0.5) * 160;
+   }
+  }
+  return [x, y];
+ }
+
  removeNode(id: string): void {
   if (!this.draftNodes) return;
   this.draftNodes = this.draftNodes.filter((n) => n.id !== id);

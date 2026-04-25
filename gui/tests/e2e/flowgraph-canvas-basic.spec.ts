@@ -133,4 +133,86 @@ test.describe('§3.2 flowgraph-canvas-basic', () => {
 			expect(restore.status(), await restore.text()).toBe(200);
 		}
 	});
+
+	test('palette category hide removes util entries; show restores', async ({ page, request }) => {
+		const snapRes = await request.get(FILE_PATH, { headers: authHeader() });
+		expect(snapRes.status(), await snapRes.text()).toBe(200);
+		const originalToml = ((await snapRes.json()) as FlowgraphFileResp).raw_toml;
+		try {
+			await page.goto(`/gui/${tokenQuery()}`);
+			await page.evaluate(() => localStorage.removeItem('vac-flowgraph-palette-hidden-categories'));
+			await page.getByRole('navigation', { name: 'Main tabs' }).getByRole('button', { name: /flowgraph/i }).click();
+			await page.getByRole('button', { name: /^sample\b/ }).click();
+			const utilEntry = page.getByTestId('palette-entry-flowgraph_util_log');
+			await expect(utilEntry).toBeVisible({ timeout: 15_000 });
+
+			await page.locator('[data-testid="palette-category-toggle"][data-category="util"]').click();
+			await expect(utilEntry).toHaveCount(0);
+
+			await page.locator('[data-testid="palette-category-toggle"][data-category="util"]').click();
+			await expect(utilEntry).toBeVisible();
+		} finally {
+			const restore = await request.put(FILE_PATH, {
+				headers: authHeader(),
+				data: { content: originalToml },
+			});
+			expect(restore.status(), await restore.text()).toBe(200);
+		}
+	});
+
+	test('palette drag Log onto canvas adds a new node', async ({ page, request }) => {
+		const snapRes = await request.get(FILE_PATH, { headers: authHeader() });
+		expect(snapRes.status(), await snapRes.text()).toBe(200);
+		const originalToml = ((await snapRes.json()) as FlowgraphFileResp).raw_toml;
+		try {
+			await page.goto(`/gui/${tokenQuery()}`);
+			await page.evaluate(() => localStorage.removeItem('vac-flowgraph-palette-hidden-categories'));
+			await page.getByRole('navigation', { name: 'Main tabs' }).getByRole('button', { name: /flowgraph/i }).click();
+			await page.getByRole('button', { name: /^sample\b/ }).click();
+			const canvas = page.locator('.svelte-flow');
+			await expect(canvas).toBeVisible({ timeout: 15_000 });
+
+			const before = await page.locator('[data-testid^="flowgraph-node-log"]').count();
+			const logPalette = page.getByTestId('palette-entry-flowgraph_util_log');
+			await expect(logPalette).toBeVisible();
+			await logPalette.dragTo(canvas, { targetPosition: { x: 420, y: 280 } });
+
+			await expect(page.locator('[data-testid^="flowgraph-node-log"]')).toHaveCount(before + 1, {
+				timeout: 10_000,
+			});
+		} finally {
+			const restore = await request.put(FILE_PATH, {
+				headers: authHeader(),
+				data: { content: originalToml },
+			});
+			expect(restore.status(), await restore.text()).toBe(200);
+		}
+	});
+
+	test('Ctrl+D duplicates selected node', async ({ page, request }) => {
+		const snapRes = await request.get(FILE_PATH, { headers: authHeader() });
+		expect(snapRes.status(), await snapRes.text()).toBe(200);
+		const originalToml = ((await snapRes.json()) as FlowgraphFileResp).raw_toml;
+		try {
+			await page.goto(`/gui/${tokenQuery()}`);
+			await page.evaluate(() => localStorage.removeItem('vac-flowgraph-palette-hidden-categories'));
+			await page.getByRole('navigation', { name: 'Main tabs' }).getByRole('button', { name: /flowgraph/i }).click();
+			await page.getByRole('button', { name: /^sample\b/ }).click();
+			const canvas = page.locator('.svelte-flow');
+			await expect(canvas).toBeVisible({ timeout: 15_000 });
+
+			const before = await page.locator('[data-testid^="flowgraph-node-"]').count();
+			await page.getByTestId('flowgraph-node-log').click({ timeout: 15_000 });
+			await page.keyboard.press('Control+d');
+			await expect(page.locator('[data-testid^="flowgraph-node-"]')).toHaveCount(before + 1, {
+				timeout: 10_000,
+			});
+		} finally {
+			const restore = await request.put(FILE_PATH, {
+				headers: authHeader(),
+				data: { content: originalToml },
+			});
+			expect(restore.status(), await restore.text()).toBe(200);
+		}
+	});
 });

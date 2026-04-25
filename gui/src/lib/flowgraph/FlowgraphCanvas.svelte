@@ -35,6 +35,7 @@
  import type { FlowgraphNodeSpec } from '../types';
  import FlowgraphNodeCard from './FlowgraphNodeCard.svelte';
  import FlowgraphAutoFit from './FlowgraphAutoFit.svelte';
+ import FlowgraphPaneDropBridge from './FlowgraphPaneDropBridge.svelte';
 
  // Svelte Flow 用のデータ。store からの初期化 / 反映は $effect で同期する。
  let nodes = $state<Node[]>([]);
@@ -187,6 +188,7 @@
    ondelete={onDelete}
    onselectionchange={onSelectionChange}
   >
+   <FlowgraphPaneDropBridge />
    <Background />
    <Controls />
    <MiniMap pannable zoomable />
@@ -197,7 +199,7 @@
   </SvelteFlow>
   <!-- γ-4a.0: 削除操作の発見性確保。編集中キャンバスの左下にキーボードヒントを固定表示。 -->
   <div class="flowgraph-keyhint pointer-events-none absolute bottom-1 left-1 select-none">
-   <code>Delete</code> / <code>Backspace</code> : 選択削除 ・ <code>Ctrl+Click</code> : 複数選択
+   <code>Delete</code> / <code>Backspace</code> : 選択削除 ・ <code>Ctrl+D</code> : 複製 ・ <code>Ctrl+Click</code> : 複数選択
   </div>
  {/if}
 </div>

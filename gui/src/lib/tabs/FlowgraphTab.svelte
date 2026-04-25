@@ -22,8 +22,9 @@
  import FlowgraphCanvas from '../flowgraph/FlowgraphCanvas.svelte';
  import FlowgraphPalette from '../flowgraph/FlowgraphPalette.svelte';
  import FlowgraphPropertyEditor from '../flowgraph/FlowgraphPropertyEditor.svelte';
-import FlowgraphDiagnostics from '../flowgraph/FlowgraphDiagnostics.svelte';
-import FlowgraphShareDialog from '../flowgraph/FlowgraphShareDialog.svelte';
+ import FlowgraphDiagnostics from '../flowgraph/FlowgraphDiagnostics.svelte';
+ import FlowgraphShareDialog from '../flowgraph/FlowgraphShareDialog.svelte';
+ import { toastStore } from '../toasts.svelte';
 
 let dialogOpen = $state(false);
 let dialogMode = $state<'paste' | 'import_zip'>('paste');
@@ -33,11 +34,28 @@ onMount(() => {
   flowgraphStore.attachWsSubscriber();
   // γ-4a: Ctrl+S / Cmd+S で現在ファイルを保存。フォーカスが input 系でも有効にするため window に付ける。
   const onKeyDown = (ev: KeyboardEvent) => {
+   const t = ev.target as HTMLElement | null;
+   if (t?.closest('input, textarea, select, [contenteditable="true"]')) return;
+
    const isSave = (ev.ctrlKey || ev.metaKey) && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === 's';
-   if (!isSave) return;
-   if (!flowgraphStore.currentFq || flowgraphStore.mutating) return;
-   ev.preventDefault();
-   void flowgraphStore.saveCurrent();
+   if (isSave) {
+    if (!flowgraphStore.currentFq || flowgraphStore.mutating) return;
+    ev.preventDefault();
+    void flowgraphStore.saveCurrent();
+    return;
+   }
+
+   const isDup =
+    (ev.ctrlKey || ev.metaKey) && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === 'd';
+   if (isDup) {
+    if (!flowgraphStore.currentFq || !flowgraphStore.selectedNodeId) return;
+    ev.preventDefault();
+    const ok = flowgraphStore.duplicateSelectedNode();
+    if (ok) {
+     toastStore.success('複製しました', flowgraphStore.selectedNodeId ?? '');
+    }
+    return;
+   }
   };
   window.addEventListener('keydown', onKeyDown);
   // γ-4a: 未保存変更がある状態で閉じようとしたらブラウザにネイティブ確認ダイアログを出す。

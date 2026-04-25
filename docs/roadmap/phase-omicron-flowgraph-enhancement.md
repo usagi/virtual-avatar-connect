@@ -1,6 +1,6 @@
 # Phase ο — Flowgraph Enhancement I (計算系 + 時間 + signal util + GUI 小改善)
 
-> **Status**: ο-0 docs / ο-1 math (42 ノード) / ο-2 easing / ο-3 vec / **ο-4 `timer_interval`** / **ο-5 signal util + random + noise** 着地済み。ο-6 以降は Phase ξ-5 (GUI) と並行進行可。
+> **Status**: ο-0 docs / ο-1 math (42 ノード) / ο-2 easing / ο-3 vec / **ο-4 `timer_interval`** / **ο-5 signal util + random + noise** / **ο-6 GUI（palette カテゴリ / DnD / 複製 + E2E）** 着地済み。ο-7 は docs 締め。Phase ξ-5 (GUI) と並行進行可。
 > 起点となるスコープ感は [`../roadmap.md`](../roadmap.md) の "Phase ο" を参照。依存する単位次元基盤は [`phase-ksi-dimensional-quantity-system.md`](phase-ksi-dimensional-quantity-system.md)。
 
 ---
@@ -257,7 +257,7 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 | ο-3 ✅ | feat(flowgraph/vec): §3.3 **20 ノード**追加（vec2 10 + vec3 10。ο-0 の「18」は `add/sub` 1 行表記による行数ミス、実数は 20）+ unit test 19 件 | `src/flowgraph/nodes/vec.rs` (new) / `src/flowgraph/nodes/mod.rs` / `src/flowgraph/registry.rs` |
 | ο-4 | feat(flowgraph/util): §3.4 `timer_interval` + unit test（**time 4 種は Phase π の `datetime` 8 ノードに移管済み、本サブでは実装しない**） | `src/flowgraph/nodes/timer_interval.rs` (new) / `delay.rs` パターン流用 / `engine.rs`（lazy 初回の `sources` 例外）/ `registry.rs` |
 | ο-5 | feat(flowgraph/util,random,noise): §3.5 signal util 5 種 + §3.6 random/noise 5 種 | `src/flowgraph/nodes/signal.rs` (new) / `src/flowgraph/nodes/random.rs` (new) / `registry.rs` / `Cargo.toml`（`noise` 追加）|
-| ο-6 | feat(gui): §3.7 palette カテゴリ絞り込み + canvas drop-at-cursor + Ctrl+D duplicate + E2E 回帰 | `gui/src/lib/flowgraph/FlowgraphPalette.svelte` / `FlowgraphCanvas.svelte` / `gui/src/lib/tabs/FlowgraphTab.svelte` / `gui/src/lib/flowgraphStore.svelte.ts` / `gui/tests/e2e/flowgraph-canvas-basic.spec.ts` |
+| ο-6 ✅ | feat(gui): §3.7 palette カテゴリ非表示 + pane DnD drop + Ctrl/Cmd+D duplicate + E2E 回帰 | `FlowgraphPalette.svelte` / `FlowgraphCanvas.svelte` / `FlowgraphPaneDropBridge.svelte` / `FlowgraphNodeCard.svelte` / `FlowgraphTab.svelte` / `flowgraphStore.svelte.ts` / `flowgraph-canvas-basic.spec.ts` |
 | ο-7 | docs: CHANGELOG + `docs/manual/node-catalog.md` 再生成 + `docs/roadmap.md` tick | `CHANGELOG.md` / `docs/manual/node-catalog.md`（`BLESS_NODE_CATALOG=1` で再生成）/ `docs/roadmap.md` |
 
 ### 6.0 ο-0 チェックリスト（本セッション成果物）
@@ -309,11 +309,11 @@ trade-off メモ: GUI 側で curve を property editor の dropdown として出
 
 ### 6.6 ο-6 チェックリスト
 
-- [ ] palette カテゴリ絞り込み: `Set<string> hiddenCategories` + localStorage 永続化 + グループヘッダの toggle
-- [ ] canvas drop handler: `dragover.preventDefault` + `drop` で feature 名取り出し + `screenToFlowPosition` で flow 座標
-- [ ] palette 側 `dragstart` で feature 名 / spec ref を `dataTransfer` に入れる
-- [ ] `Ctrl+D` / `Cmd+D` duplicate: FlowgraphTab の keydown に追加 + preventDefault + toast で「複製しました」
-- [ ] `gui/tests/e2e/flowgraph-canvas-basic.spec.ts` に 3 項目のアサーションを追加（drop で位置確認 / Ctrl+D で id 変化確認 / palette カテゴリ toggle で表示行数変化）
+- [x] palette カテゴリ非表示: `hiddenCategories`（`Set` 相当）+ `localStorage` キー `vac-flowgraph-palette-hidden-categories` + グループヘッダの toggle（`data-testid` 付き）
+- [x] canvas drop: `FlowgraphPaneDropBridge.svelte` で pane の `dragover`（`preventDefault`）+ `drop`、`useSvelteFlow().screenToFlowPosition` で flow 座標 → `flowgraphStore.addCatalogNodeAt`
+- [x] palette 側 `dragstart` で `application/x-vac-flowgraph-feature`（フォールバック `text/plain`）に feature id を設定
+- [x] `Ctrl+D` / `Cmd+D` duplicate: `FlowgraphTab` の `keydown`（入力フォーカス時は無視）+ `preventDefault` + `duplicateSelectedNode` + toast「複製しました」
+- [x] `gui/tests/e2e/flowgraph-canvas-basic.spec.ts`: カテゴリ hide→show、Log をキャンバスへ `dragTo` でノード増、`Ctrl+D` でノード増（各テストで `localStorage` 事前クリアで flake 低減）。Actix が `gui/dist` を配信するため E2E 前に `npm run build` が必要
 
 ### 6.7 ο-7 チェックリスト
 

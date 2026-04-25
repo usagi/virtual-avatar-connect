@@ -91,6 +91,7 @@
  class:selected
  class:missing-spec={!spec}
  title={data.feature}
+ data-testid={`flowgraph-node-${data.nodeId}`}
 >
  <button
   type="button"

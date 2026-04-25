@@ -56,12 +56,13 @@ Flowgraph に **第一級型 `DateTime`（`jiff::Timestamp` ラッパ、UTC 絶�
 - **π-6 docs**: 本 CHANGELOG 節、`docs/manual/datetime-system.md` 新設、`docs/manual/index.md` 目次、[`docs/roadmap/phase-omicron-flowgraph-enhancement.md`](docs/roadmap/phase-omicron-flowgraph-enhancement.md) の §3.4 / §5.4 / §6.4 を π-5 吸収後の記述に更新、`docs/roadmap.md` tick。
 - **Breaking（π）**: なし（chrono→jiff は内部表現。JSON 等の RFC3339 文字列は従来どおり解釈可能）。
 
-### ο: Flowgraph Enhancement I（進行中、ο-4 まで）
+### ο: Flowgraph Enhancement I（進行中、ο-6 まで）
 
-Phase ο の残サブフェーズ（ο-5 以降）は [`docs/roadmap/phase-omicron-flowgraph-enhancement.md`](docs/roadmap/phase-omicron-flowgraph-enhancement.md) 参照。
+Phase ο の残サブフェーズ（ο-7）は [`docs/roadmap/phase-omicron-flowgraph-enhancement.md`](docs/roadmap/phase-omicron-flowgraph-enhancement.md) 参照。
 
 - **ο-4 `flowgraph.util.timer_interval`** (`src/flowgraph/nodes/timer_interval.rs`, new): Stateful 周期タイマー（`DelayNode` と同様の `ctx.trigger` + internal `__tick__`）。`enabled` / `interval_sec`（最小 0.01s、sleep 最小 10ms）/ stale tick id ドロップ。出力 `on_tick`（Exec）/`count`（Int）/`elapsed_sec`（Float）。lazy graph で初回から arm されるよう `engine.rs` の `sources` 収集で本 feature を例外扱い。lib test 4 件、`docs/manual/node-catalog.md` 再生成、roadmap / backlog / phase-omicron の ο-4 節を実装済みに更新。
 - **ο-5 signal util + random + noise** (`src/flowgraph/nodes/signal_util.rs`, `random_noise.rs`, new): Stateful で `edge_detect`（`exec_in` + `value` + `mode`）/ `prev_value` / `sample_hold` / `debounce`（`ctx.trigger`）/ `throttle`（リーディングエッジ）。Pure で `flowgraph.random.uniform_int|uniform_float|normal`（Box–Muller）、`flowgraph.noise.perlin_1d|perlin_2d`（`noise` 0.9、`Perlin` を seed ごとにキャッシュ）。lib test +10（`edge_detect` の `run_forever` 統合含む）、`node-catalog` 再生成、phase-omicron §3.5–3.6 / §6.5 / roadmap tick。
+- **ο-6 GUI** (`gui/src/lib/flowgraph/FlowgraphPalette.svelte`, `FlowgraphCanvas.svelte`, `FlowgraphPaneDropBridge.svelte`, `FlowgraphNodeCard.svelte`, `gui/src/lib/tabs/FlowgraphTab.svelte`, `flowgraphStore.svelte.ts`): パレットのカテゴリ非表示トグル（`localStorage` 永続化）、パレットからキャンバスへの HTML5 DnD（ドロップ位置にノード追加）、`Ctrl/Cmd+D` で選択ノードをオフセット複製（エッジはコピーしない）。E2E `flowgraph-canvas-basic.spec.ts` に上記 3 点の回帰を追加（`gui/dist` 配信のため E2E 前に `npm run build`）。phase-omicron §6.6 / roadmap tick。
 
 ### χ: OpenAI Responses API Migration (χ-0 .. χ-8)
 
