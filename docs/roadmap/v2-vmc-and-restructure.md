@@ -30,8 +30,31 @@ VAC
  │   ├─ router
  │   └─ MotionFrame（後段）
  ├─ Control API（`src/web_interface/`）
- └─ GUI / トレイ
+ └─ GUI / トレイ（将来: desktop runner + Tauri shell）
 ```
+
+### 1.1 実行形態と工程順（desktop / CLI / Tauri）
+
+**工程順（この順で設計・実装する）**
+
+1. **crate 再構造化**（本書 §3）— `vac-core` 等へ責務を分け、コア API を安定させる。
+2. **2 実行ファイルの runner** — 詳細設計のあと実装する。いずれも **単体起動可能**で、コアは **同一ライブラリ**を呼ぶ薄い `main`（配布形態として「玄人用」と「一般用」を分ける）。
+3. **Tauri（Phase ε-2）** — **desktop runner に組み込む**。CLI 側に Tauri を載せない。
+
+**CLI 版（仮称 `virtual-avatar-connect-cli` 等）**
+
+- **コンソールが付く**。ログやデバッグをそのまま見られることが価値。
+- 対象: 開発者、スクリプト・CI、詳細ログが欲しい玄人。**一般ユーザーに「ターミナルを最小化してブラウザだけ使う」ことは期待しない**（黒いウィンドウの存在だけで不安になる人もいる）。
+
+**desktop 版（仮称 `virtual-avatar-connect-desktop` 等）**
+
+- **本質はシステムトレイ常駐**だが、パッケージ名・exe 名は **`desktop`** を採る。`systray` 等の実装者語より、「これを実行すれば VAC が動く」という **一般ユーザーへの伝わりやすさ**を優先する。
+- Windows では **コンソールを出さない**常駐に寄せる（`windows_subsystem` 等は ε 文書・実装時に確定）。
+- **期待 UX（目標）**: トレイにアイコン → **ダブルクリックで Web GUI**（既存 `gui/dist` + Control API）を開く → **右クリックでコンテキストメニュー**（GUI を表示 / 終了、将来は conf 一覧からリロード等）。Phase M3 の転送先 UI 等も、この入口と整合させる。
+
+**Tauri の位置づけ**
+
+- ブラウザで LAN 越しに操作する経路は維持しつつ、**ネイティブウィンドウ＋トレイ**は desktop プロセスの shell として載せる（[`phase-epsilon-shutdown-and-tauri.md`](phase-epsilon-shutdown-and-tauri.md) §3 の方針と一致）。
 
 ---
 
@@ -130,7 +153,7 @@ GET  /api/v1/vmc/status
 
 #### GUI
 
-* トレイ常駐
+* トレイ常駐（**一般ユーザー向けの入口は desktop 実行ファイル**と §1.1 を揃える）
 * Web UI の表示
 * 転送先（forward）の管理
 * 受信パケットレートの表示
@@ -233,12 +256,10 @@ crates/
 * `actix-web`
 * REST / WebSocket（Control API、GUI 用バックエンド）
 
-#### `vac-app`
+#### `vac-app`（論理名・分割タイミングは再構造化で確定）
 
-* `main`
-* 起動時の初期化
-* 各サービス起動
-* ランタイム統合
+* 現状相当の `main` / 起動初期化 / 各サービス起動 / ランタイム統合
+* 将来: **`vac-app-cli`** と **`vac-app-desktop`** の 2 bin（または同等の `[[bin]]` 2 本）に分け、いずれも `vac-core` を呼ぶ runner に落とす（§1.1）
 
 ---
 

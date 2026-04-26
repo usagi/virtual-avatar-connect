@@ -90,6 +90,8 @@ flowchart LR
 
 ## 3. ε-2: Tauri 移行の段取り（未着手）
 
+**工程順（2026 方針）**: crate **再構造化** → **CLI / desktop の 2 runner**（単体起動・コアは lib）の詳細設計・実装 → **Tauri を desktop 版にのみ組み込む**。一般ユーザー向け入口・コンソール非表示・トレイ UX は desktop 側に寄せ、CLI は玄人・自動化向けとする。正本: [`v2-vmc-and-restructure.md`](v2-vmc-and-restructure.md) §1.1、概要: [`architecture.md`](../architecture.md)「実行入口（計画・工程順）」。
+
 ### 3.1 目的
 
 ブラウザでの Control Panel も残しつつ、**ネイティブウィンドウ動作** をオプションで選べるようにする。ユーザーの最終要求は「Tauri ネイティブ GUI ウィンドウ動作風の画面」。
@@ -178,7 +180,7 @@ Windows では `#[actix_web::main]` がコンソールサブシステムで走�
 
 ### 4.3 推奨
 
-**Tauri 導入と同時に (3) を採用**。それまでは (1) の `--silent` だけ先行実装してもよい（`cargo features` を切らずに動ける）。動的 console 切替 (4) は、よほど運用上困ったら検討する、くらい。
+**Tauri 導入と同時に (3) を採用**（2 バイナリ: CLI = コンソール付き、desktop = windowed + Tauri shell）。再構造化後の **desktop / CLI runner** 方針（[`v2-vmc-and-restructure.md`](v2-vmc-and-restructure.md) §1.1）とまとめて進めるのがよい。それまでは (1) の `--silent` だけ先行実装してもよい（`cargo features` を切らずに動ける）。動的 console 切替 (4) は、よほど運用上困ったら検討する、くらい。
 
 ---
 

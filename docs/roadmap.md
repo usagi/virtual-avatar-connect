@@ -19,7 +19,7 @@ Virtual Avatar Connect の全フェーズ × サブフェーズ単位のチェ�
 ### Phase ε — Shutdown 統合と Tauri 移行段取り
 
 - [x] ε-1 ShutdownBroker（Ctrl+C / POST /shutdown / Fatal / Tauri の 4 経路集約）
-- [ ] ε-2 Tauri ネイティブウィンドウ化 / CLI 可視性ポリシー（**保留**、GUI 安定後に再開）
+- [ ] ε-2 Tauri ネイティブウィンドウ化 / CLI 可視性ポリシー（**保留**、GUI 安定後に再開）。**着手順の方針**: crate 再構造化 → `virtual-avatar-connect-cli` / `virtual-avatar-connect-desktop`（仮称）の 2 runner → **Tauri は desktop にのみ**組み込む（[`architecture.md`](architecture.md)「実行入口」、[`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1）。
 - 仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
 
 ### Phase ζ — v2 → main merge 準備
@@ -263,7 +263,7 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 
 ### ε-2 Tauri ネイティブウィンドウ化
 
-ψ-α / ν / ν-β / Phase ο 以降の Flowgraph 拡張と並行、または一段落した後に検討（ユーザー意向として "GUI の Tauri 化" を積んでいる）。仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
+ψ-α / ν / ν-β / Phase ο 以降の Flowgraph 拡張と並行、または一段落した後に検討（ユーザー意向として "GUI の Tauri 化" を積んでいる）。**実装順**: 再構造化 → CLI + desktop の 2 実行ファイル → desktop へ Tauri を載せる（§3 先頭、[`v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1）。仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
 
 ### 長期 backlog（phase 立て前の候補リスト）
 

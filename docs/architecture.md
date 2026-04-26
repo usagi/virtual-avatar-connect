@@ -7,7 +7,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 
 ## Scope
 
-- **Windows / Linux / macOS 単独アプリ**（`cargo run -- <conf>.toml`）
+- **Windows / Linux / macOS 単独アプリ**（現状は `cargo run -- <conf>.toml` の **単一バイナリ**）
 - **Flowgraph-only アーキテクチャ**（v0.10.0〜）: ingress〜変換〜出口は `flowgraph_dir` 配下の `.flowgraph.toml` と Flowgraph Runtime で表現
 - **内蔵 HTTP サーバ**: `actix-web` で GUI 配信 + Control API + WebSocket
 - **GUI**: Svelte 5 + Vite、`gui/` 配下の独立プロジェクト（build 成果物は `gui/dist/`）
@@ -144,6 +144,20 @@ UNVET (`usagi/un-virtual-eye-tracker`) の convention を踏襲し、Phase χ �
 5. **Breaking change** は `CHANGELOG.md` の `### Breaking changes (<phase>)` に必ず明記
 6. **Phase 仕様書** (`docs/roadmap/phase-<name>-*.md`) は Phase 開始前に書いて PR に含める（UNVET の `docs/plan.md` スタイル）
 7. **Phase 進行中**は [`roadmap.md`](roadmap.md) のチェックボックスを各サブフェーズ完了時に tick
+
+---
+
+## 実行入口（計画・工程順）
+
+現状のエントリは `src/main.rs` → `lib::run()` の **1 プロセス構成**。将来的に **CLI 版**と **desktop 版**の 2 実行ファイルを用意し、いずれも **同一コア（ライブラリ）**から起動する薄い runner とする（通常は静的リンク。詳細・名称の正本は [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) の「実行形態と工程順」）。
+
+**推奨する実装順**
+
+1. **crate 再構造化**（`vac-core` 等、`v2` 計画書 §3）— 境界が固まってから runner を増やす。
+2. **CLI runner と desktop runner** の詳細設計・実装 — どちらも単体起動可能（CLI はコンソール付き玄人向け、desktop はコンソール非表示・一般ユーザー向け入口）。
+3. **Tauri（Phase ε-2）** を **desktop 版に組み込む** — ネイティブウィンドウ／トレイ統合はコンソールを出さない側に寄せる。
+
+HTTP/WS をそのまま使う Tauri shell 方針は [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md) §3 を参照。
 
 ---
 
