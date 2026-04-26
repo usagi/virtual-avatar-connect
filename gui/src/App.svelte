@@ -22,10 +22,10 @@
 
  import NowTab from './lib/tabs/NowTab.svelte';
  import ModesTab from './lib/tabs/ModesTab.svelte';
- import SetupTab from './lib/tabs/SetupTab.svelte';
+ import ResourcesTab from './lib/tabs/ResourcesTab.svelte';
+ import SettingsTab from './lib/tabs/SettingsTab.svelte';
  import FlowgraphTab from './lib/tabs/FlowgraphTab.svelte';
  import LogsTab from './lib/tabs/LogsTab.svelte';
- import ToolsTab from './lib/tabs/ToolsTab.svelte';
 
  import { tabNavStore } from './lib/tabs.svelte';
  import { api } from './lib/api';
@@ -114,11 +114,11 @@ async function handleShutdownClick() {
   {:else if tabNavStore.active === 'flowgraph'}
    <FlowgraphTab />
   {:else if tabNavStore.active === 'resources'}
-   <SetupTab />
+   <ResourcesTab />
   {:else if tabNavStore.active === 'observability'}
    <LogsTab />
   {:else if tabNavStore.active === 'settings'}
-   <ToolsTab />
+   <SettingsTab />
   {/if}
  </main>
 

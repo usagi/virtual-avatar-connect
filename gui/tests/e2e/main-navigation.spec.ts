@@ -19,9 +19,10 @@ test.describe('GUI redesign: main navigation', () => {
   await expect(page.getByText('root =')).toBeVisible({ timeout: 15_000 });
 
   await tabs.getByRole('button', { name: /resources/i }).click();
-  await expect(page.getByRole('heading', { name: 'プロファイル管理' })).toBeVisible({
+  await expect(page.getByRole('heading', { name: '連携アプリ設定（run_with）' })).toBeVisible({
    timeout: 15_000,
   });
+  await expect(page.getByRole('heading', { name: 'OAuth (Twitch Device Code Flow)' })).toBeVisible();
 
   await tabs.getByRole('button', { name: /observability/i }).click();
   await expect(page.getByRole('heading', { name: 'ライブイベント' })).toBeVisible({
@@ -29,8 +30,10 @@ test.describe('GUI redesign: main navigation', () => {
   });
 
   await tabs.getByRole('button', { name: /settings/i }).click();
-  await expect(page.getByRole('heading', { name: '接続情報' })).toBeVisible({
+  await expect(page.getByRole('heading', { name: 'プロファイル管理' })).toBeVisible({
    timeout: 15_000,
+  });
+  await expect(page.getByRole('heading', { name: '接続情報' })).toBeVisible({
   });
  });
 
@@ -41,7 +44,7 @@ test.describe('GUI redesign: main navigation', () => {
   });
 
   await page.goto(`/gui/${tokenQuery()}#setup`);
-  await expect(page.getByRole('heading', { name: 'プロファイル管理' })).toBeVisible({
+  await expect(page.getByRole('heading', { name: '連携アプリ設定（run_with）' })).toBeVisible({
    timeout: 15_000,
   });
 
@@ -51,8 +54,10 @@ test.describe('GUI redesign: main navigation', () => {
   });
 
   await page.goto(`/gui/${tokenQuery()}#tools`);
-  await expect(page.getByRole('heading', { name: '接続情報' })).toBeVisible({
+  await expect(page.getByRole('heading', { name: 'プロファイル管理' })).toBeVisible({
    timeout: 15_000,
+  });
+  await expect(page.getByRole('heading', { name: '接続情報' })).toBeVisible({
   });
  });
 });

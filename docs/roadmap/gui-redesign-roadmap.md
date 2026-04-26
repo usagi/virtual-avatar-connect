@@ -163,6 +163,9 @@ Existing `ToolsTab` can remain here until split further.
 
 - Move OAuth, reload, pause, profile, and run_with panels into the new IA.
 - Split operational resources from restart / destructive settings.
+- Initial split:
+  - `Resources`: run_with / Managed App registry, Pause / Resume, OAuth, future OBS / avatar / TTS connectors.
+  - `Settings`: profile management, reload, Control API connection info, developer utilities.
 
 ### GR-4 Flowgraph Studio Layout
 
@@ -203,4 +206,3 @@ The first GUI branch implements only GR-1 and the first slice of GR-2:
 - smoke test update
 
 No Flowgraph editor internals are changed in this slice.
-
