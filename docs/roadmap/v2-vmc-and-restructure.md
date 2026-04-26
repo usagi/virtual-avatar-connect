@@ -320,6 +320,8 @@ flowgraph.motion.map
 * **実施（追記）**: `web_interface/control/flowgraph/` を **`mod.rs` + `util` / `reload` / `trigger` / `fragment_zip`** に分割（単一巨大 `flowgraph.rs` を廃止）。
 * **実施（追記）**: `web_interface/control/table/` を **`mod.rs` + `util`** に分割（旧 `table.rs` を廃止）。
 * **実施（追記）**: `web_interface/control/profiles/` を **`mod.rs` + `util`** に分割（旧 `profiles.rs` を廃止）。
+* **実施（追記）**: `web_interface/control/restart/` を **`mod.rs` + `util.rs`** に分割（旧単一 `restart.rs` を廃止。パス解決・ラベル・パス同値判定は `util`）。
+* **実施（追記）**: `web_interface/control/run_with/` を **`mod.rs` + `util.rs` + `toml_ops.rs`** に分割（旧単一 `run_with.rs` を廃止。TOML 配列操作と DTO→`Value` は `toml_ops`）。
 * **残り（後続 PR）**: 上記以外の `web_interface::control/*` の肥大化、他モジュールの同様の表化など。
 
 #### Step 5（一部完了）

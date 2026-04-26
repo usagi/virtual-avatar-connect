@@ -272,10 +272,10 @@ parse 対象文字列の TZ 情報の有無を以下で判定:
 | 5 | `src/web_interface/control/ws.rs` | 92 | `chrono::Utc::now().to_rfc3339()` | `Timestamp::now().to_string()` | RFC3339 互換、subsec 有無要確認 |
 | 6 | `src/web_interface/control/ping.rs` | 26 | 同上 | 同上 | |
 | 7 | `src/web_interface/control/dto.rs` | 101 | 同上 | 同上 | |
-| 8 | `src/web_interface/control/restart.rs` | 130 | `chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339()` | `Timestamp::try_from(t).map(\|ts\| ts.to_string())` | `SystemTime` → `Timestamp` 変換は `try_from` |
+| 8 | `src/web_interface/control/restart/mod.rs` | 該当行 | `chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339()` | `Timestamp::try_from(t).map(\|ts\| ts.to_string())` | `SystemTime` → `Timestamp` 変換は `try_from` |
 | 9 | `src/web_interface/control/oauth_twitch.rs` | 122 | `use chrono::{DateTime, Utc}` | `use jiff::Timestamp` | |
 | 10 | `src/web_interface/control/profiles/util.rs` | （`backup_path`） | `chrono::Local::now().format("%Y%m%d-%H%M%S").to_string()` | `Zoned::now().strftime("%Y%m%d-%H%M%S").to_string()` | Local → `Zoned::now()` は system tz 利用 |
-| 11 | `src/web_interface/control/run_with.rs` | 227 | 同上 | 同上 | |
+| 11 | `src/web_interface/control/run_with/mod.rs` | 該当行 | 同上 | 同上 | |
 | 12 | `src/web_interface/control/flowgraph/mod.rs` | （分割後） | 同上 | 同上 | |
 | 13 | `src/flowgraph/nodes/dictionary.rs` | 66〜78 | `DateTime<Utc>` / `parse_from_rfc3339` / `Utc::now().to_rfc3339_opts(Secs, true)` | `Timestamp` / `s.parse::<Timestamp>()` / `Timestamp::now().strftime("%Y-%m-%dT%H:%M:%SZ").to_string()` | `to_rfc3339_opts(Secs, true)` の秒切捨て + Z 終端を strftime で再現 |
 | 14 | `src/flowgraph/nodes/dictionary.rs` | 104, 636 | `chrono::Utc::now()` | `Timestamp::now()` | |
@@ -324,7 +324,7 @@ parse 対象文字列の TZ 情報の有無を以下で判定:
 - §5 の 22 箇所を 1 ファイルずつ置換。各ファイル置換後に `cargo check` を通す
 - **順序の原則**: leaf (呼ばれるだけのファイル) から書き換える。型定義を持つ `message.rs` / `channel_datum.rs` / `managed_app/mod.rs` は最後。理由: 型を先に変えると下流の `cargo check` が長期間赤くなる
 - **snapshot test 追加**: serde 経由で `DateTime<Utc>` を JSON に書き出していた構造体 (特に `message::Message`, `channel_datum::ChannelDatum`) について **既存 chrono 出力 / 新 jiff 出力 の JSON バイト列比較** を `insta` snapshot ですでに持っていれば再生成、無ければ本フェーズで追加
-- **ログ/ファイル名系 (`profiles/*` / `run_with.rs` / `flowgraph/*` / `tts` / `screenshot.rs`) の strftime 結果**: 既存と文字列一致するかを unit test で担保
+- **ログ/ファイル名系 (`profiles/*` / `run_with/*` / `flowgraph/*` / `tts` / `screenshot.rs`) の strftime 結果**: 既存と文字列一致するかを unit test で担保
 - **TTL 比較 (`dictionary.rs::is_expired`)**: 現行の文字列 → chrono parse → chrono::Utc::now() 比較のロジックを、Timestamp 比較に書き換え。semantics が変わらないかケース test を追加
 
 ### π-3 — chore(deps): chrono 解除

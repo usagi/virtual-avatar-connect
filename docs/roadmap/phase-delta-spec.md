@@ -1270,7 +1270,7 @@ virtual-avatar-connect.exe --migrate --conf conf.toml [--migrate-out-dir migrate
 - 本 spec は以下の既存コードの構造を前提に設計した:
   - プロセッサ列挙: [src/processor/mod.rs](../../src/processor/mod.rs)
   - ChannelDatum: [src/state/channel_datum.rs](../../src/state/channel_datum.rs)
-  - 既存 TOML 編集基盤: `src/web_interface/control/node_config.rs`, `src/web_interface/control/run_with.rs`
+  - 既存 TOML 編集基盤: `src/web_interface/control/node_config.rs`, `src/web_interface/control/run_with/`
   - イベントバス: `src/web_interface/ws.rs`
 
 - UE Blueprint の概念（入出力ピン / exec pin / DAG）を参考にしているが、本プロジェクトの Flowgraph は UE Blueprint とは別実装の独自モデルである。

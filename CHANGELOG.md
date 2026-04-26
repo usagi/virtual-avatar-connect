@@ -5,6 +5,11 @@
 
 ## [Unreleased]
 
+### 内部リファクタ — Control API `restart` / `run_with` モジュール分割
+
+- **`src/web_interface/control/restart/`**: 旧 `restart.rs` を `mod.rs`（ハンドラ・DTO）と `util.rs`（`resolve_new_conf_path` / `label_from_filename` / `paths_equivalent` と単体テスト）に分割。
+- **`src/web_interface/control/run_with/`**: 旧 `run_with.rs` を `mod.rs`（DTO・`mutate_conf`・ハンドラ）、`util.rs`（`err_response` / `build_views`）、`toml_ops.rs`（`run_with_array` / `dto_to_value` と単体テスト）に分割。
+
 ### 内部リファクタ — Control API `profiles` モジュール分割
 
 - **`src/web_interface/control/profiles/`**: 旧 `profiles.rs` を `mod.rs`（DTO・ハンドラ）と `util.rs`（パス検証・バックアップ・`is_current`、単体テスト）に分割。
