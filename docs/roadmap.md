@@ -3,6 +3,8 @@
 Virtual Avatar Connect の全フェーズ × サブフェーズ単位のチェックボックス一覧。
 各フェーズの詳細設計は `docs/roadmap/phase-*.md`（UNVET の `docs/plan.md` 相当）を参照。
 全体方針・レイヤ構成・Commit Granularity Rule は [`architecture.md`](architecture.md) を参照。
+VAC Flowgraph を常駐型汎用データフロー処理エンジン、および汎用プログラミング言語に近い実行記述へ伸ばす横断計画は [`roadmap/flowgraph-language-roadmap.md`](roadmap/flowgraph-language-roadmap.md) を参照。
+VAC 常駐化に伴う配信・日常・仕事・睡眠などの動作状態切替計画は [`roadmap/runtime-mode-roadmap.md`](roadmap/runtime-mode-roadmap.md) を参照。
 
 ---
 
@@ -196,6 +198,20 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 ---
 
 ## Backlog / Future
+
+### Flowgraph Language Roadmap
+
+VAC Flowgraph を「設定ファイル」ではなく、常駐型ランタイムへロードされる **プログラム**として扱うための横断計画。既存 Phase δ / λ / ξ / π / ο / M / ρ... を置き換えず、サブグラフ関数化（λ+）、コレクション処理、第一級 `Result` / `Record` / `Bytes` / `MotionFrame` 型、永続 state、capability、debug/test runner を順序立てる上位設計として管理する。
+
+- 仕様草案: [`roadmap/flowgraph-language-roadmap.md`](roadmap/flowgraph-language-roadmap.md)
+- 次の文書化候補: Flowgraph Language Spec、λ+ graph-as-node detailed spec、Flowgraph fixture test runner 設計
+
+### Runtime Mode Roadmap
+
+VAC を常駐型データフローアプリとして動かし続ける前提で、配信・日常・仕事・睡眠・RTA などのユーザー状態に合わせた runtime mode 切替を扱う横断計画。`conf` profile の丸ごと切替ではなく、Flowgraph file / group activation、AI assistant、通知、Managed App desired state を runtime 差分適用する設計として管理する。
+
+- 仕様草案: [`roadmap/runtime-mode-roadmap.md`](roadmap/runtime-mode-roadmap.md)
+- 初期 Flowgraph node 方針: `flowgraph.mode.get` / `flowgraph.mode.equals` / `flowgraph.mode.transit` の 3 種に絞る。`on_transit` 専用 ingress node は初期実装しない。
 
 ### Phase ρ — OSC / VMC / VRC bridge (TBD)
 
