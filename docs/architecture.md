@@ -1,7 +1,7 @@
 # VAC Architecture
 
 Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の Commit Granularity Rule。
-詳細な Flowgraph 仕様は [`roadmap/phase-delta-spec.md`](roadmap/phase-delta-spec.md)、フェーズ進行は [`roadmap.md`](roadmap.md) を参照。
+詳細な Flowgraph 仕様は [`roadmap/phase-delta-spec.md`](roadmap/phase-delta-spec.md)、フェーズ進行は [`roadmap.md`](roadmap.md) を参照。Enum / ライブラリ再利用の設計正本は [`roadmap/phase-lambda-flowgraph-enum-and-library.md`](roadmap/phase-lambda-flowgraph-enum-and-library.md)（Phase λ）。
 
 ---
 

@@ -138,26 +138,38 @@ Flowgraph engine に **絶対時刻を表す `DateTime` 型**を第一級概念�
 - scope: chrono → jiff 全面移行 + Flowgraph `DateTime` 型。Breaking change なし（wire 互換・config 既定で後方互換）。IANA tz / DST / `Span`（暦幅）/ 独自 affine 単位は **π+** 扱い
 - 順序: **π-0..π-6 完了**。`flowgraph.datetime.*` による日時ワイヤは本フェーズで揃い、**ρ → σ → τ → υ → ω** backlog とは独立
 
+### Phase ξ — Dimensional Quantity System (SI 準拠の単位次元システム)（完了）
+
+Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念として導入した基盤フェーズ。数値に unit を付与、unit は次元（L·M·T·I·Θ·N·J + 疑似次元 Angle の 8 成分）を持つ。strict default + 明示 `flowgraph.unit.strip`。IO 系は pass-through。既存 flow は dimensionless fallback で完全後方互換。
+
+- [x] ξ-0 docs: `phase-ksi-dimensional-quantity-system.md` 新設 + roadmap.md への Phase ξ 追加 + Phase ο doc の依存注記
+- [x] ξ-1 feat(flowgraph/quantity): `Dimension` / `Unit` / `Quantity` 型 + SI 基本 7 単位 + 主要誘導単位 + SI 接頭辞 20 種 + Angle 疑似次元（rad / deg）+ 温度 delta 分離 (K / ΔK) + unit 文字列 parser + unit test 30+
+- [x] ξ-2 feat(flowgraph/nodes/unit): `flowgraph.unit.*` 操作ノード 7 種 + `SocketType::Quantity` / `SocketValue::Quantity` + TOML / JSON wire format + `Unit::to_si_base` atom-canonical 係数込み
+- [x] ξ-3 refactor(flowgraph): `Float ↔ Quantity` 暗黙 coerce + `flowgraph.math.float_*` の Quantity 演算化
+- [x] ξ-4 feat(flowgraph/util): `Quantity → String` 暗黙 coerce + `flowgraph.util.format` + log / channel.emit の unit-aware 化
+- [x] ξ-5 feat(gui): `FlowgraphNodeCard.svelte` で Quantity ポートの handle 色分け（次元 family）+ default から復元できる場合のみ unit バッジ + tooltip。`FlowgraphCanvas` で engine 互換の型接続（Float↔Quantity 等）と型不一致エッジの赤破線表示。`FlowgraphPropertyEditor` で `unit` / `target_unit` / `unit_override` の `GET /flowgraph/parse-unit` 検証。node-catalog JSON に `quantity_dim` 等を注入。E2E `flowgraph-canvas-basic` に Quantity handle 回帰を追加。
+- [x] ξ-6 docs: `docs/manual/dimensional-quantity-system.md` ほか
+- 仕様書: [`roadmap/phase-ksi-dimensional-quantity-system.md`](roadmap/phase-ksi-dimensional-quantity-system.md)
+- 順序: **ξ-0..ξ-6 完了**。次の本編候補は Backlog（[Phase ρ](#phase-ρ--osc--vmc--vrc-bridge-tbd) など）。**閉集合 string・ライブラリ再利用 v0** は [Phase λ](roadmap/phase-lambda-flowgraph-enum-and-library.md)（本ファイル Completed 節）で完了。
+
+### Phase λ — Flowgraph: Enum 型システム + ライブラリ再利用（v0 完了）
+
+閉集合 string（`PortSpec` メタ）、ユーザ定義 `[[enums]]`、ライブラリ境界ノード（`flowgraph.library.*`）、`[meta]` 拡張（author/name/version / `library_uses`）、依存グラフの閉路検出を一つの設計線で実装した。設計の単一ソースは [`roadmap/phase-lambda-flowgraph-enum-and-library.md`](roadmap/phase-lambda-flowgraph-enum-and-library.md)。δ 当初の `FlowgraphFile` 3 セクション方針は **後方互換のもとで拡張**（同 phase doc §4、[`phase-delta-spec.md`](roadmap/phase-delta-spec.md) §8.6）。
+
+- [x] λ-0 docs: `phase-lambda-flowgraph-enum-and-library.md` 新設 + `roadmap.md` Active 化 + `phase-delta-spec.md` / `architecture.md` への cross-link
+- [x] λ-1 feat(flowgraph): Enum MVP（`closed_string_variants` + engine / loader / GUI + `tts.speak` の `engine`）
+- [x] λ-2 feat(flowgraph,gui): `[[enums]]` パース・診断・パレット `user_defined`
+- [x] λ-3 feat(flowgraph): `flowgraph.library.input` / `flowgraph.library.output` スタブ登録
+- [x] λ-4 feat(flowgraph): `FileMeta` 拡張 + `library_uses` + 閉路検出
+- [x] λ-5 docs: CHANGELOG + manual 断片 + example 更新
+- ユーザ向け: [`manual/flowgraph-enum-and-library.md`](manual/flowgraph-enum-and-library.md) / 例: [`flowgraph.example/lambda-demo/main.flowgraph.toml`](../flowgraph.example/lambda-demo/main.flowgraph.toml)
+- **λ+（未スケジュール）**: 境界ポートの接続駆動増減、Exec 境界、fragment との二重経路整理などは phase λ 文書に従い別マイルストーンで扱う。
+
 ---
 
 ## Active Phases
 
-### Phase ξ — Dimensional Quantity System (SI 準拠の単位次元システム)
-
-Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念として導入する基盤フェーズ。数値に unit を付与、unit は次元（L·M·T·I·Θ·N·J + 疑似次元 Angle の 8 成分）を持つ。strict default（次元不一致は engine error）+ 明示 escape hatch（`flowgraph.unit.strip`）の方針。IO 系ノードは pass-through（wire format 互換を死守、次元強制は個別 opt-in）。既存 flow は dimensionless fallback で完全後方互換。
-
-Flowgraph は pure-functional + 遅延評価のため runtime 単位評価コストが DAG 枝刈り / memoization で自然に償却される — これが「工学系出身者が自作アプリに求める単位安全性」を現実的コストで提供できる根拠（詳細 [`roadmap/phase-ksi-dimensional-quantity-system.md`](roadmap/phase-ksi-dimensional-quantity-system.md) §1.1）。本フェーズは **Phase ο (Flowgraph Enhancement I) の順序上の前提**。
-
-- [x] ξ-0 docs: `phase-ksi-dimensional-quantity-system.md` 新設 + roadmap.md への Phase ξ 追加 + Phase ο doc の依存注記
-- [x] ξ-1 feat(flowgraph/quantity): `Dimension` / `Unit` / `Quantity` 型 + SI 基本 7 単位 + 主要誘導単位 + SI 接頭辞 20 種 + Angle 疑似次元（rad / deg）+ 温度 delta 分離 (K / ΔK) + unit 文字列 parser + unit test 30+
-- [x] ξ-2 feat(flowgraph/nodes/unit): `flowgraph.unit.*` 操作ノード 7 種（assign / convert / strip / get_unit_string / get_dim_string / same_dimension / to_json）+ `SocketType::Quantity` / `SocketValue::Quantity` 追加 + TOML / JSON wire format 対応 + `Unit::to_si_base` atom-canonical 係数込み
-- [x] ξ-3 refactor(flowgraph): engine 側に `Float ↔ Quantity` 暗黙 coerce を新設（`SocketType::compatible_with` / `coerce_to_type`）。`flowgraph.math.float_*` 4 種を Quantity 演算化（`try_add` / `try_sub` / `try_mul` / `try_div`、div-by-zero / 次元不一致は明示エラー）。既存フローは dimensionless fallback で完全後方互換
-- [x] ξ-4 feat(flowgraph/util): engine 側に `Quantity → String` 暗黙 coerce 追加（Display 実装経由、一方向のみ）。`flowgraph.util.format` 新設（`include_unit` / `precision` / `unit_override` プロパティ）。`flowgraph.util.log` / `flowgraph.channel.emit` は port 型そのままで stringify が unit-aware に
-- [ ] ξ-5 feat(gui): `FlowgraphNodeCard.svelte` ポート chip に unit バッジ + Dimension family 色分け + hover tooltip + property editor の unit text input
-- [x] ξ-6 docs: CHANGELOG + `docs/manual/dimensional-quantity-system.md` 新設（ユーザ向け解説: 動機 / 使える単位 / parser / ノード紹介 / よくあるパターン / FAQ）+ `manual/index.md` 目次 + Socket 型列に `quantity` / `table` 追記 + roadmap tick
-- 仕様書: [`roadmap/phase-ksi-dimensional-quantity-system.md`](roadmap/phase-ksi-dimensional-quantity-system.md)
-- scope: 外部依存ゼロ（自作、`uom` crate は runtime vs compile-time の性質不一致で採用見送り）。既存 flow 完全後方互換（dimensionless fallback）。IO 系は pass-through。非対応: Celsius/Fahrenheit（ξ+）/ 非 rad-deg Angle 単位 / ユーザ定義次元 / GUI unit インライン編集（υ 合流候補）
-- 順序: **Phase ο / π（engine 面）は Completed**。未完了は主に ξ-5（Quantity 単位の GUI）と backlog（ρ 以降）。`flowgraph.math.*` / `datetime.*` 等は `Quantity<Dimension>` / `DateTime` 前提で実装済み
+（現在アクティブなマイルストーンなし。Phase λ を Completed に移動済み。）
 
 ---
 
@@ -199,6 +211,8 @@ OS プロセス / ウィンドウ制御ノード群。Windows を第一級 targe
 
 Flowgraph editor の大規模 UX 改修。ν-β で送った "Svelte Flow handle drag edge の E2E" もここに合流させ、履歴モデルを第一級概念化する。
 
+- **λ との分担**: 再利用の**意味論**（閉集合、`library_uses`、境界ノード v0）は [Phase λ（完了）](roadmap/phase-lambda-flowgraph-enum-and-library.md)。υ の subgraph / グループは **エディタ上のカプセル化・Undo 等**が主で、将来の engine 側合成は λ（λ+）の境界モデルと整合させる。
+
 - [ ] 汎用 Undo/Redo スタック（現状 "削除 1 段 snapshot" を command pattern に進化、add/delete/move/connect/disconnect/property-edit 全部対象）
 - [ ] 本物のマルチ選択（`selectedNodeIds: Set<string>` + 矩形選択 + shift-click + ctrl-click、property editor multi 表示 / 差異ハイライト）
 - [ ] Flowgraph subgraph / group（engine + GUI の両面で第一級概念化、入出力 port を再 export するカプセル化）
@@ -217,6 +231,7 @@ Phase ο の vec2/3 と signal util に直接乗る形で、音声反応と古�
 
 ### Unscheduled Flowgraph Nodes
 
+- **Phase λ（v0 完了）**: `PortSpec.closed_string_variants`、`[[enums]]`、`flowgraph.library.input` / `output`（スタブ）、`FileMeta` 拡張 + `library_uses` 閉路検出。解説: [`manual/flowgraph-enum-and-library.md`](manual/flowgraph-enum-and-library.md)。動的境界ポート等の **λ+** は [`phase-lambda-flowgraph-enum-and-library.md`](roadmap/phase-lambda-flowgraph-enum-and-library.md) 参照。
 - **Phase π**: `flowgraph.datetime.*` 8 ノード（[`phase-pi-datetime-system.md`](roadmap/phase-pi-datetime-system.md) / [`manual/datetime-system.md`](manual/datetime-system.md)）**実装済み**。
 - **Phase ο-4（実装済み）**: `flowgraph.util.timer_interval`（[`roadmap/backlog-nodes.md`](roadmap/backlog-nodes.md) §1、`phase-omicron` §3.4、[`src/flowgraph/nodes/timer_interval.rs`](../src/flowgraph/nodes/timer_interval.rs)）
 
