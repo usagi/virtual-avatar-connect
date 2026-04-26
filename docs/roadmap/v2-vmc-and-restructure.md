@@ -10,6 +10,20 @@
 
 **M0 詳細設計（実装・`conf.toml` スキーマの正本）**: [`phase-mu-vmc-motion-m0.md`](phase-mu-vmc-motion-m0.md)
 
+### 0.1 横断ロードマップ（Flowgraph Language / Runtime Mode）と担当分割
+
+[`flowgraph-language-roadmap.md`](flowgraph-language-roadmap.md) は、Flowgraph を **常駐型データフロー処理エンジン**および **型付きノード言語**へ伸ばす上位計画（Stage 0〜8、§8 Decisions、既存 Phase δ/λ/…との関係）の正本である。[`runtime-mode-roadmap.md`](runtime-mode-roadmap.md) は、常駐 VAC における **Runtime Mode**（`[modes.*]`、Flowgraph file/group の activation、Managed App の desired state、初期ノードは `flowgraph.mode.get` / `equals` / `transit` のみ、`on_transit` 専用 ingress は入れない）の正本である。入口は [`roadmap.md`](../roadmap.md) 冒頭および Backlog 節。
+
+**ブランチ運用の目安（本 `v2` を土台にする場合）**
+
+| 領域 | 担当の目安 |
+|------|------------|
+| GUI（mode 表示・セレクタ、transition plan preview、Flowgraph エディタ／パレット） | 派生ブランチで **利用者 + Codex** が実装し、**`v2` へ PR** で合流する。 |
+| `conf` / `state` の mode 周りデータモデル、Mode Manager、loader の activation、Control API `modes/*`、Flowgraph ノード `flowgraph.mode.*` の **Rust 実装・単体テスト** | **`v2` 上で Cursor** が先行してよい。競合しやすいファイルは PR 単位で調整する。 |
+| 文書のみ（language spec 草案、λ+、fixture runner 設計など） | 先に **`v2` にマージ**すると参照が安定する。 |
+
+Language roadmap が挙げる **fixture test runner** や **loader 側の signature 抽出**、Runtime roadmap の **RM-1〜RM-3**（データモデル〜activation）は、GUI ビルド成果物と衝突しにくいことが多い。
+
 ---
 
 ## 1. 目標アーキテクチャ
