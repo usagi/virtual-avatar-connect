@@ -7,7 +7,7 @@
  *   - src/web_interface/control/actions.rs    → PauseTarget / PauseOutcome
  *   - src/web_interface/control/reload.rs     → ReloadRequest / ReloadResponse
  *   - src/twitch_oauth_sessions.rs（Control API は oauth_twitch.rs）→ OAuth* 一式
- *   - src/web_interface/control/events.rs     → ControlEvent (discriminated union)
+ *   - src/control_events.rs                   → ControlEvent (discriminated union)
  *   - src/ai/reload.rs                        → AiReloadRequest / AiReloadReport
  *
  * 受信側（WS の ControlEvent）は必ず `switch (ev.kind)` で分岐し、

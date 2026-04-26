@@ -1,9 +1,8 @@
 //! ランタイム共有状態。`flowgraph` / `ai` / `bridges` 等と接続する。
 //!
-//! ## 既知のレイヤ逆流（Step 4 メモ）
+//! ## レイヤ（Step 4 メモ）
 //!
-//! `ControlEvent` のため **`web_interface::control`** に依存している。
-//! `vac-core` 等へ分割するときは、イベント型の中立クレート化などで解消する候補。
+//! Control イベント型は [`crate::control_events`] にあり、本モジュールは `web_interface` に依存しない。
 
 mod channel_attach;
 mod channel_datum;
@@ -18,14 +17,28 @@ use crate::conf::Twitch;
 use crate::flowgraph::{shared_flowgraph_new, SharedFlowgraph};
 use crate::runtime::RuntimePaths;
 use crate::shutdown::ShutdownBroker;
+use crate::control_events::{ChannelDatumPhase, ControlEvent};
 use crate::twitch_oauth_sessions::OAuthSessions;
-use crate::web_interface::control::events::{ChannelDatumPhase, ControlEvent};
 use crate::{Arc, Conf, RwLock, SharedAudioSink};
 use anyhow::Result;
 use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::broadcast;
+
+impl ControlEvent {
+	/// `ChannelDatum` から `ChannelDatum` バリアントを組む。flags は HashSet をそのまま Vec に。
+	pub fn from_channel_datum(phase: ChannelDatumPhase, cd: &ChannelDatum) -> Self {
+		Self::ChannelDatum {
+			phase,
+			id: cd.get_id(),
+			channel: cd.channel.clone(),
+			content: cd.content.clone(),
+			flags: cd.flags.iter().cloned().collect(),
+			datetime: cd.get_datetime().to_string(),
+		}
+	}
+}
 
 pub type SharedState = Arc<RwLock<State>>;
 

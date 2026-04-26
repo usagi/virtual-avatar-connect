@@ -5,9 +5,13 @@
 
 ## [Unreleased]
 
+### 内部リファクタ — Control イベント型
+
+- **`src/control_events.rs`**: `ControlEvent` / `ChannelDatumPhase` / `ProcessorInvocationOutcome` を定義。`state` は **`web_interface` に依存しない**（`from_channel_datum` は `state` 内の `impl ControlEvent`）。[`docs/architecture.md`](docs/architecture.md) の境界表を追随。
+
 ### 内部リファクタ — Twitch OAuth セッション
 
-- **`src/twitch_oauth_sessions.rs`**: `OAuthSessions` / `OAuthSessionView` 等を `web_interface` から分離。`state` の `web_interface` 依存は **`ControlEvent` のみ**に縮小。[`docs/architecture.md`](docs/architecture.md) の境界表を追随。
+- **`src/twitch_oauth_sessions.rs`**: `OAuthSessions` / `OAuthSessionView` 等を `web_interface` から分離。[`docs/architecture.md`](docs/architecture.md) の境界表を追随。
 
 ### v2 Step 4（一段）— モジュール境界の文書化
 

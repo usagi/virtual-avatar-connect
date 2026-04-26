@@ -185,7 +185,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 
 ギリシャ文字フェーズに先行して **ワークスペース化〜配布形態**を追うチェックリスト。正本: [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1 / §1.2 / §3（`vac-gui-assets` 図・移行手順 Step 4 以降）。
 
-- [x] Step 4（一段）: [`architecture.md`](architecture.md) レイヤ境界表 + `motion` / `bridges` モジュール契約。`state→web_interface` 例外を記録（中立化は未）
+- [x] Step 4（一段）: [`architecture.md`](architecture.md) レイヤ境界表 + `motion` / `bridges` モジュール契約。`state→web_interface` 型依存は `twitch_oauth_sessions` / `control_events` で中立化済み
 - [x] Step 5（部分）: ワークスペース化（`vac-gui-assets` のみメンバ追加、`default-members = ["."]`）。他 crate の分割は継続
 - [x] Step 6a: Cargo feature **`embed-gui`** — `/gui/*` メモリ配信（`gui_embedded` / `gui_path`）
 - [x] Step 6b（crate）: **`vac-gui-assets`** メンバ（`include_dir` + `build.rs`）。**CI は §1.3 どおり未着手**

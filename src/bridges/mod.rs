@@ -79,7 +79,7 @@ impl BridgeCatalog {
 ///   [`BridgeHandles::finish_all`] で停止 → 新 runtime 上で再 spawn → 入れ替え、という流れ。
 ///
 /// `web_input_snapshot` は actix HTTP server を再起動できない制約上、差分検出用にだけ持つ。
-/// 差分があれば GUI 側に [`crate::web_interface::control::events::ControlEvent::RestartRecommended`]
+/// 差分があれば GUI 側に [`crate::control_events::ControlEvent::RestartRecommended`]
 /// をブロードキャストして再起動を促す。
 pub struct BridgeHandles {
 	pub(crate) twitch: Vec<twitch::TwitchBridgeHandle>,

@@ -315,8 +315,9 @@ flowgraph.motion.map
 
 #### Step 4（文書・契約の一段）
 
-* **実施（本段）**: [`architecture.md`](../architecture.md)「レイヤ境界（Step 4）」に `motion` / `bridges` / `flowgraph` / `web_interface` / `state` の **許容依存と例外**（`state → web_interface`）を表形式で固定。`motion` / `bridges` の crate 先頭ドキュメントに同趣旨の **依存契約**を追記。
-* **残り（後続 PR）**: `state` が `web_interface` に抱える型の中立化、`web_interface::control::flowgraph` の肥大分解、他モジュールの同様の表化など。
+* **実施（本段）**: [`architecture.md`](../architecture.md)「レイヤ境界（Step 4）」に `motion` / `bridges` / `flowgraph` / `web_interface` / `state` の **許容依存と例外**（当初は `state → web_interface`）を表形式で固定。`motion` / `bridges` の crate 先頭ドキュメントに同趣旨の **依存契約**を追記。
+* **実施（追記）**: `state → web_interface` の型依存は解消済み（[`src/twitch_oauth_sessions.rs`](../../src/twitch_oauth_sessions.rs)、[`src/control_events.rs`](../../src/control_events.rs)）。`web_interface::control::events` は `control_events` の再エクスポート。
+* **残り（後続 PR）**: `web_interface::control::flowgraph` の肥大分解、他モジュールの同様の表化など。
 
 #### Step 5（一部完了）
 

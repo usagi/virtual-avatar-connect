@@ -13,9 +13,10 @@ mod processor;
 mod resource;
 mod runtime;
 pub(crate) mod shutdown;
-mod state;
 pub(crate) mod twitch;
 mod twitch_oauth_sessions;
+mod control_events;
+mod state;
 
 pub mod flowgraph;
 pub mod utility;

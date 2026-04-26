@@ -28,7 +28,7 @@ use crate::flowgraph::node::{json_to_socket_value, InputMap, PortDirection, Port
 use crate::flowgraph::quantity::{parse_unit, Quantity};
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use crate::flowgraph::{registry, FlowgraphRuntime};
-use crate::web_interface::control::events::ControlEvent;
+use crate::control_events::ControlEvent;
 use crate::SharedState;
 
 // ============================================================================
