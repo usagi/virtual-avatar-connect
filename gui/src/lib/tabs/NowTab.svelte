@@ -2,7 +2,9 @@
  import { onMount } from 'svelte';
  import { api } from '../api';
  import { eventsStore } from '../events.svelte';
+ import { tabNavStore, type TabId } from '../tabs.svelte';
  import type {
+  ControlEvent,
   FlowgraphDiagnosticsResponse,
   FlowgraphTreeResponse,
   ManagedAppsResponse,
@@ -71,22 +73,86 @@
     ? 'text-warning-500'
     : 'text-error-500',
  );
+ const healthTone = $derived.by(() => {
+  if (error || eventsStore.connection === 'error' || eventsStore.connection === 'closed') {
+   return { label: 'Needs attention', className: 'text-error-500' };
+  }
+  if (diagnosticErrors > 0) return { label: 'Flowgraph errors', className: 'text-error-500' };
+  if (diagnosticWarnings > 0) return { label: 'Warnings', className: 'text-warning-500' };
+  return { label: 'Operational', className: 'text-success-500' };
+ });
+ const topDiagnostics = $derived(diagnostics?.diagnostics.slice(0, 5) ?? []);
+ const topManagedApps = $derived(managedApps?.entries.slice(0, 6) ?? []);
+
+ function go(tab: TabId) {
+  tabNavStore.setActive(tab);
+ }
+
+ function summarizeEvent(ev: ControlEvent): string {
+  switch (ev.kind) {
+   case 'channel_datum':
+    return `${ev.channel}: ${ev.content}`;
+   case 'lagged':
+    return `${ev.dropped} dropped`;
+   case 'heartbeat':
+    return ev.now;
+   case 'pause_state':
+    return ev.paused ? `${ev.target} paused` : `${ev.target} resumed`;
+   case 'reloaded':
+    return `${ev.target}${ev.id ? `:${ev.id}` : ''}`;
+   case 'oauth_status':
+    return `${ev.account} ${ev.status}`;
+   case 'processor_invoked':
+    return `${ev.feature} ${ev.outcome} (${ev.elapsed_ms}ms)`;
+   case 'restarting':
+    return `pid ${ev.current_pid} -> ${ev.new_pid}`;
+   case 'managed_app_state':
+    return `${ev.id} ${ev.running ? 'running' : 'stopped'}`;
+   case 'flowgraph_reloaded':
+    return `${ev.node_count} nodes, ${ev.error_count} errors`;
+  }
+ }
 </script>
 
 <section class="grid gap-4">
  <div class="flex flex-wrap items-start justify-between gap-3">
   <div>
    <h2 class="text-xl font-semibold">Now</h2>
-   <p class="text-sm opacity-65">Runtime cockpit</p>
+   <p class="text-sm opacity-65">
+    Runtime cockpit · <span class={healthTone.className}>{healthTone.label}</span>
+   </p>
   </div>
-  <button
-   type="button"
-   class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900 disabled:opacity-50"
-   disabled={loading}
-   onclick={refreshNow}
-  >
-   {loading ? 'Refreshing...' : 'Refresh'}
-  </button>
+  <div class="flex flex-wrap items-center gap-2">
+   <button
+    type="button"
+    class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
+    onclick={() => go('modes')}
+   >
+    Modes
+   </button>
+   <button
+    type="button"
+    class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
+    onclick={() => go('flowgraph')}
+   >
+    Flowgraph Studio
+   </button>
+   <button
+    type="button"
+    class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
+    onclick={() => go('resources')}
+   >
+    Resources
+   </button>
+   <button
+    type="button"
+    class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900 disabled:opacity-50"
+    disabled={loading}
+    onclick={refreshNow}
+   >
+    {loading ? 'Refreshing...' : 'Refresh'}
+   </button>
+  </div>
  </div>
 
  {#if error}
@@ -147,6 +213,68 @@
   </section>
 
   <section class="rounded border border-surface-200-800 bg-surface-50-950">
+   <div class="border-b border-surface-200-800 px-4 py-2 text-sm font-semibold">Managed Apps</div>
+   <div class="max-h-72 overflow-y-auto p-2">
+    {#if topManagedApps.length === 0}
+     <div class="px-2 py-4 text-sm opacity-60">No managed apps registered.</div>
+    {:else}
+     <ul class="grid gap-1">
+      {#each topManagedApps as app (app.id)}
+       <li class="rounded bg-surface-100-900 px-2 py-1.5 text-xs">
+        <div class="flex items-center justify-between gap-2">
+         <span class="truncate font-medium">{app.label}</span>
+         <span class={app.status.running ? 'text-success-500' : 'opacity-55'}>
+          {app.status.running ? 'running' : 'stopped'}
+         </span>
+        </div>
+       </li>
+      {/each}
+     </ul>
+    {/if}
+   </div>
+  </section>
+ </div>
+
+ <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+  <section class="rounded border border-surface-200-800 bg-surface-50-950">
+   <div class="flex items-center justify-between border-b border-surface-200-800 px-4 py-2">
+    <span class="text-sm font-semibold">Flowgraph Problems</span>
+    <button
+     type="button"
+     class="rounded border border-surface-300-700 px-2 py-0.5 text-xs hover:bg-surface-100-900"
+     onclick={() => go('flowgraph')}
+    >
+     Open
+    </button>
+   </div>
+   <div class="max-h-72 overflow-y-auto p-2">
+    {#if topDiagnostics.length === 0}
+     <div class="px-2 py-4 text-sm opacity-60">No Flowgraph diagnostics.</div>
+    {:else}
+     <ul class="grid gap-1">
+      {#each topDiagnostics as d, i (`${d.file ?? ''}:${d.node ?? ''}:${d.code}:${i}`)}
+       <li class="rounded bg-surface-100-900 px-2 py-1.5 text-xs">
+        <div class="flex items-center gap-2">
+         <span
+          class="rounded px-1.5 py-0.5 text-[10px] uppercase"
+          class:bg-error-500={d.severity === 'error'}
+          class:text-white={d.severity === 'error'}
+          class:bg-warning-500={d.severity === 'warning'}
+          class:bg-surface-300-700={d.severity === 'info'}
+         >
+          {d.severity}
+         </span>
+         <span class="font-mono opacity-70">{d.code}</span>
+        </div>
+        <div class="mt-1">{d.message}</div>
+       </li>
+      {/each}
+     </ul>
+    {/if}
+   </div>
+  </section>
+
+  <section class="rounded border border-surface-200-800 bg-surface-50-950">
    <div class="border-b border-surface-200-800 px-4 py-2 text-sm font-semibold">Recent Events</div>
    <div class="max-h-72 overflow-y-auto p-2">
     {#if recentEvents.length === 0}
@@ -159,6 +287,9 @@
          <span class="font-mono">{item.event.kind}</span>
          <span class="opacity-55">{new Date(item.received_at).toLocaleTimeString()}</span>
         </div>
+        <div class="mt-1 truncate opacity-70" title={summarizeEvent(item.event)}>
+         {summarizeEvent(item.event)}
+        </div>
        </li>
       {/each}
      </ul>
@@ -167,4 +298,3 @@
   </section>
  </div>
 </section>
-
