@@ -1,0 +1,11 @@
+[package]
+name = "vac-gui-assets"
+version = "0.10.0"
+edition = "2021"
+build = "build.rs"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+include_dir = "0.7.4"

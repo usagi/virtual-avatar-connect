@@ -186,9 +186,9 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 ギリシャ文字フェーズに先行して **ワークスペース化〜配布形態**を追うチェックリスト。正本: [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1 / §1.2 / §3（`vac-gui-assets` 図・移行手順 Step 4 以降）。
 
 - [ ] Step 4: モジュール境界整理（crate 分割の下準備）
-- [ ] Step 5: Cargo ワークスペース化
-- [x] Step 6a: Cargo feature **`embed-gui`** — `gui/dist` を `include_dir` で取り込み、`/gui/*` をメモリ配信（`build.rs` で `index.html` 必須、`gui_embedded` / `gui_path`）
-- [ ] Step 6b: **`vac-gui-assets`** crate 切り出し（**CI は Step 5 確定後にまとめて設計**。§1.3 — 部分 CI は入れない方針）
+- [x] Step 5（部分）: ワークスペース化（`vac-gui-assets` のみメンバ追加、`default-members = ["."]`）。他 crate の分割は継続
+- [x] Step 6a: Cargo feature **`embed-gui`** — `/gui/*` メモリ配信（`gui_embedded` / `gui_path`）
+- [x] Step 6b（crate）: **`vac-gui-assets`** メンバ（`include_dir` + `build.rs`）。**CI は §1.3 どおり未着手**
 - [ ] Step 7: `AppCore` boot / serve / cleanup 抽出（ε-2a）
 - [ ] Step 8: CLI / desktop の 2 runner（仮称どおり）
 - [ ] Step 9: desktop に Tauri + 同梱静的 + トレイ

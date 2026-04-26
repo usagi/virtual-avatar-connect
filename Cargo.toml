@@ -5,6 +5,11 @@ edition = "2021"
 build = "build.rs"
 default-run = "virtual-avatar-connect"
 
+[workspace]
+members = [".", "vac-gui-assets"]
+default-members = ["."]
+resolver = "2"
+
 [lib]
 name = "virtual_avatar_connect"
 path = "src/lib.rs"
@@ -102,7 +107,7 @@ eventsource-stream = "0.2"
 # reqwest / eventsource-stream が推移的に依存しているので追加コストは実質ゼロ。
 bytes = "1"
 jiff = { version = "0.2.24", features = ["serde"] }
-include_dir = { version = "0.7.4", optional = true }
+vac-gui-assets = { path = "vac-gui-assets", optional = true }
 
 [dependencies.vosk]
 version = "0.3.1"
@@ -111,8 +116,8 @@ optional = true
 [features]
 # 《Voice》: 既定で Vosk を含む（プロセッサー `voice` のデフォルトエンジン）。除外する場合は `cargo build --no-default-features`
 default = ["voice-vosk"]
-# v2 Step 6: `gui/dist` をビルド時に取り込み `/gui/*` をメモリ配信。事前に `cd gui && npm ci && npm run build` が必須。
-embed-gui = ["dep:include_dir"]
+# v2 Step 6: `vac-gui-assets` 経由で `gui/dist` を取り込み `/gui/*` をメモリ配信。事前に `cd gui && npm ci && npm run build` が必須。
+embed-gui = ["dep:vac-gui-assets"]
 # 《Voice》: Vosk。Windows では build.rs が vosk-win64 の zip を .vendors にキャッシュし DLL を target/{profile}/ へコピー（上書き: VOSK_LIB_PATH）
 voice-vosk = ["dep:vosk"]
 # 《Voice》: Whisper（whisper.cpp）。CMake・LLVM（libclang）・C++ が必要: `cargo build --features voice-whisper`

@@ -9,11 +9,17 @@
 
 - **部分 CI は入れない**: [`docs/roadmap/v2-vmc-and-restructure.md`](docs/roadmap/v2-vmc-and-restructure.md) §1.3。Step 6b / CI はワークスペース確定後にまとめて設計。[`docs/roadmap.md`](docs/roadmap.md) v2 メタの Step 6b 表記を整合。
 
+### v2 Step 6b — `vac-gui-assets` ワークスペースメンバ
+
+- **クレート** [`vac-gui-assets/`](vac-gui-assets/): `include_dir` + `build.rs`（`gui/dist/index.html` 必須）。`embed-gui` 時にメイン crate から依存。
+- **ワークスペース**: ルート [`Cargo.toml`](../Cargo.toml) に `[workspace]`（`members = [".", "vac-gui-assets"]`、`default-members = ["."]`）。既定 `cargo test` は `vac-gui-assets` をビルドしない。
+- **メイン**: `embed-gui` は `dep:vac-gui-assets` のみ（ルート `build.rs` の GUI 検査は削除）。
+- **ドキュメント**: v2 §3 図・Step 5/6、[`docs/roadmap.md`](docs/roadmap.md) v2 メタ。
+
 ### v2 Step 6a — GUI `embed-gui`（バイナリ内蔵 `/gui/*`）
 
-- **Cargo feature `embed-gui`**: `include_dir` で `gui/dist` を取り込み、`/gui/*` をメモリから配信（[`src/web_interface/gui_embedded.rs`](../src/web_interface/gui_embedded.rs)）。`build.rs` が `gui/dist/index.html` を検証。
+- **Cargo feature `embed-gui`**: `/gui/*` をメモリから配信（[`src/web_interface/gui_embedded.rs`](../src/web_interface/gui_embedded.rs)）。GUI バイト列は **`vac-gui-assets`** に集約（Step 6b）。
 - **パス正規化**: [`src/web_interface/gui_path.rs`](../src/web_interface/gui_path.rs)（`..` 排除のユニットテスト）。
-- **ドキュメント**: [`docs/roadmap.md`](docs/roadmap.md) v2 メタチェックリスト（Step 6a 完了 / 6b 残）、[`docs/roadmap/v2-vmc-and-restructure.md`](docs/roadmap/v2-vmc-and-restructure.md) Step 6 追記。
 
 ### ドキュメント（実行形態・工程順）
 
