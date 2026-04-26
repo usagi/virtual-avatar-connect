@@ -2,7 +2,7 @@
 //!
 //! ## 既知のレイヤ逆流（Step 4 メモ）
 //!
-//! `ControlEvent` / `OAuthSessions` のため **`web_interface::control`** に依存している。
+//! `ControlEvent` のため **`web_interface::control`** に依存している。
 //! `vac-core` 等へ分割するときは、イベント型の中立クレート化などで解消する候補。
 
 mod channel_attach;
@@ -18,8 +18,8 @@ use crate::conf::Twitch;
 use crate::flowgraph::{shared_flowgraph_new, SharedFlowgraph};
 use crate::runtime::RuntimePaths;
 use crate::shutdown::ShutdownBroker;
+use crate::twitch_oauth_sessions::OAuthSessions;
 use crate::web_interface::control::events::{ChannelDatumPhase, ControlEvent};
-use crate::web_interface::control::oauth_twitch::OAuthSessions;
 use crate::{Arc, Conf, RwLock, SharedAudioSink};
 use anyhow::Result;
 use std::collections::{HashSet, VecDeque};

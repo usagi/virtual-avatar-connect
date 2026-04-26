@@ -15,6 +15,7 @@ mod runtime;
 pub(crate) mod shutdown;
 mod state;
 pub(crate) mod twitch;
+mod twitch_oauth_sessions;
 
 pub mod flowgraph;
 pub mod utility;

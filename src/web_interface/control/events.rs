@@ -173,9 +173,9 @@ pub enum ControlEvent {
 		/// "broadcaster" / "moderator"
 		account: &'static str,
 		/// 新しい status
-		status: super::oauth_twitch::OAuthSessionStatus,
+		status: crate::twitch_oauth_sessions::OAuthSessionStatus,
 		/// セッションのスナップショット（`device_code` のような秘匿情報は含まない）
-		view: super::oauth_twitch::OAuthSessionView,
+		view: crate::twitch_oauth_sessions::OAuthSessionView,
 	},
 }
 

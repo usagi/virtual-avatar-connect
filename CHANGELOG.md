@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### 内部リファクタ — Twitch OAuth セッション
+
+- **`src/twitch_oauth_sessions.rs`**: `OAuthSessions` / `OAuthSessionView` 等を `web_interface` から分離。`state` の `web_interface` 依存は **`ControlEvent` のみ**に縮小。[`docs/architecture.md`](docs/architecture.md) の境界表を追随。
+
 ### v2 Step 4（一段）— モジュール境界の文書化
 
 - **[`docs/architecture.md`](docs/architecture.md)**: 「レイヤ境界（Step 4）」表（`motion` / `bridges` / `flowgraph` / `web_interface` / `state` と `state→web_interface` 例外）。

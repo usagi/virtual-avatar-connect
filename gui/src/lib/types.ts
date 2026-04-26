@@ -6,7 +6,7 @@
  *   - src/web_interface/control/dto.rs        → StateSnapshot / *Summary
  *   - src/web_interface/control/actions.rs    → PauseTarget / PauseOutcome
  *   - src/web_interface/control/reload.rs     → ReloadRequest / ReloadResponse
- *   - src/web_interface/control/oauth_twitch.rs → OAuth* 一式
+ *   - src/twitch_oauth_sessions.rs（Control API は oauth_twitch.rs）→ OAuth* 一式
  *   - src/web_interface/control/events.rs     → ControlEvent (discriminated union)
  *   - src/ai/reload.rs                        → AiReloadRequest / AiReloadReport
  *

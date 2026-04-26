@@ -139,7 +139,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 | `bridges` | `flowgraph`（loader / node / socket）, `state`（共有型）, `shutdown`（例: VMC ingress）, `processor`（voice） | ingress → Flowgraph の **一方向**。`motion` へは触れない。 |
 | `flowgraph` | `conf`, `state`, `shutdown`, 自ツリー | `bridges` / `web_interface` へ **依存しない**（ノード doc 内のブリッジ名は説明用コメントのみ）。 |
 | `web_interface` | `state`, `flowgraph`, `bridges`, `ai`, … | Control API がランタイムを操作する **最上位の集約層**のまま。 |
-| `state` | `conf`, `flowgraph`, `shutdown`, `ai`, `runtime`, **`web_interface`**（下記） | **`ControlEvent` / `OAuthSessions` 等のため `web_interface::control` に依存**している。将来 `vac-core` 化ではイベント型を中立クレートへ移すなどの整理対象。 |
+| `state` | `conf`, `flowgraph`, `shutdown`, `ai`, `runtime`, `twitch_oauth_sessions`, **`web_interface`**（下記） | **`ControlEvent` のため `web_interface::control` に依存**している。Twitch OAuth セッション表は `twitch_oauth_sessions` に分離済み。将来 `vac-core` 化ではイベント型を中立クレートへ移すなどの整理対象。 |
 
 ---
 
