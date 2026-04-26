@@ -8,9 +8,61 @@ mod router;
 mod vmc_raw;
 
 use crate::conf::Conf;
+use crate::conf::VmcPassthroughSpec;
 use crate::shutdown::ShutdownBroker;
+use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
+
+fn warn_duplicate_vmcbinds(specs: &[VmcPassthroughSpec]) {
+	let mut counts: HashMap<SocketAddr, usize> = HashMap::new();
+	for spec in specs {
+		if !spec.enabled || spec.forward_to.is_empty() {
+			continue;
+		}
+		if let Ok(a) = spec.bind.trim().parse::<SocketAddr>() {
+			*counts.entry(a).or_insert(0) += 1;
+		}
+	}
+	for (addr, n) in counts.iter().filter(|(_, c)| **c > 1) {
+		let labels: Vec<&str> = specs
+			.iter()
+			.filter(|s| s.enabled && !s.forward_to.is_empty())
+			.filter(|s| s.bind.trim().parse::<SocketAddr>().ok().as_ref() == Some(addr))
+			.map(|s| {
+				s.label
+					.as_deref()
+					.map(str::trim)
+					.filter(|t| !t.is_empty())
+					.unwrap_or("(label なし)")
+			})
+			.collect();
+		log::warn!(
+			"《Motion/VMC》 同一 bind {} を {} 件の vmc_passthrough が使用しています（識別子: {}）。先着のみ bind に成功しうるため、意図しない重複なら label / bind を見直してください。",
+			addr,
+			n,
+			labels.join(", ")
+		);
+	}
+}
+
+/// `enabled` かつ `forward_to` 非空かつ `bind` がパース可能なエントリについて、同一 `bind` が 2 回以上現れたアドレスを返す（テスト用）。
+#[cfg(test)]
+pub(crate) fn duplicate_vmc_bind_addrs_for_test(specs: &[VmcPassthroughSpec]) -> Vec<SocketAddr> {
+	let mut counts: HashMap<SocketAddr, usize> = HashMap::new();
+	for spec in specs {
+		if !spec.enabled || spec.forward_to.is_empty() {
+			continue;
+		}
+		if let Ok(a) = spec.bind.trim().parse::<SocketAddr>() {
+			*counts.entry(a).or_insert(0) += 1;
+		}
+	}
+	let mut dups: Vec<SocketAddr> = counts.into_iter().filter(|(_, c)| *c > 1).map(|(a, _)| a).collect();
+	dups.sort_by_key(|a| (a.ip(), a.port()));
+	dups
+}
 
 /// 起動中の motion タスク。`run()` の cleanup で [`MotionHandles::finish_all`] する。
 pub struct MotionHandles {
@@ -31,6 +83,7 @@ impl MotionHandles {
 		let Some(m) = conf.motion.as_ref() else {
 			return Self::empty();
 		};
+		warn_duplicate_vmcbinds(&m.vmc_passthrough);
 		let mut tasks = Vec::new();
 		for spec in &m.vmc_passthrough {
 			if let Some(h) = vmc_raw::try_spawn(spec, shutdown.clone()) {
@@ -55,10 +108,51 @@ impl MotionHandles {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::conf::VmcPassthroughSpec;
 
 	#[test]
 	fn motion_handles_default_empty() {
 		let h = MotionHandles::empty();
 		assert!(h.is_empty());
+	}
+
+	#[test]
+	fn duplicate_vmc_bind_addrs_detects_dup() {
+		let specs = vec![
+			VmcPassthroughSpec {
+				enabled: true,
+				bind: "0.0.0.0:59991".into(),
+				forward_to: vec!["127.0.0.1:2".into()],
+				label: None,
+			},
+			VmcPassthroughSpec {
+				enabled: true,
+				bind: "0.0.0.0:59991".into(),
+				forward_to: vec!["127.0.0.1:3".into()],
+				label: Some("b".into()),
+			},
+		];
+		let dups = duplicate_vmc_bind_addrs_for_test(&specs);
+		assert_eq!(dups.len(), 1);
+		assert_eq!(dups[0], "0.0.0.0:59991".parse().unwrap());
+	}
+
+	#[test]
+	fn duplicate_vmc_bind_respects_disabled() {
+		let specs = vec![
+			VmcPassthroughSpec {
+				enabled: true,
+				bind: "0.0.0.0:59992".into(),
+				forward_to: vec!["127.0.0.1:2".into()],
+				label: None,
+			},
+			VmcPassthroughSpec {
+				enabled: false,
+				bind: "0.0.0.0:59992".into(),
+				forward_to: vec!["127.0.0.1:3".into()],
+				label: None,
+			},
+		];
+		assert!(duplicate_vmc_bind_addrs_for_test(&specs).is_empty());
 	}
 }

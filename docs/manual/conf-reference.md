@@ -37,8 +37,9 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 | `enabled` | bool | `true` | `false` で当該エントリのみ無効 |
 | `bind` | string | （必須） | 受信 `"host:port"`（例 `0.0.0.0:39539`） |
 | `forward_to` | string 配列 | `[]` | 転送先。空なら当該エントリはスキップ（警告） |
+| `label` | string | なし | ログ識別子。省略・空なら `bind` が文脈として使われる（複数受信口のハブ運用向け） |
 
-仕様の正本: [`../roadmap/phase-mu-vmc-motion-m0.md`](../roadmap/phase-mu-vmc-motion-m0.md)。例: リポジトリ直下の [`conf.example-motion.toml`](../../conf.example-motion.toml)。
+仕様の正本: [`../roadmap/phase-mu-vmc-motion-m0.md`](../roadmap/phase-mu-vmc-motion-m0.md)（Phase M2 は同 doc §9）。例: リポジトリ直下の [`conf.example-motion.toml`](../../conf.example-motion.toml)。
 
 ## 4. 永続化 / 添付
 

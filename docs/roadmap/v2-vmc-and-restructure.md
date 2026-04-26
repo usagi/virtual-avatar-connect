@@ -69,6 +69,8 @@ src/motion/
 * コピー回数・バッファを最小化
 * async コンテキストでワーカーを占有しないこと
 
+**M2（ハブ運用・ログ）**: 複数受信ソケット・任意 `label`・同一 `bind` の起動時警告・`send_to` 失敗のログ間引き。正本は [`phase-mu-vmc-motion-m0.md`](phase-mu-vmc-motion-m0.md) §9。
+
 ---
 
 ### Phase M1: VMC ingress ブリッジ

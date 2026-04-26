@@ -19,8 +19,9 @@
 | `enabled` | bool | `false` で当該エントリを無効化（既定 `true`） |
 | `bind` | string | 受信 UDP の `"host:port"`（例 `0.0.0.0:39539`） |
 | `forward_to` | string 配列 | 転送先ごとの `"host:port"`。**空のときは当該エントリをスキップ**（警告ログ） |
+| `label` | string（任意） | ログ行の識別子。省略・空のときは `bind` が文脈として使われる（Phase M2） |
 
-複数の `[[motion.vmc_passthrough]]` を並べれば、受信ポートを複数立てられる。
+複数の `[[motion.vmc_passthrough]]` を並べれば、受信ポートを複数立てられる。ハブ運用では `label` で受信口を区別し、同一 `bind` の重複は起動時に `warn` される。
 
 ## 3. ランタイム挙動
 
@@ -41,7 +42,7 @@
 | [`src/conf/motion.rs`](../../src/conf/motion.rs) | `MotionConf` / `VmcPassthroughSpec`（serde） |
 | [`src/motion/mod.rs`](../../src/motion/mod.rs) | `MotionHandles`、spawn / finish |
 | [`src/motion/vmc_raw.rs`](../../src/motion/vmc_raw.rs) | bind / recv / shutdown select |
-| [`src/motion/router.rs`](../../src/motion/router.rs) | `forward_datagram`（マルチ `send_to`） |
+| [`src/motion/router.rs`](../../src/motion/router.rs) | `forward_datagram`（マルチ `send_to`）+ `SendFailLogThrottle`（`send_to` 失敗ログの間引き） |
 | [`src/motion/osc.rs`](../../src/motion/osc.rs) | M4 までプレースホルダ |
 
 ## 6. 検証手順（手元）
@@ -91,3 +92,21 @@
 ### 8.6 Commit メッセージ例
 
 `M-1 feat(flowgraph,bridges): flowgraph.ingress.vmc_udp + vmc_ingress bridge`
+
+---
+
+## 9. Phase M2 — パススルー・ハブ運用（conf / ログ）
+
+### 9.1 スコープ
+
+- **`label`**: 各 `[[motion.vmc_passthrough]]` に任意の短い文字列を付け、受信ループ・`send_to`・`recv_from` のログを識別しやすくする。
+- **重複 `bind` 警告**: 有効かつ `forward_to` 非空で、パース可能な同一 `bind` が複数エントリに現れたとき、起動時に `warn`（先着 bind のみ成功しうるため）。
+- **`send_to` 失敗**: 連続失敗時は最大約 5 秒に 1 回まで `warn` にまとめ、間の件数を別行で報告する。
+
+### 9.2 例
+
+[`conf.example-motion.toml`](../../conf.example-motion.toml)（複数受信ソケット + 共通ハブ宛先の並記）。
+
+### 9.3 Commit メッセージ例
+
+`M-2 feat(motion): VMC passthrough hub labels + duplicate-bind warn + send_to log throttle`

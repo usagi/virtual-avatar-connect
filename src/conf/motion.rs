@@ -23,4 +23,7 @@ pub struct VmcPassthroughSpec {
 	/// 転送先ごとの `"host:port"`。空のときこのエントリは起動しない（警告ログ）。
 	#[serde(default)]
 	pub forward_to: Vec<String>,
+	/// ログ用の短い識別子。省略・空のときは `bind` が文脈として使われる。
+	#[serde(default)]
+	pub label: Option<String>,
 }

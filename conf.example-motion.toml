@@ -13,8 +13,16 @@ log_level = "Info"
 # 受信 39539 → 127.0.0.1:39540 と 127.0.0.1:39541 へ同一ペイロードを転送（パースなし）。
 [[motion.vmc_passthrough]]
 enabled = true
+label = "primary"
 bind = "0.0.0.0:39539"
 forward_to = [
   "127.0.0.1:39540",
   "127.0.0.1:39541",
 ]
+
+# ハブ例: 別ポートで受け、同一の「集約ポート」へ転送（ログは label で区別）。
+[[motion.vmc_passthrough]]
+enabled = true
+label = "secondary_in"
+bind = "0.0.0.0:39538"
+forward_to = ["127.0.0.1:39540"]

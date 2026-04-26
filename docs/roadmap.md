@@ -176,7 +176,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] M-0 docs: `phase-mu-vmc-motion-m0.md` 新設 + `roadmap.md` Active 化 + `architecture.md` / `conf-reference.md` + `v2-vmc-and-restructure.md` cross-link + `conf.example-motion.toml`
 - [x] M-0 feat(motion): `src/motion/`（`vmc_raw` + `router` + `osc` プレースホルダ）+ `[motion]` / `MotionHandles` 起動・`ShutdownBroker` 連携
 - [x] M-1 feat(flowgraph,bridges): `flowgraph.ingress.vmc_udp` + `vmc_ingress` ブリッジ + `` `TriggerEvent` `` 投入（`phase-mu` §8、`flowgraph.example/vmc-udp-ingress`）
-- [ ] M-2 feat(motion): パススルー・ハブ運用の conf / ログ整備（複数受信ソケットの運用例）
+- [x] M-2 feat(motion): パススルー・ハブ運用の conf / ログ整備（複数受信ソケットの運用例）
 - [ ] M-3 feat(web_interface,gui): Control API `POST /api/v1/vmc/*` + トレイ/Web UI の転送先管理
 - [ ] M-4 feat(flowgraph): `MotionFrame` / `flowgraph.motion.*`（後段）
 - [ ] M-5 docs+flowgraph: 表情・ジェスチャ等の用途拡張（`v2-vmc` §5 参照）

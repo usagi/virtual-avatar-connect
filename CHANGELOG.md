@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### Phase M2 — VMC パススルー・ハブ運用（conf / ログ）
+
+- **`[[motion.vmc_passthrough]]`**: 任意の `label`（ログ識別。空なら `bind` を文脈に使用）。同一 `bind` を複数エントリが参照する場合は起動時 `warn`。
+- **`src/motion/router.rs`**: `send_to` 失敗ログを `SendFailLogThrottle` で間引き（約 5 秒に最大 1 回のまとめ + 省略件数）。
+- **ドキュメント**: [`docs/roadmap/phase-mu-vmc-motion-m0.md`](docs/roadmap/phase-mu-vmc-motion-m0.md) §9、[`docs/manual/conf-reference.md`](docs/manual/conf-reference.md)、[`conf.example-motion.toml`](conf.example-motion.toml)（複数受信口の例）。
+
 ### Phase M1 — `flowgraph.ingress.vmc_udp` + VMC UDP ブリッジ
 
 - **ノード**: `flowgraph.ingress.vmc_udp`（ingress echo パターン）。`properties.bind`（`host:port`）で UDP 受信。`content` は受信ペイロードの **Base64**。
