@@ -157,7 +157,7 @@ UNVET (`usagi/un-virtual-eye-tracker`) の convention を踏襲し、Phase χ �
 2. **CLI runner と desktop runner** の詳細設計・実装 — どちらも単体起動可能（CLI はコンソール付き玄人向け、desktop はコンソール非表示・一般ユーザー向け入口）。
 3. **Tauri（Phase ε-2）** を **desktop 版に組み込む** — ネイティブウィンドウ／トレイ統合はコンソールを出さない側に寄せる。
 
-**GUI 静的ファイル**: Svelte の **ビルド済み** `gui/dist` を専用 crate またはモジュールに同梱し、CLI／desktop の両方から **内蔵配信**できるようにする（詳細は v2 計画書 §1.2）。
+**GUI 静的ファイル**: Svelte の **ビルド済み** `gui/dist` を専用 crate またはモジュールに同梱し、CLI／desktop の両方から **内蔵配信**できるようにする（詳細は v2 計画書 §1.2）。**GitHub Actions 等の CI は** v2 計画書 **§1.3**（部分 CI を今は入れない）に従い、ワークスペース確定後にまとめて設計する。
 
 HTTP/WS をそのまま使う Tauri shell 方針は [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md) §3 を参照。
 

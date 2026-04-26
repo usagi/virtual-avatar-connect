@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### ドキュメント（v2 CI 方針メモ）
+
+- **部分 CI は入れない**: [`docs/roadmap/v2-vmc-and-restructure.md`](docs/roadmap/v2-vmc-and-restructure.md) §1.3。Step 6b / CI はワークスペース確定後にまとめて設計。[`docs/roadmap.md`](docs/roadmap.md) v2 メタの Step 6b 表記を整合。
+
 ### v2 Step 6a — GUI `embed-gui`（バイナリ内蔵 `/gui/*`）
 
 - **Cargo feature `embed-gui`**: `include_dir` で `gui/dist` を取り込み、`/gui/*` をメモリから配信（[`src/web_interface/gui_embedded.rs`](../src/web_interface/gui_embedded.rs)）。`build.rs` が `gui/dist/index.html` を検証。

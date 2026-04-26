@@ -74,6 +74,12 @@ VAC
 
 - 開発者向けには従来どおり **ファイルシステムの `gui/dist` または Vite dev server** を指す feature／環境変数を残してよい（リリースと開発の二経路）。
 
+### 1.3 CI 方針（メモ・2026）
+
+- **`embed-gui` だけを対象にした部分的な GitHub Actions 等は、いま入れない。** リポジトリにワークフローがほぼ無い現状では、単発ジョブの保守コストに対して得が小さい。`Cargo.lock` の扱い・ワークスペース（Step 5）・`vac-gui-assets`（Step 6b）が固まる前に CI を足すと、すぐ作り直すことになる。
+- **CI は** 上記と **まとめて設計**する（Rust 既定テスト、`gui` の `npm ci && npm run build`、必要なら `--features embed-gui` を **一連の方針**で）。それまでは **開発に専念**し、リリース同梱は手元または既存の release 手順で十分とする。
+- 参照: Step 6a 実装済み（`embed-gui`）。Step 6b の「CI での npm 統合」は **上記タイミングまで保留**とする（[`roadmap.md`](../roadmap.md) v2 メタ節）。
+
 ---
 
 ## 2. フェーズ設計
@@ -315,7 +321,7 @@ crates/
 #### Step 6 — `vac-gui-assets` と埋め込み配信
 
 * **6a（実装済み・単一 crate）**: Cargo feature **`embed-gui`**。`include_dir!("gui/dist")` と `web_interface::gui_embedded` で `/gui/*` をメモリ配信。`build.rs` が `gui/dist/index.html` の存在を検査（無ければ panic + 手順表示）。既定ビルドでは従来どおり `gui_disk`（ファイル）経路。
-* **6b（未）**: **`vac-gui-assets`**（論理名）へ crate 切り出し。CI / リリースで **`npm ci` + `npm run build`** を Rust ビルドの前提にする（`xtask` 等は後続）。
+* **6b（未）**: **`vac-gui-assets`**（論理名）へ crate 切り出し。**GitHub Actions 等の CI は §1.3 のとおり Step 5 確定後にまとめて設計**し、`npm ci` + `npm run build` をその枠組みに載せる（唐突な部分 CI はしない）。
 * **開発時**: `embed-gui` 無効時は既存の `gui_dist_path` や Vite をそのまま利用（§1.2）。
 
 #### Step 7 — `AppCore` 抽出（Phase ε-2a）
