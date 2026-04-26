@@ -677,7 +677,12 @@ export type FlowgraphDiagnosticCode =
  | 'unknown-property'
  | 'engine-build'
  | 'io'
- | 'ambiguous-main-ref';
+ | 'ambiguous-main-ref'
+ | 'closed-string-literal-out-of-enum'
+ | 'duplicate-enum-id'
+ | 'invalid-enum-definition'
+ | 'unknown-library-ref'
+ | 'library-dependency-cycle';
 
 export type FlowgraphDiagnostic = {
  severity: FlowgraphSeverity;
@@ -705,6 +710,12 @@ export type FlowgraphPortSpec = {
  default?: unknown;
  multi: boolean;
  description?: string;
+ /** Phase λ: 閉集合 string（`ty === "string"` のとき）。 */
+ closed_string_variants?: string[] | null;
+ /** Phase ξ-5: node-catalog 注入。`default` から復元できた非無次元 Quantity のみ。 */
+ quantity_dim?: string | null;
+ quantity_unit_badge?: string | null;
+ quantity_unit_full?: string | null;
 };
 
 export type FlowgraphPropertySpec = {
@@ -730,6 +741,8 @@ export type FlowgraphNodeSpec = {
  title: string;
  category: string;
  description?: string;
+ /** Phase λ: パレット行の一意キー（同一 feature の合成エントリ用）。 */
+ palette_key?: string;
  inputs: FlowgraphPortSpec[];
  outputs: FlowgraphPortSpec[];
  properties: FlowgraphPropertySpec[];
@@ -783,12 +796,25 @@ export type FlowgraphFileMeta = {
  title?: string | null;
  description?: string | null;
  tags?: string[] | null;
+ author?: string | null;
+ name?: string | null;
+ version?: string | null;
+ license?: string | null;
+ repos?: string | null;
+ library_uses?: string[] | null;
+};
+
+export type FlowgraphEnumDef = {
+ id: string;
+ primitive?: string | null;
+ variants: string[];
 };
 
 export type FlowgraphFileDocument = {
  meta: FlowgraphFileMeta | null;
  nodes: FlowgraphNodeEntry[];
  edges: FlowgraphEdgeEntry[];
+ enums?: FlowgraphEnumDef[];
 };
 
 export type FlowgraphFileResponse = {

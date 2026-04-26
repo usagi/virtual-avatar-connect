@@ -14,6 +14,7 @@
   */
  import { Handle, Position } from '@xyflow/svelte';
  import { flowgraphStore } from '../flowgraphStore.svelte';
+ import { quantityFamilyClassFromDim, quantityPortTooltip } from '../quantityDisplay';
  import { toastStore } from '../toasts.svelte';
  import type { FlowgraphNodeSpec, FlowgraphPortSpec } from '../types';
  import FlowgraphTriggerDialog from './FlowgraphTriggerDialog.svelte';
@@ -45,7 +46,15 @@
   if (port.is_exec) return 'flowgraph-handle exec';
   // η: Table ポートは辞書/表データを表す特別なハンドルとして視覚的に区別する。
   if (port.ty === 'table') return 'flowgraph-handle data table';
+  // ξ-5: Quantity は SI 単位付き数値。次元 family は port-row の class で色分け。
+  if (port.ty === 'quantity') return 'flowgraph-handle data quantity';
   return 'flowgraph-handle data';
+ }
+
+ function portRowClass(port: FlowgraphPortSpec): string {
+  const base = 'port-row';
+  if (port.ty !== 'quantity') return base;
+  return `${base} ${quantityFamilyClassFromDim(port.quantity_dim)}`;
  }
 
  /** γ-4a.0: × ボタンから単一ノード削除。FlowgraphCanvas の onDelete と同じ挙動（undo toast 付き）。 */
@@ -123,28 +132,34 @@
 
  <div class="ports inputs">
   {#each inputs as p (p.name)}
-   <div class="port-row">
+   <div class={portRowClass(p)}>
     <Handle
      type="target"
      position={Position.Left}
      id={p.name}
      class={handleClass(p)}
-     title={`${p.label} : ${p.ty}`}
+     title={quantityPortTooltip(p)}
     />
     <span class="label">{p.label}</span>
+    {#if p.ty === 'quantity' && p.quantity_unit_badge}
+     <span class="unit-badge" data-testid="flowgraph-quantity-badge">{p.quantity_unit_badge}</span>
+    {/if}
    </div>
   {/each}
  </div>
  <div class="ports outputs">
   {#each outputs as p (p.name)}
-   <div class="port-row">
+   <div class={portRowClass(p)}>
     <span class="label">{p.label}</span>
+    {#if p.ty === 'quantity' && p.quantity_unit_badge}
+     <span class="unit-badge" data-testid="flowgraph-quantity-badge">{p.quantity_unit_badge}</span>
+    {/if}
     <Handle
      type="source"
      position={Position.Right}
      id={p.name}
      class={handleClass(p)}
-     title={`${p.label} : ${p.ty}`}
+     title={quantityPortTooltip(p)}
     />
    </div>
   {/each}
@@ -317,6 +332,20 @@
   min-width: 0;
   flex: 1 1 auto;
  }
+ /* ξ-5: default から復元できた単位のみ短縮表示 */
+ .unit-badge {
+  flex: 0 0 auto;
+  max-width: 4.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: rgba(139, 92, 246, 0.2);
+  color: rgb(91, 33, 182);
+ }
  /* ==== Handle の絶対配置を port-row 単位に縛る ==== */
  .ports.inputs :global(.flowgraph-handle) {
   left: -6px !important;
@@ -356,6 +385,41 @@
   border-radius: 3px;
   background: rgb(16 185 129);
   border: 2px solid white;
+ }
+ /* ξ-5: Quantity 既定色（family 無指定）。port-row の family class で上書き。 */
+ :global(.flowgraph-handle.data.quantity) {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgb(139 92 246);
+  border: 2px solid white;
+ }
+ .port-row.qty-family-length :global(.flowgraph-handle.data.quantity) {
+  background: rgb(34 197 94);
+ }
+ .port-row.qty-family-mass :global(.flowgraph-handle.data.quantity) {
+  background: rgb(168 85 247);
+ }
+ .port-row.qty-family-time :global(.flowgraph-handle.data.quantity) {
+  background: rgb(59 130 246);
+ }
+ .port-row.qty-family-current :global(.flowgraph-handle.data.quantity) {
+  background: rgb(249 115 22);
+ }
+ .port-row.qty-family-temperature :global(.flowgraph-handle.data.quantity) {
+  background: rgb(244 63 94);
+ }
+ .port-row.qty-family-amount :global(.flowgraph-handle.data.quantity) {
+  background: rgb(6 182 212);
+ }
+ .port-row.qty-family-luminous :global(.flowgraph-handle.data.quantity) {
+  background: rgb(234 179 8);
+ }
+ .port-row.qty-family-angle :global(.flowgraph-handle.data.quantity) {
+  background: rgb(202 138 4);
+ }
+ .port-row.qty-family-mixed :global(.flowgraph-handle.data.quantity) {
+  background: rgb(99 102 241);
  }
  :global(.flowgraph-handle.exec) {
   width: 0;

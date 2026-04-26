@@ -82,6 +82,14 @@ import {
  type TriggerNodeResponse,
 } from './types';
 
+/** `GET /flowgraph/parse-unit` の JSON。Phase ξ-5 プロパティエディタの単位検証用。 */
+export type FlowgraphParseUnitResponse = {
+	valid: boolean;
+	dimension: string | null;
+	canonical_unit: string | null;
+	error: string | null;
+};
+
 const API_BASE = '/api/v1/control';
 
 type JsonInit = Omit<RequestInit, 'body' | 'headers'> & {
@@ -372,6 +380,11 @@ export const api = {
  /** 登録済み全 NodeSpec を取得する。パレット表示に使う。 */
  flowgraphNodeCatalog(): Promise<FlowgraphNodeCatalogResponse> {
   return request<FlowgraphNodeCatalogResponse>('/flowgraph/node-catalog');
+ },
+ /** Phase ξ-5: 単位文字列をサーバの `parse_unit` と同じルールで検証する。 */
+ flowgraphParseUnit(text: string): Promise<FlowgraphParseUnitResponse> {
+  const q = new URLSearchParams({ text });
+  return request<FlowgraphParseUnitResponse>(`/flowgraph/parse-unit?${q.toString()}`);
  },
  /** `flowgraph_dir` 配下のファイル一覧を取得する（各ファイルの meta / node 数 / パースエラー含む）。 */
  flowgraphTree(): Promise<FlowgraphTreeResponse> {

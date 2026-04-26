@@ -21,6 +21,9 @@
 
  let search = $state('');
  const searchLower = $derived(search.trim().toLowerCase());
+ const userEnumPaletteExtra = $derived(
+  flowgraphStore.currentFile?.parsed?.enums?.reduce((s, e) => s + e.variants.length, 0) ?? 0,
+ );
 
  /** 非表示カテゴリ（`spec.category` 文字列キー）。 */
  let hiddenCategories = $state<Set<string>>(new Set());
@@ -90,7 +93,9 @@
  <div class="border-b border-surface-200-800 p-2">
   <div class="mb-1 flex items-center justify-between">
    <span class="text-xs font-semibold uppercase tracking-wider opacity-60">Palette</span>
-   <span class="text-xs opacity-50">{flowgraphStore.catalog?.count ?? 0} ノード</span>
+   <span class="text-xs opacity-50">
+    {(flowgraphStore.catalog?.count ?? 0) + userEnumPaletteExtra} ノード
+   </span>
   </div>
   <input
    type="text"
@@ -121,7 +126,7 @@
     </div>
     {#if !group.hidden}
      <ul class="mb-1">
-      {#each group.specs as spec (spec.feature)}
+      {#each group.specs as spec (spec.palette_key ?? `${spec.feature}\t${spec.title}`)}
        <li>
         <button
          type="button"

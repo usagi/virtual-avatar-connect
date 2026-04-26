@@ -31,6 +31,8 @@ use crate::flowgraph::loader::{parse_flowgraph_file, Diagnostic, FlowgraphFile, 
 use crate::flowgraph::node::{
 	json_to_socket_value, InputMap, PortDirection, PortSpec, TriggerEvent,
 };
+use crate::flowgraph::quantity::{parse_unit, Quantity};
+use crate::flowgraph::socket::{SocketType, SocketValue};
 use crate::flowgraph::{registry, FlowgraphRuntime};
 use crate::web_interface::control::events::ControlEvent;
 use crate::SharedState;
@@ -44,6 +46,68 @@ fn err_json(status: actix_web::http::StatusCode, code: &str, detail: impl std::f
 		"error": code,
 		"detail": detail.to_string(),
 	}))
+}
+
+/// Quantity ポートの unit バッジ用に canonical 単位文字列を短くする。
+fn shorten_unit_label_chars(s: &str, max_chars: usize) -> String {
+	let count = s.chars().count();
+	if count <= max_chars {
+		return s.to_string();
+	}
+	let take = max_chars.saturating_sub(1);
+	s.chars().take(take).collect::<String>() + "…"
+}
+
+/// Phase ξ-5: GUI が Quantity ポートの badge / tooltip に使うヒントを JSON に注入する。
+/// `default` が dimensionless のときはキーを付けない（既存クライアント互換）。
+fn enrich_quantity_port_ui_hints(port: &mut serde_json::Value) {
+	let Some(obj) = port.as_object_mut() else {
+		return;
+	};
+	let Some(ty) = obj.get("ty").and_then(|t| t.as_str()) else {
+		return;
+	};
+	if ty != "quantity" {
+		return;
+	}
+	let Some(SocketValue::Quantity(q)) = obj
+		.get("default")
+		.and_then(|d| json_to_socket_value(&SocketType::Quantity, d))
+	else {
+		return;
+	};
+	let dim = q.dimension();
+	if dim.is_dimensionless() {
+		return;
+	}
+	let dim_s = dim.canonical();
+	let full = q.unit.canonical();
+	let badge = shorten_unit_label_chars(&full, 14);
+	obj.insert("quantity_dim".to_string(), serde_json::Value::String(dim_s));
+	obj.insert(
+		"quantity_unit_badge".to_string(),
+		serde_json::Value::String(badge),
+	);
+	obj.insert("quantity_unit_full".to_string(), serde_json::Value::String(full));
+}
+
+/// node-catalog の各 spec JSON に control_triggerable + Quantity UI ヒントを注入する。
+fn enrich_node_catalog_spec_json(reg: &crate::flowgraph::registry::NodeRegistry, v: &mut serde_json::Value) {
+	let Some(obj) = v.as_object_mut() else {
+		return;
+	};
+	let feature = obj.get("feature").and_then(|f| f.as_str()).unwrap_or("");
+	obj.insert(
+		"control_triggerable".to_string(),
+		serde_json::Value::Bool(reg.is_control_triggerable(feature)),
+	);
+	for key in ["inputs", "outputs"] {
+		if let Some(serde_json::Value::Array(arr)) = obj.get_mut(key) {
+			for item in arr.iter_mut() {
+				enrich_quantity_port_ui_hints(item);
+			}
+		}
+	}
 }
 
 /// `state.flowgraph` と `conf.flowgraph_dir` を取り出す。dir 未設定なら 500。
@@ -190,21 +254,15 @@ pub struct NodeCatalogResponse {
 
 #[get("/flowgraph/node-catalog")]
 pub async fn get_node_catalog() -> impl Responder {
-	// Phase φ-6: Flowgraph Editor の「Trigger」ボタン表示判定のため、
-	// `control_triggerable` を NodeSpec JSON に差し込んで返す。NodeSpec 自体に
-	// field を増やすと既存リテラルが全て壊れるので JSON 層で注入する。
+	// Phase φ-6: Trigger 表示用 `control_triggerable` を JSON に注入。
+	// Phase ξ-5: Quantity ポートに `quantity_dim` / `quantity_unit_*` を付与（default から復元できる場合のみ）。
 	let reg = registry();
 	let specs = reg.all_specs();
 	let values: Vec<serde_json::Value> = specs
 		.iter()
 		.map(|s| {
 			let mut v = serde_json::to_value(s).unwrap();
-			if let Some(obj) = v.as_object_mut() {
-				obj.insert(
-					"control_triggerable".to_string(),
-					serde_json::Value::Bool(reg.is_control_triggerable(&s.feature)),
-				);
-			}
+			enrich_node_catalog_spec_json(reg, &mut v);
 			v
 		})
 		.collect();
@@ -212,6 +270,48 @@ pub async fn get_node_catalog() -> impl Responder {
 		count: values.len(),
 		specs: values,
 	})
+}
+
+#[derive(Debug, Deserialize)]
+struct ParseUnitQuery {
+	/// URL クエリで渡す単位文字列（例 `m%2Fs%5E2`）。空は dimensionless として valid。
+	text: String,
+}
+
+/// Phase ξ-5: プロパティエディタが単位文字列をサーバと同じ `parse_unit` で検証するための軽量 API。
+#[get("/flowgraph/parse-unit")]
+pub async fn get_parse_unit(q: web::Query<ParseUnitQuery>) -> impl Responder {
+	let t = q.text.trim();
+	if t.is_empty() {
+		return HttpResponse::Ok().json(serde_json::json!({
+			"valid": true,
+			"dimension": serde_json::Value::Null,
+			"canonical_unit": "",
+			"error": serde_json::Value::Null,
+		}));
+	}
+	match parse_unit(t) {
+		Ok(u) => {
+			let q = Quantity::of(1.0, u);
+			let dim = q.dimension();
+			HttpResponse::Ok().json(serde_json::json!({
+				"valid": true,
+				"dimension": if dim.is_dimensionless() {
+					serde_json::Value::Null
+				} else {
+					serde_json::json!(dim.canonical())
+				},
+				"canonical_unit": q.unit.canonical(),
+				"error": serde_json::Value::Null,
+			}))
+		}
+		Err(e) => HttpResponse::Ok().json(serde_json::json!({
+			"valid": false,
+			"dimension": serde_json::Value::Null,
+			"canonical_unit": serde_json::Value::Null,
+			"error": e.to_string(),
+		})),
+	}
 }
 
 // ============================================================================
@@ -1123,6 +1223,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 	const ZIP_BODY_LIMIT_BYTES: usize = 64 * 1024 * 1024;
 	cfg.app_data(web::PayloadConfig::new(ZIP_BODY_LIMIT_BYTES))
 		.service(get_node_catalog)
+		.service(get_parse_unit)
 		.service(get_tree)
 		.service(get_diagnostics)
 		.service(post_reload)
@@ -1478,12 +1579,7 @@ mod tests {
 			.iter()
 			.map(|s| {
 				let mut v = serde_json::to_value(s).unwrap();
-				if let Some(obj) = v.as_object_mut() {
-					obj.insert(
-						"control_triggerable".to_string(),
-						serde_json::Value::Bool(reg.is_control_triggerable(&s.feature)),
-					);
-				}
+				enrich_node_catalog_spec_json(reg, &mut v);
 				v
 			})
 			.collect();
@@ -1517,6 +1613,24 @@ mod tests {
 				"{f} は control_triggerable=false であるべき"
 			);
 		}
+	}
+
+	#[test]
+	fn enrich_quantity_port_ui_hint_from_default_object() {
+		let mut port = serde_json::json!({
+			"name": "result",
+			"label": "Result",
+			"ty": "quantity",
+			"direction": "output",
+			"is_exec": false,
+			"optional": false,
+			"default": { "value": 9.81, "unit": "m/s^2" },
+			"multi": false
+		});
+		super::enrich_quantity_port_ui_hints(&mut port);
+		assert_eq!(port["quantity_dim"].as_str().unwrap(), "L·T^-2");
+		assert!(port["quantity_unit_badge"].as_str().unwrap().len() > 0);
+		assert!(port["quantity_unit_full"].as_str().is_some());
 	}
 
 	#[test]

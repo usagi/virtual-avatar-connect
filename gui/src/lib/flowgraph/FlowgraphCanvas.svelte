@@ -37,6 +37,26 @@
  import FlowgraphAutoFit from './FlowgraphAutoFit.svelte';
  import FlowgraphPaneDropBridge from './FlowgraphPaneDropBridge.svelte';
 
+ /** engine の `SocketType::compatible_with` + Phase λ `closed_string_variants` に概ね整合。 */
+ function portsWireCompatible(
+  outTy: string,
+  inTy: string,
+  outClosed?: string[] | null,
+  inClosed?: string[] | null,
+ ): boolean {
+  let ok = false;
+  if (outTy === inTy) ok = true;
+  else if (outTy === 'json' || inTy === 'json') ok = true;
+  else if ((outTy === 'float' && inTy === 'quantity') || (outTy === 'quantity' && inTy === 'float')) ok = true;
+  else if (outTy === 'quantity' && inTy === 'string') ok = true;
+  else if ((outTy === 'string' && inTy === 'datetime') || (outTy === 'datetime' && inTy === 'string')) ok = true;
+  if (!ok) return false;
+  if (outTy === 'string' && inTy === 'string' && inClosed?.length && outClosed?.length) {
+   if (!outClosed.every((v) => inClosed.includes(v))) return false;
+  }
+  return true;
+ }
+
  // Svelte Flow 用のデータ。store からの初期化 / 反映は $effect で同期する。
  let nodes = $state<Node[]>([]);
  let edges = $state<Edge[]>([]);
@@ -69,7 +89,16 @@
    const from = parsePortRef(e.from);
    const to = parsePortRef(e.to);
    const fromSpec = findPortSpec(from.nodeId, from.port, 'output');
+   const toSpec = findPortSpec(to.nodeId, to.port, 'input');
    const isExec = fromSpec?.is_exec ?? false;
+   const typeMismatch =
+    fromSpec &&
+    toSpec &&
+    !isExec &&
+    !portsWireCompatible(fromSpec.ty, toSpec.ty, fromSpec.closed_string_variants, toSpec.closed_string_variants);
+   let style: string | undefined;
+   if (isExec) style = 'stroke: rgb(249 115 22); stroke-width: 2;';
+   else if (typeMismatch) style = 'stroke: rgb(239 68 68); stroke-width: 2; stroke-dasharray: 5 4;';
    return {
     id: `e-${i}-${e.from}->${e.to}`,
     source: from.nodeId,
@@ -78,7 +107,7 @@
     targetHandle: to.port,
     animated: isExec,
     data: { original: e },
-    style: isExec ? 'stroke: rgb(249 115 22); stroke-width: 2;' : undefined,
+    style,
    };
   });
  }
@@ -87,14 +116,22 @@
   nodeId: string,
   portName: string,
   dir: 'input' | 'output',
- ): { is_exec: boolean; ty: string } | undefined {
+ ):
+  | { is_exec: boolean; ty: string; closed_string_variants?: string[] | null }
+  | undefined {
   const node = flowgraphStore.draftNodes?.find((n) => n.id === nodeId);
   if (!node) return undefined;
   const spec: FlowgraphNodeSpec | undefined = flowgraphStore.findSpec(node.feature);
   if (!spec) return undefined;
   const ports = dir === 'input' ? spec.inputs : spec.outputs;
   const p = ports.find((pp) => pp.name === portName);
-  return p ? { is_exec: p.is_exec, ty: p.ty } : undefined;
+  return p
+   ? {
+      is_exec: p.is_exec,
+      ty: p.ty,
+      closed_string_variants: p.closed_string_variants,
+     }
+   : undefined;
  }
 
  // store -> local sync
@@ -116,10 +153,16 @@
   const inSpec = findPortSpec(c.target, c.targetHandle ?? '', 'input');
   if (!outSpec || !inSpec) return;
   if (outSpec.is_exec !== inSpec.is_exec) return;
-  if (!outSpec.is_exec && outSpec.ty !== inSpec.ty && outSpec.ty !== 'json' && inSpec.ty !== 'json') {
-   // json は総称型として両方向受け入れる緩和
+  if (
+   !outSpec.is_exec &&
+   !portsWireCompatible(
+    outSpec.ty,
+    inSpec.ty,
+    outSpec.closed_string_variants,
+    inSpec.closed_string_variants,
+   )
+  )
    return;
-  }
   const from = `${c.source}:${c.sourceHandle ?? ''}`;
   const to = `${c.target}:${c.targetHandle ?? ''}`;
   flowgraphStore.addEdge(from, to);

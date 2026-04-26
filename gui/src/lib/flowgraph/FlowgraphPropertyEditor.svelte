@@ -9,8 +9,57 @@
   * - required 未指定のプロパティは "Default" バッジ + "Set" ボタンで明示的に追加する UI。
   * - 不明プロパティ（spec 側に無い）は "Unknown" バッジ + 削除ボタン。
   */
+ import { api } from '../api';
  import { flowgraphStore, type FlowgraphDraftNode } from '../flowgraphStore.svelte';
  import type { FlowgraphNodeSpec, FlowgraphPropertySpec } from '../types';
+
+ const UNIT_PARSE_PROP_NAMES = new Set(['unit', 'target_unit', 'unit_override']);
+
+ function isUnitStringProp(p: FlowgraphPropertySpec): boolean {
+  return p.ty === 'string' && UNIT_PARSE_PROP_NAMES.has(p.name);
+ }
+
+ /** propName → parse エラーメッセージ（valid 時はキー無し） */
+ let unitParseByProp = $state<Record<string, string>>({});
+ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+ let prevSelectedNodeId = $state<string | null>(null);
+ $effect(() => {
+  const id = flowgraphStore.selectedNodeId;
+  if (id !== prevSelectedNodeId) {
+   prevSelectedNodeId = id;
+   unitParseByProp = {};
+  }
+ });
+
+ function scheduleUnitParse(propName: string, raw: string) {
+  clearTimeout(unitParseTimers.get(propName));
+  unitParseTimers.set(
+   propName,
+   setTimeout(() => {
+    void (async () => {
+     try {
+      const r = await api.flowgraphParseUnit(raw);
+      if (r.valid) {
+       const next = { ...unitParseByProp };
+       delete next[propName];
+       unitParseByProp = next;
+      } else {
+       unitParseByProp = {
+        ...unitParseByProp,
+        [propName]: r.error ?? '単位として解釈できません',
+       };
+      }
+     } catch (e) {
+      unitParseByProp = {
+       ...unitParseByProp,
+       [propName]: e instanceof Error ? e.message : String(e),
+      };
+     }
+    })();
+   }, 380),
+  );
+ }
 
  const node: FlowgraphDraftNode | undefined = $derived(
   flowgraphStore.selectedNodeId
@@ -201,6 +250,23 @@
          <option value={choice}>{choice}</option>
         {/each}
        </select>
+      {:else if cat === 'string' && isUnitStringProp(item.p)}
+       <input
+        id={`prop-${item.p.name}`}
+        type="text"
+        class="w-full rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1 font-mono text-[0.7rem]"
+        value={asString(item.value)}
+        oninput={(e) => {
+         const v = (e.target as HTMLInputElement).value;
+         updateProp(item.p.name, v);
+         scheduleUnitParse(item.p.name, v);
+        }}
+       />
+       {#if unitParseByProp[item.p.name]}
+        <div class="mt-0.5 text-[0.65rem] text-error-600 dark:text-error-400">
+         {unitParseByProp[item.p.name]}
+        </div>
+       {/if}
       {:else if cat === 'string'}
        <input
         id={`prop-${item.p.name}`}

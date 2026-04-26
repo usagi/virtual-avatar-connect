@@ -134,6 +134,39 @@ test.describe('§3.2 flowgraph-canvas-basic', () => {
 		}
 	});
 
+	test('Phase ξ-5: palette add math.float_add shows Quantity-colored handles', async ({
+		page,
+		request,
+	}) => {
+		const snapRes = await request.get(FILE_PATH, { headers: authHeader() });
+		expect(snapRes.status(), await snapRes.text()).toBe(200);
+		const originalToml = ((await snapRes.json()) as FlowgraphFileResp).raw_toml;
+		try {
+			await page.goto(`/gui/${tokenQuery()}`);
+			await page.evaluate(() => localStorage.removeItem('vac-flowgraph-palette-hidden-categories'));
+			await page.getByRole('navigation', { name: 'Main tabs' }).getByRole('button', { name: /flowgraph/i }).click();
+			await page.getByRole('button', { name: /^sample\b/ }).click();
+			const canvas = page.locator('.svelte-flow');
+			await expect(canvas).toBeVisible({ timeout: 15_000 });
+
+			const paletteSearch = page.getByPlaceholder(/検索（feature \/ title）/);
+			await paletteSearch.fill('math.float_add');
+			const addBtn = page.getByTestId('palette-entry-flowgraph_math_float_add');
+			await expect(addBtn).toBeVisible();
+			await addBtn.click();
+
+			const qtyHandles = canvas.locator('.flowgraph-handle.data.quantity');
+			await expect(qtyHandles.first()).toBeVisible({ timeout: 10_000 });
+			await expect(qtyHandles).toHaveCount(3);
+		} finally {
+			const restore = await request.put(FILE_PATH, {
+				headers: authHeader(),
+				data: { content: originalToml },
+			});
+			expect(restore.status(), await restore.text()).toBe(200);
+		}
+	});
+
 	test('palette category hide removes util entries; show restores', async ({ page, request }) => {
 		const snapRes = await request.get(FILE_PATH, { headers: authHeader() });
 		expect(snapRes.status(), await snapRes.text()).toBe(200);

@@ -22,6 +22,8 @@ import {
  ControlApiError,
  type FlowgraphDiagnostic,
  type FlowgraphDiagnosticsResponse,
+ type FlowgraphEnumDef,
+ type FlowgraphFileMeta,
  type FlowgraphFileResponse,
  type FlowgraphNodeCatalogResponse,
  type FlowgraphNodeSpec,
@@ -379,6 +381,7 @@ class FlowgraphStore {
    meta: this.currentFile?.parsed?.meta ?? null,
    nodes: this.draftNodes,
    edges: this.draftEdges,
+   enums: this.currentFile?.parsed?.enums ?? [],
   });
   this.mutating = true;
   try {
@@ -625,12 +628,48 @@ class FlowgraphStore {
    if (!groups[key]) groups[key] = [];
    groups[key].push(spec);
   }
+  const userEnumSpecs = this.#userEnumPaletteSpecs();
+  if (userEnumSpecs.length > 0) {
+   groups.user_defined = userEnumSpecs;
+  }
   return Object.entries(groups)
    .map(([category, specs]) => ({
     category,
     specs: specs.slice().sort((a, b) => a.title.localeCompare(b.title)),
    }))
    .sort((a, b) => a.category.localeCompare(b.category));
+ }
+
+ /** Phase λ: `[[enums]]` を String Literal プリセットとしてパレットに載せる。 */
+ #userEnumPaletteSpecs(): FlowgraphNodeSpec[] {
+  const parsed = this.currentFile?.parsed;
+  if (!parsed?.enums?.length) return [];
+  const base = this.catalog?.specs.find((s) => s.feature === 'flowgraph.literal.string');
+  if (!base) return [];
+  const out: FlowgraphNodeSpec[] = [];
+  for (const en of parsed.enums) {
+   for (const v of en.variants) {
+    const props = base.properties.map((p) =>
+     p.name === 'value'
+      ? {
+         ...p,
+         required: true,
+         default: v,
+         choices: en.variants.length > 0 ? [...en.variants] : p.choices,
+        }
+      : { ...p },
+    );
+    out.push({
+     ...base,
+     palette_key: `user_enum:${en.id}:${v}`,
+     title: `${en.id}: ${v}`,
+     category: 'user_defined',
+     description: `ユーザ定義 enum「${en.id}」の値 "${v}"（String Literal プリセット）`,
+     properties: props,
+    });
+   }
+  }
+  return out;
  }
 
  // -------------------------------------------------------------------------
@@ -727,18 +766,47 @@ function findLastSinglePortColon(s: string): number {
  * δ-6e では GUI 編集中心なので許容する（外部エディタで直接書いた場合は PUT を使わず open-external で開く UX）。
  */
 export function serializeFlowgraph(doc: {
- meta: { title?: string | null; description?: string | null; tags?: string[] | null } | null;
+ meta: FlowgraphFileMeta | null;
  nodes: FlowgraphDraftNode[];
  edges: FlowgraphDraftEdge[];
+ enums?: FlowgraphEnumDef[];
 }): string {
  const lines: string[] = [];
- if (doc.meta && (doc.meta.title || doc.meta.description || (doc.meta.tags && doc.meta.tags.length > 0))) {
+ const m = doc.meta;
+ const hasMeta =
+  m &&
+  (m.title ||
+   m.description ||
+   (m.tags && m.tags.length > 0) ||
+   m.author ||
+   m.name ||
+   m.version ||
+   m.license ||
+   m.repos ||
+   (m.library_uses && m.library_uses.length > 0));
+ if (hasMeta && m) {
   lines.push('[meta]');
-  if (doc.meta.title) lines.push(`title = ${tomlString(doc.meta.title)}`);
-  if (doc.meta.description) lines.push(`description = ${tomlString(doc.meta.description)}`);
-  if (doc.meta.tags && doc.meta.tags.length > 0) {
-   lines.push(`tags = [${doc.meta.tags.map(tomlString).join(', ')}]`);
+  if (m.title) lines.push(`title = ${tomlString(m.title)}`);
+  if (m.description) lines.push(`description = ${tomlString(m.description)}`);
+  if (m.tags && m.tags.length > 0) {
+   lines.push(`tags = [${m.tags.map(tomlString).join(', ')}]`);
   }
+  if (m.author) lines.push(`author = ${tomlString(m.author)}`);
+  if (m.name) lines.push(`name = ${tomlString(m.name)}`);
+  if (m.version) lines.push(`version = ${tomlString(m.version)}`);
+  if (m.license) lines.push(`license = ${tomlString(m.license)}`);
+  if (m.repos) lines.push(`repos = ${tomlString(m.repos)}`);
+  if (m.library_uses && m.library_uses.length > 0) {
+   lines.push(`library_uses = [${m.library_uses.map(tomlString).join(', ')}]`);
+  }
+  lines.push('');
+ }
+
+ for (const en of doc.enums ?? []) {
+  lines.push('[[enums]]');
+  lines.push(`id = ${tomlString(en.id)}`);
+  if (en.primitive) lines.push(`primitive = ${tomlString(en.primitive)}`);
+  lines.push(`variants = [${en.variants.map(tomlString).join(', ')}]`);
   lines.push('');
  }
 
