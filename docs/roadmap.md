@@ -181,6 +181,17 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [ ] M-4 feat(flowgraph): `MotionFrame` / `flowgraph.motion.*`（後段）
 - [ ] M-5 docs+flowgraph: 表情・ジェスチャ等の用途拡張（`v2-vmc` §5 参照）
 
+### v2 crate / runner / GUI 同梱（再構造化メタ）
+
+ギリシャ文字フェーズに先行して **ワークスペース化〜配布形態**を追うチェックリスト。正本: [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1 / §1.2 / §3（`vac-gui-assets` 図・移行手順 Step 4 以降）。
+
+- [ ] Step 4: モジュール境界整理（crate 分割の下準備）
+- [ ] Step 5: Cargo ワークスペース化
+- [ ] Step 6: `vac-gui-assets` + `gui/dist` ビルド時取り込み + actix メモリ配信（開発時ファイル fallback）
+- [ ] Step 7: `AppCore` boot / serve / cleanup 抽出（ε-2a）
+- [ ] Step 8: CLI / desktop の 2 runner（仮称どおり）
+- [ ] Step 9: desktop に Tauri + 同梱静的 + トレイ
+
 ---
 
 ## Backlog / Future

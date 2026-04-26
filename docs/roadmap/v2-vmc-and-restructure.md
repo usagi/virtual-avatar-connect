@@ -235,8 +235,9 @@ crates/
   vac-flowgraph
   vac-bridges
   vac-motion
+  vac-gui-assets   ← Svelte のビルド済み dist のみ（§1.2）
   vac-control-api
-  vac-app
+  vac-app          ← 将来: vac-app-cli / vac-app-desktop の 2 bin に分割
 ```
 
 （ワークスペース化後の **論理 crate 名**。実リネーム順序は §3「移行手順」に従う。）
@@ -269,6 +270,11 @@ crates/
 * router
 * `` `MotionFrame` ``
 
+#### `vac-gui-assets`（論理名）
+
+* `gui/` の **ビルド成果物**（`gui/dist`）のみを所有。`build.rs` / `rust-embed` / 生成ソース等は実装時に確定（§1.2）。
+* `vac-control-api` はここから静的ファイルを解決し、**埋め込み配信**と **ファイル fallback**（開発用）を切り替え可能にする。
+
 #### `vac-control-api`
 
 * `actix-web`
@@ -283,26 +289,46 @@ crates/
 
 ### 移行手順
 
-#### Step 1（今やる）
+**進捗メモ**: Step 1〜3 は **Phase M0〜M1 相当として実装済み**（`src/motion/`、`vmc_ingress`、ingress ノード）。Step 4〜5 と **Step 6 以降**は未着手。以降は **§1.1** の工程順（再構造化 → Step 6 の GUI 同梱 → AppCore → runner → Tauri）と整合させる。
+
+#### Step 1（完了）
 
 * `src/motion/` を追加する
 * `vmc_raw` を実装する
 
-#### Step 2
+#### Step 2（完了）
 
 * `src/bridges/` に `vmc_ingress` を追加する
 
-#### Step 3
+#### Step 3（完了）
 
 * Flowgraph（ingress ノード・`TriggerHandle` 経路）と接続する
 
 #### Step 4
 
-* モジュール境界を整理する
+* モジュール境界を整理する（`motion` / `bridges` / `web_interface` の依存矢印を v2 の crate 図に寄せる下準備）
 
 #### Step 5
 
-* Cargo **ワークスペース**化する
+* Cargo **ワークスペース**化する（上記 crate 図へ向けた土台）
+
+#### Step 6 — `vac-gui-assets` と埋め込み配信
+
+* CI / リリースビルドで **`gui` の `npm ci` + `npm run build`** を Rust ビルドの前提にする（`xtask` またはルート `build.rs` で失敗を明示）。
+* **`vac-gui-assets`**（論理名）: `gui/dist` をビルド時取り込み。`vac-control-api` から **メモリ上の `index.html` / chunk / wasm** を返せるようにする（§1.2）。
+* **開発時**: 既存の `gui_dist_path` や Vite を使う **ファイル fallback** を feature または環境変数で維持。
+
+#### Step 7 — `AppCore` 抽出（Phase ε-2a）
+
+* [`phase-epsilon-shutdown-and-tauri.md`](phase-epsilon-shutdown-and-tauri.md) §3.2 のとおり `boot` / `serve` / `cleanup` に分離し、runner と Tauri の両方から同じコアを起動できるようにする。
+
+#### Step 8 — CLI / desktop の 2 runner
+
+* **`virtual-avatar-connect-cli`** / **`virtual-avatar-connect-desktop`**（仮称）の `[[bin]]` 2 本。いずれも `vac-core` + `AppCore` 経路を共有（§1.1）。
+
+#### Step 9 — desktop に Tauri + 同梱静的
+
+* WebView の入口を **同梱 GUI**（§1.2、[`phase-epsilon-shutdown-and-tauri.md`](phase-epsilon-shutdown-and-tauri.md) §3.6）に切り替え可能にする。Control API はループバック HTTP のまま。トレイ・`ShutdownBroker` 連携。
 
 ---
 
