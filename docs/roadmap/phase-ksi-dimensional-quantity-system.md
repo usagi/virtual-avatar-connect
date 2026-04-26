@@ -1,15 +1,15 @@
 # Phase ξ — Dimensional Quantity System (SI 準拠の単位次元システム)
 
-> **Status**: ξ-0 docs 完了 / ξ-1 core types (Dimension / Unit / Quantity / parser) 着地 / ξ-2 `SocketType::Quantity` + `SocketValue::Quantity` + `flowgraph.unit.*` ノード 7 種着地 / ξ-3 engine edge 暗黙 coerce (Float ↔ Quantity) + `flowgraph.math.float_*` の Quantity 化 着地 / ξ-4 Quantity → String 自動 coerce + `flowgraph.util.format` ノード + log / channel.emit の unit-aware 化 着地 / ξ-6 docs (`docs/manual/dimensional-quantity-system.md` 新設 + CHANGELOG + roadmap tick) 着地。**残りは ξ-5 (GUI) のみ**。ο-1 以降と並行で進められる。
+> **Status**: ξ-0..ξ-6 **完了**（ξ-5 GUI: Quantity ポートの handle 色分け・default 由来 unit バッジ・tooltip、プロパティの `parse-unit` 検証、キャンバス上の型不一致エッジ表示、node-catalog の `quantity_dim` 注入、E2E 回帰）。
 > 起点: [`../roadmap.md`](../roadmap.md) の "Phase ξ" セクション。
 
 ---
 
 ## 0. Status
 
-- Phase ν-β / ο-0 クローズ後の **次セッション Active 候補 No.1**。
-- スコープは engine 側の型システム拡張 + 単位代数（Dimension / Unit / Quantity）+ 単位操作ノード群 + 既存 `SocketValue::Float` を `Quantity` に移行する refactor + log / format の unit-aware 化 + GUI ポートチップの unit バッジ表示。
-- **Phase ο (Flowgraph Enhancement I) は本フェーズ完了後に着手**。ο の math / easing / vec / time / signal util ノードは最初から `Quantity<Dimension>` 対応で実装する（§5.0 ο-doc 参照）。
+- **Phase ξ は完了**（ξ-5 GUI 含む）。次のロードマップ本編は [`../roadmap.md`](../roadmap.md) Backlog（Phase ρ 等）。
+- スコープ達成: engine 型システム + 単位代数 + `flowgraph.unit.*` + Float↔Quantity coerce + log/format + **GUI**（ポート表示・接続規則・単位プロパティ検証）。
+- Phase ο は本フェーズ前提のもと **既に Completed**（math / easing / vec 等は `Quantity` 対応で実装済み）。
 
 ---
 
@@ -461,7 +461,7 @@ impl Quantity {
 - [x] `json_ops` / `state` / `table_ops` / `collection` は Quantity 受け取り時に value だけ使う実装 ← ξ-2 の `socket_value_to_json` 更新で着地済み
 - [x] 既存 `flowgraph.math.*` の int_add 等は touched しない（Int は Quantity に乗らない）、float_add / sub / mul / div を Quantity 対応化（port 型 `Quantity`、内部は `try_add` / `try_sub` / `try_mul` / `try_div`、div-by-zero は `QuantityArithError::DivisionByZero` で明示）
 - [x] `cargo test --lib` 既存回帰テスト全緑（629 passed、unit mismatch / m·s 組み立て / div-by-zero の新規 test 込み）、`BLESS_NODE_CATALOG=1` で catalog 更新
-- [ ] `gui/tests/e2e/` 緑確認（GUI 側は float_* の output 型が `float` → `quantity` に変わった以外の影響はない想定、次セッション冒頭で playwright 実機確認）
+- [x] `gui/tests/e2e/` 緑確認（ξ-5 で `flowgraph-canvas-basic` に Quantity handle 回帰を追加し playwright 実行済み）
 
 ### 7.4 ξ-4 チェックリスト
 
@@ -473,19 +473,19 @@ impl Quantity {
 
 ### 7.5 ξ-5 チェックリスト
 
-- [ ] `FlowgraphNodeCard.svelte`: ポート chip に unit バッジ（dimensionless 以外のみ）
-- [ ] Dimension family 色分け（CSS variable / Svelte 側 static map）
-- [ ] hover tooltip で Dimension canonical 表記
-- [ ] property editor: unit フィールドの text input + parse error 表示
-- [ ] `gui/tests/e2e/flowgraph-canvas-basic.spec.ts` に unit バッジ assertion 追加
+- [x] `FlowgraphNodeCard.svelte`: Quantity handle の次元 family 色、`default` から復元できた非無次元のみ unit バッジ、tooltip（次元・単位）
+- [x] Dimension family 色分け（port-row class + handle 背景色）
+- [x] `GET /flowgraph/parse-unit` + property editor（`unit` / `target_unit` / `unit_override`）の debounce 検証とエラー表示
+- [x] `FlowgraphCanvas`: `SocketType::compatible_with` に合わせた接続許可 + 型不一致エッジの赤破線
+- [x] `gui/tests/e2e/flowgraph-canvas-basic.spec.ts`: `math.float_add` 追加で Quantity handle 3 個の可視化回帰
 
 ### 7.6 ξ-6 チェックリスト
 
-- [x] `CHANGELOG.md` `### ξ: Dimensional Quantity System (ξ-0 .. ξ-4, ξ-6)` 節を追記（ξ-5 は未着手として明記、ο 並行実施可）。Breaking change 注意（`SocketType::Quantity` variant 追加 / `flowgraph.math.float_*` の output 型が `float → quantity` に）を併記。
+- [x] `CHANGELOG.md` の Phase ξ 節を追記・更新（ξ-5 GUI 完了を反映）。Breaking change 注意（`SocketType::Quantity` / `float_*` の output 型）を併記。
 - [x] `docs/manual/dimensional-quantity-system.md` 新設。動機 / Quantity と Unit の基本 / 使える単位（SI 基本 7 + Angle + ΔK + 誘導単位 + SI 接頭辞）/ 単位文字列 parser 文法 / `flowgraph.unit.*` 7 種と `flowgraph.util.format` / 暗黙 coerce ルール / flow TOML リテラル 3 形式 / よくあるパターン 5 件 / FAQ 7 件。
 - [x] `docs/manual/index.md` 目次に追加、Flowgraph 用語の Socket 型列に `quantity` / `table` を追記（これまで `table` も欠落していたのでついでに直した）。
 - [~] `docs/manual/node-catalog.md` Dimension 列追加は Phase ο-1 以降に送る（物理計算ノードで Dimension ラベルが意味を持つ段階、ξ 単独では既存 `blessed` 内容で十分）。
-- [x] `docs/roadmap.md` の Phase ξ ticks 更新（ξ-1 / ξ-2 / ξ-3 / ξ-4 / ξ-6 完了、ξ-5 のみ未着手）。
+- [x] `docs/roadmap.md` の Phase ξ ticks 更新（ξ-0..ξ-6 完了、Active から Completed へ移動）。
 
 ---
 

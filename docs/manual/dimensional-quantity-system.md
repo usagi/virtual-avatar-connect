@@ -31,6 +31,16 @@ Flowgraph は pure-functional + lazy 評価なので、単位計算のランタ�
 
 ---
 
+## Flowgraph エディタ（GUI）での見え方（Phase ξ-5）
+
+- **Quantity ポート**は、専用の丸ハンドル色で `float` / `table` と区別されます。次元の先頭記号（`L`, `M`, `T`, …）に応じて **family ごとに色が変わります**（`node-catalog` のポート `default` が `{ value, unit }` で非無次元と復元できる場合のみ、その次元で色付け）。
+- **単位バッジ**: 上記のように default から単位が分かるポートに限り、ラベル横に短縮表示されます。無次元のみのポートにはバッジは出ません。
+- **ツールチップ**: ハンドルにカーソルを置くと、型に加えて次元 canonical（例 `L·T^-2`）や単位全文が分かる場合があります。
+- **配線**: エンジンの [`SocketType::compatible_with`](../roadmap/phase-ksi-dimensional-quantity-system.md) と同じく、`float` ↔ `quantity`、`quantity` → `string` などがキャンバス上で接続可能です。**型が合わないエッジ**は赤の破線で表示されます（保存はユーザー責任: 実行時に engine が拒否する可能性あり）。
+- **プロパティの単位文字列**: `flowgraph.unit.assign` の `unit`、`flowgraph.unit.convert` の `target_unit`、`flowgraph.util.format` の `unit_override` は、入力後に Control API の `GET /api/v1/control/flowgraph/parse-unit?text=...` で **サーバと同じパーサ**が検証します。無効ならエディタ直下にエラーが出ます（空の `unit` は無次元として valid）。
+
+---
+
 ## 使える単位
 
 ### SI 基本 7 単位
