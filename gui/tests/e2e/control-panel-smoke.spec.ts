@@ -24,9 +24,9 @@ test.describe('§3.1 control-panel-smoke', () => {
   // `<nav aria-label="Main tabs">` landmark. Scope the lookup to that
   // landmark (§5.3 selector policy).
   const tabs = page.getByRole('navigation', { name: 'Main tabs' });
-  await expect(
-   tabs.getByRole('button', { name: /live/i }),
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(tabs.getByRole('button', { name: /now/i })).toBeVisible({
+   timeout: 15_000,
+  });
 
   // /ping is the lightest endpoint inside the auth-wrapped scope; 200
   // here means routing + bearer_token both work.

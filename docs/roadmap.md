@@ -5,6 +5,7 @@ Virtual Avatar Connect の全フェーズ × サブフェーズ単位のチェ�
 全体方針・レイヤ構成・Commit Granularity Rule は [`architecture.md`](architecture.md) を参照。
 VAC Flowgraph を常駐型汎用データフロー処理エンジン、および汎用プログラミング言語に近い実行記述へ伸ばす横断計画は [`roadmap/flowgraph-language-roadmap.md`](roadmap/flowgraph-language-roadmap.md) を参照。
 VAC 常駐化に伴う配信・日常・仕事・睡眠などの動作状態切替計画は [`roadmap/runtime-mode-roadmap.md`](roadmap/runtime-mode-roadmap.md) を参照。
+v2 GUI を常駐ランタイムの管制卓と Flowgraph Studio へ再設計する計画は [`roadmap/gui-redesign-roadmap.md`](roadmap/gui-redesign-roadmap.md) を参照。
 
 ---
 
@@ -212,6 +213,13 @@ VAC を常駐型データフローアプリとして動かし続ける前提で�
 
 - 仕様草案: [`roadmap/runtime-mode-roadmap.md`](roadmap/runtime-mode-roadmap.md)
 - 初期 Flowgraph node 方針: `flowgraph.mode.get` / `flowgraph.mode.equals` / `flowgraph.mode.transit` の 3 種に絞る。`on_transit` 専用 ingress node は初期実装しない。
+
+### GUI Redesign Roadmap
+
+VAC GUI を「機能別の設定パネル」から「常駐ランタイムの管制卓 + Flowgraph Studio」へ再設計する横断計画。トップレベル IA を `Now / Modes / Flowgraph Studio / Resources / Observability / Settings` へ変更し、現在状態の把握、Runtime Mode、Flowgraph 編集、外部リソース、観測、設定を分離して進める。
+
+- 仕様草案: [`roadmap/gui-redesign-roadmap.md`](roadmap/gui-redesign-roadmap.md)
+- 初期実装スコープ: `Now` first screen、`Modes` placeholder、新 IA への hash fallback、既存 Flowgraph editor 内部は温存
 
 ### Phase ρ — OSC / VMC / VRC bridge (TBD)
 

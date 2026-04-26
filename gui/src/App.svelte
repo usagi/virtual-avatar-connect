@@ -3,7 +3,7 @@
   * Phase VI-γ-1: アプリケーションシェル。
   *
   * - 上部ヘッダ（ロゴ / 接続インジケータ / 再起動ボタン）
-  * - タブナビゲーション（Live / Setup / Flowgraph / Logs / Tools）
+  * - タブナビゲーション（Now / Modes / Flowgraph Studio / Resources / Observability / Settings）
   * - 下部ステータスバー（常駐）
   * - 右下トーストレイヤ
   * - 再起動・プロファイル切替モーダル
@@ -20,7 +20,8 @@
  import RestartDialog from './lib/RestartDialog.svelte';
  import ManagedAppDrawer from './lib/ManagedAppDrawer.svelte';
 
- import LiveTab from './lib/tabs/LiveTab.svelte';
+ import NowTab from './lib/tabs/NowTab.svelte';
+ import ModesTab from './lib/tabs/ModesTab.svelte';
  import SetupTab from './lib/tabs/SetupTab.svelte';
  import FlowgraphTab from './lib/tabs/FlowgraphTab.svelte';
  import LogsTab from './lib/tabs/LogsTab.svelte';
@@ -106,15 +107,17 @@ async function handleShutdownClick() {
  </header>
 
  <main class="flex-1 px-6 py-4">
-  {#if tabNavStore.active === 'live'}
-   <LiveTab />
-  {:else if tabNavStore.active === 'setup'}
-   <SetupTab />
+  {#if tabNavStore.active === 'now'}
+   <NowTab />
+  {:else if tabNavStore.active === 'modes'}
+   <ModesTab />
   {:else if tabNavStore.active === 'flowgraph'}
    <FlowgraphTab />
-  {:else if tabNavStore.active === 'logs'}
+  {:else if tabNavStore.active === 'resources'}
+   <SetupTab />
+  {:else if tabNavStore.active === 'observability'}
    <LogsTab />
-  {:else if tabNavStore.active === 'tools'}
+  {:else if tabNavStore.active === 'settings'}
    <ToolsTab />
   {/if}
  </main>

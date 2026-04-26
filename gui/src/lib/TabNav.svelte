@@ -1,9 +1,9 @@
 <script lang="ts">
  /**
-  * タブナビゲーションの表示。現在タブは URL hash (`#live`, `#pipeline`, ...) で保持し、
+  * タブナビゲーションの表示。現在タブは URL hash (`#now`, `#flowgraph`, ...) で保持し、
   * ブラウザ戻る/進むや deep-link に対応する。
   *
-  * γ-1 ではシンプルな水平タブ。γ-7 でアイコンや色を整えていく。
+  * GUI redesign 初期段階では水平タブを維持し、情報設計だけ先に v2 へ寄せる。
   */
  import { tabNavStore, type TabId, TABS } from './tabs.svelte';
 
