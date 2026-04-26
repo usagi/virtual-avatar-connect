@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### v2 Step 6a — GUI `embed-gui`（バイナリ内蔵 `/gui/*`）
+
+- **Cargo feature `embed-gui`**: `include_dir` で `gui/dist` を取り込み、`/gui/*` をメモリから配信（[`src/web_interface/gui_embedded.rs`](../src/web_interface/gui_embedded.rs)）。`build.rs` が `gui/dist/index.html` を検証。
+- **パス正規化**: [`src/web_interface/gui_path.rs`](../src/web_interface/gui_path.rs)（`..` 排除のユニットテスト）。
+- **ドキュメント**: [`docs/roadmap.md`](docs/roadmap.md) v2 メタチェックリスト（Step 6a 完了 / 6b 残）、[`docs/roadmap/v2-vmc-and-restructure.md`](docs/roadmap/v2-vmc-and-restructure.md) Step 6 追記。
+
 ### ドキュメント（実行形態・工程順）
 
 - **desktop / CLI / Tauri の順序**: [`docs/architecture.md`](docs/architecture.md) に「実行入口（計画・工程順）」を追加。[`docs/roadmap/v2-vmc-and-restructure.md`](docs/roadmap/v2-vmc-and-restructure.md) §1.1（実行形態・desktop 命名理由・トレイ UX 目標）、[`docs/roadmap/phase-epsilon-shutdown-and-tauri.md`](docs/roadmap/phase-epsilon-shutdown-and-tauri.md) §3 / §4.3、[`docs/roadmap.md`](docs/roadmap.md) Phase ε を整合。

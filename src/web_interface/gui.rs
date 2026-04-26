@@ -6,69 +6,90 @@
 //!     無ければ `/gui*` 全体を掴むフォールバックハンドラで親切な HTML を返す。
 //!   - SPA のルーティングは現状不要（ルーターを入れていない）ので `index_file("index.html")` は
 //!     ルート 1 本だけの挙動でよい。将来 SPA にする場合はフォールバックをそちらに委譲する。
+//!   - feature **`embed-gui`**: ビルド時に `gui/dist` を取り込み、ディスクなしで配信（[`gui_embedded`](gui_embedded)）。
 
-use actix_web::{web, HttpResponse, Responder};
-use std::path::PathBuf;
+use actix_web::web;
 
 /// actix-web `App` に `/gui/*` を登録する。
 ///
-/// `dist_path` が `Some` かつ `<dist_path>/index.html` が存在すれば静的配信を有効化。
+/// **`embed-gui` 有効時**: `gui/dist` をバイナリ内蔵で配信し、`dist_path` は無視される。
+///
+/// それ以外: `dist_path` が `Some` かつ `<dist_path>/index.html` が存在すれば静的配信を有効化。
 /// それ以外は「未ビルド」案内を返すフォールバックを `/gui` と `/gui/{tail:.*}` に登録する。
 pub fn register(cfg: &mut web::ServiceConfig, dist_path: Option<&str>) {
-	let Some(dist) = dist_path else {
-		log::info!("《GUI》 gui_dist_path が null のため /gui/* は未ビルド案内のみ提供します。");
-		register_not_built(cfg, None);
-		return;
-	};
-	let dist_pb = PathBuf::from(dist);
-	let index_html = dist_pb.join("index.html");
-	if !index_html.is_file() {
-		log::warn!(
-			"《GUI》 {} が見つかりません。`cd gui && npm install && npm run build` を実行してください。/gui/* はビルド案内を返します。",
-			index_html.display()
-		);
-		register_not_built(cfg, Some(dist_pb));
+	#[cfg(feature = "embed-gui")]
+	{
+		let _ = dist_path;
+		super::gui_embedded::register(cfg);
 		return;
 	}
+	#[cfg(not(feature = "embed-gui"))]
+	{
+		gui_disk::register(cfg, dist_path);
+	}
+}
 
-	log::info!("《GUI》 {} を /gui/ で配信します。", dist_pb.display());
-	cfg.service(actix_files::Files::new("/gui", dist_pb)
+/// ディスク上の `gui/dist` を配信（`embed-gui` ではコンパイルしない）。
+#[cfg(not(feature = "embed-gui"))]
+mod gui_disk {
+	use actix_web::{web, HttpResponse, Responder};
+	use std::path::PathBuf;
+
+	pub(super) fn register(cfg: &mut web::ServiceConfig, dist_path: Option<&str>) {
+		let Some(dist) = dist_path else {
+			log::info!("《GUI》 gui_dist_path が null のため /gui/* は未ビルド案内のみ提供します。");
+			register_not_built(cfg, None);
+			return;
+		};
+		let dist_pb = PathBuf::from(dist);
+		let index_html = dist_pb.join("index.html");
+		if !index_html.is_file() {
+			log::warn!(
+				"《GUI》 {} が見つかりません。`cd gui && npm install && npm run build` を実行してください。/gui/* はビルド案内を返します。",
+				index_html.display()
+			);
+			register_not_built(cfg, Some(dist_pb));
+			return;
+		}
+
+		log::info!("《GUI》 {} を /gui/ で配信します。", dist_pb.display());
+		cfg.service(actix_files::Files::new("/gui", dist_pb)
    .index_file("index.html")
    // dotfiles（.env.* 等）が紛れ込んでいても露出させない。
    .use_hidden_files());
-}
+	}
 
-/// 未ビルド時のフォールバック。`/gui`・`/gui/`・`/gui/<任意のパス>` の全てを拾う。
-///
-/// actix-web の動的パスは `/gui/{tail:.*}` だと **末尾スラッシュ単独** (`/gui/`) が
-/// tail="" で一致しないケースがあるため、`/gui{tail:.*}` の形で `/gui` 側から貪欲にマッチさせる。
-fn register_not_built(cfg: &mut web::ServiceConfig, dist_pb: Option<PathBuf>) {
-	let shown_path = dist_pb
-		.map(|p| p.display().to_string())
-		.unwrap_or_else(|| "(none; gui_dist_path is null)".to_string());
-	log::info!("《GUI》 /gui/* は未ビルド案内 (dist_path={}) を返します。", shown_path);
-	cfg.app_data(web::Data::new(GuiNotBuilt { dist_path: shown_path }));
-	cfg.service(web::resource("/gui{tail:.*}").route(web::get().to(not_built_index)));
-}
+	/// 未ビルド時のフォールバック。`/gui`・`/gui/`・`/gui/<任意のパス>` の全てを拾う。
+	///
+	/// actix-web の動的パスは `/gui/{tail:.*}` だと **末尾スラッシュ単独** (`/gui/`) が
+	/// tail="" で一致しないケースがあるため、`/gui{tail:.*}` の形で `/gui` 側から貪欲にマッチさせる。
+	fn register_not_built(cfg: &mut web::ServiceConfig, dist_pb: Option<PathBuf>) {
+		let shown_path = dist_pb
+			.map(|p| p.display().to_string())
+			.unwrap_or_else(|| "(none; gui_dist_path is null)".to_string());
+		log::info!("《GUI》 /gui/* は未ビルド案内 (dist_path={}) を返します。", shown_path);
+		cfg.app_data(web::Data::new(GuiNotBuilt { dist_path: shown_path }));
+		cfg.service(web::resource("/gui{tail:.*}").route(web::get().to(not_built_index)));
+	}
 
-#[derive(Clone)]
-struct GuiNotBuilt {
-	dist_path: String,
-}
+	#[derive(Clone)]
+	struct GuiNotBuilt {
+		dist_path: String,
+	}
 
-async fn not_built_index(ctx: web::Data<GuiNotBuilt>) -> impl Responder {
-	let body = NOT_BUILT_HTML.replace("{{DIST_PATH}}", &html_escape(&ctx.dist_path));
-	HttpResponse::NotFound().content_type("text/html; charset=utf-8").body(body)
-}
+	async fn not_built_index(ctx: web::Data<GuiNotBuilt>) -> impl Responder {
+		let body = NOT_BUILT_HTML.replace("{{DIST_PATH}}", &html_escape(&ctx.dist_path));
+		HttpResponse::NotFound().content_type("text/html; charset=utf-8").body(body)
+	}
 
-fn html_escape(s: &str) -> String {
-	s.replace('&', "&amp;")
-		.replace('<', "&lt;")
-		.replace('>', "&gt;")
-		.replace('"', "&quot;")
-}
+	fn html_escape(s: &str) -> String {
+		s.replace('&', "&amp;")
+			.replace('<', "&lt;")
+			.replace('>', "&gt;")
+			.replace('"', "&quot;")
+	}
 
-const NOT_BUILT_HTML: &str = r#"<!doctype html>
+	const NOT_BUILT_HTML: &str = r#"<!doctype html>
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
@@ -121,3 +142,4 @@ npm run dev</pre>
 </body>
 </html>
 "#;
+}

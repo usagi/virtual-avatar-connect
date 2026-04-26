@@ -25,6 +25,18 @@ fn main() {
 	println!("cargo:rerun-if-env-changed=VOSK_WIN64_VERSION");
 	println!("cargo:rerun-if-env-changed=VOSK_LIB_PATH");
 
+	if env::var("CARGO_FEATURE_EMBED_GUI").is_ok() {
+		let manifest = env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
+		let index = Path::new(&manifest).join("gui/dist/index.html");
+		if !index.is_file() {
+			panic!(
+				"feature `embed-gui` にはビルド済み GUI が必要です。次を実行してから再度 `cargo build --features embed-gui` してください:\n  cd gui && npm ci && npm run build\n期待パス: {}",
+				index.display()
+			);
+		}
+		rerun_if_dir_changed(&Path::new(&manifest).join("gui/dist"));
+	}
+
 	if !voice_vosk || !windows_target {
 		return;
 	}
@@ -197,5 +209,20 @@ fn copy_vosk_dlls_from_dir(vendor_dir: &Path) {
 			"[build] 警告: {} に .dll がありません。公式 vosk-win64 zip を展開したディレクトリか VOSK_LIB_PATH を確認してください。",
 			vendor_dir.display()
 		);
+	}
+}
+
+/// `embed-gui` 時に `gui/dist` 配下の変更で再コンパイルする。
+fn rerun_if_dir_changed(dir: &Path) {
+	let Ok(entries) = fs::read_dir(dir) else {
+		println!("cargo:rerun-if-changed={}", dir.display());
+		return;
+	};
+	for e in entries.flatten() {
+		let p = e.path();
+		println!("cargo:rerun-if-changed={}", p.display());
+		if p.is_dir() {
+			rerun_if_dir_changed(&p);
+		}
 	}
 }

@@ -314,9 +314,9 @@ crates/
 
 #### Step 6 — `vac-gui-assets` と埋め込み配信
 
-* CI / リリースビルドで **`gui` の `npm ci` + `npm run build`** を Rust ビルドの前提にする（`xtask` またはルート `build.rs` で失敗を明示）。
-* **`vac-gui-assets`**（論理名）: `gui/dist` をビルド時取り込み。`vac-control-api` から **メモリ上の `index.html` / chunk / wasm** を返せるようにする（§1.2）。
-* **開発時**: 既存の `gui_dist_path` や Vite を使う **ファイル fallback** を feature または環境変数で維持。
+* **6a（実装済み・単一 crate）**: Cargo feature **`embed-gui`**。`include_dir!("gui/dist")` と `web_interface::gui_embedded` で `/gui/*` をメモリ配信。`build.rs` が `gui/dist/index.html` の存在を検査（無ければ panic + 手順表示）。既定ビルドでは従来どおり `gui_disk`（ファイル）経路。
+* **6b（未）**: **`vac-gui-assets`**（論理名）へ crate 切り出し。CI / リリースで **`npm ci` + `npm run build`** を Rust ビルドの前提にする（`xtask` 等は後続）。
+* **開発時**: `embed-gui` 無効時は既存の `gui_dist_path` や Vite をそのまま利用（§1.2）。
 
 #### Step 7 — `AppCore` 抽出（Phase ε-2a）
 

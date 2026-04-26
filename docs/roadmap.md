@@ -187,7 +187,8 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 
 - [ ] Step 4: モジュール境界整理（crate 分割の下準備）
 - [ ] Step 5: Cargo ワークスペース化
-- [ ] Step 6: `vac-gui-assets` + `gui/dist` ビルド時取り込み + actix メモリ配信（開発時ファイル fallback）
+- [x] Step 6a: Cargo feature **`embed-gui`** — `gui/dist` を `include_dir` で取り込み、`/gui/*` をメモリ配信（`build.rs` で `index.html` 必須、`gui_embedded` / `gui_path`）
+- [ ] Step 6b: **`vac-gui-assets`** crate 切り出し + CI での `npm ci && npm run build` 統合（§3 Step 6 残タスク）
 - [ ] Step 7: `AppCore` boot / serve / cleanup 抽出（ε-2a）
 - [ ] Step 8: CLI / desktop の 2 runner（仮称どおり）
 - [ ] Step 9: desktop に Tauri + 同梱静的 + トレイ

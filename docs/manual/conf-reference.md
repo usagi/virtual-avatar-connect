@@ -20,7 +20,7 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 | `web_ui_address` | string | `"127.0.0.1:57000"` | 内蔵 HTTP サーバの bind address。LAN 公開は `"0.0.0.0:57000"` 等 |
 | `web_ui_compress` | bool | `true` | Actix のレスポンス圧縮。無効化したい場合のみ `false` |
 | `web_ui_resources_path` | string | `"resources"` | `/resources/*` で配信する静的ファイル置き場 |
-| `gui_dist_path` | string | `"gui/dist"` | GUI (Svelte) のビルド成果物。無ければ案内 HTML を返す |
+| `gui_dist_path` | string | `"gui/dist"` | GUI (Svelte) のビルド成果物。無ければ案内 HTML を返す。**バイナリを `cargo build --features embed-gui` でビルドした場合**は `gui/dist` を実行ファイルに取り込むため、このキーは `/gui/*` 配信には使われない（Control API 等は従来どおり） |
 
 ## 3. Flowgraph
 

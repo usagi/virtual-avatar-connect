@@ -1,5 +1,8 @@
 pub mod control;
 pub mod gui;
+#[cfg(feature = "embed-gui")]
+mod gui_embedded;
+mod gui_path;
 pub mod input;
 pub mod output;
 pub use output::OutputPaths;
