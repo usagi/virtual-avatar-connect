@@ -150,6 +150,9 @@ pub struct State {
  ///   差分は `web_input_snapshot` で検出し、`ControlEvent::RestartRecommended` で GUI に促す。
  pub bridge_handles: std::sync::Arc<tokio::sync::Mutex<crate::bridges::BridgeHandles>>,
 
+ /// Flowgraph `tts.speak` + `engine=voicepeak` で `endpoint` が空のときに埋める CLI パス（`[voicepeak]` + OS 既定）。
+ pub voicepeak_fallback_exe: String,
+
  /// Phase ε-1: 統合シャットダウンブローカー。
  ///
  /// Ctrl+C / `POST /api/v1/control/shutdown` / 致命的エラー の全てをここに集約する。
@@ -195,6 +198,8 @@ impl State {
   }
  let twitch_ignore_logins = Arc::new(RwLock::new(twitch_ignore_set));
 
+ let voicepeak_fallback_exe = crate::conf::resolve_voicepeak_fallback_executable(conf);
+
  // δ-6: Flowgraph ランタイム共有ハンドル。opt-in なので `flowgraph_dir` が None / 非存在なら `None` 保持。
  // δ-9 Part A: ロード + 実行ワーカー spawn は `State` 生成後に遅延実行する（`Weak<RwLock<State>>` が必要なため）。
  let flowgraph = shared_flowgraph_new();
@@ -226,6 +231,7 @@ impl State {
    twitch_ignore_logins,
    flowgraph,
    bridge_handles: std::sync::Arc::new(tokio::sync::Mutex::new(crate::bridges::BridgeHandles::empty())),
+   voicepeak_fallback_exe,
    shutdown,
   }));
   log::trace!("State の生成が完了しました。");

@@ -5,8 +5,9 @@
 #
 # 前提:
 #   - VoicePeak をインストール済み（実ライセンス必須）。
-#   - voicepeak(.exe) が PATH 上にあるか、GUI のインストール先を絶対パスで指定。
-#     Windows 既定: C:\Program Files\VOICEPEAK\voicepeak.exe
+#   - 既定パス: `conf.toml` の `[voicepeak].path` が空または未指定なら、Windows は
+#     %ProgramFiles%\VOICEPEAK\voicepeak.exe、非 Windows は PATH 上の `voicepeak`。
+#   - 別の exe を使うときは本フローの `endpoint` に絶対パスを渡す（正規の上書き口）。
 #
 # voice（narrator）指定:
 #   `voicepeak --list-narrator` で取れるナレーター名をそのまま渡す（例: "Japanese Female 1"）。
@@ -17,14 +18,13 @@
 #   - pitch (0.0=標準) → CLI `--pitch` = clamp((pitch*300) as i32, -300, 300)
 #   - volume: CLI に音量オプションは無い。volume != 1.0 は WARN 付きで無視。
 #
-# NOTE: emotion（"happy=50,angry=10" 等の CSV）や executable の絶対パス上書きは
-#   `speak:extra`（Map<Json>）経由で渡す設計だが、現状の v2 ノード群には
-#   **Map<Json> 値を直接構築できるリテラルノードが無い**（flowgraph.literal.map_json は後続 phase）。
+# NOTE: emotion（"happy=50,angry=10" 等の CSV）は `speak:extra`（Map<Json>）経由だが、
+#   現状の v2 ノード群には **Map<Json> 値を直接構築できるリテラルノードが無い**
+#   （flowgraph.literal.map_json は後続 phase）。
 #   暫定対応:
 #     - GUI の Property Editor で `extra` を編集
 #     - または `flowgraph.json.parse` + 後続の map 構築ノードで組み立てる
-#   CLI 上書きをどうしても固定したいときは `endpoint` 入力に voicepeak.exe のパスを
-#   そのまま渡す（VoicePeak ドライバは endpoint を「exe パス上書き」に転用している）。
+#   exe の上書きは `endpoint` のみ（`extra.executable` は非推奨・互換用）。
 # =========================================================================
 
 [meta]
@@ -70,7 +70,7 @@ feature = "flowgraph.literal.float"
 position = [80, 700]
 properties.value = 1.0
 
-# 既定なら空文字で PATH 解決に任せる。
+# 既定なら空文字（conf の `[voicepeak]` + OS 既定で補填。非 Windows は PATH の voicepeak）。
 # 絶対パス上書き例: "C:/Program Files/VOICEPEAK/voicepeak.exe"
 [[nodes]]
 id = "endpoint"

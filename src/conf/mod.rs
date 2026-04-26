@@ -473,6 +473,42 @@ pub struct TwitchModeratorConfig {
  pub oauth_browser_command: Option<String>,
 }
 
+/// VoicePeak CLI のグローバル既定（`flowgraph.tts.speak` で `endpoint` が空のときに State が埋める）。
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+pub struct VoicepeakConfig {
+ /// `voicepeak.exe` の絶対パス。未指定・空文字のときは OS 既定（Windows: `%ProgramFiles%\\VOICEPEAK\\voicepeak.exe`、他: `voicepeak`）。
+ #[serde(default)]
+ pub path: Option<String>,
+}
+
+/// `[voicepeak].path` が非空ならそれを返し、空なら Windows は `%ProgramFiles%\\VOICEPEAK\\voicepeak.exe`、それ以外は `voicepeak`。
+pub fn resolve_voicepeak_fallback_executable(conf: &Conf) -> String {
+ let from_conf = conf
+  .voicepeak
+  .as_ref()
+  .and_then(|v| v.path.as_deref())
+  .map(str::trim)
+  .filter(|s| !s.is_empty());
+ if let Some(p) = from_conf {
+  return p.to_string();
+ }
+ #[cfg(windows)]
+ {
+  let base = std::env::var("ProgramW6432")
+   .or_else(|_| std::env::var("PROGRAMFILES"))
+   .unwrap_or_else(|_| "C:\\Program Files".to_string());
+  std::path::PathBuf::from(base)
+   .join("VOICEPEAK")
+   .join("voicepeak.exe")
+   .to_string_lossy()
+   .into_owned()
+ }
+ #[cfg(not(windows))]
+ {
+  "voicepeak".to_string()
+ }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Conf {
  pub workers: Option<usize>,
@@ -522,6 +558,10 @@ pub struct Conf {
  /// 参照する。将来のロケール設定 / 単位系好み等もここに集約予定。
  #[serde(default, skip_serializing_if = "Option::is_none", rename = "flowgraph")]
  pub flowgraph_config: Option<FlowgraphInstanceConfig>,
+
+ /// VoicePeak CLI のグローバルパス（`[voicepeak]`）。未指定時は [`resolve_voicepeak_fallback_executable`] と同じ既定。
+ #[serde(default)]
+ pub voicepeak: Option<VoicepeakConfig>,
 
  #[serde(default)]
  pub run_with: Vec<RunWith>,
@@ -1358,5 +1398,30 @@ default_timezone = "+09:00"
 		let src = ""; // 空 conf
 		let conf: Conf = toml::from_str(src).unwrap();
 		assert!(conf.flowgraph_config.is_none());
+	}
+
+	#[test]
+	fn voicepeak_conf_path_wires_resolve() {
+		let src = r#"
+[voicepeak]
+path = "D:/tools/voicepeak.exe"
+"#;
+		let conf: Conf = toml::from_str(src).unwrap();
+		assert_eq!(resolve_voicepeak_fallback_executable(&conf), "D:/tools/voicepeak.exe");
+	}
+
+	#[test]
+	fn voicepeak_resolve_without_table_uses_os_heuristic() {
+		let conf: Conf = toml::from_str("").unwrap();
+		let p = resolve_voicepeak_fallback_executable(&conf);
+		#[cfg(windows)]
+		{
+			assert!(
+				p.ends_with(r"VOICEPEAK\voicepeak.exe") || p.ends_with("VOICEPEAK/voicepeak.exe"),
+				"unexpected path: {p}"
+			);
+		}
+		#[cfg(not(windows))]
+		assert_eq!(p, "voicepeak");
 	}
 }

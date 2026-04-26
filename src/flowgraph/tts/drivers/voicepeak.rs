@@ -5,10 +5,10 @@
 //!
 //! ## 解決順序（実行ファイルパス）
 //!
-//! 1. `extra.executable: String` が非空ならそのパスを使用。
-//! 2. 非空の `req.endpoint` を executable パスとして流用（`endpoint` の意味は
-//!    ドライバごとに自由のため、VoicePeak では「実行ファイルパス上書き」に割り当てる）。
-//! 3. どちらも無ければ PATH 上の `voicepeak` / `voicepeak.exe` に委ねる。
+//! 1. 非空の `req.endpoint` を exe パスとして使用（`tts.speak` が VoicePeak 用に注入する想定。
+//!    空のときはノード側で `[voicepeak]` + OS 既定を `endpoint` に詰めてから到達する）。
+//! 2. **非推奨**: `extra.executable` が非空で `endpoint` が空のときのみその値を使い、1 回だけ `warn!`。
+//! 3. どちらも無ければ PATH 上の `voicepeak` / `voicepeak.exe` に委ねる（ヘッドレス等で `state_handle` が無い場合）。
 //!
 //! ## CLI とパラメータ対応
 //!
@@ -35,8 +35,11 @@ use super::super::driver::{
 };
 use async_trait::async_trait;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::process::Command;
+
+static VOICEPEAK_EXECUTABLE_DEPRECATION_WARNED: AtomicBool = AtomicBool::new(false);
 
 pub struct VoicepeakDriver;
 
@@ -53,13 +56,18 @@ fn map_pitch(req_pitch: f64) -> i32 {
 	v.clamp(-300, 300) as i32
 }
 
-/// CLI 起動に使う executable パスを req / extra から解決する。
+/// CLI 起動に使う executable パスを `endpoint`（および後方互換の `extra.executable`）から解決する。
 fn resolve_executable(req: &TtsRequest) -> String {
-	if let Some(exe) = extra_str(&req.extra, "executable").filter(|s| !s.is_empty()) {
-		return exe.to_string();
-	}
 	if !req.endpoint.is_empty() {
 		return req.endpoint.clone();
+	}
+	if let Some(exe) = extra_str(&req.extra, "executable").filter(|s| !s.is_empty()) {
+		if !VOICEPEAK_EXECUTABLE_DEPRECATION_WARNED.swap(true, Ordering::Relaxed) {
+			log::warn!(
+				"[tts.voicepeak] extra.executable is deprecated; set the flowgraph `tts.speak` `endpoint` input (or `[voicepeak].path` in conf) for the voicepeak CLI path."
+			);
+		}
+		return exe.to_string();
 	}
 	DEFAULT_EXECUTABLE.to_string()
 }
@@ -122,7 +130,6 @@ impl TtsDriver for VoicepeakDriver {
 	fn params_schema(&self) -> TtsParamSchema {
 		TtsParamSchema {
 			entries: vec![
-				TtsParamEntry { key: "executable", ty: TtsParamType::String, description: "voicepeak(.exe) の絶対パス上書き。空なら endpoint → PATH の順に解決" },
 				TtsParamEntry { key: "narrator", ty: TtsParamType::String, description: "voice 入力の代わりにナレーターを直接指定（voice より優先）" },
 				TtsParamEntry { key: "emotion", ty: TtsParamType::String, description: "CLI -e に渡す感情 CSV（例: \"happy=50,angry=10\"）" },
 				TtsParamEntry { key: "speed_raw", ty: TtsParamType::Int, description: "--speed を正規化せず直接指定（50..=200）" },
@@ -265,15 +272,22 @@ mod tests {
 	}
 
 	#[test]
-	fn resolve_executable_priority_extra_over_endpoint() {
+	fn resolve_executable_endpoint_wins_over_deprecated_executable() {
 		let mut req = base_req();
 		req.endpoint = "C:/from-endpoint.exe".into();
+		req.extra.insert("executable".into(), SocketValue::String("C:/from-extra.exe".into()));
+		assert_eq!(resolve_executable(&req), "C:/from-endpoint.exe");
+	}
+
+	#[test]
+	fn resolve_executable_deprecated_extra_when_endpoint_empty() {
+		let mut req = base_req();
 		req.extra.insert("executable".into(), SocketValue::String("C:/from-extra.exe".into()));
 		assert_eq!(resolve_executable(&req), "C:/from-extra.exe");
 	}
 
 	#[test]
-	fn resolve_executable_falls_back_to_endpoint_then_default() {
+	fn resolve_executable_falls_back_to_default_when_empty() {
 		let mut req = base_req();
 		assert_eq!(resolve_executable(&req), DEFAULT_EXECUTABLE);
 		req.endpoint = "C:/from-endpoint.exe".into();
@@ -284,11 +298,8 @@ mod tests {
 	async fn unreachable_executable_yields_io_error() {
 		let driver = VoicepeakDriver;
 		let mut req = base_req();
-		// 存在しないパスを executable にして、TtsError::Io に落ちることを確認。
-		req.extra.insert(
-			"executable".into(),
-			SocketValue::String("C:/vac-nonexistent-voicepeak-xyz-12345.exe".into()),
-		);
+		// 存在しないパスを endpoint にして、TtsError::Io に落ちることを確認。
+		req.endpoint = "C:/vac-nonexistent-voicepeak-xyz-12345.exe".into();
 		let audio = AudioContext { sink: None };
 		let err = driver.speak(req, &audio).await.unwrap_err();
 		// OS によって Io か Synthesis（タイムアウト）に畳まれるが、少なくとも非致命的に畳まれる

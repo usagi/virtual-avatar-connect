@@ -24,7 +24,18 @@
 # -------------------------------------------------------------------------
 # 1. conf.toml 側に必要な設定
 # -------------------------------------------------------------------------
-# なし。**TTS 自体はサービス設定を必要としません。**
+# 原則としてなし。**TTS 自体はサービス設定を必要としません。**
+#
+# VoicePeak のみ任意で `[voicepeak]` を置ける（未記載でもパース可能）。
+#   [voicepeak]
+#   path = ""   # 省略可。非空ならグローバル既定の voicepeak.exe 絶対パス。
+#               # 空または未指定のとき: Windows は %ProgramFiles%\VOICEPEAK\voicepeak.exe
+#               # （64bit 優先の ProgramW6432 を参照）、非 Windows はバイナリ名 "voicepeak"。
+# この値は起動時に 1 度解決され、`flowgraph.tts.speak` で engine が voicepeak かつ
+# `endpoint` 入力が空のとき、exe パスとして自動で補填される。
+#
+# ノード側で exe を上書きしたい場合の**正規の唯一の入力**は `endpoint`（文字列）である。
+# `extra.executable` は後方互換のため残るが非推奨（将来削除予定）。新規フローでは使わないこと。
 #
 # ただし、TTS の再生音量を BGM / 効果音とミックスしたい場合は、別途
 # ブラウザソース (`[browser_source]`) とその中の `bgm-player` / `effects` を使う。
@@ -49,14 +60,15 @@
 #   - endpoint:  HTTP base URL / TCP "host:port"。空で driver 既定
 #                （VOICEVOX: http://127.0.0.1:50021 / AivisSpeech: http://127.0.0.1:10101
 #                 CoeiroInk: http://127.0.0.1:50032 / Bouyomichan: 127.0.0.1:50001
-#                 VoicePeak: `voicepeak(.exe)` の絶対パス上書きに流用可能）
+#                 VoicePeak: CLI の exe 絶対パス。空なら `[voicepeak]` + OS 既定を利用）
 #   - extra:     Map<Json>。engine 固有パラメーターの escape hatch。
 #                VOICEVOX 系:   intonation_scale / pre_phoneme_length / post_phoneme_length /
 #                               output_sampling_rate
 #                CoeiroInk:     style_id / intonation_scale / pre_phoneme_length / ...
 #                Bouyomichan:   speed_raw / tone_raw / volume_raw / voice_raw
-#                VoicePeak:     executable / narrator / emotion ("happy=50,angry=10") /
+#                VoicePeak:     narrator / emotion ("happy=50,angry=10") /
 #                               speed_raw (50..200) / pitch_raw (-300..300)
+#                （`executable` は非推奨・削除予定。exe は `endpoint` か conf の `[voicepeak]` を使う）
 #   - save_path: 合成 WAV の保存先。`{T}` が UTC ISO 日時に展開される。
 #
 # 出力:
