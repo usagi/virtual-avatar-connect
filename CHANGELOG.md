@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 内部リファクタ — Control API `bos` / `reload` / `ws` モジュール分割
+
+- **`src/web_interface/control/bos/`**: 旧 `bos.rs` を `mod.rs`（DTO・`GET /bos`）と `util.rs`（カテゴリ推定・channel 検出・タイトル・単体テスト）に分割。
+- **`src/web_interface/control/reload/`**: 旧 `reload.rs` を `mod.rs`（`ReloadRequest` / ルート）と `ai_persona.rs`（`handle_ai_reload` と JSON エラー応答）に分割。
+- **`src/web_interface/control/ws/`**: 旧 `ws.rs` を `mod.rs`（`events_ws`）と `actor.rs`（`ControlEventsWs` と配信ループ）に分割。
+
 ### 内部リファクタ — Control API `auth` / `oauth_twitch` / `managed_app` モジュール分割
 
 - **`src/web_interface/control/auth/`**: 旧 `auth.rs` を `mod.rs`、`runtime.rs`（`ControlApiRuntime` / `TokenSource` / トークン解決）、`middleware.rs`（`control_api_auth` と結合・単体テスト）に分割。モジュール先頭の rustdoc を日本語で整理。

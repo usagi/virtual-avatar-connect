@@ -325,6 +325,9 @@ flowgraph.motion.map
 * **実施（追記）**: `web_interface/control/auth/` を **`mod.rs` + `runtime.rs` + `middleware.rs`** に分割（旧 `auth.rs` を廃止。トークン解決は `runtime`、`control_api_auth` とクエリ解析テストは `middleware`）。
 * **実施（追記）**: `web_interface/control/oauth_twitch/` を **`mod.rs` + `start_flow.rs`** に分割（旧 `oauth_twitch.rs` を廃止。DCF 開始〜ポーリング登録は `start_flow`）。
 * **実施（追記）**: `web_interface/control/managed_app/` を **`mod.rs` + `lookup.rs`** に分割（旧 `managed_app.rs` を廃止。registry 参照は `lookup`）。
+* **実施（追記）**: `web_interface/control/bos/` を **`mod.rs` + `util.rs`** に分割（旧 `bos.rs` を廃止。カテゴリ推定・channel 検出・タイトル生成は `util`）。
+* **実施（追記）**: `web_interface/control/reload/` を **`mod.rs` + `ai_persona.rs`** に分割（旧 `reload.rs` を廃止。AI persona 適用は `ai_persona`）。
+* **実施（追記）**: `web_interface/control/ws/` を **`mod.rs` + `actor.rs`** に分割（旧 `ws.rs` を廃止。`ControlEventsWs` は `actor`）。
 * **残り（後続 PR）**: 上記以外の `web_interface::control/*` の肥大化、他モジュールの同様の表化など。
 
 #### Step 5（一部完了）
