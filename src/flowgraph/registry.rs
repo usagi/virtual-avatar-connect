@@ -480,10 +480,7 @@ mod tests {
 			"flowgraph.vec3.dot",
 			"flowgraph.vec3.lerp",
 		] {
-			assert!(
-				r.contains(feature),
-				"registry にコア feature '{feature}' が登録されていない"
-			);
+			assert!(r.contains(feature), "registry にコア feature '{feature}' が登録されていない");
 			assert_eq!(r.spec(feature).unwrap().feature, feature);
 		}
 	}

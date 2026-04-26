@@ -51,8 +51,7 @@ use crate::web_interface::control::auth::ControlApiRuntime;
 // 共通ヘルパ
 // ============================================================================
 
-fn err_json(status: actix_web::http::StatusCode, code: &str, detail: impl std::fmt::Display) -> HttpResponse
-{
+fn err_json(status: actix_web::http::StatusCode, code: &str, detail: impl std::fmt::Display) -> HttpResponse {
 	HttpResponse::build(status).json(serde_json::json!({
 		"error": code,
 		"detail": detail.to_string(),
@@ -60,65 +59,54 @@ fn err_json(status: actix_web::http::StatusCode, code: &str, detail: impl std::f
 }
 
 /// allow-list から `key` に一致するエントリを探して返す。見つからなければ 404 HttpResponse。
-fn find_entry(runtime: &ControlApiRuntime, key: &str) -> Result<ControlTableEntry, HttpResponse>
-{
-	match runtime.tables.iter().find(|t| t.key == key)
-	{
+fn find_entry(runtime: &ControlApiRuntime, key: &str) -> Result<ControlTableEntry, HttpResponse> {
+	match runtime.tables.iter().find(|t| t.key == key) {
 		Some(e) => Ok(e.clone()),
 		None => Err(err_json(
 			actix_web::http::StatusCode::NOT_FOUND,
 			"not_found",
-			format!("allow-list に登録されていない table key です: '{key}'")
-		))
+			format!("allow-list に登録されていない table key です: '{key}'"),
+		)),
 	}
 }
 
 /// `If-Match` header を読み取り、`current_hash` と比較する。header 未指定は許容（盲目上書き）。
 ///
 /// 形式は `b3:<64 hex>`。Prefix 無しでも 64 hex なら許容する。
-fn check_if_match(req: &HttpRequest, current_hash: &[u8; 32]) -> Result<(), HttpResponse>
-{
-	let Some(hv) = req.headers().get("If-Match")
-	else
-	{
+fn check_if_match(req: &HttpRequest, current_hash: &[u8; 32]) -> Result<(), HttpResponse> {
+	let Some(hv) = req.headers().get("If-Match") else {
 		return Ok(());
 	};
-	let Ok(raw) = hv.to_str()
-	else
-	{
+	let Ok(raw) = hv.to_str() else {
 		return Err(err_json(
 			actix_web::http::StatusCode::BAD_REQUEST,
 			"bad_if_match",
-			"If-Match ヘッダが ASCII ではありません"
+			"If-Match ヘッダが ASCII ではありません",
 		));
 	};
 	let hex_part = raw.trim().trim_start_matches("b3:").trim_matches('"');
-	if hex_part.len() != 64
-	{
+	if hex_part.len() != 64 {
 		return Err(err_json(
 			actix_web::http::StatusCode::BAD_REQUEST,
 			"bad_if_match",
-			format!("If-Match は `b3:<64 hex>` 形式です。got='{raw}'")
+			format!("If-Match は `b3:<64 hex>` 形式です。got='{raw}'"),
 		));
 	}
 	let current_hex = hex_encode(current_hash);
-	if !hex_part.eq_ignore_ascii_case(&current_hex)
-	{
+	if !hex_part.eq_ignore_ascii_case(&current_hex) {
 		return Err(err_json(
 			actix_web::http::StatusCode::CONFLICT,
 			"optimistic_lock_failed",
-			format!("If-Match 不一致: 現在の content_hash は b3:{current_hex}")
+			format!("If-Match 不一致: 現在の content_hash は b3:{current_hex}"),
 		));
 	}
 	Ok(())
 }
 
-fn hex_encode(bytes: &[u8; 32]) -> String
-{
+fn hex_encode(bytes: &[u8; 32]) -> String {
 	const HEX: &[u8; 16] = b"0123456789abcdef";
 	let mut s = String::with_capacity(64);
-	for b in bytes
-	{
+	for b in bytes {
 		s.push(HEX[(*b >> 4) as usize] as char);
 		s.push(HEX[(*b & 0x0f) as usize] as char);
 	}
@@ -126,46 +114,39 @@ fn hex_encode(bytes: &[u8; 32]) -> String
 }
 
 /// ディスクから TSV を読んで Table にパース。ファイル未存在は空 Table として扱う。
-fn read_table(path: &Path) -> Result<Table, HttpResponse>
-{
-	let contents = match fs::read_to_string(path)
-	{
+fn read_table(path: &Path) -> Result<Table, HttpResponse> {
+	let contents = match fs::read_to_string(path) {
 		Ok(s) => s,
 		Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
-		Err(e) =>
-		{
+		Err(e) => {
 			return Err(err_json(
 				actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
 				"read_failed",
-				format!("読み込み失敗: {} ({e})", path.display())
+				format!("読み込み失敗: {} ({e})", path.display()),
 			));
 		}
 	};
-	if contents.trim().is_empty()
-	{
+	if contents.trim().is_empty() {
 		return Ok(Table::empty());
 	}
 	parse_tsv_with_mode(&contents, "auto").map_err(|e| {
 		err_json(
 			actix_web::http::StatusCode::UNPROCESSABLE_ENTITY,
 			"parse_failed",
-			format!("TSV パース失敗: {e}")
+			format!("TSV パース失敗: {e}"),
 		)
 	})
 }
 
 /// Table を atomic rename で書き戻す。
-fn write_table(path: &Path, table: &Table) -> Result<(), HttpResponse>
-{
+fn write_table(path: &Path, table: &Table) -> Result<(), HttpResponse> {
 	let parent = path.parent().unwrap_or_else(|| Path::new("."));
-	if !parent.as_os_str().is_empty() && !parent.exists()
-	{
-		if let Err(e) = fs::create_dir_all(parent)
-		{
+	if !parent.as_os_str().is_empty() && !parent.exists() {
+		if let Err(e) = fs::create_dir_all(parent) {
 			return Err(err_json(
 				actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
 				"io_failed",
-				format!("親ディレクトリ作成失敗: {} ({e})", parent.display())
+				format!("親ディレクトリ作成失敗: {} ({e})", parent.display()),
 			));
 		}
 	}
@@ -177,35 +158,30 @@ fn write_table(path: &Path, table: &Table) -> Result<(), HttpResponse>
 		.map(|d| d.as_nanos())
 		.unwrap_or(0);
 	let tmp_path = parent.join(format!(".{fname}.tmp-{}-{stamp}", std::process::id()));
-	match fs::File::create(&tmp_path).and_then(|mut f| f.write_all(contents.as_bytes()).and_then(|_| f.sync_all()))
-	{
-		Ok(_) =>
-		{}
-		Err(e) =>
-		{
+	match fs::File::create(&tmp_path).and_then(|mut f| f.write_all(contents.as_bytes()).and_then(|_| f.sync_all())) {
+		Ok(_) => {}
+		Err(e) => {
 			let _ = fs::remove_file(&tmp_path);
 			return Err(err_json(
 				actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
 				"write_failed",
-				format!("tmp 書き込み失敗: {} ({e})", tmp_path.display())
+				format!("tmp 書き込み失敗: {} ({e})", tmp_path.display()),
 			));
 		}
 	}
-	if let Err(e) = fs::rename(&tmp_path, path)
-	{
+	if let Err(e) = fs::rename(&tmp_path, path) {
 		let _ = fs::remove_file(&tmp_path);
 		return Err(err_json(
 			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
 			"rename_failed",
-			format!("atomic rename 失敗: {} → {} ({e})", tmp_path.display(), path.display())
+			format!("atomic rename 失敗: {} → {} ({e})", tmp_path.display(), path.display()),
 		));
 	}
 	Ok(())
 }
 
 /// JSON Map を schema 順の `Row` に変換する。未指定カラムは `null` で埋める。
-fn map_to_row(table: &Table, map: &serde_json::Map<String, JsonValue>) -> Row
-{
+fn map_to_row(table: &Table, map: &serde_json::Map<String, JsonValue>) -> Row {
 	let values: Vec<JsonValue> = table
 		.schema()
 		.column_names()
@@ -215,11 +191,8 @@ fn map_to_row(table: &Table, map: &serde_json::Map<String, JsonValue>) -> Row
 }
 
 /// `is_locked` カラムが `true` ならロック済み。列が無い Table では常に `false`。
-fn is_row_locked(table: &Table, row: &Row) -> bool
-{
-	let Some(idx) = table.schema().column_index("is_locked")
-	else
-	{
+fn is_row_locked(table: &Table, row: &Row) -> bool {
+	let Some(idx) = table.schema().column_index("is_locked") else {
 		return false;
 	};
 	row.get(idx).and_then(|v| v.as_bool()).unwrap_or(false)
@@ -231,8 +204,7 @@ fn is_row_locked(table: &Table, row: &Row) -> bool
 
 /// allow-list 内の 1 テーブルを GUI に返すカタログ要素。
 #[derive(Debug, Serialize)]
-pub struct TableCatalogItem
-{
+pub struct TableCatalogItem {
 	pub key: String,
 	pub path: String,
 	pub label: Option<String>,
@@ -240,19 +212,17 @@ pub struct TableCatalogItem
 	pub editable: bool,
 	pub quick_add: Option<ControlTableQuickAdd>,
 	/// ファイルが現在ディスクに存在するか（存在しなくても API は動く／空 Table 扱い）。
-	pub exists: bool
+	pub exists: bool,
 }
 
 #[derive(Debug, Serialize)]
-pub struct TableCatalogResponse
-{
+pub struct TableCatalogResponse {
 	pub tables: Vec<TableCatalogItem>,
-	pub count: usize
+	pub count: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct TableFileDto
-{
+pub struct TableFileDto {
 	pub key: String,
 	pub path: String,
 	/// 列名リスト（挿入順）。
@@ -260,40 +230,36 @@ pub struct TableFileDto
 	pub rows: Vec<TableEntryDto>,
 	/// 現在内容の blake3 ハッシュ（`b3:` prefix 無し 64 hex）。`If-Match` に渡す値。
 	pub content_hash: String,
-	pub editable: bool
+	pub editable: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct TableEntryDto
-{
+pub struct TableEntryDto {
 	pub row_index: usize,
-	pub values: serde_json::Map<String, JsonValue>
+	pub values: serde_json::Map<String, JsonValue>,
 }
 
 /// PUT 全行置換の入力。
 #[derive(Debug, Deserialize)]
-pub struct PutTableRequest
-{
+pub struct PutTableRequest {
 	/// 列順序を保持するための明示オプション。未指定なら現 Table の schema 列順に従う。
 	#[serde(default)]
 	pub columns: Option<Vec<String>>,
-	pub rows: Vec<serde_json::Map<String, JsonValue>>
+	pub rows: Vec<serde_json::Map<String, JsonValue>>,
 }
 
 /// POST append / PATCH 共通の単行入力。
 #[derive(Debug, Deserialize)]
-pub struct EntryRequest
-{
-	pub values: serde_json::Map<String, JsonValue>
+pub struct EntryRequest {
+	pub values: serde_json::Map<String, JsonValue>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MutationResponse
-{
+pub struct MutationResponse {
 	pub ok: bool,
 	pub content_hash: String,
 	pub row_count: usize,
-	pub affected_row_index: Option<usize>
+	pub affected_row_index: Option<usize>,
 }
 
 // ============================================================================
@@ -301,8 +267,7 @@ pub struct MutationResponse
 // ============================================================================
 
 #[get("/tables")]
-pub async fn list_tables(runtime: Data<ControlApiRuntime>) -> impl Responder
-{
+pub async fn list_tables(runtime: Data<ControlApiRuntime>) -> impl Responder {
 	let items: Vec<TableCatalogItem> = runtime
 		.tables
 		.iter()
@@ -313,12 +278,12 @@ pub async fn list_tables(runtime: Data<ControlApiRuntime>) -> impl Responder
 			role: t.role.clone(),
 			editable: t.editable,
 			quick_add: t.quick_add.clone(),
-			exists: t.path.is_file()
+			exists: t.path.is_file(),
 		})
 		.collect();
 	HttpResponse::Ok().json(TableCatalogResponse {
 		count: items.len(),
-		tables: items
+		tables: items,
 	})
 }
 
@@ -327,18 +292,15 @@ pub async fn list_tables(runtime: Data<ControlApiRuntime>) -> impl Responder
 // ============================================================================
 
 #[get("/table/{key}")]
-pub async fn get_table(runtime: Data<ControlApiRuntime>, key: web::Path<String>) -> impl Responder
-{
+pub async fn get_table(runtime: Data<ControlApiRuntime>, key: web::Path<String>) -> impl Responder {
 	let key = key.into_inner();
-	let entry = match find_entry(&runtime, &key)
-	{
+	let entry = match find_entry(&runtime, &key) {
 		Ok(e) => e,
-		Err(r) => return r
+		Err(r) => return r,
 	};
-	let table = match read_table(&entry.path)
-	{
+	let table = match read_table(&entry.path) {
 		Ok(t) => t,
-		Err(r) => return r
+		Err(r) => return r,
 	};
 	let columns: Vec<String> = table.schema().column_names().map(|s| s.to_string()).collect();
 	let rows: Vec<TableEntryDto> = table
@@ -347,7 +309,7 @@ pub async fn get_table(runtime: Data<ControlApiRuntime>, key: web::Path<String>)
 		.enumerate()
 		.map(|(i, r)| TableEntryDto {
 			row_index: i,
-			values: r.as_map(table.schema())
+			values: r.as_map(table.schema()),
 		})
 		.collect();
 	HttpResponse::Ok().json(TableFileDto {
@@ -356,7 +318,7 @@ pub async fn get_table(runtime: Data<ControlApiRuntime>, key: web::Path<String>)
 		columns,
 		rows,
 		content_hash: hex_encode(table.content_hash()),
-		editable: entry.editable
+		editable: entry.editable,
 	})
 }
 
@@ -364,14 +326,12 @@ pub async fn get_table(runtime: Data<ControlApiRuntime>, key: web::Path<String>)
 // 編集系共通: editable チェック
 // ============================================================================
 
-fn ensure_editable(entry: &ControlTableEntry) -> Result<(), HttpResponse>
-{
-	if !entry.editable
-	{
+fn ensure_editable(entry: &ControlTableEntry) -> Result<(), HttpResponse> {
+	if !entry.editable {
 		return Err(err_json(
 			actix_web::http::StatusCode::FORBIDDEN,
 			"read_only",
-			format!("table '{}' は editable = false で登録されています", entry.key)
+			format!("table '{}' は editable = false で登録されています", entry.key),
 		));
 	}
 	Ok(())
@@ -386,33 +346,26 @@ pub async fn put_table(
 	runtime: Data<ControlApiRuntime>,
 	req: HttpRequest,
 	key: web::Path<String>,
-	body: Json<PutTableRequest>
-) -> impl Responder
-{
+	body: Json<PutTableRequest>,
+) -> impl Responder {
 	let key = key.into_inner();
-	let entry = match find_entry(&runtime, &key)
-	{
+	let entry = match find_entry(&runtime, &key) {
 		Ok(e) => e,
-		Err(r) => return r
+		Err(r) => return r,
 	};
-	if let Err(r) = ensure_editable(&entry)
-	{
+	if let Err(r) = ensure_editable(&entry) {
 		return r;
 	}
-	let current = match read_table(&entry.path)
-	{
+	let current = match read_table(&entry.path) {
 		Ok(t) => t,
-		Err(r) => return r
+		Err(r) => return r,
 	};
-	if let Err(r) = check_if_match(&req, current.content_hash())
-	{
+	if let Err(r) = check_if_match(&req, current.content_hash()) {
 		return r;
 	}
 	// 列順は「入力 columns > 現 schema」の順で優先。空 Table のときは columns 必須。
-	let schema_basis: Table = match &body.columns
-	{
-		Some(cols) if !cols.is_empty() =>
-		{
+	let schema_basis: Table = match &body.columns {
+		Some(cols) if !cols.is_empty() => {
 			// 指定列だけの schema を持つ空 Table を作ってベースにする。
 			use crate::flowgraph::socket::SocketType;
 			use crate::flowgraph::table::{ColumnSpec, TableSchema};
@@ -422,14 +375,12 @@ pub async fn put_table(
 				.collect();
 			Table::new(TableSchema::new(specs), vec![])
 		}
-		_ =>
-		{
-			if current.schema().is_empty()
-			{
+		_ => {
+			if current.schema().is_empty() {
 				return err_json(
 					actix_web::http::StatusCode::BAD_REQUEST,
 					"schema_missing",
-					"現 Table に schema が無いため、PUT body に columns を明示してください"
+					"現 Table に schema が無いため、PUT body に columns を明示してください",
 				);
 			}
 			current.clone()
@@ -439,21 +390,19 @@ pub async fn put_table(
 	{
 		let inner = new_table.make_mut();
 		inner.rows.clear();
-		for m in &body.rows
-		{
+		for m in &body.rows {
 			let row = map_to_row(&schema_basis, m);
 			inner.rows.push(row);
 		}
 	}
-	if let Err(r) = write_table(&entry.path, &new_table)
-	{
+	if let Err(r) = write_table(&entry.path, &new_table) {
 		return r;
 	}
 	HttpResponse::Ok().json(MutationResponse {
 		ok: true,
 		content_hash: hex_encode(new_table.content_hash()),
 		row_count: new_table.len(),
-		affected_row_index: None
+		affected_row_index: None,
 	})
 }
 
@@ -466,48 +415,41 @@ pub async fn post_entry(
 	runtime: Data<ControlApiRuntime>,
 	req: HttpRequest,
 	key: web::Path<String>,
-	body: Json<EntryRequest>
-) -> impl Responder
-{
+	body: Json<EntryRequest>,
+) -> impl Responder {
 	let key = key.into_inner();
-	let entry = match find_entry(&runtime, &key)
-	{
+	let entry = match find_entry(&runtime, &key) {
 		Ok(e) => e,
-		Err(r) => return r
+		Err(r) => return r,
 	};
-	if let Err(r) = ensure_editable(&entry)
-	{
+	if let Err(r) = ensure_editable(&entry) {
 		return r;
 	}
-	let mut table = match read_table(&entry.path)
-	{
+	let mut table = match read_table(&entry.path) {
 		Ok(t) => t,
-		Err(r) => return r
+		Err(r) => return r,
 	};
-	if let Err(r) = check_if_match(&req, table.content_hash())
-	{
+	if let Err(r) = check_if_match(&req, table.content_hash()) {
 		return r;
 	}
-	if table.schema().is_empty()
-	{
+	if table.schema().is_empty() {
 		return err_json(
 			actix_web::http::StatusCode::BAD_REQUEST,
 			"schema_missing",
-			"空ファイルへの append は未サポート。先に PUT で schema を確定してください"
+			"空ファイルへの append は未サポート。先に PUT で schema を確定してください",
 		);
 	}
 	let row = map_to_row(&table, &body.values);
 	table.push_row(row);
 	let idx = table.len().saturating_sub(1);
-	if let Err(r) = write_table(&entry.path, &table)
-	{
+	if let Err(r) = write_table(&entry.path, &table) {
 		return r;
 	}
 	HttpResponse::Ok().json(MutationResponse {
 		ok: true,
 		content_hash: hex_encode(table.content_hash()),
 		row_count: table.len(),
-		affected_row_index: Some(idx)
+		affected_row_index: Some(idx),
 	})
 }
 
@@ -520,49 +462,41 @@ pub async fn patch_entry(
 	runtime: Data<ControlApiRuntime>,
 	req: HttpRequest,
 	params: web::Path<(String, usize)>,
-	body: Json<EntryRequest>
-) -> impl Responder
-{
+	body: Json<EntryRequest>,
+) -> impl Responder {
 	let (key, row_index) = params.into_inner();
-	let entry = match find_entry(&runtime, &key)
-	{
+	let entry = match find_entry(&runtime, &key) {
 		Ok(e) => e,
-		Err(r) => return r
+		Err(r) => return r,
 	};
-	if let Err(r) = ensure_editable(&entry)
-	{
+	if let Err(r) = ensure_editable(&entry) {
 		return r;
 	}
-	let mut table = match read_table(&entry.path)
-	{
+	let mut table = match read_table(&entry.path) {
 		Ok(t) => t,
-		Err(r) => return r
+		Err(r) => return r,
 	};
-	if let Err(r) = check_if_match(&req, table.content_hash())
-	{
+	if let Err(r) = check_if_match(&req, table.content_hash()) {
 		return r;
 	}
-	if row_index >= table.len()
-	{
+	if row_index >= table.len() {
 		return err_json(
 			actix_web::http::StatusCode::NOT_FOUND,
 			"row_not_found",
-			format!("row_index={row_index} は範囲外（現在 {} 行）", table.len())
+			format!("row_index={row_index} は範囲外（現在 {} 行）", table.len()),
 		);
 	}
 	let current_row = table.rows()[row_index].clone();
-	if is_row_locked(&table, &current_row)
-	{
+	if is_row_locked(&table, &current_row) {
 		return err_json(
 			actix_web::http::StatusCode::FORBIDDEN,
 			"locked",
-			format!("row_index={row_index} は is_locked = true のため編集できません")
+			format!("row_index={row_index} は is_locked = true のため編集できません"),
 		);
 	}
 	// merge: current row → map → 上書き → row
 	let mut merged = current_row.as_map(table.schema());
-	for (k, v) in &body.values
-	{
+	for (k, v) in &body.values {
 		merged.insert(k.clone(), v.clone());
 	}
 	let new_row = map_to_row(&table, &merged);
@@ -570,15 +504,14 @@ pub async fn patch_entry(
 		let inner = table.make_mut();
 		inner.rows[row_index] = new_row;
 	}
-	if let Err(r) = write_table(&entry.path, &table)
-	{
+	if let Err(r) = write_table(&entry.path, &table) {
 		return r;
 	}
 	HttpResponse::Ok().json(MutationResponse {
 		ok: true,
 		content_hash: hex_encode(table.content_hash()),
 		row_count: table.len(),
-		affected_row_index: Some(row_index)
+		affected_row_index: Some(row_index),
 	})
 }
 
@@ -587,61 +520,49 @@ pub async fn patch_entry(
 // ============================================================================
 
 #[delete("/table/{key}/entry/{row_index}")]
-pub async fn delete_entry(
-	runtime: Data<ControlApiRuntime>,
-	req: HttpRequest,
-	params: web::Path<(String, usize)>
-) -> impl Responder
-{
+pub async fn delete_entry(runtime: Data<ControlApiRuntime>, req: HttpRequest, params: web::Path<(String, usize)>) -> impl Responder {
 	let (key, row_index) = params.into_inner();
-	let entry = match find_entry(&runtime, &key)
-	{
+	let entry = match find_entry(&runtime, &key) {
 		Ok(e) => e,
-		Err(r) => return r
+		Err(r) => return r,
 	};
-	if let Err(r) = ensure_editable(&entry)
-	{
+	if let Err(r) = ensure_editable(&entry) {
 		return r;
 	}
-	let mut table = match read_table(&entry.path)
-	{
+	let mut table = match read_table(&entry.path) {
 		Ok(t) => t,
-		Err(r) => return r
+		Err(r) => return r,
 	};
-	if let Err(r) = check_if_match(&req, table.content_hash())
-	{
+	if let Err(r) = check_if_match(&req, table.content_hash()) {
 		return r;
 	}
-	if row_index >= table.len()
-	{
+	if row_index >= table.len() {
 		return err_json(
 			actix_web::http::StatusCode::NOT_FOUND,
 			"row_not_found",
-			format!("row_index={row_index} は範囲外（現在 {} 行）", table.len())
+			format!("row_index={row_index} は範囲外（現在 {} 行）", table.len()),
 		);
 	}
 	let current_row = table.rows()[row_index].clone();
-	if is_row_locked(&table, &current_row)
-	{
+	if is_row_locked(&table, &current_row) {
 		return err_json(
 			actix_web::http::StatusCode::FORBIDDEN,
 			"locked",
-			format!("row_index={row_index} は is_locked = true のため削除できません")
+			format!("row_index={row_index} は is_locked = true のため削除できません"),
 		);
 	}
 	{
 		let inner = table.make_mut();
 		inner.rows.remove(row_index);
 	}
-	if let Err(r) = write_table(&entry.path, &table)
-	{
+	if let Err(r) = write_table(&entry.path, &table) {
 		return r;
 	}
 	HttpResponse::Ok().json(MutationResponse {
 		ok: true,
 		content_hash: hex_encode(table.content_hash()),
 		row_count: table.len(),
-		affected_row_index: Some(row_index)
+		affected_row_index: Some(row_index),
 	})
 }
 
@@ -649,8 +570,7 @@ pub async fn delete_entry(
 // configure
 // ============================================================================
 
-pub fn configure(cfg: &mut web::ServiceConfig)
-{
+pub fn configure(cfg: &mut web::ServiceConfig) {
 	cfg.service(list_tables)
 		.service(get_table)
 		.service(put_table)
@@ -664,8 +584,7 @@ pub fn configure(cfg: &mut web::ServiceConfig)
 // ============================================================================
 
 #[cfg(test)]
-mod tests
-{
+mod tests {
 	use super::*;
 	use crate::web_interface::control::auth::TokenSource;
 	use actix_web::{http::StatusCode, test, App};
@@ -675,22 +594,17 @@ mod tests
 
 	/// Drop 時に再帰削除する軽量 tmp dir。tempfile crate を足さないための自前実装。
 	pub struct TempDir(PathBuf);
-	impl TempDir
-	{
-		pub fn path(&self) -> &Path
-		{
+	impl TempDir {
+		pub fn path(&self) -> &Path {
 			&self.0
 		}
 	}
-	impl Drop for TempDir
-	{
-		fn drop(&mut self)
-		{
+	impl Drop for TempDir {
+		fn drop(&mut self) {
 			let _ = fs::remove_dir_all(&self.0);
 		}
 	}
-	fn mk_tmp_dir() -> TempDir
-	{
+	fn mk_tmp_dir() -> TempDir {
 		static SEQ: AtomicU64 = AtomicU64::new(0);
 		let ns = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
 		let seq = SEQ.fetch_add(1, Ordering::Relaxed);
@@ -700,12 +614,10 @@ mod tests
 	}
 
 	/// テスト用の `ControlApiRuntime` を組み立て、tmp dir に TSV ファイルを置く。
-	fn setup_runtime(initial_tsv: &str) -> (ControlApiRuntime, TempDir, PathBuf)
-	{
+	fn setup_runtime(initial_tsv: &str) -> (ControlApiRuntime, TempDir, PathBuf) {
 		let tmp = mk_tmp_dir();
 		let tsv_path = tmp.path().join("sample.tsv");
-		if !initial_tsv.is_empty()
-		{
+		if !initial_tsv.is_empty() {
 			fs::write(&tsv_path, initial_tsv).expect("write tsv");
 		}
 		let runtime = ControlApiRuntime {
@@ -721,7 +633,7 @@ mod tests
 					label: Some("Sample".into()),
 					role: Some("dictionary".into()),
 					editable: true,
-					quick_add: None
+					quick_add: None,
 				},
 				ControlTableEntry {
 					key: "readonly".into(),
@@ -729,15 +641,14 @@ mod tests
 					label: None,
 					role: None,
 					editable: false,
-					quick_add: None
+					quick_add: None,
 				},
-			]
+			],
 		};
 		(runtime, tmp, tsv_path)
 	}
 
-	fn sample_headerful() -> &'static str
-	{
+	fn sample_headerful() -> &'static str {
 		concat!(
 			"source\treplacement\tkind\tpriority\tis_locked\tenabled\tby\tcreated_at\texpires_at\ttags\tnote\n",
 			"hello\thi\tliteral\t0\tfalse\ttrue\ttest\t2026-01-01T00:00:00Z\t\t\t\n",
@@ -746,11 +657,9 @@ mod tests
 	}
 
 	#[actix_web::test]
-	async fn list_tables_returns_catalog()
-	{
+	async fn list_tables_returns_catalog() {
 		let (runtime, _tmp, _path) = setup_runtime(sample_headerful());
-		let app =
-			test::init_service(App::new().app_data(Data::new(runtime)).service(list_tables)).await;
+		let app = test::init_service(App::new().app_data(Data::new(runtime)).service(list_tables)).await;
 		let req = test::TestRequest::get().uri("/tables").to_request();
 		let resp = test::call_service(&app, req).await;
 		assert_eq!(resp.status(), StatusCode::OK);
@@ -761,11 +670,9 @@ mod tests
 	}
 
 	#[actix_web::test]
-	async fn get_table_returns_rows_and_hash()
-	{
+	async fn get_table_returns_rows_and_hash() {
 		let (runtime, _tmp, _path) = setup_runtime(sample_headerful());
-		let app =
-			test::init_service(App::new().app_data(Data::new(runtime)).service(get_table)).await;
+		let app = test::init_service(App::new().app_data(Data::new(runtime)).service(get_table)).await;
 		let req = test::TestRequest::get().uri("/table/sample").to_request();
 		let resp = test::call_service(&app, req).await;
 		assert_eq!(resp.status(), StatusCode::OK);
@@ -778,27 +685,18 @@ mod tests
 	}
 
 	#[actix_web::test]
-	async fn get_table_unknown_key_is_404()
-	{
+	async fn get_table_unknown_key_is_404() {
 		let (runtime, _tmp, _path) = setup_runtime(sample_headerful());
-		let app =
-			test::init_service(App::new().app_data(Data::new(runtime)).service(get_table)).await;
+		let app = test::init_service(App::new().app_data(Data::new(runtime)).service(get_table)).await;
 		let req = test::TestRequest::get().uri("/table/unknown").to_request();
 		let resp = test::call_service(&app, req).await;
 		assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 	}
 
 	#[actix_web::test]
-	async fn put_with_if_match_success_and_conflict()
-	{
+	async fn put_with_if_match_success_and_conflict() {
 		let (runtime, _tmp, path) = setup_runtime(sample_headerful());
-		let app = test::init_service(
-			App::new()
-				.app_data(Data::new(runtime))
-				.service(get_table)
-				.service(put_table)
-		)
-		.await;
+		let app = test::init_service(App::new().app_data(Data::new(runtime)).service(get_table).service(put_table)).await;
 		// 現 hash を取得
 		let resp = test::call_service(&app, test::TestRequest::get().uri("/table/sample").to_request()).await;
 		let dto: TableFileDto = test::read_body_json(resp).await;
@@ -839,15 +737,9 @@ mod tests
 	}
 
 	#[actix_web::test]
-	async fn post_entry_appends_row()
-	{
+	async fn post_entry_appends_row() {
 		let (runtime, _tmp, _path) = setup_runtime(sample_headerful());
-		let app = test::init_service(
-			App::new()
-				.app_data(Data::new(runtime))
-				.service(post_entry)
-		)
-		.await;
+		let app = test::init_service(App::new().app_data(Data::new(runtime)).service(post_entry)).await;
 		let body = serde_json::json!({
 			"values": {
 				"source": "new", "replacement": "shiny", "kind": "literal", "priority": 5,
@@ -855,10 +747,7 @@ mod tests
 				"expires_at": null, "tags": "test", "note": "phi-1"
 			}
 		});
-		let req = test::TestRequest::post()
-			.uri("/table/sample/entry")
-			.set_json(&body)
-			.to_request();
+		let req = test::TestRequest::post().uri("/table/sample/entry").set_json(&body).to_request();
 		let resp = test::call_service(&app, req).await;
 		assert_eq!(resp.status(), StatusCode::OK);
 		let res: MutationResponse = test::read_body_json(resp).await;
@@ -867,15 +756,9 @@ mod tests
 	}
 
 	#[actix_web::test]
-	async fn delete_locked_row_is_403()
-	{
+	async fn delete_locked_row_is_403() {
 		let (runtime, _tmp, _path) = setup_runtime(sample_headerful());
-		let app = test::init_service(
-			App::new()
-				.app_data(Data::new(runtime))
-				.service(delete_entry)
-		)
-		.await;
+		let app = test::init_service(App::new().app_data(Data::new(runtime)).service(delete_entry)).await;
 		// row_index = 1 の行は is_locked = true
 		let req = test::TestRequest::delete().uri("/table/sample/entry/1").to_request();
 		let resp = test::call_service(&app, req).await;
@@ -883,48 +766,26 @@ mod tests
 	}
 
 	#[actix_web::test]
-	async fn readonly_table_rejects_mutation()
-	{
+	async fn readonly_table_rejects_mutation() {
 		let (runtime, _tmp, _path) = setup_runtime(sample_headerful());
-		let app = test::init_service(
-			App::new()
-				.app_data(Data::new(runtime))
-				.service(post_entry)
-		)
-		.await;
+		let app = test::init_service(App::new().app_data(Data::new(runtime)).service(post_entry)).await;
 		let body = serde_json::json!({"values": {"source": "x", "replacement": "y"}});
-		let req = test::TestRequest::post()
-			.uri("/table/readonly/entry")
-			.set_json(&body)
-			.to_request();
+		let req = test::TestRequest::post().uri("/table/readonly/entry").set_json(&body).to_request();
 		let resp = test::call_service(&app, req).await;
 		assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 	}
 
 	#[actix_web::test]
-	async fn patch_unlocked_row_updates_value()
-	{
+	async fn patch_unlocked_row_updates_value() {
 		let (runtime, _tmp, _path) = setup_runtime(sample_headerful());
-		let app = test::init_service(
-			App::new()
-				.app_data(Data::new(runtime))
-				.service(patch_entry)
-				.service(get_table)
-		)
-		.await;
+		let app = test::init_service(App::new().app_data(Data::new(runtime)).service(patch_entry).service(get_table)).await;
 		let body = serde_json::json!({"values": {"replacement": "HOWDY"}});
-		let req = test::TestRequest::patch()
-			.uri("/table/sample/entry/0")
-			.set_json(&body)
-			.to_request();
+		let req = test::TestRequest::patch().uri("/table/sample/entry/0").set_json(&body).to_request();
 		let resp = test::call_service(&app, req).await;
 		assert_eq!(resp.status(), StatusCode::OK);
 
 		let resp = test::call_service(&app, test::TestRequest::get().uri("/table/sample").to_request()).await;
 		let dto: TableFileDto = test::read_body_json(resp).await;
-		assert_eq!(
-			dto.rows[0].values.get("replacement").and_then(|v| v.as_str()),
-			Some("HOWDY")
-		);
+		assert_eq!(dto.rows[0].values.get("replacement").and_then(|v| v.as_str()), Some("HOWDY"));
 	}
 }

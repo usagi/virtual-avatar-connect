@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### スタイル（stable rustfmt 一括適用）
+
+- `.rustfmt.toml`（stable 互換）に沿い、`src/**` / `build.rs` / `tests/jiff_smoke.rs` を **`cargo fmt` で全面整形**。ロジック変更なし。`cargo test --lib` 全通過で確認。
+
 ### Phase M0 — motion 層: VMC 生 UDP パススルー
 
 - **設計**: [`docs/roadmap/v2-vmc-and-restructure.md`](docs/roadmap/v2-vmc-and-restructure.md) を親計画として `docs/roadmap.md` **Active（Phase M）** にリンク。M0 の正本は [`docs/roadmap/phase-mu-vmc-motion-m0.md`](docs/roadmap/phase-mu-vmc-motion-m0.md)。

@@ -580,10 +580,7 @@ mod tests {
 	fn dk_minus_k_is_error() {
 		let dk = Quantity::of(10.0, Unit::kelvin_delta());
 		let k = Quantity::of(300.0, Unit::kelvin());
-		assert!(matches!(
-			dk.try_sub(&k),
-			Err(QuantityArithError::AbsoluteTemperature { .. })
-		));
+		assert!(matches!(dk.try_sub(&k), Err(QuantityArithError::AbsoluteTemperature { .. })));
 	}
 
 	#[test]
@@ -607,24 +604,15 @@ mod tests {
 	fn k_times_anything_is_error() {
 		let k = Quantity::of(300.0, Unit::kelvin());
 		let two = Quantity::dimensionless(2.0);
-		assert!(matches!(
-			k.try_mul(&two),
-			Err(QuantityArithError::AbsoluteTemperature { .. })
-		));
-		assert!(matches!(
-			two.try_mul(&k),
-			Err(QuantityArithError::AbsoluteTemperature { .. })
-		));
+		assert!(matches!(k.try_mul(&two), Err(QuantityArithError::AbsoluteTemperature { .. })));
+		assert!(matches!(two.try_mul(&k), Err(QuantityArithError::AbsoluteTemperature { .. })));
 	}
 
 	#[test]
 	fn k_divided_by_anything_is_error() {
 		let k = Quantity::of(300.0, Unit::kelvin());
 		let s = Quantity::of(2.0, Unit::second());
-		assert!(matches!(
-			k.try_div(&s),
-			Err(QuantityArithError::AbsoluteTemperature { .. })
-		));
+		assert!(matches!(k.try_div(&s), Err(QuantityArithError::AbsoluteTemperature { .. })));
 	}
 
 	#[test]

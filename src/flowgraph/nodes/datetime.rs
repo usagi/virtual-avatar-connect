@@ -1,4 +1,4 @@
-﻿//! DateTime nodes (Phase \u{03C0}-5).
+//! DateTime nodes (Phase \u{03C0}-5).
 //!
 //! 8 PureNode \u{3067} DateTime \u{6f14}\u{7b97}\u{3092}\u{63d0}\u{4f9b}:
 //!
@@ -23,8 +23,8 @@
 use crate::datetime::DateTime;
 use crate::flowgraph::config::parse_offset_str;
 use crate::flowgraph::node::{
-	get_required_datetime, get_required_quantity, get_required_string, ExecFireSet, InputMap, NodeDescriptor,
-	NodeExecError, NodeOutput, NodeSpec, PortSpec, PropertySpec, PureNode,
+	get_required_datetime, get_required_quantity, get_required_string, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput,
+	NodeSpec, PortSpec, PropertySpec, PureNode,
 };
 use crate::flowgraph::quantity::{Dimension, Quantity, SIPrefix, Unit};
 use crate::flowgraph::socket::{SocketType, SocketValue};
@@ -66,7 +66,9 @@ fn quantity_to_signed_duration(q: &Quantity, op: &str) -> Result<SignedDuration,
 		)));
 	}
 	SignedDuration::try_from_secs_f64(secs).map_err(|e| {
-		NodeExecError::Generic(anyhow::anyhow!("{op}: duration {secs}s \u{3092} SignedDuration \u{306b}\u{5909}\u{63db}\u{3067}\u{304d}\u{307e}\u{305b}\u{3093}: {e}"))
+		NodeExecError::Generic(anyhow::anyhow!(
+			"{op}: duration {secs}s \u{3092} SignedDuration \u{306b}\u{5909}\u{63db}\u{3067}\u{304d}\u{307e}\u{305b}\u{3093}: {e}"
+		))
 	})
 }
 
@@ -131,12 +133,7 @@ impl NodeDescriptor for DateTimeNowNode {
 
 #[async_trait]
 impl PureNode for DateTimeNowNode {
-	async fn compute(
-		&self,
-		_p: &InputMap,
-		_inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _p: &InputMap, _inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		Ok(NodeOutput::new().set_data("datetime", SocketValue::DateTime(DateTime::now())))
 	}
 }
@@ -191,17 +188,9 @@ impl NodeDescriptor for DateTimeParseNode {
 
 #[async_trait]
 impl PureNode for DateTimeParseNode {
-	async fn compute(
-		&self,
-		properties: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let s = get_required_string(inputs, "s")?;
-		let require_tz = properties
-			.get("require_timezone")
-			.and_then(|v| v.as_bool().ok())
-			.unwrap_or(false);
+		let require_tz = properties.get("require_timezone").and_then(|v| v.as_bool().ok()).unwrap_or(false);
 		let default_tz_str = properties
 			.get("default_timezone")
 			.and_then(|v| v.as_str().ok())
@@ -222,9 +211,8 @@ impl PureNode for DateTimeParseNode {
 				"datetime.parse: default_timezone '{default_tz_str}' \u{306e}\u{66f8}\u{5f0f}\u{4e0d}\u{6b63}: {e}"
 			))
 		})?;
-		let dt = DateTime::parse_with_default_tz(&s, default_tz).map_err(|e| {
-			NodeExecError::Generic(anyhow::anyhow!("datetime.parse: {e}"))
-		})?;
+		let dt =
+			DateTime::parse_with_default_tz(&s, default_tz).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("datetime.parse: {e}")))?;
 		Ok(NodeOutput::new().set_data("datetime", SocketValue::DateTime(dt)))
 	}
 }
@@ -291,12 +279,7 @@ impl NodeDescriptor for DateTimeFormatNode {
 
 #[async_trait]
 impl PureNode for DateTimeFormatNode {
-	async fn compute(
-		&self,
-		properties: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let dt = get_required_datetime(inputs, "datetime")?;
 		let format = properties
 			.get("format")
@@ -308,11 +291,7 @@ impl PureNode for DateTimeFormatNode {
 			.and_then(|v| v.as_str().ok())
 			.unwrap_or("")
 			.to_string();
-		let tz_str = properties
-			.get("timezone")
-			.and_then(|v| v.as_str().ok())
-			.unwrap_or("")
-			.to_string();
+		let tz_str = properties.get("timezone").and_then(|v| v.as_str().ok()).unwrap_or("").to_string();
 
 		let offset = parse_offset_str(&tz_str).map_err(|e| {
 			NodeExecError::Generic(anyhow::anyhow!(
@@ -418,18 +397,14 @@ impl NodeDescriptor for DateTimeAddDurationNode {
 
 #[async_trait]
 impl PureNode for DateTimeAddDurationNode {
-	async fn compute(
-		&self,
-		_p: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let dt = get_required_datetime(inputs, "datetime")?;
 		let q = get_required_quantity(inputs, "duration")?;
 		let d = quantity_to_signed_duration(q, "datetime.add_duration")?;
-		let result = dt.timestamp().checked_add(d).map_err(|e| {
-			NodeExecError::Generic(anyhow::anyhow!("datetime.add_duration: overflow: {e}"))
-		})?;
+		let result = dt
+			.timestamp()
+			.checked_add(d)
+			.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("datetime.add_duration: overflow: {e}")))?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::DateTime(DateTime::from(result))))
 	}
 }
@@ -463,18 +438,14 @@ impl NodeDescriptor for DateTimeSubDurationNode {
 
 #[async_trait]
 impl PureNode for DateTimeSubDurationNode {
-	async fn compute(
-		&self,
-		_p: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let dt = get_required_datetime(inputs, "datetime")?;
 		let q = get_required_quantity(inputs, "duration")?;
 		let d = quantity_to_signed_duration(q, "datetime.sub_duration")?;
-		let result = dt.timestamp().checked_sub(d).map_err(|e| {
-			NodeExecError::Generic(anyhow::anyhow!("datetime.sub_duration: overflow: {e}"))
-		})?;
+		let result = dt
+			.timestamp()
+			.checked_sub(d)
+			.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("datetime.sub_duration: overflow: {e}")))?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::DateTime(DateTime::from(result))))
 	}
 }
@@ -508,12 +479,7 @@ impl NodeDescriptor for DateTimeDiffNode {
 
 #[async_trait]
 impl PureNode for DateTimeDiffNode {
-	async fn compute(
-		&self,
-		_p: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let lhs = get_required_datetime(inputs, "lhs")?;
 		let rhs = get_required_datetime(inputs, "rhs")?;
 		let d: SignedDuration = lhs.timestamp().duration_since(rhs.timestamp());
@@ -551,12 +517,7 @@ impl NodeDescriptor for DateTimeEpochMsNode {
 
 #[async_trait]
 impl PureNode for DateTimeEpochMsNode {
-	async fn compute(
-		&self,
-		_p: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let dt = get_required_datetime(inputs, "datetime")?;
 		let ms = dt.timestamp().as_millisecond();
 		let q = Quantity::of(ms as f64, millisecond_unit());
@@ -591,12 +552,7 @@ impl NodeDescriptor for DateTimeFromEpochMsNode {
 
 #[async_trait]
 impl PureNode for DateTimeFromEpochMsNode {
-	async fn compute(
-		&self,
-		_p: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "millis")?;
 		let ms = quantity_to_epoch_ms(q, "datetime.from_epoch_ms")?;
 		let ts = Timestamp::from_millisecond(ms).map_err(|e| {
@@ -703,7 +659,10 @@ mod tests {
 				&ExecFireSet::new(),
 			)
 			.await;
-		assert!(r.is_err(), "require_timezone=true \u{3067} naive \u{5165}\u{529b}\u{306f} error \u{306b}\u{306a}\u{308b}\u{306f}\u{305a}");
+		assert!(
+			r.is_err(),
+			"require_timezone=true \u{3067} naive \u{5165}\u{529b}\u{306f} error \u{306b}\u{306a}\u{308b}\u{306f}\u{305a}"
+		);
 	}
 
 	#[tokio::test]
@@ -730,10 +689,7 @@ mod tests {
 			)
 			.await
 			.unwrap();
-		assert_eq!(
-			out.data.get("text").unwrap().as_str().unwrap(),
-			"2026-04-24T12:34:56Z"
-		);
+		assert_eq!(out.data.get("text").unwrap().as_str().unwrap(), "2026-04-24T12:34:56Z");
 	}
 
 	#[tokio::test]
@@ -749,10 +705,7 @@ mod tests {
 			)
 			.await
 			.unwrap();
-		assert_eq!(
-			out.data.get("text").unwrap().as_str().unwrap(),
-			"2026-04-24T21:34:56+09:00"
-		);
+		assert_eq!(out.data.get("text").unwrap().as_str().unwrap(), "2026-04-24T21:34:56+09:00");
 	}
 
 	#[tokio::test]
@@ -765,10 +718,7 @@ mod tests {
 			)
 			.await
 			.unwrap();
-		assert_eq!(
-			out.data.get("text").unwrap().as_str().unwrap(),
-			"20260424T123456Z"
-		);
+		assert_eq!(out.data.get("text").unwrap().as_str().unwrap(), "20260424T123456Z");
 	}
 
 	#[tokio::test]
@@ -811,10 +761,7 @@ mod tests {
 			)
 			.await
 			.unwrap();
-		assert_eq!(
-			out.data.get("text").unwrap().as_str().unwrap(),
-			"2026/04/24 21:34:56"
-		);
+		assert_eq!(out.data.get("text").unwrap().as_str().unwrap(), "2026/04/24 21:34:56");
 	}
 
 	#[tokio::test]
@@ -826,7 +773,10 @@ mod tests {
 				&ExecFireSet::new(),
 			)
 			.await;
-		assert!(r.is_err(), "custom \u{30e2}\u{30fc}\u{30c9}\u{3067} custom_format \u{304c}\u{7a7a}\u{306a}\u{3089} error");
+		assert!(
+			r.is_err(),
+			"custom \u{30e2}\u{30fc}\u{30c9}\u{3067} custom_format \u{304c}\u{7a7a}\u{306a}\u{3089} error"
+		);
 	}
 
 	#[tokio::test]
@@ -962,12 +912,9 @@ mod tests {
 		let out = DateTimeDiffNode
 			.compute(
 				&InputMap::new(),
-				&[
-					dt_input("lhs", "2026-04-24T12:35:56Z"),
-					dt_input("rhs", "2026-04-24T12:34:56Z"),
-				]
-				.into_iter()
-				.collect(),
+				&[dt_input("lhs", "2026-04-24T12:35:56Z"), dt_input("rhs", "2026-04-24T12:34:56Z")]
+					.into_iter()
+					.collect(),
 				&ExecFireSet::new(),
 			)
 			.await
@@ -982,12 +929,9 @@ mod tests {
 		let out = DateTimeDiffNode
 			.compute(
 				&InputMap::new(),
-				&[
-					dt_input("lhs", "2026-04-24T12:34:00Z"),
-					dt_input("rhs", "2026-04-24T12:34:30Z"),
-				]
-				.into_iter()
-				.collect(),
+				&[dt_input("lhs", "2026-04-24T12:34:00Z"), dt_input("rhs", "2026-04-24T12:34:30Z")]
+					.into_iter()
+					.collect(),
 				&ExecFireSet::new(),
 			)
 			.await
@@ -1109,9 +1053,7 @@ mod tests {
 		let out1 = DateTimeFromEpochMsNode
 			.compute(
 				&InputMap::new(),
-				&[q_input("millis", 1_714__000_000_123.0, millisecond_unit())]
-					.into_iter()
-					.collect(),
+				&[q_input("millis", 1_714__000_000_123.0, millisecond_unit())].into_iter().collect(),
 				&ExecFireSet::new(),
 			)
 			.await

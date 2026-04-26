@@ -30,8 +30,8 @@
 //! → 一時ファイル削除、の順。60 秒で timeout し、`TtsError::Synthesis` に畳む。
 
 use super::super::driver::{
-	extra_i64, extra_str, maybe_save_wav, resolve_save_path, AudioContext, TtsDriver, TtsError, TtsOutcome,
-	TtsParamEntry, TtsParamSchema, TtsParamType, TtsRequest,
+	extra_i64, extra_str, maybe_save_wav, resolve_save_path, AudioContext, TtsDriver, TtsError, TtsOutcome, TtsParamEntry, TtsParamSchema,
+	TtsParamType, TtsRequest,
 };
 use async_trait::async_trait;
 use std::path::PathBuf;
@@ -81,13 +81,10 @@ fn build_args(req: &TtsRequest, output_path: &str) -> Vec<String> {
 	args.push("-o".into());
 	args.push(output_path.to_string());
 
-	let narrator = extra_str(&req.extra, "narrator").filter(|s| !s.is_empty()).map(|s| s.to_string()).or_else(|| {
-		if req.voice.is_empty() {
-			None
-		} else {
-			Some(req.voice.clone())
-		}
-	});
+	let narrator = extra_str(&req.extra, "narrator")
+		.filter(|s| !s.is_empty())
+		.map(|s| s.to_string())
+		.or_else(|| if req.voice.is_empty() { None } else { Some(req.voice.clone()) });
 	if let Some(n) = narrator {
 		args.push("-n".into());
 		args.push(n);
@@ -98,14 +95,17 @@ fn build_args(req: &TtsRequest, output_path: &str) -> Vec<String> {
 		args.push(emo.to_string());
 	}
 
-	let speed = extra_i64(&req.extra, "speed_raw").map(|v| v.clamp(50, 200) as i32).unwrap_or_else(|| map_speed(req.speed));
+	let speed = extra_i64(&req.extra, "speed_raw")
+		.map(|v| v.clamp(50, 200) as i32)
+		.unwrap_or_else(|| map_speed(req.speed));
 	if speed != 100 {
 		args.push("--speed".into());
 		args.push(speed.to_string());
 	}
 
-	let pitch =
-		extra_i64(&req.extra, "pitch_raw").map(|v| v.clamp(-300, 300) as i32).unwrap_or_else(|| map_pitch(req.pitch));
+	let pitch = extra_i64(&req.extra, "pitch_raw")
+		.map(|v| v.clamp(-300, 300) as i32)
+		.unwrap_or_else(|| map_pitch(req.pitch));
 	if pitch != 0 {
 		args.push("--pitch".into());
 		args.push(pitch.to_string());
@@ -130,10 +130,26 @@ impl TtsDriver for VoicepeakDriver {
 	fn params_schema(&self) -> TtsParamSchema {
 		TtsParamSchema {
 			entries: vec![
-				TtsParamEntry { key: "narrator", ty: TtsParamType::String, description: "voice 入力の代わりにナレーターを直接指定（voice より優先）" },
-				TtsParamEntry { key: "emotion", ty: TtsParamType::String, description: "CLI -e に渡す感情 CSV（例: \"happy=50,angry=10\"）" },
-				TtsParamEntry { key: "speed_raw", ty: TtsParamType::Int, description: "--speed を正規化せず直接指定（50..=200）" },
-				TtsParamEntry { key: "pitch_raw", ty: TtsParamType::Int, description: "--pitch を正規化せず直接指定（-300..=300）" },
+				TtsParamEntry {
+					key: "narrator",
+					ty: TtsParamType::String,
+					description: "voice 入力の代わりにナレーターを直接指定（voice より優先）",
+				},
+				TtsParamEntry {
+					key: "emotion",
+					ty: TtsParamType::String,
+					description: "CLI -e に渡す感情 CSV（例: \"happy=50,angry=10\"）",
+				},
+				TtsParamEntry {
+					key: "speed_raw",
+					ty: TtsParamType::Int,
+					description: "--speed を正規化せず直接指定（50..=200）",
+				},
+				TtsParamEntry {
+					key: "pitch_raw",
+					ty: TtsParamType::Int,
+					description: "--pitch を正規化せず直接指定（-300..=300）",
+				},
 			],
 		}
 	}
@@ -151,10 +167,9 @@ impl TtsDriver for VoicepeakDriver {
 		let out_str = out_path.to_string_lossy().to_string();
 		let args = build_args(&req, &out_str);
 
-		let spawn_result =
-			tokio::time::timeout(SPAWN_TIMEOUT, Command::new(&exe).args(&args).output()).await.map_err(|_| {
-				TtsError::Synthesis(format!("'{exe}' timed out after {}s", SPAWN_TIMEOUT.as_secs()))
-			})?;
+		let spawn_result = tokio::time::timeout(SPAWN_TIMEOUT, Command::new(&exe).args(&args).output())
+			.await
+			.map_err(|_| TtsError::Synthesis(format!("'{exe}' timed out after {}s", SPAWN_TIMEOUT.as_secs())))?;
 		let output = spawn_result.map_err(|e| {
 			// `Command::output` が失敗 = executable 起動失敗（NotFound 等）
 			TtsError::Io(format!("spawn '{exe}' failed: {e}"))
@@ -177,7 +192,7 @@ impl TtsDriver for VoicepeakDriver {
 			Err(e) => {
 				let _ = tokio::fs::remove_file(&out_path).await;
 				return Err(TtsError::Io(format!("read voicepeak output '{}': {e}", out_path.display())));
-			},
+			}
 		};
 		let _ = tokio::fs::remove_file(&out_path).await;
 
@@ -187,8 +202,15 @@ impl TtsDriver for VoicepeakDriver {
 
 		let played = audio.play_wav(wav.clone()).await?;
 		let saved = maybe_save_wav(&wav, &req.save_path).await?;
-		let audio_path = if saved.is_empty() { resolve_save_path(&req.save_path) } else { saved };
-		Ok(TtsOutcome { played, audio_path: if req.save_path.is_empty() { String::new() } else { audio_path } })
+		let audio_path = if saved.is_empty() {
+			resolve_save_path(&req.save_path)
+		} else {
+			saved
+		};
+		Ok(TtsOutcome {
+			played,
+			audio_path: if req.save_path.is_empty() { String::new() } else { audio_path },
+		})
 	}
 }
 
@@ -275,14 +297,16 @@ mod tests {
 	fn resolve_executable_endpoint_wins_over_deprecated_executable() {
 		let mut req = base_req();
 		req.endpoint = "C:/from-endpoint.exe".into();
-		req.extra.insert("executable".into(), SocketValue::String("C:/from-extra.exe".into()));
+		req.extra
+			.insert("executable".into(), SocketValue::String("C:/from-extra.exe".into()));
 		assert_eq!(resolve_executable(&req), "C:/from-endpoint.exe");
 	}
 
 	#[test]
 	fn resolve_executable_deprecated_extra_when_endpoint_empty() {
 		let mut req = base_req();
-		req.extra.insert("executable".into(), SocketValue::String("C:/from-extra.exe".into()));
+		req.extra
+			.insert("executable".into(), SocketValue::String("C:/from-extra.exe".into()));
 		assert_eq!(resolve_executable(&req), "C:/from-extra.exe");
 	}
 

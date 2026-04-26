@@ -22,12 +22,10 @@
 //! import は `dry_run=true` でプレビューを返し、衝突一覧・dangling 一覧・進入予定の file 一覧を提示。
 //! GUI はこれを見てから `dry_run=false` で本番 import を実行する。
 
-use crate::flowgraph::fragment::paste::{
-	paste_fragment, PasteError, PasteOptions, PasteRequest, PasteTarget,
-};
+use crate::flowgraph::fragment::paste::{paste_fragment, PasteError, PasteOptions, PasteRequest, PasteTarget};
 use crate::flowgraph::fragment::{
-	copy_targets, parse_fragment, serialize_fragment, CopyError, CopyRequest, Fragment,
-	FragmentDangling, FragmentFile, FragmentHeader, FragmentScope, SCRATCH_PATH,
+	copy_targets, parse_fragment, serialize_fragment, CopyError, CopyRequest, Fragment, FragmentDangling, FragmentFile, FragmentHeader,
+	FragmentScope, SCRATCH_PATH,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -36,9 +34,7 @@ use std::path::{Path, PathBuf};
 
 /// 拒否する危険拡張子（spec §9.3）。
 /// 大文字小文字は区別せず小文字で比較する。
-const DENY_EXTENSIONS: &[&str] = &[
-	"exe", "dll", "bat", "ps1", "sh", "cmd", "com", "scr", "msi", "app", "apk", "jar",
-];
+const DENY_EXTENSIONS: &[&str] = &["exe", "dll", "bat", "ps1", "sh", "cmd", "com", "scr", "msi", "app", "apk", "jar"];
 
 /// ZIP 内で flowgraph ファイルを置くフォルダ（spec §9.3）。
 const ZIP_FLOWGRAPH_PREFIX: &str = "flowgraph/";
@@ -107,8 +103,7 @@ pub fn export_zip(root: &Path, req: &CopyRequest) -> Result<Vec<u8>, ZipExportEr
 		for ff in &fragment.files {
 			let zip_path = format!("{ZIP_FLOWGRAPH_PREFIX}{}", ff.path);
 			zw.start_file(&zip_path, opts)?;
-			let file_toml = serialize_fragment_file_as_flowgraph_toml(ff)
-				.map_err(ZipExportError::Serialize)?;
+			let file_toml = serialize_fragment_file_as_flowgraph_toml(ff).map_err(ZipExportError::Serialize)?;
 			zw.write_all(file_toml.as_bytes())?;
 		}
 
@@ -202,11 +197,7 @@ pub struct ZipImportEntry {
 }
 
 /// ZIP バイナリを import（dry_run or 本番）。
-pub fn import_zip(
-	root: &Path,
-	bytes: &[u8],
-	opts: &ZipImportOptions,
-) -> Result<ZipImportOutcome, ZipImportError> {
+pub fn import_zip(root: &Path, bytes: &[u8], opts: &ZipImportOptions) -> Result<ZipImportOutcome, ZipImportError> {
 	let reader = Cursor::new(bytes);
 	let mut archive = zip::ZipArchive::new(reader)?;
 
@@ -229,15 +220,11 @@ pub fn import_zip(
 		if let Some(mode) = entry.unix_mode() {
 			// S_IFLNK = 0o120000
 			if mode & 0o170000 == 0o120000 {
-				return Err(ZipImportError::UnsafeEntry(format!(
-					"symlink を拒否: {raw_name}"
-				)));
+				return Err(ZipImportError::UnsafeEntry(format!("symlink を拒否: {raw_name}")));
 			}
 		}
 		if has_deny_extension(&raw_name) {
-			return Err(ZipImportError::UnsafeEntry(format!(
-				"危険な拡張子を拒否: {raw_name}"
-			)));
+			return Err(ZipImportError::UnsafeEntry(format!("危険な拡張子を拒否: {raw_name}")));
 		}
 
 		if raw_name == MANIFEST_NAME {
@@ -340,11 +327,7 @@ pub fn import_zip(
 
 	Ok(ZipImportOutcome::Report(ZipImportReport {
 		manifest: rebuilt.header,
-		written_files: report
-			.written_files
-			.iter()
-			.map(|w| w.path.clone())
-			.collect(),
+		written_files: report.written_files.iter().map(|w| w.path.clone()).collect(),
 		written_companions,
 		danglings_unresolved: report.unresolved_danglings,
 		target_prefix,
@@ -403,9 +386,7 @@ fn sanitize_target_prefix(s: &str) -> Result<String, ZipImportError> {
 	}
 	for seg in t.split('/') {
 		if seg == ".." || seg == "." || seg.is_empty() {
-			return Err(ZipImportError::UnsafeEntry(format!(
-				"target_prefix 不正: '{s}'"
-			)));
+			return Err(ZipImportError::UnsafeEntry(format!("target_prefix 不正: '{s}'")));
 		}
 	}
 	Ok(t)
@@ -476,10 +457,7 @@ mod tests {
 		static SEQ: AtomicU64 = AtomicU64::new(0);
 		let ns = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
 		let seq = SEQ.fetch_add(1, Ordering::Relaxed);
-		let p = std::env::temp_dir().join(format!(
-			"vac-fg-zip-{}-{ns}-{seq}",
-			std::process::id()
-		));
+		let p = std::env::temp_dir().join(format!("vac-fg-zip-{}-{ns}-{seq}", std::process::id()));
 		fs::create_dir_all(&p).unwrap();
 		TempDir(p)
 	}
@@ -536,9 +514,7 @@ value = "y"
 
 		// zip 内に manifest と 2 ファイルがある。
 		let mut ar = zip::ZipArchive::new(Cursor::new(&bytes)).unwrap();
-		let mut names: Vec<String> = (0..ar.len())
-			.map(|i| ar.by_index(i).unwrap().name().to_string())
-			.collect();
+		let mut names: Vec<String> = (0..ar.len()).map(|i| ar.by_index(i).unwrap().name().to_string()).collect();
 		names.sort();
 		assert!(names.iter().any(|n| n == MANIFEST_NAME));
 		assert!(names.iter().any(|n| n == "flowgraph/tts/main.flowgraph.toml"));
@@ -597,8 +573,7 @@ value = "y"
 				danglings: vec![],
 			};
 			zw.start_file(MANIFEST_NAME, opts).unwrap();
-			zw.write_all(serialize_fragment(&frag).unwrap().as_bytes())
-				.unwrap();
+			zw.write_all(serialize_fragment(&frag).unwrap().as_bytes()).unwrap();
 			zw.start_file("flowgraph/evil.exe", opts).unwrap();
 			zw.write_all(b"MZ...").unwrap();
 			zw.finish().unwrap();
@@ -631,8 +606,7 @@ value = "y"
 				danglings: vec![],
 			};
 			zw.start_file(MANIFEST_NAME, opts).unwrap();
-			zw.write_all(serialize_fragment(&frag).unwrap().as_bytes())
-				.unwrap();
+			zw.write_all(serialize_fragment(&frag).unwrap().as_bytes()).unwrap();
 			zw.start_file("flowgraph/../evil.flowgraph.toml", opts).unwrap();
 			zw.write_all(b"").unwrap();
 			zw.finish().unwrap();
@@ -690,17 +664,13 @@ value = "x"
 				for i in 0..ar.len() {
 					let mut e = ar.by_index(i).unwrap();
 					let name = e.name().to_string();
-					zw.start_file(&name, zip::write::SimpleFileOptions::default())
-						.unwrap();
+					zw.start_file(&name, zip::write::SimpleFileOptions::default()).unwrap();
 					let mut s = Vec::new();
 					e.read_to_end(&mut s).unwrap();
 					zw.write_all(&s).unwrap();
 				}
-				zw.start_file(
-					"flowgraph/README.md",
-					zip::write::SimpleFileOptions::default(),
-				)
-				.unwrap();
+				zw.start_file("flowgraph/README.md", zip::write::SimpleFileOptions::default())
+					.unwrap();
 				zw.write_all(b"# hi").unwrap();
 				zw.finish().unwrap();
 			}

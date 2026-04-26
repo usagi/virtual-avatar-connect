@@ -12,8 +12,8 @@ use std::path::Path;
 
 /// OCR 対象となる画像ソースを表す。`data_urls::get` / `local::get` / `web::get` の戻り値型。
 pub enum PathOrTempFileWithMime {
- Path(String, String),
- TempFile(TempFile, String),
+	Path(String, String),
+	TempFile(TempFile, String),
 }
 
 /// 画像ファイルを Windows Media OCR で認識し、テキストを返す。
@@ -28,8 +28,6 @@ pub enum PathOrTempFileWithMime {
 /// `on_error` が発火する。δ-9.3 の GUI / Flowgraph 仕上げと同時に本実装を復活させる予定。
 #[cfg(target_os = "windows")]
 pub fn recognize<P: AsRef<Path>, M: AsRef<str>>(path: P, mime: M, lang: &str, lines: bool) -> Result<String> {
- let _ = (path.as_ref(), mime.as_ref(), lang, lines);
- anyhow::bail!(
-  "ocr::recognize: Windows Media OCR バインディングは windows crate 0.62 migration のため一時停止中。δ-9.3 で再実装予定。"
- )
+	let _ = (path.as_ref(), mime.as_ref(), lang, lines);
+	anyhow::bail!("ocr::recognize: Windows Media OCR バインディングは windows crate 0.62 migration のため一時停止中。δ-9.3 で再実装予定。")
 }

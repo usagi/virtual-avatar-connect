@@ -37,9 +37,7 @@ impl VoiceIngress {
 			let _ = self.join_handle.join();
 		});
 		if tokio::time::timeout(std::time::Duration::from_secs(3), join).await.is_err() {
-			log::warn!(
-				"《Flowgraph/Voice》 worker スレッドの join が 3 秒で完了しませんでした。OS に任せて続行します。"
-			);
+			log::warn!("《Flowgraph/Voice》 worker スレッドの join が 3 秒で完了しませんでした。OS に任せて続行します。");
 		}
 	}
 }
@@ -68,7 +66,11 @@ pub(crate) struct VoiceSink {
 #[allow(dead_code)]
 impl VoiceSink {
 	pub(crate) fn new(trigger: TriggerHandle, node_id: String, fixed_channel: String) -> Self {
-		Self { trigger, node_id, fixed_channel }
+		Self {
+			trigger,
+			node_id,
+			fixed_channel,
+		}
 	}
 
 	/// Vosk の部分認識テキスト。MVP では Flowgraph には流さず、上位のログ出力のみに任せる。
@@ -91,11 +93,7 @@ impl VoiceSink {
 			.with_override("__content__", SocketValue::String(text))
 			.with_override("__source_kind__", SocketValue::String(source_kind));
 		if let Err(e) = self.trigger.send(event) {
-			log::warn!(
-				"《Flowgraph/Voice》 trigger 送信失敗 node={}: {:?}",
-				self.node_id,
-				e
-			);
+			log::warn!("《Flowgraph/Voice》 trigger 送信失敗 node={}: {:?}", self.node_id, e);
 		}
 	}
 }
@@ -128,7 +126,7 @@ pub(crate) fn spawn_from_flowgraph(
 				);
 				None
 			}
-		},
+		}
 		"whisper" | "whisper-rs" => {
 			#[cfg(feature = "voice-whisper")]
 			{
@@ -142,7 +140,7 @@ pub(crate) fn spawn_from_flowgraph(
 				);
 				None
 			}
-		},
+		}
 		other => {
 			log::error!(
 				"《Flowgraph/Voice》: 不明な engine {:?}（vosk または whisper を指定してください）node={}",
@@ -150,6 +148,6 @@ pub(crate) fn spawn_from_flowgraph(
 				ingress.node_id
 			);
 			None
-		},
+		}
 	}
 }

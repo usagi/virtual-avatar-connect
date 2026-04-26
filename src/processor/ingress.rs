@@ -40,10 +40,7 @@ pub(crate) async fn prepare(
 		if !pc.is_enabled {
 			continue;
 		}
-		if matches!(
-			pc.feature.as_deref().map(|s| s.eq_ignore_ascii_case("voice")),
-			Some(true)
-		) {
+		if matches!(pc.feature.as_deref().map(|s| s.eq_ignore_ascii_case("voice")), Some(true)) {
 			log::warn!(
 				"《Voice》: [[processors]] feature=\"voice\" は δ-9 Part E.2 で廃止されました。\
 				 `flowgraph.ingress.voice` ノード + `flowgraph.local/*.flowgraph.toml` へ移行してください。id={:?}",
@@ -51,10 +48,7 @@ pub(crate) async fn prepare(
 			);
 			continue;
 		}
-		if !matches!(
-			pc.feature.as_deref().map(|s| s.eq_ignore_ascii_case("twitch")),
-			Some(true)
-		) {
+		if !matches!(pc.feature.as_deref().map(|s| s.eq_ignore_ascii_case("twitch")), Some(true)) {
 			continue;
 		}
 		// ζ-1: Twitch IRC ingress は Flowgraph bridge が担当する。V1 processor は deprecation。
@@ -77,9 +71,7 @@ pub(crate) async fn prepare(
 				.trim()
 				.trim_start_matches('#')
 				.to_lowercase();
-			let should_skip = !bl_key.is_empty()
-				&& !es.force_v1_loop
-				&& v2_eventsub_skip_broadcasters.contains(&bl_key);
+			let should_skip = !bl_key.is_empty() && !es.force_v1_loop && v2_eventsub_skip_broadcasters.contains(&bl_key);
 			if should_skip {
 				log::info!(
 					"《Twitch》: EventSub V1 ループは Flowgraph ingress により自動スキップされました \
@@ -93,7 +85,7 @@ pub(crate) async fn prepare(
 					Ok(r) => {
 						log::info!("《Twitch》: EventSub を開始します (processor id={:?})", pc.id);
 						eventsub_handles.push(twitch_eventsub::spawn_eventsub_loop(state.clone(), r));
-					},
+					}
 					Err(e) => log::error!("《Twitch》 EventSub: {:?}", e),
 				}
 			}
@@ -103,11 +95,7 @@ pub(crate) async fn prepare(
 	// トップレベル [twitch] の IRC フィールドは deprecated。Flowgraph 側で定義し直すよう促す。
 	if let Some(ref tw) = conf.twitch {
 		let irc_fields_set = !tw.username.trim().is_empty()
-			|| tw
-				.channel_to
-				.as_deref()
-				.map(|s| !s.trim().is_empty())
-				.unwrap_or(false)
+			|| tw.channel_to.as_deref().map(|s| !s.trim().is_empty()).unwrap_or(false)
 			|| tw.reads.as_ref().map(|r| !r.is_empty()).unwrap_or(false);
 		if irc_fields_set {
 			log::warn!(
@@ -126,9 +114,7 @@ pub(crate) async fn prepare(
 					.trim()
 					.trim_start_matches('#')
 					.to_lowercase();
-				let should_skip = !bl_key.is_empty()
-					&& !es.force_v1_loop
-					&& v2_eventsub_skip_broadcasters.contains(&bl_key);
+				let should_skip = !bl_key.is_empty() && !es.force_v1_loop && v2_eventsub_skip_broadcasters.contains(&bl_key);
 				if should_skip {
 					log::info!(
 						"《Twitch》: トップレベル EventSub V1 ループは Flowgraph ingress により自動スキップされました \
@@ -136,14 +122,12 @@ pub(crate) async fn prepare(
 						 `[twitch.eventsub].force_v1_loop = true` を設定してください。",
 						bl_key
 					);
-				} else if let Some(resolved) =
-					twitch_eventsub::resolve_from_top_level(&tw.username, tw.effective_channel_to(), es).await
-				{
+				} else if let Some(resolved) = twitch_eventsub::resolve_from_top_level(&tw.username, tw.effective_channel_to(), es).await {
 					match resolved {
 						Ok(r) => {
 							log::info!("《Twitch》: トップレベル EventSub を開始します");
 							eventsub_handles.push(twitch_eventsub::spawn_eventsub_loop(state.clone(), r));
-						},
+						}
 						Err(e) => log::error!("《Twitch》 EventSub: {:?}", e),
 					}
 				}

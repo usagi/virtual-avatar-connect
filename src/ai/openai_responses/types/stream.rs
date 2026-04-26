@@ -32,154 +32,109 @@ use super::response::{ErrorObject, OutputItem, Response};
 /// `Response` 型が `PartialEq` を実装しないため `StreamEvent` 自身も `PartialEq` を持たない。
 /// 比較したい場合はテストで `matches!` + 個別フィールドアクセスを使うこと。
 #[derive(Debug, Clone)]
-pub enum StreamEvent
-{
- /// `response.created` — stream 開始直後、response の初期 state。
- Created
- {
-  response: Response,
- },
- /// `response.in_progress` — stream 進行中の周期通知（content は増えていない）。
- InProgress
- {
-  response: Response,
- },
- /// `response.output_item.added` — 新しい output item（message / function_call /
- /// reasoning 等）が開始された。
- OutputItemAdded
- {
-  output_index: u32,
-  item: OutputItem,
- },
- /// `response.output_item.done` — output item が完成した。message の場合は最終テキスト、
- /// function_call の場合は引数を含む完成形。
- OutputItemDone
- {
-  output_index: u32,
-  item: OutputItem,
- },
- /// `response.output_text.delta` — assistant text の 1 デルタ。
- OutputTextDelta
- {
-  item_id: String,
-  output_index: u32,
-  content_index: u32,
-  delta: String,
- },
- /// `response.output_text.done` — text content part の完成テキスト。
- OutputTextDone
- {
-  item_id: String,
-  output_index: u32,
-  content_index: u32,
-  text: String,
- },
- /// `response.function_call_arguments.delta` — function_call の引数部分文字列。
- /// 途中で JSON parse を試みず、[`StreamEvent::FunctionCallArgumentsDone`] で一括 parse する。
- FunctionCallArgumentsDelta
- {
-  item_id: String,
-  output_index: u32,
-  delta: String,
- },
- /// `response.function_call_arguments.done` — function_call の引数完成。
- FunctionCallArgumentsDone
- {
-  item_id: String,
-  output_index: u32,
-  arguments: String,
- },
- /// `response.completed` — stream 終了時の最終 response。usage 含む。
- Completed
- {
-  response: Response,
- },
- /// `response.incomplete` — max_output_tokens 到達等。
- Incomplete
- {
-  response: Response,
- },
- /// `response.failed` — サーバ側失敗。`response.error` を含む。
- Failed
- {
-  response: Response,
- },
- /// Top-level `error` イベント（`response.created` 前の失敗や transport レベルのエラー通知）。
- Error
- {
-  error: ErrorObject,
- },
- /// 未知イベント catch-all。
- /// 将来 OpenAI が追加するイベントはここに落ち、ログに raw_type を出して以降の処理を続行する。
- Other
- {
-  raw_type: String,
- },
+pub enum StreamEvent {
+	/// `response.created` — stream 開始直後、response の初期 state。
+	Created { response: Response },
+	/// `response.in_progress` — stream 進行中の周期通知（content は増えていない）。
+	InProgress { response: Response },
+	/// `response.output_item.added` — 新しい output item（message / function_call /
+	/// reasoning 等）が開始された。
+	OutputItemAdded { output_index: u32, item: OutputItem },
+	/// `response.output_item.done` — output item が完成した。message の場合は最終テキスト、
+	/// function_call の場合は引数を含む完成形。
+	OutputItemDone { output_index: u32, item: OutputItem },
+	/// `response.output_text.delta` — assistant text の 1 デルタ。
+	OutputTextDelta {
+		item_id: String,
+		output_index: u32,
+		content_index: u32,
+		delta: String,
+	},
+	/// `response.output_text.done` — text content part の完成テキスト。
+	OutputTextDone {
+		item_id: String,
+		output_index: u32,
+		content_index: u32,
+		text: String,
+	},
+	/// `response.function_call_arguments.delta` — function_call の引数部分文字列。
+	/// 途中で JSON parse を試みず、[`StreamEvent::FunctionCallArgumentsDone`] で一括 parse する。
+	FunctionCallArgumentsDelta { item_id: String, output_index: u32, delta: String },
+	/// `response.function_call_arguments.done` — function_call の引数完成。
+	FunctionCallArgumentsDone {
+		item_id: String,
+		output_index: u32,
+		arguments: String,
+	},
+	/// `response.completed` — stream 終了時の最終 response。usage 含む。
+	Completed { response: Response },
+	/// `response.incomplete` — max_output_tokens 到達等。
+	Incomplete { response: Response },
+	/// `response.failed` — サーバ側失敗。`response.error` を含む。
+	Failed { response: Response },
+	/// Top-level `error` イベント（`response.created` 前の失敗や transport レベルのエラー通知）。
+	Error { error: ErrorObject },
+	/// 未知イベント catch-all。
+	/// 将来 OpenAI が追加するイベントはここに落ち、ログに raw_type を出して以降の処理を続行する。
+	Other { raw_type: String },
 }
 
 /// 共通 payload: `response.*` 系イベントでしばしば現れる `response` / `type` だけの形。
 /// デシリアライズ用ヘルパ。
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ResponseEnvelope
-{
- #[serde(rename = "type", default)]
- pub r#type: String,
- pub response: Response,
+pub(crate) struct ResponseEnvelope {
+	#[serde(rename = "type", default)]
+	pub r#type: String,
+	pub response: Response,
 }
 
 /// `response.output_item.*` 系イベントの共通 payload。
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct OutputItemEnvelope
-{
- #[serde(rename = "type", default)]
- pub r#type: String,
- pub output_index: u32,
- pub item: OutputItem,
+pub(crate) struct OutputItemEnvelope {
+	#[serde(rename = "type", default)]
+	pub r#type: String,
+	pub output_index: u32,
+	pub item: OutputItem,
 }
 
 /// `response.output_text.delta` の payload。
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct OutputTextDeltaPayload
-{
- pub item_id: String,
- pub output_index: u32,
- pub content_index: u32,
- pub delta: String,
+pub(crate) struct OutputTextDeltaPayload {
+	pub item_id: String,
+	pub output_index: u32,
+	pub content_index: u32,
+	pub delta: String,
 }
 
 /// `response.output_text.done` の payload。
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct OutputTextDonePayload
-{
- pub item_id: String,
- pub output_index: u32,
- pub content_index: u32,
- pub text: String,
+pub(crate) struct OutputTextDonePayload {
+	pub item_id: String,
+	pub output_index: u32,
+	pub content_index: u32,
+	pub text: String,
 }
 
 /// `response.function_call_arguments.delta` の payload。
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct FunctionCallArgumentsDeltaPayload
-{
- pub item_id: String,
- pub output_index: u32,
- pub delta: String,
+pub(crate) struct FunctionCallArgumentsDeltaPayload {
+	pub item_id: String,
+	pub output_index: u32,
+	pub delta: String,
 }
 
 /// `response.function_call_arguments.done` の payload。
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct FunctionCallArgumentsDonePayload
-{
- pub item_id: String,
- pub output_index: u32,
- pub arguments: String,
+pub(crate) struct FunctionCallArgumentsDonePayload {
+	pub item_id: String,
+	pub output_index: u32,
+	pub arguments: String,
 }
 
 /// Top-level `error` イベントの payload。
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ErrorEnvelope
-{
- #[serde(rename = "type", default)]
- pub r#type: String,
- pub error: ErrorObject,
+pub(crate) struct ErrorEnvelope {
+	#[serde(rename = "type", default)]
+	pub r#type: String,
+	pub error: ErrorObject,
 }

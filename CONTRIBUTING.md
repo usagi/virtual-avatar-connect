@@ -39,7 +39,7 @@ Virtual Avatar Connect 開発プロジェクトへの貢献の前に、以下の
 ## Pull Request への投稿
 
 - 必ず Issues に対応する「提案」や「不具合」を先に投稿して PR からリンクして下さい。
-- リポジトリー内の `.rustfmt.toml` は **stable `cargo fmt` 互換**のみ。PR 前は**変更した Rust ファイル**に対して `rustfmt` / `cargo fmt` を当てて下さい（リポジトリ全体に一度 `cargo fmt` を掛けると、旧 nightly 由来の体裁との差で差分が広がりやすい）。より厳しいルールが必要ならローカルで `cargo +nightly fmt` 等に任せ、**コミットに混ぜない**運用を推奨。
+- リポジトリー内の `.rustfmt.toml` は **stable `cargo fmt` 互換**のみ。PR 前に **`cargo fmt`** で整形して下さい（変更ファイルだけ `rustfmt` 単体を当てても可）。より厳しいルールが必要ならローカルで `cargo +nightly fmt` 等に任せ、**コミットに混ぜない**運用を推奨。
 - Rust 以外のソースについては原則的にインデントを 1-space に統一して下さい。
 - テキストファイルの改行コードは既存のファイルまたは迷ったら LF で統一して下さい。
 

@@ -17,16 +17,16 @@ use std::fmt;
 /// Atto 以下で `f64` のダイナミックレンジが限界に近づくが、VAC の実用範囲では問題ない。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SIPrefix {
-	Yotta,  // Y   10^24
-	Zetta,  // Z   10^21
-	Exa,    // E   10^18
-	Peta,   // P   10^15
-	Tera,   // T   10^12
-	Giga,   // G   10^9
-	Mega,   // M   10^6
-	Kilo,   // k   10^3
-	Hecto,  // h   10^2
-	Deca,   // da  10^1
+	Yotta, // Y   10^24
+	Zetta, // Z   10^21
+	Exa,   // E   10^18
+	Peta,  // P   10^15
+	Tera,  // T   10^12
+	Giga,  // G   10^9
+	Mega,  // M   10^6
+	Kilo,  // k   10^3
+	Hecto, // h   10^2
+	Deca,  // da  10^1
 	/// 接頭辞なし（10^0）。多くの単位はこの値を持つ。
 	None,
 	Deci,  // d   10^-1

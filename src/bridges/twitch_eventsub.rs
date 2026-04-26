@@ -69,7 +69,11 @@ impl FlowgraphTwitchEventsubIngress {
 			.unwrap_or_default();
 		let token_key = {
 			let k = get_str("token_key");
-			if k.is_empty() { "broadcaster".into() } else { k }
+			if k.is_empty() {
+				"broadcaster".into()
+			} else {
+				k
+			}
 		};
 		Some(Self {
 			node_id: fq.to_string(),
@@ -89,10 +93,7 @@ impl FlowgraphTwitchEventsubIngress {
 /// 実際の起動資材に触れず、純粋に設定名だけを返すので同期的。
 ///
 /// 空文字しか解決できないときは `None` を返す。
-pub fn normalized_broadcaster_login(
-	entry: &FlowgraphTwitchEventsubIngress,
-	twitch_username_fallback: &str,
-) -> Option<String> {
+pub fn normalized_broadcaster_login(entry: &FlowgraphTwitchEventsubIngress, twitch_username_fallback: &str) -> Option<String> {
 	fn norm(s: &str) -> String {
 		s.trim().trim_start_matches('#').to_lowercase()
 	}
@@ -146,15 +147,9 @@ impl TwitchEventsubBridgeHandle {
 
 /// ブリッジ資材（トークン / client_id / broadcaster_login / broadcaster_id）を `SharedState`
 /// から解決する。token / broadcaster_login のどちらが不足しても `Err` を返す。
-async fn resolve_resources(
-	entry: &FlowgraphTwitchEventsubIngress,
-	state: &SharedState,
-) -> Result<ResolvedResources> {
+async fn resolve_resources(entry: &FlowgraphTwitchEventsubIngress, state: &SharedState) -> Result<ResolvedResources> {
 	let s = state.read().await;
-	let twitch = s
-		.twitch
-		.as_ref()
-		.ok_or_else(|| anyhow!("[twitch] section is not configured"))?;
+	let twitch = s.twitch.as_ref().ok_or_else(|| anyhow!("[twitch] section is not configured"))?;
 	let es = twitch
 		.eventsub
 		.as_ref()
@@ -168,14 +163,12 @@ async fn resolve_resources(
 			"twitch client_id が空です（VAC_TWITCH_CLIENT_ID または [twitch.eventsub].client_id を設定してください）"
 		));
 	}
-	let access_token = crate::twitch::oauth::try_load_valid_token_for(&ident)
-		.await
-		.ok_or_else(|| {
-			anyhow!(
-				"token_key='{}' の有効な保存済みトークンがありません（設定画面で DCF を通してください）",
-				entry.token_key
-			)
-		})?;
+	let access_token = crate::twitch::oauth::try_load_valid_token_for(&ident).await.ok_or_else(|| {
+		anyhow!(
+			"token_key='{}' の有効な保存済みトークンがありません（設定画面で DCF を通してください）",
+			entry.token_key
+		)
+	})?;
 
 	// broadcaster_login: property > conf.twitch.username > 空
 	let broadcaster_login = {
@@ -227,10 +220,7 @@ struct ResolvedResources {
 /// - `event_types` が非空 → 明示指定を使う（channel_points は `channel_points_reward_id` で展開、
 ///   空なら自動列挙）。
 /// - 空 → `conf.twitch.eventsub` の bool トグルから既定セットを使う（V1 同等）。
-async fn build_subscription_queue(
-	entry: &FlowgraphTwitchEventsubIngress,
-	res: &ResolvedResources,
-) -> Result<Vec<(String, String, Value)>> {
+async fn build_subscription_queue(entry: &FlowgraphTwitchEventsubIngress, res: &ResolvedResources) -> Result<Vec<(String, String, Value)>> {
 	let mut out: Vec<(String, String, Value)> = Vec::new();
 
 	if !entry.event_types.is_empty() {
@@ -249,12 +239,7 @@ async fn build_subscription_queue(
 			let reward_ids = if !entry.channel_points_reward_id.trim().is_empty() {
 				vec![entry.channel_points_reward_id.trim().to_string()]
 			} else {
-				crate::twitch::eventsub::helix_list_custom_reward_ids(
-					&res.client_id,
-					&res.access_token,
-					&res.broadcaster_id,
-				)
-				.await?
+				crate::twitch::eventsub::helix_list_custom_reward_ids(&res.client_id, &res.access_token, &res.broadcaster_id).await?
 			};
 			for rid in reward_ids {
 				out.push((
@@ -269,23 +254,14 @@ async fn build_subscription_queue(
 		}
 	} else {
 		// 既定: conf.twitch.eventsub の bool を踏襲
-		for (t, v, cond) in
-			crate::twitch::eventsub::default_subscription_queue_from_cfg(&res.es_cfg, &res.broadcaster_id)
-		{
+		for (t, v, cond) in crate::twitch::eventsub::default_subscription_queue_from_cfg(&res.es_cfg, &res.broadcaster_id) {
 			out.push((t.to_string(), v.to_string(), cond));
 		}
 		// channel_points は V1 と同じルール（reward_id 指定 / 空なら自動列挙）
 		if res.es_cfg.channel_points {
 			let reward_ids = match &res.es_cfg.channel_points_reward_id {
 				Some(rid) if !rid.trim().is_empty() => vec![rid.trim().to_string()],
-				_ => {
-					crate::twitch::eventsub::helix_list_custom_reward_ids(
-						&res.client_id,
-						&res.access_token,
-						&res.broadcaster_id,
-					)
-					.await?
-				},
+				_ => crate::twitch::eventsub::helix_list_custom_reward_ids(&res.client_id, &res.access_token, &res.broadcaster_id).await?,
 			};
 			for rid in reward_ids {
 				out.push((
@@ -317,17 +293,14 @@ fn pick_str<'a>(event: &'a Value, keys: &[&str]) -> Option<&'a str> {
 /// `sub_type` に応じてアクター表示を決める（V1 の `build_notification_datum` と同じルール）。
 fn extract_actor(sub_type: &str, event: &Value) -> (String, String) {
 	let (name_keys, login_keys): (&[&str], &[&str]) = match sub_type {
-		"channel.raid" => (
-			&["from_broadcaster_user_name"],
-			&["from_broadcaster_user_login"],
-		),
+		"channel.raid" => (&["from_broadcaster_user_name"], &["from_broadcaster_user_login"]),
 		"stream.online" | "stream.offline" => (&["broadcaster_user_name"], &["broadcaster_user_login"]),
 		"channel.subscription.gift" => {
 			if event.get("is_anonymous").and_then(|v| v.as_bool()) == Some(true) {
 				return ("匿名".into(), String::new());
 			}
 			(&["user_name"], &["user_login"])
-		},
+		}
 		_ => (&["user_name"], &["user_login"]),
 	};
 	let name = pick_str(event, name_keys).unwrap_or_default().to_string();
@@ -380,11 +353,7 @@ pub fn spawn(
 	handles
 }
 
-fn spawn_one(
-	entry: FlowgraphTwitchEventsubIngress,
-	trigger: TriggerHandle,
-	state: SharedState,
-) -> TwitchEventsubBridgeHandle {
+fn spawn_one(entry: FlowgraphTwitchEventsubIngress, trigger: TriggerHandle, state: SharedState) -> TwitchEventsubBridgeHandle {
 	let node_id = entry.node_id.clone();
 	let (shutdown_tx, mut shutdown_rx) = tokio::sync::watch::channel(false);
 	let trigger_for_task = trigger.clone();
@@ -451,7 +420,7 @@ async fn session_loop(
 			Message::Text(s) => break s.as_str().to_string(),
 			Message::Close(frame) => {
 				return Err(anyhow!("EventSub: welcome 前に Close されました: {:?}", frame));
-			},
+			}
 			_ => continue,
 		}
 	};
@@ -509,15 +478,8 @@ async fn session_loop(
 		);
 	}
 	for (sub_type, version, cond) in queue.iter() {
-		if let Err(e) = crate::twitch::eventsub::post_subscription(
-			&res.client_id,
-			&res.access_token,
-			&session_id,
-			sub_type,
-			version,
-			cond,
-		)
-		.await
+		if let Err(e) =
+			crate::twitch::eventsub::post_subscription(&res.client_id, &res.access_token, &session_id, sub_type, version, cond).await
 		{
 			read_task.abort();
 			return Err(e);
@@ -534,13 +496,7 @@ async fn session_loop(
 }
 
 /// 1 本の EventSub WS テキストメッセージを処理。`notification` なら TriggerEvent を発火する。
-fn handle_notification(
-	text: &str,
-	node_id: &str,
-	broadcaster_login: &str,
-	broadcaster_id: &str,
-	trigger: &TriggerHandle,
-) -> Result<()> {
+fn handle_notification(text: &str, node_id: &str, broadcaster_login: &str, broadcaster_id: &str, trigger: &TriggerHandle) -> Result<()> {
 	let v: Value = serde_json::from_str(text)?;
 	let msg_type = v["metadata"]["message_type"].as_str().unwrap_or("");
 	match msg_type {
@@ -553,44 +509,33 @@ fn handle_notification(
 				url
 			);
 			return Err(anyhow!("reconnect"));
-		},
+		}
 		"revocation" => {
 			log::warn!("《Flowgraph/EventSub》 node={} revocation: {:?}", node_id, v);
 			return Ok(());
-		},
-		"notification" => {},
+		}
+		"notification" => {}
 		other => {
 			log::trace!("《Flowgraph/EventSub》 node={} unknown message type: {}", node_id, other);
 			return Ok(());
-		},
+		}
 	}
 
 	let sub_type = v["payload"]["subscription"]["type"].as_str().unwrap_or("").to_string();
 	let sub_version = v["payload"]["subscription"]["version"].as_str().unwrap_or("").to_string();
 	let event = v["payload"]["event"].clone();
 	let (actor_name, actor_login) = extract_actor(&sub_type, &event);
-	let meta = build_meta_map(
-		broadcaster_login,
-		broadcaster_id,
-		node_id,
-		&sub_type,
-		&sub_version,
-	);
+	let meta = build_meta_map(broadcaster_login, broadcaster_id, node_id, &sub_type, &sub_version);
 
 	let ev = TriggerEvent::new(node_id)
 		.with_exec("__trigger__")
 		.with_override("__event_type__", SocketValue::String(sub_type))
 		.with_override("__actor_name__", SocketValue::String(actor_name))
 		.with_override("__actor_login__", SocketValue::String(actor_login))
-		.with_override(
-			"__broadcaster_login__",
-			SocketValue::String(broadcaster_login.to_string()),
-		)
+		.with_override("__broadcaster_login__", SocketValue::String(broadcaster_login.to_string()))
 		.with_override("__payload__", SocketValue::Json(event))
 		.with_override("__meta__", SocketValue::Map(meta));
-	trigger
-		.send(ev)
-		.map_err(|e| anyhow!("TriggerHandle::send failed: {}", e))?;
+	trigger.send(ev).map_err(|e| anyhow!("TriggerHandle::send failed: {}", e))?;
 	Ok(())
 }
 
@@ -625,10 +570,7 @@ mod tests {
 				SocketValue::String(" channel.raid ".into()),
 			]),
 		);
-		props.insert(
-			"channel_points_reward_id".into(),
-			SocketValue::String("uuid-0001".into()),
-		);
+		props.insert("channel_points_reward_id".into(), SocketValue::String("uuid-0001".into()));
 		let t = FlowgraphTwitchEventsubIngress::from_meta("in", &meta_with(props)).unwrap();
 		assert_eq!(t.token_key, "moderator");
 		assert_eq!(t.broadcaster_login, "Alice");
@@ -683,19 +625,13 @@ mod tests {
 		let mut props = InputMap::new();
 		props.insert("broadcaster_login".into(), SocketValue::String(" #Alice ".into()));
 		let t = FlowgraphTwitchEventsubIngress::from_meta("in", &meta_with(props)).unwrap();
-		assert_eq!(
-			normalized_broadcaster_login(&t, "fallback_user"),
-			Some("alice".to_string())
-		);
+		assert_eq!(normalized_broadcaster_login(&t, "fallback_user"), Some("alice".to_string()));
 	}
 
 	#[test]
 	fn normalize_falls_back_to_conf_username() {
 		let t = FlowgraphTwitchEventsubIngress::from_meta("in", &meta_with(InputMap::new())).unwrap();
-		assert_eq!(
-			normalized_broadcaster_login(&t, "  #BobBot  "),
-			Some("bobbot".to_string())
-		);
+		assert_eq!(normalized_broadcaster_login(&t, "  #BobBot  "), Some("bobbot".to_string()));
 	}
 
 	#[test]

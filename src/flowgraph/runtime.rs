@@ -85,9 +85,7 @@ impl FlowgraphRuntime {
 
 	/// `load` と違い、ロードした program を第 2 戻り値で返す内部ユーティリティ。
 	/// `(runtime_meta, Option<program>)` のペア。
-	pub fn load_program(
-		root_dir: &std::path::Path,
-	) -> (Self, Option<crate::flowgraph::FlowgraphProgram>) {
+	pub fn load_program(root_dir: &std::path::Path) -> (Self, Option<crate::flowgraph::FlowgraphProgram>) {
 		if !root_dir.exists() {
 			return (Self::empty(root_dir.to_path_buf()), None);
 		}
@@ -108,7 +106,11 @@ impl FlowgraphRuntime {
 		}
 		match crate::flowgraph::load_flowgraph_dir(root_dir) {
 			Ok(report) => {
-				let crate::flowgraph::LoadReport { program, diagnostics, node_meta } = report;
+				let crate::flowgraph::LoadReport {
+					program,
+					diagnostics,
+					node_meta,
+				} = report;
 				let has_nodes = !node_meta.is_empty();
 				let rt = Self {
 					root_dir: root_dir.to_path_buf(),
@@ -143,8 +145,7 @@ impl FlowgraphRuntime {
 	) -> Self {
 		let (mut rt, program) = Self::load_program(root_dir);
 		if let Some(program) = program {
-			let (trigger, shutdown_tx, join) =
-				crate::flowgraph::spawn::spawn_program(program, state_weak, audio_sink);
+			let (trigger, shutdown_tx, join) = crate::flowgraph::spawn::spawn_program(program, state_weak, audio_sink);
 			rt.handle = Some(Arc::new(RuntimeHandle {
 				trigger,
 				shutdown_tx,

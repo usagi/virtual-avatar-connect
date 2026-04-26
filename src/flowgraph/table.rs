@@ -25,7 +25,11 @@ pub struct ColumnSpec {
 
 impl ColumnSpec {
 	pub fn new(name: impl Into<String>, ty: SocketType) -> Self {
-		Self { name: name.into(), ty, nullable: false }
+		Self {
+			name: name.into(),
+			ty,
+			nullable: false,
+		}
 	}
 	pub fn nullable(mut self) -> Self {
 		self.nullable = true;
@@ -117,7 +121,12 @@ impl Clone for TableInner {
 
 impl TableInner {
 	fn new(schema: TableSchema, rows: Vec<Row>) -> Self {
-		Self { schema, rows, version: 0, content_hash: OnceLock::new() }
+		Self {
+			schema,
+			rows,
+			version: 0,
+			content_hash: OnceLock::new(),
+		}
 	}
 }
 
@@ -133,18 +142,21 @@ pub struct Table {
 impl PartialEq for Table {
 	fn eq(&self, other: &Self) -> bool {
 		// Arc 同一 or 内容同一
-		Arc::ptr_eq(&self.inner, &other.inner)
-			|| (self.inner.schema == other.inner.schema && self.inner.rows == other.inner.rows)
+		Arc::ptr_eq(&self.inner, &other.inner) || (self.inner.schema == other.inner.schema && self.inner.rows == other.inner.rows)
 	}
 }
 
 impl Table {
 	pub fn empty() -> Self {
-		Self { inner: Arc::new(TableInner::new(TableSchema::empty(), Vec::new())) }
+		Self {
+			inner: Arc::new(TableInner::new(TableSchema::empty(), Vec::new())),
+		}
 	}
 
 	pub fn new(schema: TableSchema, rows: Vec<Row>) -> Self {
-		Self { inner: Arc::new(TableInner::new(schema, rows)) }
+		Self {
+			inner: Arc::new(TableInner::new(schema, rows)),
+		}
 	}
 
 	pub fn schema(&self) -> &TableSchema {
@@ -235,10 +247,7 @@ impl Table {
 	/// 空配列 + スキーマ未指定の場合は `Table::empty()` 相当を返す（推論不能でエラーにしない）。
 	/// これにより `PortSpec::with_default(SocketValue::Table(Table::empty()))` → JSON `[]` →
 	/// `to_socket_value` の round-trip が成立する（ν-β-3）。
-	pub fn from_json_array(
-		array: &[JsonValue],
-		schema: Option<TableSchema>,
-	) -> Result<Self, TableFromJsonError> {
+	pub fn from_json_array(array: &[JsonValue], schema: Option<TableSchema>) -> Result<Self, TableFromJsonError> {
 		let schema = match schema {
 			Some(s) => s,
 			None => {
@@ -372,8 +381,7 @@ mod tests {
 	fn from_to_json_roundtrip() {
 		let a = sample_table();
 		let arr = a.to_json_array();
-		let parsed =
-			Table::from_json_array(arr.as_array().unwrap(), Some(a.schema().clone())).unwrap();
+		let parsed = Table::from_json_array(arr.as_array().unwrap(), Some(a.schema().clone())).unwrap();
 		assert_eq!(parsed.rows(), a.rows());
 	}
 
@@ -403,8 +411,7 @@ mod tests {
 		let original = Table::empty();
 		let arr = original.to_json_array();
 		assert_eq!(arr, JsonValue::Array(Vec::new()));
-		let back = Table::from_json_array(arr.as_array().unwrap(), None)
-			.expect("round-trip of empty table must succeed");
+		let back = Table::from_json_array(arr.as_array().unwrap(), None).expect("round-trip of empty table must succeed");
 		assert_eq!(back.len(), 0);
 		assert_eq!(back.schema().len(), 0);
 	}

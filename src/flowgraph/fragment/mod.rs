@@ -200,9 +200,7 @@ pub fn copy_targets(root: &Path, req: &CopyRequest) -> Result<Fragment, CopyErro
 		match t {
 			CopyTarget::Node { fq_file, node_id } => {
 				let fq = normalize_fq_str(fq_file)?;
-				let file = loaded
-					.get(&fq)
-					.ok_or_else(|| CopyError::FileNotFound(fq.clone()))?;
+				let file = loaded.get(&fq).ok_or_else(|| CopyError::FileNotFound(fq.clone()))?;
 				if !file.doc.nodes.iter().any(|n| &n.id == node_id) {
 					return Err(CopyError::NodeNotFound {
 						fq_file: fq,
@@ -213,9 +211,7 @@ pub fn copy_targets(root: &Path, req: &CopyRequest) -> Result<Fragment, CopyErro
 			}
 			CopyTarget::File { fq } => {
 				let fq = normalize_fq_str(fq)?;
-				let file = loaded
-					.get(&fq)
-					.ok_or_else(|| CopyError::FileNotFound(fq.clone()))?;
+				let file = loaded.get(&fq).ok_or_else(|| CopyError::FileNotFound(fq.clone()))?;
 				let ids = selected_nodes.entry(fq.clone()).or_default();
 				for n in &file.doc.nodes {
 					ids.insert(n.id.clone());
@@ -261,9 +257,7 @@ pub fn copy_targets(root: &Path, req: &CopyRequest) -> Result<Fragment, CopyErro
 	let nodes_only = matches!(req.header_scope(), FragmentScope::Nodes);
 
 	for (fq, selected_ids) in &selected_nodes {
-		let file = loaded
-			.get(fq)
-			.ok_or_else(|| CopyError::FileNotFound(fq.clone()))?;
+		let file = loaded.get(fq).ok_or_else(|| CopyError::FileNotFound(fq.clone()))?;
 
 		// 対象ノードをコピー（properties は toml::Table そのまま）。
 		let mut nodes_out: Vec<NodeEntry> = Vec::new();
@@ -384,14 +378,10 @@ pub fn serialize_fragment(fragment: &Fragment) -> Result<String, String> {
 pub fn parse_fragment(src: &str) -> Result<Fragment, String> {
 	let mut value: toml::Value = toml::from_str(src).map_err(|e| format!("parse failed: {e}"))?;
 
-	let table = value
-		.as_table_mut()
-		.ok_or_else(|| "ルートが table でない".to_string())?;
+	let table = value.as_table_mut().ok_or_else(|| "ルートが table でない".to_string())?;
 
 	// `[fragment]` / `[fragment.files]` / `[fragment.danglings]` を剥がして Fragment に組み直す。
-	let fragment_val = table
-		.remove("fragment")
-		.ok_or_else(|| "[fragment] セクションが無い".to_string())?;
+	let fragment_val = table.remove("fragment").ok_or_else(|| "[fragment] セクションが無い".to_string())?;
 	let mut ftable = match fragment_val {
 		toml::Value::Table(t) => t,
 		_ => return Err("[fragment] が table でない".to_string()),
@@ -403,25 +393,16 @@ pub fn parse_fragment(src: &str) -> Result<Fragment, String> {
 	let header: FragmentHeader = toml::Value::Table(ftable)
 		.try_into()
 		.map_err(|e| format!("[fragment] header パース失敗: {e}"))?;
-	let files: Vec<FragmentFile> = files_val
-		.try_into()
-		.map_err(|e| format!("[[fragment.files]] パース失敗: {e}"))?;
+	let files: Vec<FragmentFile> = files_val.try_into().map_err(|e| format!("[[fragment.files]] パース失敗: {e}"))?;
 	let danglings: Vec<FragmentDangling> = danglings_val
 		.try_into()
 		.map_err(|e| format!("[[fragment.danglings]] パース失敗: {e}"))?;
 
 	if header.schema != FRAGMENT_SCHEMA_V1 {
-		return Err(format!(
-			"schema が未対応: '{}'（期待: '{}'）",
-			header.schema, FRAGMENT_SCHEMA_V1
-		));
+		return Err(format!("schema が未対応: '{}'（期待: '{}'）", header.schema, FRAGMENT_SCHEMA_V1));
 	}
 
-	Ok(Fragment {
-		header,
-		files,
-		danglings,
-	})
+	Ok(Fragment { header, files, danglings })
 }
 
 /// 内部用: Fragment を `toml::Value` に変換して、spec §9.2 どおりの table 構造で書き出す。
@@ -429,8 +410,7 @@ fn to_toml_value(fragment: &Fragment) -> Result<toml::Value, String> {
 	let mut frag_tbl = toml::Table::new();
 
 	// header
-	let header_val = toml::Value::try_from(&fragment.header)
-		.map_err(|e| format!("header の値化失敗: {e}"))?;
+	let header_val = toml::Value::try_from(&fragment.header).map_err(|e| format!("header の値化失敗: {e}"))?;
 	if let toml::Value::Table(h) = header_val {
 		for (k, v) in h {
 			frag_tbl.insert(k, v);
@@ -440,8 +420,7 @@ fn to_toml_value(fragment: &Fragment) -> Result<toml::Value, String> {
 	let files_val = toml::Value::try_from(&fragment.files).map_err(|e| format!("files の値化失敗: {e}"))?;
 	frag_tbl.insert("files".to_string(), files_val);
 	// danglings
-	let dangs_val =
-		toml::Value::try_from(&fragment.danglings).map_err(|e| format!("danglings の値化失敗: {e}"))?;
+	let dangs_val = toml::Value::try_from(&fragment.danglings).map_err(|e| format!("danglings の値化失敗: {e}"))?;
 	frag_tbl.insert("danglings".to_string(), dangs_val);
 
 	let mut root = toml::Table::new();
@@ -473,12 +452,8 @@ fn load_all_files(root: &Path) -> Result<BTreeMap<String, LoadedOnDisk>, CopyErr
 	})?;
 	let mut out: BTreeMap<String, LoadedOnDisk> = BTreeMap::new();
 	for p in paths {
-		let src = std::fs::read_to_string(&p).map_err(|err| CopyError::Io {
-			path: p.clone(),
-			err,
-		})?;
-		let doc = parse_flowgraph_file(&src, Some(&p))
-			.map_err(|e| CopyError::Parse(format!("{}: {}", p.display(), e)))?;
+		let src = std::fs::read_to_string(&p).map_err(|err| CopyError::Io { path: p.clone(), err })?;
+		let doc = parse_flowgraph_file(&src, Some(&p)).map_err(|e| CopyError::Parse(format!("{}: {}", p.display(), e)))?;
 		let fq = fq_path_of_file(root, &p).map_err(CopyError::InvalidFq)?;
 		out.insert(fq, LoadedOnDisk { path: p, doc });
 	}
@@ -515,10 +490,7 @@ fn normalize_folder_prefix(s: &str) -> Result<String, CopyError> {
 }
 
 /// edge endpoint の `"fq::id:port"` を `(fq, node_id)` に解決する。
-fn resolve_endpoint(
-	endpoint: &str,
-	ctx: &ResolveContext,
-) -> Result<(String, String), EndpointError> {
+fn resolve_endpoint(endpoint: &str, ctx: &ResolveContext) -> Result<(String, String), EndpointError> {
 	let pr = parse_port_ref(endpoint).map_err(EndpointError::Parse)?;
 	let fq = resolve_fq_ref(&pr, ctx).map_err(EndpointError::Resolve)?;
 	Ok((fq, pr.node_id))
@@ -539,15 +511,8 @@ fn reason_for(res: &Result<(String, String), EndpointError>) -> String {
 	}
 }
 
-fn is_selected(
-	selected: &BTreeMap<String, BTreeSet<String>>,
-	fq: &str,
-	node_id: &str,
-) -> bool {
-	selected
-		.get(fq)
-		.map(|ids| ids.contains(node_id))
-		.unwrap_or(false)
+fn is_selected(selected: &BTreeMap<String, BTreeSet<String>>, fq: &str, node_id: &str) -> bool {
+	selected.get(fq).map(|ids| ids.contains(node_id)).unwrap_or(false)
 }
 
 fn now_rfc3339() -> String {
@@ -592,15 +557,9 @@ mod tests {
 	fn mk_dir() -> TempDir {
 		use std::time::{SystemTime, UNIX_EPOCH};
 		static SEQ: AtomicU64 = AtomicU64::new(0);
-		let ns = SystemTime::now()
-			.duration_since(UNIX_EPOCH)
-			.unwrap()
-			.as_nanos();
+		let ns = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
 		let seq = SEQ.fetch_add(1, Ordering::Relaxed);
-		let dir = std::env::temp_dir().join(format!(
-			"vac-fg-fragment-{}-{ns}-{seq}",
-			std::process::id()
-		));
+		let dir = std::env::temp_dir().join(format!("vac-fg-fragment-{}-{ns}-{seq}", std::process::id()));
 		fs::create_dir_all(&dir).unwrap();
 		TempDir { path: dir }
 	}
@@ -680,9 +639,7 @@ to   = "b:message"
 		);
 		let req = CopyRequest {
 			scope: FragmentScope::File,
-			targets: vec![CopyTarget::File {
-				fq: "chat/main".into(),
-			}],
+			targets: vec![CopyTarget::File { fq: "chat/main".into() }],
 			origin: None,
 		};
 		let frag = copy_targets(td.path(), &req).unwrap();
@@ -884,15 +841,10 @@ scope = "nodes"
 		let td = mk_dir();
 		let req = CopyRequest {
 			scope: FragmentScope::File,
-			targets: vec![CopyTarget::File {
-				fq: "nonexistent".into(),
-			}],
+			targets: vec![CopyTarget::File { fq: "nonexistent".into() }],
 			origin: None,
 		};
-		assert!(matches!(
-			copy_targets(td.path(), &req).unwrap_err(),
-			CopyError::FileNotFound(_)
-		));
+		assert!(matches!(copy_targets(td.path(), &req).unwrap_err(), CopyError::FileNotFound(_)));
 	}
 
 	#[test]

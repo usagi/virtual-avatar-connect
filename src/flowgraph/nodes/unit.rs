@@ -16,8 +16,8 @@
 //! All pure; no exec ports (D4: dimension errors halt the graph via `NodeExecError::Generic`).
 
 use crate::flowgraph::node::{
-	get_required_float, get_required_quantity, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput,
-	NodeSpec, PortSpec, PropertySpec, PureNode,
+	get_required_float, get_required_quantity, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
+	PropertySpec, PureNode,
 };
 use crate::flowgraph::quantity::{parse_unit, Quantity};
 use crate::flowgraph::socket::{SocketType, SocketValue};
@@ -38,25 +38,17 @@ impl NodeDescriptor for UnitAssignNode {
 			description: Some("Attach a unit to a dimensionless Float and produce a Quantity.".into()),
 			inputs: vec![PortSpec::input("value", "Value", SocketType::Float)],
 			outputs: vec![PortSpec::output("result", "Result", SocketType::Quantity)],
-			properties: vec![PropertySpec::new(
-				"unit",
-				"Unit",
-				SocketType::String,
-				SocketValue::String(String::new()),
-			)
-			.description("SI-compatible unit string, e.g. \"m/s^2\", \"Hz\", \"kg\". Empty = dimensionless.")],
+			properties: vec![
+				PropertySpec::new("unit", "Unit", SocketType::String, SocketValue::String(String::new()))
+					.description("SI-compatible unit string, e.g. \"m/s^2\", \"Hz\", \"kg\". Empty = dimensionless."),
+			],
 		}
 	}
 }
 
 #[async_trait]
 impl PureNode for UnitAssignNode {
-	async fn compute(
-		&self,
-		properties: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let value = get_required_float(inputs, "value")?;
 		let unit_str = properties
 			.get("unit")
@@ -67,8 +59,7 @@ impl PureNode for UnitAssignNode {
 		let unit = if unit_str.is_empty() {
 			crate::flowgraph::quantity::Unit::dimensionless()
 		} else {
-			parse_unit(&unit_str)
-				.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("unit parse error on '{unit_str}': {e}")))?
+			parse_unit(&unit_str).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("unit parse error on '{unit_str}': {e}")))?
 		};
 		Ok(NodeOutput::new().set_data("result", SocketValue::Quantity(Quantity::of(value, unit))))
 	}
@@ -91,26 +82,18 @@ impl NodeDescriptor for UnitConvertNode {
 			),
 			inputs: vec![PortSpec::input("value", "Value", SocketType::Quantity)],
 			outputs: vec![PortSpec::output("result", "Result", SocketType::Quantity)],
-			properties: vec![PropertySpec::new(
-				"target_unit",
-				"Target Unit",
-				SocketType::String,
-				SocketValue::String(String::new()),
-			)
-			.required()
-			.description("Target unit string. Must match the input dimension.")],
+			properties: vec![
+				PropertySpec::new("target_unit", "Target Unit", SocketType::String, SocketValue::String(String::new()))
+					.required()
+					.description("Target unit string. Must match the input dimension."),
+			],
 		}
 	}
 }
 
 #[async_trait]
 impl PureNode for UnitConvertNode {
-	async fn compute(
-		&self,
-		properties: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "value")?.clone();
 		let target_str = properties
 			.get("target_unit")
@@ -123,11 +106,9 @@ impl PureNode for UnitConvertNode {
 				"flowgraph.unit.convert: property 'target_unit' is required (non-empty)"
 			)));
 		}
-		let target = parse_unit(&target_str)
-			.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("unit parse error on '{target_str}': {e}")))?;
-		let converted = q
-			.convert_to(&target)
-			.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
+		let target =
+			parse_unit(&target_str).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("unit parse error on '{target_str}': {e}")))?;
+		let converted = q.convert_to(&target).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Quantity(converted)))
 	}
 }
@@ -144,9 +125,7 @@ impl NodeDescriptor for UnitStripNode {
 			feature: "flowgraph.unit.strip".into(),
 			title: "Unit Strip".into(),
 			category: "unit".into(),
-			description: Some(
-				"Explicit escape hatch: discard the unit and emit the raw numeric value as Float.".into(),
-			),
+			description: Some("Explicit escape hatch: discard the unit and emit the raw numeric value as Float.".into()),
 			inputs: vec![PortSpec::input("value", "Value", SocketType::Quantity)],
 			outputs: vec![PortSpec::output("result", "Result", SocketType::Float)],
 			properties: vec![],
@@ -156,12 +135,7 @@ impl NodeDescriptor for UnitStripNode {
 
 #[async_trait]
 impl PureNode for UnitStripNode {
-	async fn compute(
-		&self,
-		_properties: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "value")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Float(q.value)))
 	}
@@ -189,12 +163,7 @@ impl NodeDescriptor for UnitGetUnitStringNode {
 
 #[async_trait]
 impl PureNode for UnitGetUnitStringNode {
-	async fn compute(
-		&self,
-		_properties: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "value")?;
 		Ok(NodeOutput::new().set_data("name", SocketValue::String(q.unit.canonical())))
 	}
@@ -222,12 +191,7 @@ impl NodeDescriptor for UnitGetDimensionStringNode {
 
 #[async_trait]
 impl PureNode for UnitGetDimensionStringNode {
-	async fn compute(
-		&self,
-		_properties: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "value")?;
 		Ok(NodeOutput::new().set_data("dim", SocketValue::String(q.dimension().canonical())))
 	}
@@ -258,12 +222,7 @@ impl NodeDescriptor for UnitSameDimensionNode {
 
 #[async_trait]
 impl PureNode for UnitSameDimensionNode {
-	async fn compute(
-		&self,
-		_properties: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let a = get_required_quantity(inputs, "a")?;
 		let b = get_required_quantity(inputs, "b")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Bool(a.dimension() == b.dimension())))
@@ -282,9 +241,7 @@ impl NodeDescriptor for UnitToJsonNode {
 			feature: "flowgraph.unit.to_json".into(),
 			title: "Unit -> JSON".into(),
 			category: "unit".into(),
-			description: Some(
-				"Serialize Quantity to JSON with `value`, `unit`, `dimension` fields (internal form).".into(),
-			),
+			description: Some("Serialize Quantity to JSON with `value`, `unit`, `dimension` fields (internal form).".into()),
 			inputs: vec![PortSpec::input("value", "Value", SocketType::Quantity)],
 			outputs: vec![PortSpec::output("json", "JSON", SocketType::Json)],
 			properties: vec![],
@@ -294,12 +251,7 @@ impl NodeDescriptor for UnitToJsonNode {
 
 #[async_trait]
 impl PureNode for UnitToJsonNode {
-	async fn compute(
-		&self,
-		_properties: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "value")?;
 		let j = serde_json::json!({
 			"value": q.value,
@@ -368,11 +320,7 @@ mod tests {
 	#[tokio::test]
 	async fn assign_invalid_unit_errors() {
 		let err = UnitAssignNode
-			.compute(
-				&prop_str("unit", "not_a_unit"),
-				&in_float("value", 1.0),
-				&ExecFireSet::new(),
-			)
+			.compute(&prop_str("unit", "not_a_unit"), &in_float("value", 1.0), &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(err, NodeExecError::Generic(_)));
@@ -400,11 +348,7 @@ mod tests {
 	async fn convert_deg_to_rad() {
 		let deg = Quantity::of(180.0, Unit::degree());
 		let out = UnitConvertNode
-			.compute(
-				&prop_str("target_unit", "rad"),
-				&in_quantity("value", deg),
-				&ExecFireSet::new(),
-			)
+			.compute(&prop_str("target_unit", "rad"), &in_quantity("value", deg), &ExecFireSet::new())
 			.await
 			.unwrap();
 		match out.data.get("result").unwrap() {
@@ -420,11 +364,7 @@ mod tests {
 	async fn convert_dimension_mismatch_errors() {
 		let metres = Quantity::of(1.0, Unit::metre());
 		let err = UnitConvertNode
-			.compute(
-				&prop_str("target_unit", "s"),
-				&in_quantity("value", metres),
-				&ExecFireSet::new(),
-			)
+			.compute(&prop_str("target_unit", "s"), &in_quantity("value", metres), &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(err, NodeExecError::Generic(_)));
@@ -445,11 +385,7 @@ mod tests {
 		// K and \u{394}K share dimension but have different semantics; convert must reject
 		let k = Quantity::of(300.0, Unit::kelvin());
 		let err = UnitConvertNode
-			.compute(
-				&prop_str("target_unit", "\u{394}K"),
-				&in_quantity("value", k),
-				&ExecFireSet::new(),
-			)
+			.compute(&prop_str("target_unit", "\u{394}K"), &in_quantity("value", k), &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(err, NodeExecError::Generic(_)));

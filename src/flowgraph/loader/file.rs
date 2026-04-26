@@ -6,9 +6,7 @@
 //!
 //! 「1 ファイル限定」のショートカット。多ファイル統合は [`super::dir::load_flowgraph_dir`]。
 
-use crate::flowgraph::loader::diagnostic::{
-	Diagnostic, DiagnosticCode, LoadError, LoadReport, LoadedNodeMeta, Severity,
-};
+use crate::flowgraph::loader::diagnostic::{Diagnostic, DiagnosticCode, LoadError, LoadReport, LoadedNodeMeta, Severity};
 use crate::flowgraph::loader::reference::parse_port_ref;
 use crate::flowgraph::node::{InputMap, NodeSpec};
 use crate::flowgraph::registry::{registry, NodeRegistry};
@@ -80,13 +78,7 @@ pub fn normalized_library_id(meta: &FileMeta) -> Option<String> {
 	fn norm_token(s: &str) -> String {
 		let t: String = s
 			.chars()
-			.map(|c| {
-				if c.is_ascii_alphanumeric() {
-					c.to_ascii_lowercase()
-				} else {
-					'_'
-				}
-			})
+			.map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '_' })
 			.collect();
 		t.trim_matches('_').to_string()
 	}
@@ -148,15 +140,9 @@ pub fn parse_flowgraph_file(src: &str, file_hint: Option<&Path>) -> Result<Flowg
 ///
 /// `file_fq_path_hint` は edge 内で書かれる絶対 fq 名のチェックに使う。
 /// 通常は `"main"` や `"graph"` など、呼び出し側で任意に決めてよい。
-pub fn load_file(
-	path: &Path,
-	file_fq_path_hint: Option<&str>,
-) -> Result<LoadReport, LoadError> {
+pub fn load_file(path: &Path, file_fq_path_hint: Option<&str>) -> Result<LoadReport, LoadError> {
 	let src = std::fs::read_to_string(path).map_err(|e| {
-		LoadError::from_single(
-			Diagnostic::error(DiagnosticCode::Io, format!("ファイル読み込み失敗: {e}"))
-				.with_file(path.to_path_buf()),
-		)
+		LoadError::from_single(Diagnostic::error(DiagnosticCode::Io, format!("ファイル読み込み失敗: {e}")).with_file(path.to_path_buf()))
 	})?;
 	let parsed = parse_flowgraph_file(&src, Some(path))?;
 
@@ -189,22 +175,16 @@ fn validate_enum_definitions(file: &FlowgraphFile, file_path: &Path, diagnostics
 		}
 		if !seen.insert(e.id.clone()) {
 			diagnostics.push(
-				Diagnostic::error(
-					DiagnosticCode::DuplicateEnumId,
-					format!("enums.id 重複: '{}'", e.id),
-				)
-				.with_file(file_path.to_path_buf())
-				.with_hint(hint.clone()),
+				Diagnostic::error(DiagnosticCode::DuplicateEnumId, format!("enums.id 重複: '{}'", e.id))
+					.with_file(file_path.to_path_buf())
+					.with_hint(hint.clone()),
 			);
 		}
 		if e.variants.is_empty() {
 			diagnostics.push(
-				Diagnostic::error(
-					DiagnosticCode::InvalidEnumDefinition,
-					format!("enums '{}' の variants が空", e.id),
-				)
-				.with_file(file_path.to_path_buf())
-				.with_hint(hint.clone()),
+				Diagnostic::error(DiagnosticCode::InvalidEnumDefinition, format!("enums '{}' の variants が空", e.id))
+					.with_file(file_path.to_path_buf())
+					.with_hint(hint.clone()),
 			);
 			continue;
 		}
@@ -250,20 +230,14 @@ impl BuildContext {
 
 			for node in &file.nodes {
 				if node.id.is_empty() {
-					diagnostics.push(
-						Diagnostic::error(DiagnosticCode::DuplicateNodeId, "node.id が空")
-							.with_file(file_path.clone()),
-					);
+					diagnostics.push(Diagnostic::error(DiagnosticCode::DuplicateNodeId, "node.id が空").with_file(file_path.clone()));
 					continue;
 				}
 				if !local_ids.insert(node.id.clone()) {
 					diagnostics.push(
-						Diagnostic::error(
-							DiagnosticCode::DuplicateNodeId,
-							format!("ファイル内で node.id 重複: '{}'", node.id),
-						)
-						.with_file(file_path.clone())
-						.with_node(node.id.clone()),
+						Diagnostic::error(DiagnosticCode::DuplicateNodeId, format!("ファイル内で node.id 重複: '{}'", node.id))
+							.with_file(file_path.clone())
+							.with_node(node.id.clone()),
 					);
 					continue;
 				}
@@ -273,13 +247,10 @@ impl BuildContext {
 				// feature → NodeImpl
 				let Some(spec) = reg.spec(&node.feature) else {
 					diagnostics.push(
-						Diagnostic::error(
-							DiagnosticCode::UnknownFeature,
-							format!("未登録 feature: '{}'", node.feature),
-						)
-						.with_file(file_path.clone())
-						.with_node(node.id.clone())
-						.with_hint(node.feature.clone()),
+						Diagnostic::error(DiagnosticCode::UnknownFeature, format!("未登録 feature: '{}'", node.feature))
+							.with_file(file_path.clone())
+							.with_node(node.id.clone())
+							.with_hint(node.feature.clone()),
 					);
 					continue;
 				};
@@ -290,17 +261,13 @@ impl BuildContext {
 				let properties = match resolve_properties(&spec, &node.properties) {
 					Ok((map, diags)) => {
 						for d in diags {
-							diagnostics.push(
-								d.with_file(file_path.clone()).with_node(node.id.clone()),
-							);
+							diagnostics.push(d.with_file(file_path.clone()).with_node(node.id.clone()));
 						}
 						map
 					}
 					Err(diags) => {
 						for d in diags {
-							diagnostics.push(
-								d.with_file(file_path.clone()).with_node(node.id.clone()),
-							);
+							diagnostics.push(d.with_file(file_path.clone()).with_node(node.id.clone()));
 						}
 						continue;
 					}
@@ -347,12 +314,9 @@ impl BuildContext {
 					Ok(v) => v,
 					Err(e) => {
 						diagnostics.push(
-							Diagnostic::error(
-								DiagnosticCode::InvalidPortRef,
-								format!("edge.from 不正: {e}"),
-							)
-							.with_file(file_path.clone())
-							.with_hint(edge_hint.clone()),
+							Diagnostic::error(DiagnosticCode::InvalidPortRef, format!("edge.from 不正: {e}"))
+								.with_file(file_path.clone())
+								.with_hint(edge_hint.clone()),
 						);
 						continue;
 					}
@@ -361,21 +325,15 @@ impl BuildContext {
 					Ok(v) => v,
 					Err(e) => {
 						diagnostics.push(
-							Diagnostic::error(
-								DiagnosticCode::InvalidPortRef,
-								format!("edge.to 不正: {e}"),
-							)
-							.with_file(file_path.clone())
-							.with_hint(edge_hint.clone()),
+							Diagnostic::error(DiagnosticCode::InvalidPortRef, format!("edge.to 不正: {e}"))
+								.with_file(file_path.clone())
+								.with_hint(edge_hint.clone()),
 						);
 						continue;
 					}
 				};
 
-				let from_fq_path = match crate::flowgraph::loader::reference::resolve_fq_ref(
-					&parsed_from,
-					&resolve_ctx,
-				) {
+				let from_fq_path = match crate::flowgraph::loader::reference::resolve_fq_ref(&parsed_from, &resolve_ctx) {
 					Ok(v) => v,
 					Err(e) => {
 						diagnostics.push(
@@ -386,10 +344,7 @@ impl BuildContext {
 						continue;
 					}
 				};
-				let to_fq_path = match crate::flowgraph::loader::reference::resolve_fq_ref(
-					&parsed_to,
-					&resolve_ctx,
-				) {
+				let to_fq_path = match crate::flowgraph::loader::reference::resolve_fq_ref(&parsed_to, &resolve_ctx) {
 					Ok(v) => v,
 					Err(e) => {
 						diagnostics.push(
@@ -417,12 +372,9 @@ impl BuildContext {
 				};
 				let Some(to_spec) = node_specs.get(&to_fq_name) else {
 					diagnostics.push(
-						Diagnostic::error(
-							DiagnosticCode::UnresolvedNodeRef,
-							format!("edge.to が解決不能: '{}'", to_fq_name),
-						)
-						.with_file(file_path.clone())
-						.with_hint(edge_hint.clone()),
+						Diagnostic::error(DiagnosticCode::UnresolvedNodeRef, format!("edge.to が解決不能: '{}'", to_fq_name))
+							.with_file(file_path.clone())
+							.with_hint(edge_hint.clone()),
 					);
 					continue;
 				};
@@ -431,10 +383,7 @@ impl BuildContext {
 					diagnostics.push(
 						Diagnostic::error(
 							DiagnosticCode::UnknownPort,
-							format!(
-								"未知出力ポート: '{}' にポート '{}' が無い",
-								from_fq_name, parsed_from.port
-							),
+							format!("未知出力ポート: '{}' にポート '{}' が無い", from_fq_name, parsed_from.port),
 						)
 						.with_file(file_path.clone())
 						.with_hint(edge_hint.clone()),
@@ -445,10 +394,7 @@ impl BuildContext {
 					diagnostics.push(
 						Diagnostic::error(
 							DiagnosticCode::UnknownPort,
-							format!(
-								"未知入力ポート: '{}' にポート '{}' が無い",
-								to_fq_name, parsed_to.port
-							),
+							format!("未知入力ポート: '{}' にポート '{}' が無い", to_fq_name, parsed_to.port),
 						)
 						.with_file(file_path.clone())
 						.with_hint(edge_hint.clone()),
@@ -487,10 +433,7 @@ impl BuildContext {
 					diagnostics.push(
 						Diagnostic::error(
 							DiagnosticCode::EngineBuild,
-							format!(
-								"exec と data を跨ぐエッジ: '{}' → '{}'",
-								edge.from, edge.to
-							),
+							format!("exec と data を跨ぐエッジ: '{}' → '{}'", edge.from, edge.to),
 						)
 						.with_file(file_path.clone())
 						.with_hint(edge_hint.clone()),
@@ -515,10 +458,7 @@ impl BuildContext {
 		// Pass 3: engine build
 		let program: FlowgraphProgram = builder.build().map_err(|e| {
 			let mut ds = diagnostics.clone();
-			ds.push(Diagnostic::error(
-				DiagnosticCode::EngineBuild,
-				format!("engine build 失敗: {e}"),
-			));
+			ds.push(Diagnostic::error(DiagnosticCode::EngineBuild, format!("engine build 失敗: {e}")));
 			LoadError::new(ds)
 		})?;
 
@@ -551,10 +491,7 @@ pub(crate) fn fq_node_name(fq_path: &str, node_id: &str) -> String {
 /// - 型一致の場合、欠けているプロパティは `PropertySpec.default` を充てる。
 ///
 /// 成功時は (InputMap, warnings) を返す。失敗時は Err(errors)。
-fn resolve_properties(
-	spec: &NodeSpec,
-	table: &toml::Table,
-) -> Result<(InputMap, Vec<Diagnostic>), Vec<Diagnostic>> {
+fn resolve_properties(spec: &NodeSpec, table: &toml::Table) -> Result<(InputMap, Vec<Diagnostic>), Vec<Diagnostic>> {
 	let mut map: InputMap = InputMap::new();
 	let mut diags: Vec<Diagnostic> = Vec::new();
 	let mut errors_occurred = false;
@@ -618,11 +555,7 @@ mod tests {
 	use super::*;
 
 	fn write_tmp(name: &str, contents: &str) -> PathBuf {
-		let dir = std::env::temp_dir().join(format!(
-			"vac-flowgraph-loader-{}-{}",
-			std::process::id(),
-			rand_suffix()
-		));
+		let dir = std::env::temp_dir().join(format!("vac-flowgraph-loader-{}-{}", std::process::id(), rand_suffix()));
 		std::fs::create_dir_all(&dir).unwrap();
 		let path = dir.join(name);
 		std::fs::write(&path, contents).unwrap();
@@ -693,9 +626,7 @@ mod tests {
 			"#,
 		);
 		let err = load_file(&path, None).expect_err("should fail");
-		assert!(err
-			.errors()
-			.any(|d| d.code == DiagnosticCode::UnknownFeature));
+		assert!(err.errors().any(|d| d.code == DiagnosticCode::UnknownFeature));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
@@ -738,9 +669,7 @@ mod tests {
 			"#,
 		);
 		let err = load_file(&path, None).expect_err("should fail");
-		assert!(err
-			.errors()
-			.any(|d| d.code == DiagnosticCode::UnresolvedNodeRef));
+		assert!(err.errors().any(|d| d.code == DiagnosticCode::UnresolvedNodeRef));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
@@ -759,9 +688,7 @@ mod tests {
 			"#,
 		);
 		let err = load_file(&path, None).expect_err("should fail");
-		assert!(err
-			.errors()
-			.any(|d| d.code == DiagnosticCode::DuplicateNodeId));
+		assert!(err.errors().any(|d| d.code == DiagnosticCode::DuplicateNodeId));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
@@ -777,9 +704,7 @@ mod tests {
 			"#,
 		);
 		let err = load_file(&path, None).expect_err("should fail");
-		assert!(err
-			.errors()
-			.any(|d| d.code == DiagnosticCode::PropertyTypeMismatch));
+		assert!(err.errors().any(|d| d.code == DiagnosticCode::PropertyTypeMismatch));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
@@ -818,9 +743,7 @@ mod tests {
 			"#,
 		);
 		let err = load_file(&path, None).expect_err("should fail");
-		assert!(err
-			.errors()
-			.any(|d| d.code == DiagnosticCode::InvalidPortRef));
+		assert!(err.errors().any(|d| d.code == DiagnosticCode::InvalidPortRef));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
@@ -927,9 +850,7 @@ mod tests {
 			"#,
 		);
 		let err = load_file(&path, None).expect_err("should fail");
-		assert!(err
-			.errors()
-			.any(|d| d.code == DiagnosticCode::ClosedStringLiteralOutOfEnum));
+		assert!(err.errors().any(|d| d.code == DiagnosticCode::ClosedStringLiteralOutOfEnum));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
@@ -941,10 +862,7 @@ mod tests {
 			version: Some("1.0.0".into()),
 			..Default::default()
 		};
-		assert_eq!(
-			normalized_library_id(&m).unwrap(),
-			"alice::core_lib::1_0_0"
-		);
+		assert_eq!(normalized_library_id(&m).unwrap(), "alice::core_lib::1_0_0");
 	}
 
 	#[test]
@@ -956,8 +874,7 @@ mod tests {
 			"unexpected errors: {:?}",
 			report.diagnostics,
 		);
-		for id in ["in", "cmd_path", "cmd_mode", "load_cmds", "match", "log_matched", "log_plain"]
-		{
+		for id in ["in", "cmd_path", "cmd_mode", "load_cmds", "match", "log_matched", "log_plain"] {
 			let fq = format!("main::{id}");
 			assert!(
 				report.node_meta.contains_key(&fq),

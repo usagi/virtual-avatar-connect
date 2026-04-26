@@ -133,20 +133,12 @@ pub enum MigrateError {
 // Public API
 // ---------------------------------------------------------------------
 
-pub fn migrate_conf_file(
-	input_path: &Path,
-	out_dir: &Path,
-	strict: bool,
-) -> Result<MigrationReport, MigrateError> {
+pub fn migrate_conf_file(input_path: &Path, out_dir: &Path, strict: bool) -> Result<MigrationReport, MigrateError> {
 	let src = std::fs::read_to_string(input_path)?;
 	migrate_conf_str(&src, out_dir, strict)
 }
 
-pub fn migrate_conf_str(
-	input_toml: &str,
-	out_dir: &Path,
-	strict: bool,
-) -> Result<MigrationReport, MigrateError> {
+pub fn migrate_conf_str(input_toml: &str, out_dir: &Path, strict: bool) -> Result<MigrationReport, MigrateError> {
 	let mut doc: DocumentMut = input_toml.parse()?;
 	let mut report = MigrationReport {
 		strict,
@@ -164,9 +156,12 @@ pub fn migrate_conf_str(
 	let processors: Vec<Table> = match doc.remove("processors") {
 		Some(Item::ArrayOfTables(arr)) => arr.iter().cloned().collect(),
 		Some(other) => {
-			report.error(None, format!("トップレベル `processors` が [[processors]] でない: {:?}", other.type_name()));
+			report.error(
+				None,
+				format!("トップレベル `processors` が [[processors]] でない: {:?}", other.type_name()),
+			);
 			Vec::new()
-		},
+		}
 		None => Vec::new(),
 	};
 
@@ -175,11 +170,7 @@ pub fn migrate_conf_str(
 	let mut topic_counter: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
 
 	for (idx, proc_t) in processors.iter().enumerate() {
-		let feature = proc_t
-			.get("feature")
-			.and_then(|i| i.as_str())
-			.unwrap_or("")
-			.to_string();
+		let feature = proc_t.get("feature").and_then(|i| i.as_str()).unwrap_or("").to_string();
 
 		if feature.is_empty() {
 			report.warn(None, format!("processors[{idx}] に feature が無いため無視"));
@@ -207,8 +198,11 @@ pub fn migrate_conf_str(
 				let file = topic_dir.join("main.flowgraph.toml");
 				std::fs::write(&file, toml_content)?;
 				report.written_files.push(file);
-				report.converted(&feature, format!("processors[{idx}] → flowgraph/{topic}{suffix}/main.flowgraph.toml"));
-			},
+				report.converted(
+					&feature,
+					format!("processors[{idx}] → flowgraph/{topic}{suffix}/main.flowgraph.toml"),
+				);
+			}
 			None => {
 				report.warn(
 					Some(feature.clone()),
@@ -216,7 +210,7 @@ pub fn migrate_conf_str(
 						"processors[{idx}] feature=\"{feature}\" は v2 Flowgraph への自動変換をサポートしていません。手動で書き換えてください。"
 					),
 				);
-			},
+			}
 		}
 	}
 
@@ -287,10 +281,7 @@ fn render_flowgraph_for(feature: &str, proc_t: &Table, idx: usize) -> Option<Str
 	let channel_from = proc_t.get("channel_from").and_then(|i| i.as_str()).map(|s| s.to_string());
 	let channel_to = proc_t.get("channel_to").and_then(|i| i.as_str()).map(|s| s.to_string());
 	let header = |title: &str, desc: &str, tags: &[&str]| -> String {
-		let id_note = id
-			.as_ref()
-			.map(|s| format!("# 旧 processors.id = \"{}\"\n", s))
-			.unwrap_or_default();
+		let id_note = id.as_ref().map(|s| format!("# 旧 processors.id = \"{}\"\n", s)).unwrap_or_default();
 		let from_note = channel_from
 			.as_ref()
 			.map(|s| format!("# 旧 channel_from = \"{}\"\n", s))
@@ -858,7 +849,7 @@ fn guess_tts_voice(feature: &str, proc_t: &Table) -> String {
 				(_, Some(s)) => format!("{s}"),
 				_ => String::from(""),
 			}
-		},
+		}
 		"coeiroink" => {
 			let uuid = proc_t.get("speaker_uuid").and_then(|i| i.as_str()).unwrap_or("");
 			let style = proc_t.get("style_id").and_then(item_to_i64);
@@ -866,12 +857,8 @@ fn guess_tts_voice(feature: &str, proc_t: &Table) -> String {
 				Some(s) => format!("{uuid}:{s}"),
 				None => uuid.to_string(),
 			}
-		},
-		"bouyomichan" | "BouyomiChan" => proc_t
-			.get("voice")
-			.and_then(item_to_i64)
-			.map(|v| v.to_string())
-			.unwrap_or_default(),
+		}
+		"bouyomichan" | "BouyomiChan" => proc_t.get("voice").and_then(item_to_i64).map(|v| v.to_string()).unwrap_or_default(),
 		"os-tts" | "OS-TTS" => proc_t
 			.get("voice_name")
 			.and_then(|i| i.as_str())
@@ -884,15 +871,12 @@ fn guess_tts_voice(feature: &str, proc_t: &Table) -> String {
 
 fn guess_tts_endpoint(feature: &str, proc_t: &Table) -> Option<String> {
 	match feature {
-		"voicevox" | "aivis-speech" | "aivisspeech" | "coeiroink" => proc_t
-			.get("api_url")
-			.and_then(|i| i.as_str())
-			.map(|s| s.to_string()),
+		"voicevox" | "aivis-speech" | "aivisspeech" | "coeiroink" => proc_t.get("api_url").and_then(|i| i.as_str()).map(|s| s.to_string()),
 		"bouyomichan" | "BouyomiChan" => {
 			let addr = proc_t.get("address").and_then(|i| i.as_str()).unwrap_or("127.0.0.1");
 			let port = proc_t.get("port").and_then(item_to_i64).unwrap_or(50001);
 			Some(format!("{addr}:{port}"))
-		},
+		}
 		_ => None,
 	}
 }

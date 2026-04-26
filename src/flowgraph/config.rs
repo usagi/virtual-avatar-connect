@@ -59,9 +59,7 @@ impl FlowgraphInstanceConfig {
 		match self.resolve_default_timezone() {
 			Ok(off) => off,
 			Err(e) => {
-				log::warn!(
-					"《FlowgraphInstanceConfig》 default_timezone parse 失敗: {e}。UTC に fallback します。"
-				);
+				log::warn!("《FlowgraphInstanceConfig》 default_timezone parse 失敗: {e}。UTC に fallback します。");
 				Offset::UTC
 			}
 		}
@@ -81,10 +79,7 @@ impl FlowgraphInstanceConfig {
 /// 3. [`TimeZone::to_fixed_offset`] で fixed offset を取り出す (IANA zone は `Err`)
 pub fn parse_offset_str(s: &str) -> Result<Offset, ConfigError> {
 	let trimmed = s.trim();
-	if trimmed.is_empty()
-		|| trimmed.eq_ignore_ascii_case("z")
-		|| trimmed.eq_ignore_ascii_case("utc")
-	{
+	if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("z") || trimmed.eq_ignore_ascii_case("utc") {
 		return Ok(Offset::UTC);
 	}
 	static PARSER: DateTimeParser = DateTimeParser::new();
@@ -171,14 +166,8 @@ mod tests {
 
 	#[test]
 	fn parse_offset_str_rejects_nonsense() {
-		assert!(matches!(
-			parse_offset_str("nonsense"),
-			Err(ConfigError::InvalidOffset { .. })
-		));
-		assert!(matches!(
-			parse_offset_str("+9:00"),
-			Err(ConfigError::InvalidOffset { .. })
-		));
+		assert!(matches!(parse_offset_str("nonsense"), Err(ConfigError::InvalidOffset { .. })));
+		assert!(matches!(parse_offset_str("+9:00"), Err(ConfigError::InvalidOffset { .. })));
 	}
 
 	// ----- FlowgraphInstanceConfig -----
@@ -203,10 +192,7 @@ mod tests {
 		let cfg = FlowgraphInstanceConfig {
 			default_timezone: Some("Asia/Tokyo".into()),
 		};
-		assert!(matches!(
-			cfg.resolve_default_timezone(),
-			Err(ConfigError::IanaNotSupported { .. })
-		));
+		assert!(matches!(cfg.resolve_default_timezone(), Err(ConfigError::IanaNotSupported { .. })));
 	}
 
 	#[test]
@@ -242,9 +228,6 @@ mod tests {
 		let src = r#"default_timezone = "-05:30""#;
 		let cfg: FlowgraphInstanceConfig = toml::from_str(src).unwrap();
 		assert_eq!(cfg.default_timezone.as_deref(), Some("-05:30"));
-		assert_eq!(
-			cfg.resolve_default_timezone().unwrap().seconds(),
-			-(5 * 3600 + 30 * 60)
-		);
+		assert_eq!(cfg.resolve_default_timezone().unwrap().seconds(), -(5 * 3600 + 30 * 60));
 	}
 }

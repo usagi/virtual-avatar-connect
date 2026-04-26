@@ -17,8 +17,7 @@
 //! downstream Quantity needs can be reattached via `flowgraph.unit.assign`.
 
 use crate::flowgraph::node::{
-	get_required_float, get_required_json, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec,
-	PortSpec, PureNode,
+	get_required_float, get_required_json, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec, PureNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
@@ -29,11 +28,9 @@ use serde_json::Value as JsonValue;
 // ===========================================================================
 
 fn decode_vec<const N: usize>(v: &JsonValue, port: &str) -> Result<[f64; N], NodeExecError> {
-	let arr = v.as_array().ok_or_else(|| {
-		NodeExecError::Generic(anyhow::anyhow!(
-			"port `{port}`: expected JSON array of {N} numbers, got: {v}"
-		))
-	})?;
+	let arr = v
+		.as_array()
+		.ok_or_else(|| NodeExecError::Generic(anyhow::anyhow!("port `{port}`: expected JSON array of {N} numbers, got: {v}")))?;
 	if arr.len() != N {
 		return Err(NodeExecError::Generic(anyhow::anyhow!(
 			"port `{port}`: expected array of length {N}, got length {}",
@@ -42,11 +39,9 @@ fn decode_vec<const N: usize>(v: &JsonValue, port: &str) -> Result<[f64; N], Nod
 	}
 	let mut out = [0.0_f64; N];
 	for (i, x) in arr.iter().enumerate() {
-		let n = x.as_f64().ok_or_else(|| {
-			NodeExecError::Generic(anyhow::anyhow!(
-				"port `{port}`[{i}]: expected finite number, got: {x}"
-			))
-		})?;
+		let n = x
+			.as_f64()
+			.ok_or_else(|| NodeExecError::Generic(anyhow::anyhow!("port `{port}`[{i}]: expected finite number, got: {x}")))?;
 		if !n.is_finite() {
 			return Err(NodeExecError::Generic(anyhow::anyhow!(
 				"port `{port}`[{i}]: non-finite component ({n}) disallowed"
@@ -323,7 +318,14 @@ macro_rules! vec_lerp_node {
 					feature: $feature.into(),
 					title: $title.into(),
 					category: "vec".into(),
-					description: Some(concat!("Componentwise linear interpolation: a + (b - a) * t for ", stringify!($n), "-vectors. t is not clamped.").into()),
+					description: Some(
+						concat!(
+							"Componentwise linear interpolation: a + (b - a) * t for ",
+							stringify!($n),
+							"-vectors. t is not clamped."
+						)
+						.into(),
+					),
 					inputs: vec![
 						PortSpec::input("a", "A", SocketType::Json),
 						PortSpec::input("b", "B", SocketType::Json),
@@ -356,19 +358,75 @@ vec_make_node!(Vec3MakeNode, "flowgraph.vec3.make", "Vec3 make", 3, ["x", "y", "
 vec_unpack_node!(Vec2UnpackNode, "flowgraph.vec2.unpack", "Vec2 unpack", 2, ["x", "y"]);
 vec_unpack_node!(Vec3UnpackNode, "flowgraph.vec3.unpack", "Vec3 unpack", 3, ["x", "y", "z"]);
 
-vec_binop_node!(Vec2AddNode, "flowgraph.vec2.add", "Vec2 add", 2, add_n, "Componentwise vec2 addition");
-vec_binop_node!(Vec2SubNode, "flowgraph.vec2.sub", "Vec2 sub", 2, sub_n, "Componentwise vec2 subtraction");
-vec_binop_node!(Vec3AddNode, "flowgraph.vec3.add", "Vec3 add", 3, add_n, "Componentwise vec3 addition");
-vec_binop_node!(Vec3SubNode, "flowgraph.vec3.sub", "Vec3 sub", 3, sub_n, "Componentwise vec3 subtraction");
+vec_binop_node!(
+	Vec2AddNode,
+	"flowgraph.vec2.add",
+	"Vec2 add",
+	2,
+	add_n,
+	"Componentwise vec2 addition"
+);
+vec_binop_node!(
+	Vec2SubNode,
+	"flowgraph.vec2.sub",
+	"Vec2 sub",
+	2,
+	sub_n,
+	"Componentwise vec2 subtraction"
+);
+vec_binop_node!(
+	Vec3AddNode,
+	"flowgraph.vec3.add",
+	"Vec3 add",
+	3,
+	add_n,
+	"Componentwise vec3 addition"
+);
+vec_binop_node!(
+	Vec3SubNode,
+	"flowgraph.vec3.sub",
+	"Vec3 sub",
+	3,
+	sub_n,
+	"Componentwise vec3 subtraction"
+);
 
 vec_scale_node!(Vec2ScaleNode, "flowgraph.vec2.scale", "Vec2 scale", 2);
 vec_scale_node!(Vec3ScaleNode, "flowgraph.vec3.scale", "Vec3 scale", 3);
 
-vec_scalar_out_binop_node!(Vec2DotNode, "flowgraph.vec2.dot", "Vec2 dot", 2, dot_n, "Vec2 dot product (returns scalar)");
-vec_scalar_out_binop_node!(Vec3DotNode, "flowgraph.vec3.dot", "Vec3 dot", 3, dot_n, "Vec3 dot product (returns scalar)");
+vec_scalar_out_binop_node!(
+	Vec2DotNode,
+	"flowgraph.vec2.dot",
+	"Vec2 dot",
+	2,
+	dot_n,
+	"Vec2 dot product (returns scalar)"
+);
+vec_scalar_out_binop_node!(
+	Vec3DotNode,
+	"flowgraph.vec3.dot",
+	"Vec3 dot",
+	3,
+	dot_n,
+	"Vec3 dot product (returns scalar)"
+);
 
-vec_scalar_out_binop_node!(Vec2DistanceNode, "flowgraph.vec2.distance", "Vec2 distance", 2, distance_n, "Euclidean distance between two vec2s");
-vec_scalar_out_binop_node!(Vec3DistanceNode, "flowgraph.vec3.distance", "Vec3 distance", 3, distance_n, "Euclidean distance between two vec3s");
+vec_scalar_out_binop_node!(
+	Vec2DistanceNode,
+	"flowgraph.vec2.distance",
+	"Vec2 distance",
+	2,
+	distance_n,
+	"Euclidean distance between two vec2s"
+);
+vec_scalar_out_binop_node!(
+	Vec3DistanceNode,
+	"flowgraph.vec3.distance",
+	"Vec3 distance",
+	3,
+	distance_n,
+	"Euclidean distance between two vec3s"
+);
 
 fn wrap_float(x: f64) -> Result<SocketValue, NodeExecError> {
 	Ok(SocketValue::Float(x))
@@ -443,10 +501,13 @@ mod tests {
 	}
 
 	fn as_json(out: &NodeOutput, key: &str) -> JsonValue {
-		out.data.get(key).and_then(|v| match v {
-			SocketValue::Json(j) => Some(j.clone()),
-			_ => None,
-		}).unwrap()
+		out.data
+			.get(key)
+			.and_then(|v| match v {
+				SocketValue::Json(j) => Some(j.clone()),
+				_ => None,
+			})
+			.unwrap()
 	}
 
 	fn as_float(out: &NodeOutput, key: &str) -> f64 {
@@ -506,13 +567,9 @@ mod tests {
 		let v = as_json(&made, "v");
 		assert_eq!(v, json!([3.0, -4.0]));
 
-		let un = run_pure(
-			&Vec2UnpackNode,
-			InputMap::new(),
-			inp(&[("v", SocketValue::Json(v))]),
-		)
-		.await
-		.unwrap();
+		let un = run_pure(&Vec2UnpackNode, InputMap::new(), inp(&[("v", SocketValue::Json(v))]))
+			.await
+			.unwrap();
 		assert!((as_float(&un, "x") - 3.0).abs() < 1e-12);
 		assert!((as_float(&un, "y") + 4.0).abs() < 1e-12);
 	}
@@ -533,13 +590,9 @@ mod tests {
 		let v = as_json(&made, "v");
 		assert_eq!(v, json!([1.0, 2.0, 3.0]));
 
-		let un = run_pure(
-			&Vec3UnpackNode,
-			InputMap::new(),
-			inp(&[("v", SocketValue::Json(v))]),
-		)
-		.await
-		.unwrap();
+		let un = run_pure(&Vec3UnpackNode, InputMap::new(), inp(&[("v", SocketValue::Json(v))]))
+			.await
+			.unwrap();
 		assert_eq!(as_float(&un, "x"), 1.0);
 		assert_eq!(as_float(&un, "y"), 2.0);
 		assert_eq!(as_float(&un, "z"), 3.0);
@@ -551,22 +604,12 @@ mod tests {
 	async fn vec2_add_sub() {
 		let a = SocketValue::Json(json!([1.0, 2.0]));
 		let b = SocketValue::Json(json!([10.0, 20.0]));
-		let sum = run_pure(
-			&Vec2AddNode,
-			InputMap::new(),
-			inp(&[("a", a.clone()), ("b", b.clone())]),
-		)
-		.await
-		.unwrap();
+		let sum = run_pure(&Vec2AddNode, InputMap::new(), inp(&[("a", a.clone()), ("b", b.clone())]))
+			.await
+			.unwrap();
 		assert_eq!(as_json(&sum, "result"), json!([11.0, 22.0]));
 
-		let diff = run_pure(
-			&Vec2SubNode,
-			InputMap::new(),
-			inp(&[("a", b), ("b", a)]),
-		)
-		.await
-		.unwrap();
+		let diff = run_pure(&Vec2SubNode, InputMap::new(), inp(&[("a", b), ("b", a)])).await.unwrap();
 		assert_eq!(as_json(&diff, "result"), json!([9.0, 18.0]));
 	}
 
@@ -574,13 +617,7 @@ mod tests {
 	async fn vec3_add_and_dim_mismatch_errors() {
 		let a = SocketValue::Json(json!([1.0, 2.0, 3.0]));
 		let b = SocketValue::Json(json!([10.0, 20.0, 30.0]));
-		let sum = run_pure(
-			&Vec3AddNode,
-			InputMap::new(),
-			inp(&[("a", a), ("b", b)]),
-		)
-		.await
-		.unwrap();
+		let sum = run_pure(&Vec3AddNode, InputMap::new(), inp(&[("a", a), ("b", b)])).await.unwrap();
 		assert_eq!(as_json(&sum, "result"), json!([11.0, 22.0, 33.0]));
 
 		// Wrong dimension on one side \u{2192} decode error.
@@ -603,10 +640,7 @@ mod tests {
 		let out = run_pure(
 			&Vec2ScaleNode,
 			InputMap::new(),
-			inp(&[
-				("a", SocketValue::Json(json!([2.0, -3.0]))),
-				("k", SocketValue::Float(4.0)),
-			]),
+			inp(&[("a", SocketValue::Json(json!([2.0, -3.0]))), ("k", SocketValue::Float(4.0))]),
 		)
 		.await
 		.unwrap();

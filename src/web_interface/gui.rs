@@ -15,29 +15,27 @@ use std::path::PathBuf;
 /// `dist_path` が `Some` かつ `<dist_path>/index.html` が存在すれば静的配信を有効化。
 /// それ以外は「未ビルド」案内を返すフォールバックを `/gui` と `/gui/{tail:.*}` に登録する。
 pub fn register(cfg: &mut web::ServiceConfig, dist_path: Option<&str>) {
- let Some(dist) = dist_path else {
-  log::info!("《GUI》 gui_dist_path が null のため /gui/* は未ビルド案内のみ提供します。");
-  register_not_built(cfg, None);
-  return;
- };
- let dist_pb = PathBuf::from(dist);
- let index_html = dist_pb.join("index.html");
- if !index_html.is_file() {
-  log::warn!(
-   "《GUI》 {} が見つかりません。`cd gui && npm install && npm run build` を実行してください。/gui/* はビルド案内を返します。",
-   index_html.display()
-  );
-  register_not_built(cfg, Some(dist_pb));
-  return;
- }
+	let Some(dist) = dist_path else {
+		log::info!("《GUI》 gui_dist_path が null のため /gui/* は未ビルド案内のみ提供します。");
+		register_not_built(cfg, None);
+		return;
+	};
+	let dist_pb = PathBuf::from(dist);
+	let index_html = dist_pb.join("index.html");
+	if !index_html.is_file() {
+		log::warn!(
+			"《GUI》 {} が見つかりません。`cd gui && npm install && npm run build` を実行してください。/gui/* はビルド案内を返します。",
+			index_html.display()
+		);
+		register_not_built(cfg, Some(dist_pb));
+		return;
+	}
 
- log::info!("《GUI》 {} を /gui/ で配信します。", dist_pb.display());
- cfg.service(
-  actix_files::Files::new("/gui", dist_pb)
+	log::info!("《GUI》 {} を /gui/ で配信します。", dist_pb.display());
+	cfg.service(actix_files::Files::new("/gui", dist_pb)
    .index_file("index.html")
    // dotfiles（.env.* 等）が紛れ込んでいても露出させない。
-   .use_hidden_files(),
- );
+   .use_hidden_files());
 }
 
 /// 未ビルド時のフォールバック。`/gui`・`/gui/`・`/gui/<任意のパス>` の全てを拾う。
@@ -45,34 +43,29 @@ pub fn register(cfg: &mut web::ServiceConfig, dist_path: Option<&str>) {
 /// actix-web の動的パスは `/gui/{tail:.*}` だと **末尾スラッシュ単独** (`/gui/`) が
 /// tail="" で一致しないケースがあるため、`/gui{tail:.*}` の形で `/gui` 側から貪欲にマッチさせる。
 fn register_not_built(cfg: &mut web::ServiceConfig, dist_pb: Option<PathBuf>) {
- let shown_path = dist_pb
-  .map(|p| p.display().to_string())
-  .unwrap_or_else(|| "(none; gui_dist_path is null)".to_string());
- log::info!(
-  "《GUI》 /gui/* は未ビルド案内 (dist_path={}) を返します。",
-  shown_path
- );
- cfg.app_data(web::Data::new(GuiNotBuilt { dist_path: shown_path }));
- cfg.service(web::resource("/gui{tail:.*}").route(web::get().to(not_built_index)));
+	let shown_path = dist_pb
+		.map(|p| p.display().to_string())
+		.unwrap_or_else(|| "(none; gui_dist_path is null)".to_string());
+	log::info!("《GUI》 /gui/* は未ビルド案内 (dist_path={}) を返します。", shown_path);
+	cfg.app_data(web::Data::new(GuiNotBuilt { dist_path: shown_path }));
+	cfg.service(web::resource("/gui{tail:.*}").route(web::get().to(not_built_index)));
 }
 
 #[derive(Clone)]
 struct GuiNotBuilt {
- dist_path: String,
+	dist_path: String,
 }
 
 async fn not_built_index(ctx: web::Data<GuiNotBuilt>) -> impl Responder {
- let body = NOT_BUILT_HTML.replace("{{DIST_PATH}}", &html_escape(&ctx.dist_path));
- HttpResponse::NotFound()
-  .content_type("text/html; charset=utf-8")
-  .body(body)
+	let body = NOT_BUILT_HTML.replace("{{DIST_PATH}}", &html_escape(&ctx.dist_path));
+	HttpResponse::NotFound().content_type("text/html; charset=utf-8").body(body)
 }
 
 fn html_escape(s: &str) -> String {
- s.replace('&', "&amp;")
-  .replace('<', "&lt;")
-  .replace('>', "&gt;")
-  .replace('"', "&quot;")
+	s.replace('&', "&amp;")
+		.replace('<', "&lt;")
+		.replace('>', "&gt;")
+		.replace('"', "&quot;")
 }
 
 const NOT_BUILT_HTML: &str = r#"<!doctype html>

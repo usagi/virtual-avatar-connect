@@ -7,8 +7,8 @@
 //! `on_edge` / `edge_type` を更新する（`bool` の `changed` などと組み合わせる想定）。
 
 use crate::flowgraph::node::{
-	get_optional_int, get_required_bool, get_required_json, ExecFireSet, InputMap, NodeDescriptor, NodeExecError,
-	NodeOutput, NodeSpec, PortSpec, PropertySpec, StatefulCtx, StatefulNode, TriggerEvent,
+	get_optional_int, get_required_bool, get_required_json, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec,
+	PortSpec, PropertySpec, StatefulCtx, StatefulNode, TriggerEvent,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
@@ -49,23 +49,17 @@ impl NodeDescriptor for EdgeDetectNode {
 				PortSpec::output("edge_type", "Edge type", SocketType::String),
 				PortSpec::exec_output("on_edge", "On edge"),
 			],
-			properties: vec![PropertySpec::new(
-				"mode",
-				"Mode",
-				SocketType::String,
-				SocketValue::String("both".into()),
-			)
-			.description("rising: low→high only, falling: high→low only, both: either transition.")
-			.with_choices(["rising", "falling", "both"])],
+			properties: vec![
+				PropertySpec::new("mode", "Mode", SocketType::String, SocketValue::String("both".into()))
+					.description("rising: low→high only, falling: high→low only, both: either transition.")
+					.with_choices(["rising", "falling", "both"]),
+			],
 		}
 	}
 }
 
 fn edge_mode(props: &InputMap) -> Result<String, NodeExecError> {
-	let s = props
-		.get("mode")
-		.and_then(|v| v.as_str().ok())
-		.unwrap_or("both");
+	let s = props.get("mode").and_then(|v| v.as_str().ok()).unwrap_or("both");
 	match s {
 		"rising" | "falling" | "both" => Ok(s.to_string()),
 		_ => Err(NodeExecError::Generic(anyhow::anyhow!(
@@ -91,10 +85,7 @@ impl StatefulNode for EdgeDetectNode {
 		let state = state.downcast_mut::<EdgeDetectState>().expect("EdgeDetectState");
 
 		if !fired_exec.contains("exec_in") {
-			return Ok(NodeOutput::new().set_data(
-				"edge_type",
-				SocketValue::String(state.last_edge_type.clone()),
-			));
+			return Ok(NodeOutput::new().set_data("edge_type", SocketValue::String(state.last_edge_type.clone())));
 		}
 
 		let cur = get_required_bool(inputs, "value")?;
@@ -122,9 +113,7 @@ impl StatefulNode for EdgeDetectNode {
 				};
 				if fire && !label.is_empty() {
 					state.last_edge_type = label.to_string();
-					out = out
-						.set_data("edge_type", SocketValue::String(label.into()))
-						.fire_exec("on_edge");
+					out = out.set_data("edge_type", SocketValue::String(label.into())).fire_exec("on_edge");
 				}
 			}
 		}
@@ -155,9 +144,7 @@ impl NodeDescriptor for PrevValueNode {
 				 First sample: `prev` equals the current `value`."
 					.into(),
 			),
-			inputs: vec![PortSpec::input("value", "Value", SocketType::Json).with_default(SocketValue::Json(
-				JsonValue::Null,
-			))],
+			inputs: vec![PortSpec::input("value", "Value", SocketType::Json).with_default(SocketValue::Json(JsonValue::Null))],
 			outputs: vec![PortSpec::output("prev", "Previous", SocketType::Json)],
 			properties: vec![],
 		}
@@ -404,10 +391,7 @@ impl StatefulNode for ThrottleNode {
 		}
 
 		let now = Instant::now();
-		let can_emit = state
-			.last_emit_at
-			.map(|t| now.duration_since(t) >= interval)
-			.unwrap_or(true);
+		let can_emit = state.last_emit_at.map(|t| now.duration_since(t) >= interval).unwrap_or(true);
 
 		if can_emit {
 			state.last_sent = vin.clone();

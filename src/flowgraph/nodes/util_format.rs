@@ -17,8 +17,7 @@
 //! On dimensionless Quantity, `include_unit` is ignored (no unit to append).
 
 use crate::flowgraph::node::{
-	get_required_quantity, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
-	PropertySpec, PureNode,
+	get_required_quantity, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec, PropertySpec, PureNode,
 };
 use crate::flowgraph::quantity::parse_unit;
 use crate::flowgraph::socket::{SocketType, SocketValue};
@@ -40,16 +39,10 @@ impl NodeDescriptor for UtilFormatNode {
 			inputs: vec![PortSpec::input("value", "Value", SocketType::Quantity)],
 			outputs: vec![PortSpec::output("result", "Result", SocketType::String)],
 			properties: vec![
-				PropertySpec::new(
-					"include_unit",
-					"Include Unit",
-					SocketType::Bool,
-					SocketValue::Bool(true),
-				)
-				.description("Append \" {unit}\" suffix when the value is non-dimensionless."),
-				PropertySpec::new("precision", "Precision", SocketType::Int, SocketValue::Int(-1)).description(
-					"Decimal places for the numeric part. -1 means use the default Display formatter (no forced precision).",
-				),
+				PropertySpec::new("include_unit", "Include Unit", SocketType::Bool, SocketValue::Bool(true))
+					.description("Append \" {unit}\" suffix when the value is non-dimensionless."),
+				PropertySpec::new("precision", "Precision", SocketType::Int, SocketValue::Int(-1))
+					.description("Decimal places for the numeric part. -1 means use the default Display formatter (no forced precision)."),
 				PropertySpec::new(
 					"unit_override",
 					"Unit Override",
@@ -67,12 +60,7 @@ impl NodeDescriptor for UtilFormatNode {
 
 #[async_trait]
 impl PureNode for UtilFormatNode {
-	async fn compute(
-		&self,
-		properties: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "value")?;
 		let include_unit = properties.get("include_unit").and_then(|v| v.as_bool().ok()).unwrap_or(true);
 		let precision: i64 = properties.get("precision").and_then(|v| v.as_i64().ok()).unwrap_or(-1);
@@ -87,12 +75,11 @@ impl PureNode for UtilFormatNode {
 		let q_ref = if unit_override.is_empty() {
 			q
 		} else {
-			let target = parse_unit(&unit_override).map_err(|e| {
-				NodeExecError::Generic(anyhow::anyhow!("unit_override parse error on '{unit_override}': {e}"))
-			})?;
-			q_owned = q.convert_to(&target).map_err(|e| {
-				NodeExecError::Generic(anyhow::anyhow!("unit_override convert failed: {e}"))
-			})?;
+			let target = parse_unit(&unit_override)
+				.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("unit_override parse error on '{unit_override}': {e}")))?;
+			q_owned = q
+				.convert_to(&target)
+				.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("unit_override convert failed: {e}")))?;
 			&q_owned
 		};
 

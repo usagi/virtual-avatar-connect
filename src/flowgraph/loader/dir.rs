@@ -20,10 +20,7 @@ fn normalize_library_use_fq(s: &str) -> String {
 }
 
 /// `[meta].library_uses` の参照先検証と閉路検出（エラー時はロード失敗）。
-fn library_use_dependency_diagnostics(
-	files: &[(String, PathBuf, FlowgraphFile)],
-	known: &HashSet<String>,
-) -> Vec<Diagnostic> {
+fn library_use_dependency_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], known: &HashSet<String>) -> Vec<Diagnostic> {
 	let mut diagnostics: Vec<Diagnostic> = Vec::new();
 	let mut adj: HashMap<String, Vec<String>> = HashMap::new();
 
@@ -198,19 +195,13 @@ pub fn fq_path_of_file(root: &Path, file: &Path) -> Result<String, String> {
 pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 	if !root.exists() {
 		return Err(LoadError::from_single(
-			Diagnostic::error(
-				DiagnosticCode::Io,
-				format!("flowgraph root が存在しない: '{}'", root.display()),
-			)
-			.with_file(root.to_path_buf()),
+			Diagnostic::error(DiagnosticCode::Io, format!("flowgraph root が存在しない: '{}'", root.display()))
+				.with_file(root.to_path_buf()),
 		));
 	}
 
 	let files = walk_flowgraph_dir(root).map_err(|e| {
-		LoadError::from_single(
-			Diagnostic::error(DiagnosticCode::Io, format!("ディレクトリ走査失敗: {e}"))
-				.with_file(root.to_path_buf()),
-		)
+		LoadError::from_single(Diagnostic::error(DiagnosticCode::Io, format!("ディレクトリ走査失敗: {e}")).with_file(root.to_path_buf()))
 	})?;
 
 	if files.is_empty() {
@@ -230,9 +221,7 @@ pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 		let fq = match fq_path_of_file(root, &file_path) {
 			Ok(v) => v,
 			Err(e) => {
-				parse_diags.push(
-					Diagnostic::error(DiagnosticCode::Io, e).with_file(file_path.clone()),
-				);
+				parse_diags.push(Diagnostic::error(DiagnosticCode::Io, e).with_file(file_path.clone()));
 				continue;
 			}
 		};
@@ -240,10 +229,7 @@ pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 		let src = match std::fs::read_to_string(&file_path) {
 			Ok(v) => v,
 			Err(e) => {
-				parse_diags.push(
-					Diagnostic::error(DiagnosticCode::Io, format!("読み込み失敗: {e}"))
-						.with_file(file_path.clone()),
-				);
+				parse_diags.push(Diagnostic::error(DiagnosticCode::Io, format!("読み込み失敗: {e}")).with_file(file_path.clone()));
 				continue;
 			}
 		};
@@ -252,11 +238,7 @@ pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 			Ok(file) => {
 				if !known_file_fqs.insert(fq.clone()) {
 					parse_diags.push(
-						Diagnostic::error(
-							DiagnosticCode::DuplicateNodeId,
-							format!("fq path 重複: '{fq}'"),
-						)
-						.with_file(file_path.clone()),
+						Diagnostic::error(DiagnosticCode::DuplicateNodeId, format!("fq path 重複: '{fq}'")).with_file(file_path.clone()),
 					);
 					continue;
 				}
@@ -300,10 +282,7 @@ mod tests {
 
 	fn tmp_root() -> PathBuf {
 		use std::time::{SystemTime, UNIX_EPOCH};
-		let ns = SystemTime::now()
-			.duration_since(UNIX_EPOCH)
-			.unwrap()
-			.as_nanos();
+		let ns = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
 		let dir = std::env::temp_dir().join(format!("vac-fg-dir-{}-{ns}", std::process::id()));
 		std::fs::create_dir_all(&dir).unwrap();
 		dir
@@ -339,14 +318,8 @@ mod tests {
 	#[test]
 	fn fq_path_conversion() {
 		let root = Path::new("/root");
-		assert_eq!(
-			fq_path_of_file(root, Path::new("/root/main.flowgraph.toml")).unwrap(),
-			"main"
-		);
-		assert_eq!(
-			fq_path_of_file(root, Path::new("/root/tts/jp.flowgraph.toml")).unwrap(),
-			"tts/jp"
-		);
+		assert_eq!(fq_path_of_file(root, Path::new("/root/main.flowgraph.toml")).unwrap(), "main");
+		assert_eq!(fq_path_of_file(root, Path::new("/root/tts/jp.flowgraph.toml")).unwrap(), "tts/jp");
 		assert_eq!(
 			fq_path_of_file(root, Path::new("/root/tts/main.flowgraph.toml")).unwrap(),
 			"tts/main"
@@ -468,12 +441,8 @@ mod tests {
 	#[test]
 	fn examples_dir_loads_without_errors() {
 		let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("flowgraph.example");
-		let report = load_flowgraph_dir(&root).unwrap_or_else(|e| {
-			panic!(
-				"flowgraph.example の load に失敗: diagnostics={:#?}",
-				e.diagnostics
-			)
-		});
+		let report =
+			load_flowgraph_dir(&root).unwrap_or_else(|e| panic!("flowgraph.example の load に失敗: diagnostics={:#?}", e.diagnostics));
 		// エラーが無い
 		assert!(
 			report.diagnostics.iter().all(|d| d.severity != Severity::Error),
@@ -507,8 +476,7 @@ library_uses = ["a"]
 		);
 		let err = load_flowgraph_dir(&root).expect_err("cycle");
 		assert!(
-			err.errors()
-				.any(|d| d.code == DiagnosticCode::LibraryDependencyCycle),
+			err.errors().any(|d| d.code == DiagnosticCode::LibraryDependencyCycle),
 			"{:#?}",
 			err.diagnostics
 		);
@@ -524,18 +492,9 @@ library_uses = ["a"]
 		if !root.is_dir() {
 			return;
 		}
-		let report = load_flowgraph_dir(&root).unwrap_or_else(|e| {
-			panic!("flowgraph.local の load に失敗: diagnostics={:#?}", e.diagnostics)
-		});
-		let errors: Vec<_> = report
-			.diagnostics
-			.iter()
-			.filter(|d| d.severity == Severity::Error)
-			.collect();
-		assert!(
-			errors.is_empty(),
-			"flowgraph.local に error 診断が含まれる: {:#?}",
-			errors
-		);
+		let report =
+			load_flowgraph_dir(&root).unwrap_or_else(|e| panic!("flowgraph.local の load に失敗: diagnostics={:#?}", e.diagnostics));
+		let errors: Vec<_> = report.diagnostics.iter().filter(|d| d.severity == Severity::Error).collect();
+		assert!(errors.is_empty(), "flowgraph.local に error 診断が含まれる: {:#?}", errors);
 	}
 }

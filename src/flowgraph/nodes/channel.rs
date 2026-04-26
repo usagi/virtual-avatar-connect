@@ -24,8 +24,7 @@
 //! のデフォルトフィルタ (`ignore_flowgraph_echo = true`) が自ノード発の datum を安全に drop できる。
 
 use crate::flowgraph::node::{
-	EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
-	PropertySpec,
+	EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec, PropertySpec,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
@@ -47,14 +46,10 @@ impl NodeDescriptor for ChannelEmitNode {
 			),
 			inputs: vec![
 				PortSpec::exec_input("exec_in", "Exec"),
-				PortSpec::input("channel", "Channel", SocketType::String)
-					.with_default(SocketValue::String(String::new())),
-				PortSpec::input("content", "Content", SocketType::String)
-					.with_default(SocketValue::String(String::new())),
-				PortSpec::input("is_final", "Is Final", SocketType::Bool)
-					.with_default(SocketValue::Bool(true)),
-				PortSpec::input("source_actor", "Source Actor", SocketType::String)
-					.with_default(SocketValue::String(String::new())),
+				PortSpec::input("channel", "Channel", SocketType::String).with_default(SocketValue::String(String::new())),
+				PortSpec::input("content", "Content", SocketType::String).with_default(SocketValue::String(String::new())),
+				PortSpec::input("is_final", "Is Final", SocketType::Bool).with_default(SocketValue::Bool(true)),
+				PortSpec::input("source_actor", "Source Actor", SocketType::String).with_default(SocketValue::String(String::new())),
 			],
 			outputs: vec![
 				PortSpec::exec_output("exec_out", "On Success"),
@@ -96,12 +91,7 @@ impl EffectfulNode for ChannelEmitNode {
 			return Ok(NodeOutput::new());
 		}
 
-		let channel_in = inputs
-			.get("channel")
-			.and_then(|v| v.as_str().ok())
-			.unwrap_or("")
-			.trim()
-			.to_string();
+		let channel_in = inputs.get("channel").and_then(|v| v.as_str().ok()).unwrap_or("").trim().to_string();
 		let fallback = properties
 			.get("fallback_channel")
 			.and_then(|v| v.as_str().ok())
@@ -114,27 +104,20 @@ impl EffectfulNode for ChannelEmitNode {
 			return Ok(NodeOutput::new().fire_exec("on_error"));
 		}
 
-		let content = inputs
-			.get("content")
-			.and_then(|v| v.as_str().ok())
-			.unwrap_or("")
-			.to_string();
-		let is_final = inputs
-			.get("is_final")
-			.and_then(|v| v.as_bool().ok())
-			.unwrap_or(true);
-		let mut source_actor = inputs
-			.get("source_actor")
-			.and_then(|v| v.as_str().ok())
-			.unwrap_or("")
-			.to_string();
+		let content = inputs.get("content").and_then(|v| v.as_str().ok()).unwrap_or("").to_string();
+		let is_final = inputs.get("is_final").and_then(|v| v.as_bool().ok()).unwrap_or(true);
+		let mut source_actor = inputs.get("source_actor").and_then(|v| v.as_str().ok()).unwrap_or("").to_string();
 		if source_actor.is_empty() {
 			let auto_tag = properties
 				.get("auto_tag_source_actor")
 				.and_then(|v| v.as_bool().ok())
 				.unwrap_or(true);
 			if auto_tag {
-				let tag = if ctx.node_id.is_empty() { "flowgraph".to_string() } else { format!("flowgraph:{}", ctx.node_id) };
+				let tag = if ctx.node_id.is_empty() {
+					"flowgraph".to_string()
+				} else {
+					format!("flowgraph:{}", ctx.node_id)
+				};
 				source_actor = tag;
 			}
 		}
@@ -148,10 +131,7 @@ impl EffectfulNode for ChannelEmitNode {
 			return Ok(NodeOutput::new().fire_exec("on_error"));
 		};
 
-		let mut cd = crate::state::ChannelDatum::new(channel, content).with_flag_if(
-			crate::state::ChannelDatum::FLAG_IS_FINAL,
-			is_final,
-		);
+		let mut cd = crate::state::ChannelDatum::new(channel, content).with_flag_if(crate::state::ChannelDatum::FLAG_IS_FINAL, is_final);
 		if !source_actor.is_empty() {
 			cd = cd.with_meta("source_actor", source_actor);
 		}

@@ -20,17 +20,11 @@ use actix_web::web::{self, Data, Json};
 use actix_web::{delete, get, post, put, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 
-use crate::flowgraph::fragment::paste::{
-	paste_fragment, PasteError, PasteReport, PasteRequest,
-};
-use crate::flowgraph::fragment::zip_codec::{
-	export_zip, import_zip, ZipExportError, ZipImportError, ZipImportOptions, ZipImportOutcome,
-};
+use crate::flowgraph::fragment::paste::{paste_fragment, PasteError, PasteReport, PasteRequest};
+use crate::flowgraph::fragment::zip_codec::{export_zip, import_zip, ZipExportError, ZipImportError, ZipImportOptions, ZipImportOutcome};
 use crate::flowgraph::fragment::{copy_targets, serialize_fragment, CopyError, CopyRequest, Fragment};
 use crate::flowgraph::loader::{parse_flowgraph_file, Diagnostic, FlowgraphFile, Severity};
-use crate::flowgraph::node::{
-	json_to_socket_value, InputMap, PortDirection, PortSpec, TriggerEvent,
-};
+use crate::flowgraph::node::{json_to_socket_value, InputMap, PortDirection, PortSpec, TriggerEvent};
 use crate::flowgraph::quantity::{parse_unit, Quantity};
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use crate::flowgraph::{registry, FlowgraphRuntime};
@@ -70,10 +64,7 @@ fn enrich_quantity_port_ui_hints(port: &mut serde_json::Value) {
 	if ty != "quantity" {
 		return;
 	}
-	let Some(SocketValue::Quantity(q)) = obj
-		.get("default")
-		.and_then(|d| json_to_socket_value(&SocketType::Quantity, d))
-	else {
+	let Some(SocketValue::Quantity(q)) = obj.get("default").and_then(|d| json_to_socket_value(&SocketType::Quantity, d)) else {
 		return;
 	};
 	let dim = q.dimension();
@@ -84,10 +75,7 @@ fn enrich_quantity_port_ui_hints(port: &mut serde_json::Value) {
 	let full = q.unit.canonical();
 	let badge = shorten_unit_label_chars(&full, 14);
 	obj.insert("quantity_dim".to_string(), serde_json::Value::String(dim_s));
-	obj.insert(
-		"quantity_unit_badge".to_string(),
-		serde_json::Value::String(badge),
-	);
+	obj.insert("quantity_unit_badge".to_string(), serde_json::Value::String(badge));
 	obj.insert("quantity_unit_full".to_string(), serde_json::Value::String(full));
 }
 
@@ -132,11 +120,7 @@ async fn flowgraph_dir(state: &SharedState) -> Result<(PathBuf, Option<Flowgraph
 fn fq_to_file_path(root: &Path, fq: &str) -> Result<PathBuf, HttpResponse> {
 	let fq = fq.trim_matches('/').trim();
 	if fq.is_empty() {
-		return Err(err_json(
-			actix_web::http::StatusCode::BAD_REQUEST,
-			"empty_fq",
-			"fq が空です",
-		));
+		return Err(err_json(actix_web::http::StatusCode::BAD_REQUEST, "empty_fq", "fq が空です"));
 	}
 	for seg in fq.split('/') {
 		if seg.is_empty() || seg == "." || seg == ".." {
@@ -620,11 +604,7 @@ pub struct PutFileRequest {
 }
 
 #[put("/flowgraph/file/{fq:.*}")]
-pub async fn put_file(
-	state: Data<SharedState>,
-	fq_path: web::Path<String>,
-	body: Json<PutFileRequest>,
-) -> impl Responder {
+pub async fn put_file(state: Data<SharedState>, fq_path: web::Path<String>, body: Json<PutFileRequest>) -> impl Responder {
 	let fq = fq_path.into_inner();
 	let (root, _) = match flowgraph_dir(&state).await {
 		Ok(v) => v,
@@ -763,7 +743,10 @@ pub async fn post_open_external(state: Data<SharedState>, fq_path: web::Path<Str
 		);
 	}
 	let (command, spawned) = spawn_os_opener(&file_path);
-	log::info!("《Flowgraph》 open-external: {} (cmd={command}, spawned={spawned})", file_path.display());
+	log::info!(
+		"《Flowgraph》 open-external: {} (cmd={command}, spawned={spawned})",
+		file_path.display()
+	);
 	HttpResponse::Ok().json(OpenExternalResponse {
 		fq: fq.trim_matches('/').to_string(),
 		path: root_relative(&root, &file_path),
@@ -918,10 +901,7 @@ fn spawn_os_opener(file: &Path) -> (String, bool) {
 	#[cfg(target_os = "windows")]
 	{
 		let cmd = format!("cmd /C start \"\" {path:?}");
-		let spawned = std::process::Command::new("cmd")
-			.args(["/C", "start", "", &path])
-			.spawn()
-			.is_ok();
+		let spawned = std::process::Command::new("cmd").args(["/C", "start", "", &path]).spawn().is_ok();
 		(cmd, spawned)
 	}
 	#[cfg(target_os = "macos")]
@@ -1017,9 +997,7 @@ impl TriggerValidationError {
 	pub(crate) fn status(&self) -> actix_web::http::StatusCode {
 		use actix_web::http::StatusCode;
 		match self {
-			Self::NoExecInput | Self::ExecPortNotExec(_) | Self::UnknownPort(_) | Self::ExecPortInData(_) => {
-				StatusCode::BAD_REQUEST
-			}
+			Self::NoExecInput | Self::ExecPortNotExec(_) | Self::UnknownPort(_) | Self::ExecPortInData(_) => StatusCode::BAD_REQUEST,
 			Self::ExecPortNotFound(_) => StatusCode::NOT_FOUND,
 			Self::InputTypeMismatch { .. } => StatusCode::UNPROCESSABLE_ENTITY,
 		}
@@ -1117,9 +1095,7 @@ pub async fn post_trigger_node(
 		return err_json(
 			actix_web::http::StatusCode::NOT_FOUND,
 			"instance_not_found",
-			format!(
-				"instance_id '{instance_id}' は存在しません（V2 は 'default' のみ対応）"
-			),
+			format!("instance_id '{instance_id}' は存在しません（V2 は 'default' のみ対応）"),
 		);
 	}
 
@@ -1155,9 +1131,7 @@ pub async fn post_trigger_node(
 		return err_json(
 			actix_web::http::StatusCode::FORBIDDEN,
 			"feature_not_triggerable",
-			format!(
-				"feature '{feature}' は control API からの外部トリガに opt-in していません"
-			),
+			format!("feature '{feature}' は control API からの外部トリガに opt-in していません"),
 		);
 	}
 
@@ -1279,11 +1253,7 @@ pub async fn post_fragment_copy(state: Data<SharedState>, req: Json<CopyRequest>
 	let fragment_toml = match serialize_fragment(&fragment) {
 		Ok(s) => s,
 		Err(e) => {
-			return err_json(
-				actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
-				"serialize_failed",
-				e,
-			);
+			return err_json(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, "serialize_failed", e);
 		}
 	};
 	let file_count = fragment.files.len();
@@ -1313,10 +1283,7 @@ fn copy_error_to_response(e: CopyError) -> HttpResponse {
 ///
 /// 書き込み後は `reload_runtime` で runtime を再構築 + `FlowgraphReloaded` WS push。
 #[post("/flowgraph/fragment/paste")]
-pub async fn post_fragment_paste(
-	state: Data<SharedState>,
-	req: Json<PasteRequest>,
-) -> impl Responder {
+pub async fn post_fragment_paste(state: Data<SharedState>, req: Json<PasteRequest>) -> impl Responder {
 	let (root, _) = match flowgraph_dir(&state).await {
 		Ok(v) => v,
 		Err(r) => return r,
@@ -1344,18 +1311,12 @@ pub async fn post_fragment_paste(
 fn paste_error_to_response(e: PasteError) -> HttpResponse {
 	use actix_web::http::StatusCode;
 	match e {
-		PasteError::RootMissing(_) => {
-			err_json(StatusCode::INTERNAL_SERVER_ERROR, "flowgraph_dir_missing", e)
-		}
+		PasteError::RootMissing(_) => err_json(StatusCode::INTERNAL_SERVER_ERROR, "flowgraph_dir_missing", e),
 		PasteError::Parse(_) => err_json(StatusCode::UNPROCESSABLE_ENTITY, "fragment_parse", e),
 		PasteError::InvalidTarget(_) => err_json(StatusCode::BAD_REQUEST, "invalid_target", e),
-		PasteError::InvalidFragmentPath(_) => {
-			err_json(StatusCode::BAD_REQUEST, "invalid_fragment_path", e)
-		}
+		PasteError::InvalidFragmentPath(_) => err_json(StatusCode::BAD_REQUEST, "invalid_fragment_path", e),
 		PasteError::Io { .. } => err_json(StatusCode::INTERNAL_SERVER_ERROR, "io", e),
-		PasteError::ExistingParse { .. } => {
-			err_json(StatusCode::CONFLICT, "existing_parse_failed", e)
-		}
+		PasteError::ExistingParse { .. } => err_json(StatusCode::CONFLICT, "existing_parse_failed", e),
 	}
 }
 
@@ -1415,11 +1376,7 @@ pub struct ImportZipQuery {
 }
 
 #[post("/flowgraph/import/zip")]
-pub async fn post_import_zip(
-	state: Data<SharedState>,
-	query: web::Query<ImportZipQuery>,
-	body: web::Bytes,
-) -> impl Responder {
+pub async fn post_import_zip(state: Data<SharedState>, query: web::Query<ImportZipQuery>, body: web::Bytes) -> impl Responder {
 	let (root, _) = match flowgraph_dir(&state).await {
 		Ok(v) => v,
 		Err(r) => return r,
@@ -1475,12 +1432,8 @@ fn import_zip_error_to_response(e: ZipImportError) -> HttpResponse {
 	use actix_web::http::StatusCode;
 	match e {
 		ZipImportError::UnsafeEntry(_) => err_json(StatusCode::BAD_REQUEST, "unsafe_entry", e),
-		ZipImportError::ManifestMissing => {
-			err_json(StatusCode::UNPROCESSABLE_ENTITY, "manifest_missing", e)
-		}
-		ZipImportError::ManifestParse(_) => {
-			err_json(StatusCode::UNPROCESSABLE_ENTITY, "manifest_parse", e)
-		}
+		ZipImportError::ManifestMissing => err_json(StatusCode::UNPROCESSABLE_ENTITY, "manifest_missing", e),
+		ZipImportError::ManifestParse(_) => err_json(StatusCode::UNPROCESSABLE_ENTITY, "manifest_parse", e),
 		ZipImportError::Zip(_) => err_json(StatusCode::UNPROCESSABLE_ENTITY, "zip_parse", e),
 		ZipImportError::Io(_) => err_json(StatusCode::INTERNAL_SERVER_ERROR, "io", e),
 		ZipImportError::Paste(p) => paste_error_to_response(p),
@@ -1584,10 +1537,8 @@ mod tests {
 			})
 			.collect();
 
-		let by_feature: std::collections::HashMap<&str, &serde_json::Value> = values
-			.iter()
-			.map(|v| (v["feature"].as_str().unwrap(), v))
-			.collect();
+		let by_feature: std::collections::HashMap<&str, &serde_json::Value> =
+			values.iter().map(|v| (v["feature"].as_str().unwrap(), v)).collect();
 
 		// opt-in 済み: dictionary.learn / .forget
 		for f in ["flowgraph.dictionary.learn", "flowgraph.dictionary.forget"] {

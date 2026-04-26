@@ -6,8 +6,7 @@
 //! Perlin instances are cached per `seed` (as `u32`) in a process-global `Mutex<HashMap>`.
 
 use crate::flowgraph::node::{
-	get_required_float, get_required_int, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec,
-	PortSpec, PureNode,
+	get_required_float, get_required_int, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec, PureNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
@@ -48,12 +47,7 @@ impl NodeDescriptor for RandomUniformIntNode {
 
 #[async_trait]
 impl PureNode for RandomUniformIntNode {
-	async fn compute(
-		&self,
-		_props: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let mut lo = get_required_int(inputs, "lo")?;
 		let mut hi = get_required_int(inputs, "hi")?;
 		if lo > hi {
@@ -89,12 +83,7 @@ impl NodeDescriptor for RandomUniformFloatNode {
 
 #[async_trait]
 impl PureNode for RandomUniformFloatNode {
-	async fn compute(
-		&self,
-		_props: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let mut lo = get_required_float(inputs, "lo")?;
 		let mut hi = get_required_float(inputs, "hi")?;
 		if !lo.is_finite() || !hi.is_finite() {
@@ -126,8 +115,7 @@ impl NodeDescriptor for RandomNormalNode {
 			title: "Random normal".into(),
 			category: "random".into(),
 			description: Some(
-				"Gaussian sample (Box–Muller) with given mean and stddev. stddev must be non-negative; 0 yields mean."
-					.into(),
+				"Gaussian sample (Box–Muller) with given mean and stddev. stddev must be non-negative; 0 yields mean.".into(),
 			),
 			inputs: vec![
 				PortSpec::input("mean", "Mean", SocketType::Float),
@@ -154,12 +142,7 @@ fn box_muller_pair() -> (f64, f64) {
 
 #[async_trait]
 impl PureNode for RandomNormalNode {
-	async fn compute(
-		&self,
-		_props: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let mean = get_required_float(inputs, "mean")?;
 		let stddev = get_required_float(inputs, "stddev")?;
 		if !mean.is_finite() {
@@ -203,12 +186,7 @@ impl NodeDescriptor for NoisePerlin1dNode {
 
 #[async_trait]
 impl PureNode for NoisePerlin1dNode {
-	async fn compute(
-		&self,
-		_props: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let t = get_required_float(inputs, "t")?;
 		let seed = get_required_int(inputs, "seed")?;
 		if !t.is_finite() {
@@ -246,12 +224,7 @@ impl NodeDescriptor for NoisePerlin2dNode {
 
 #[async_trait]
 impl PureNode for NoisePerlin2dNode {
-	async fn compute(
-		&self,
-		_props: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let x = get_required_float(inputs, "x")?;
 		let y = get_required_float(inputs, "y")?;
 		let seed = get_required_int(inputs, "seed")?;
@@ -292,12 +265,9 @@ mod tests {
 	#[tokio::test]
 	async fn normal_zero_stddev_is_mean() {
 		let n = RandomNormalNode;
-		let inputs: InputMap = [
-			("mean".into(), SocketValue::Float(3.5)),
-			("stddev".into(), SocketValue::Float(0.0)),
-		]
-		.into_iter()
-		.collect();
+		let inputs: InputMap = [("mean".into(), SocketValue::Float(3.5)), ("stddev".into(), SocketValue::Float(0.0))]
+			.into_iter()
+			.collect();
 		let out = n.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((out.data.get("value").unwrap().as_f64().unwrap() - 3.5).abs() < 1e-12);
 	}
@@ -305,12 +275,9 @@ mod tests {
 	#[tokio::test]
 	async fn perlin_1d_deterministic_for_seed() {
 		let n = NoisePerlin1dNode;
-		let inputs: InputMap = [
-			("t".into(), SocketValue::Float(0.25)),
-			("seed".into(), SocketValue::Int(42)),
-		]
-		.into_iter()
-		.collect();
+		let inputs: InputMap = [("t".into(), SocketValue::Float(0.25)), ("seed".into(), SocketValue::Int(42))]
+			.into_iter()
+			.collect();
 		let a = n.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		let b = n.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(a.data.get("value"), b.data.get("value"));

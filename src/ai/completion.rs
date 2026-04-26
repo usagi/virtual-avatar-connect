@@ -23,11 +23,10 @@ use std::collections::HashSet;
 /// Responses API を 1 回叩く薄いラッパ（tool loop 無し）。
 #[allow(dead_code)]
 pub(crate) async fn create_response(
- client: &ResponsesClient,
- request: CreateResponseRequest,
-) -> std::result::Result<Response, ResponsesClientError>
-{
- client.create(request).await
+	client: &ResponsesClient,
+	request: CreateResponseRequest,
+) -> std::result::Result<Response, ResponsesClientError> {
+	client.create(request).await
 }
 
 /// Responses API の non-stream + tool loop。
@@ -46,66 +45,54 @@ pub(crate) async fn create_response(
 /// 4. function call が無い場合: `extract_output_text` で assistant text を返す
 #[allow(dead_code)]
 pub(crate) async fn create_response_resolve_tools(
- client: &ResponsesClient,
- mut request: CreateResponseRequest,
- tool_ctx: &ToolContext,
-) -> Result<String>
-{
- const MAX_TOOL_ROUNDS: usize = 8;
- let declared_local: HashSet<String> = request
-  .tools
-  .as_deref()
-  .map(tools::locally_dispatched_tool_names)
-  .unwrap_or_default();
+	client: &ResponsesClient,
+	mut request: CreateResponseRequest,
+	tool_ctx: &ToolContext,
+) -> Result<String> {
+	const MAX_TOOL_ROUNDS: usize = 8;
+	let declared_local: HashSet<String> = request
+		.tools
+		.as_deref()
+		.map(tools::locally_dispatched_tool_names)
+		.unwrap_or_default();
 
- for _round in 0 .. MAX_TOOL_ROUNDS
- {
-  let response = client
-   .create(request.clone())
-   .await
-   .map_err(|e| anyhow::anyhow!("{e}"))?;
+	for _round in 0..MAX_TOOL_ROUNDS {
+		let response = client.create(request.clone()).await.map_err(|e| anyhow::anyhow!("{e}"))?;
 
-  let function_calls: Vec<OutputItem> = response
-   .output
-   .iter()
-   .filter(|item| matches!(item, OutputItem::FunctionCall { .. }))
-   .cloned()
-   .collect();
+		let function_calls: Vec<OutputItem> = response
+			.output
+			.iter()
+			.filter(|item| matches!(item, OutputItem::FunctionCall { .. }))
+			.cloned()
+			.collect();
 
-  if function_calls.is_empty()
-  {
-   return extract_output_text(&response).context("AI からの応答はありましたが出力テキストがありませんでした。");
-  }
+		if function_calls.is_empty() {
+			return extract_output_text(&response).context("AI からの応答はありましたが出力テキストがありませんでした。");
+		}
 
-  // 会話履歴（input）に今回の FunctionCall item 群をそのまま積む。Responses API は
-  // `FunctionCall` と `FunctionCallOutput` が揃った状態で次の request を受け取る。
-  for fc in &function_calls
-  {
-   if let OutputItem::FunctionCall {
-    call_id,
-    name,
-    arguments,
-    ..
-   } = fc
-   {
-    request.input.push(InputItem::FunctionCall {
-     call_id: call_id.clone(),
-     name: name.clone(),
-     arguments: arguments.clone(),
-    });
-   }
-  }
+		// 会話履歴（input）に今回の FunctionCall item 群をそのまま積む。Responses API は
+		// `FunctionCall` と `FunctionCallOutput` が揃った状態で次の request を受け取る。
+		for fc in &function_calls {
+			if let OutputItem::FunctionCall {
+				call_id, name, arguments, ..
+			} = fc
+			{
+				request.input.push(InputItem::FunctionCall {
+					call_id: call_id.clone(),
+					name: name.clone(),
+					arguments: arguments.clone(),
+				});
+			}
+		}
 
-  for fc in &function_calls
-  {
-   if let Some(view) = fc.as_function_call()
-   {
-    let out_item = tools::dispatch_tool_call(view, &declared_local, tool_ctx).await;
-    request.input.push(out_item);
-   }
-  }
- }
- bail!("OpenAI ツール呼び出しのラウンド上限（{}）に達しました。", MAX_TOOL_ROUNDS);
+		for fc in &function_calls {
+			if let Some(view) = fc.as_function_call() {
+				let out_item = tools::dispatch_tool_call(view, &declared_local, tool_ctx).await;
+				request.input.push(out_item);
+			}
+		}
+	}
+	bail!("OpenAI ツール呼び出しのラウンド上限（{}）に達しました。", MAX_TOOL_ROUNDS);
 }
 
 /// gpt-5 系が empty な assistant text を返したときに、最小構成（system + user）で 1 回だけ再試行する。
@@ -116,38 +103,36 @@ pub(crate) async fn create_response_resolve_tools(
 ///
 /// 戻り値は再試行で得られた非空の応答テキスト（失敗 or 空なら `None`）。
 pub(crate) async fn retry_if_gpt5_empty_response(
- client: &ResponsesClient,
- model_id: &str,
- latest_user: &str,
- orig_max_output_tokens: Option<u32>,
-) -> Option<String>
-{
- if !model_policy::should_retry_on_empty_assistant(Some(model_id))
- {
-  return None;
- }
- let sys = InputItem::Message {
+	client: &ResponsesClient,
+	model_id: &str,
+	latest_user: &str,
+	orig_max_output_tokens: Option<u32>,
+) -> Option<String> {
+	if !model_policy::should_retry_on_empty_assistant(Some(model_id)) {
+		return None;
+	}
+	let sys = InputItem::Message {
   role: "developer".to_string(),
   content: InputContent::Text(
    "You are a helpful assistant. Provide a concise final answer. If reasoning consumed tokens, output the answer briefly now. 日本語入力には日本語で返答して下さい。"
     .to_string(),
   ),
  };
- let user = InputItem::Message {
-  role: "user".to_string(),
-  content: InputContent::Text(latest_user.to_string()),
- };
- let mut req = CreateResponseRequest {
-  model: model_id.to_string(),
-  input: vec![sys, user],
-  ..Default::default()
- };
- let retry_cap: u32 = orig_max_output_tokens.map(|m| std::cmp::min(m, 128)).unwrap_or(128);
- // reasoning.effort は低めに倒して thinking token の消費を抑える。text.format も Text に。
- model_policy::apply_model_responses_options(&mut req, model_id, Some(retry_cap), Some(ReasoningEffort::Low));
+	let user = InputItem::Message {
+		role: "user".to_string(),
+		content: InputContent::Text(latest_user.to_string()),
+	};
+	let mut req = CreateResponseRequest {
+		model: model_id.to_string(),
+		input: vec![sys, user],
+		..Default::default()
+	};
+	let retry_cap: u32 = orig_max_output_tokens.map(|m| std::cmp::min(m, 128)).unwrap_or(128);
+	// reasoning.effort は低めに倒して thinking token の消費を抑える。text.format も Text に。
+	model_policy::apply_model_responses_options(&mut req, model_id, Some(retry_cap), Some(ReasoningEffort::Low));
 
- let res = client.create(req).await.ok()?;
- extract_output_text(&res).filter(|t| !t.trim().is_empty())
+	let res = client.create(req).await.ok()?;
+	extract_output_text(&res).filter(|t| !t.trim().is_empty())
 }
 
 const OVERFLOW_SUMMARY_SYSTEM: &str = "\
@@ -157,33 +142,32 @@ const OVERFLOW_SUMMARY_SYSTEM: &str = "\
 
 /// メモリ窓から押し出された古い発話群を単発 Responses 呼び出しで要約する。
 pub(crate) async fn summarize_overflow_turns(
- client: &ResponsesClient,
- model: &str,
- max_output_tokens: Option<u32>,
- user_payload: &str,
-) -> Result<String>
-{
- let sys = InputItem::Message {
-  role: "developer".to_string(),
-  content: InputContent::Text(OVERFLOW_SUMMARY_SYSTEM.to_string()),
- };
- let user = InputItem::Message {
-  role: "user".to_string(),
-  content: InputContent::Text(user_payload.to_string()),
- };
- let mut req = CreateResponseRequest {
-  model: model.to_string(),
-  input: vec![sys, user],
-  temperature: Some(0.2),
-  ..Default::default()
- };
- let cap = max_output_tokens.or(Some(256));
- model_policy::apply_model_responses_options(&mut req, model, cap, None);
+	client: &ResponsesClient,
+	model: &str,
+	max_output_tokens: Option<u32>,
+	user_payload: &str,
+) -> Result<String> {
+	let sys = InputItem::Message {
+		role: "developer".to_string(),
+		content: InputContent::Text(OVERFLOW_SUMMARY_SYSTEM.to_string()),
+	};
+	let user = InputItem::Message {
+		role: "user".to_string(),
+		content: InputContent::Text(user_payload.to_string()),
+	};
+	let mut req = CreateResponseRequest {
+		model: model.to_string(),
+		input: vec![sys, user],
+		temperature: Some(0.2),
+		..Default::default()
+	};
+	let cap = max_output_tokens.or(Some(256));
+	model_policy::apply_model_responses_options(&mut req, model, cap, None);
 
- let res = client
-  .create(req)
-  .await
-  .map_err(|e| anyhow::anyhow!("{e}"))
-  .context("overflow summary: Responses create")?;
- extract_output_text(&res).context("overflow summary: 空の応答")
+	let res = client
+		.create(req)
+		.await
+		.map_err(|e| anyhow::anyhow!("{e}"))
+		.context("overflow summary: Responses create")?;
+	extract_output_text(&res).context("overflow summary: 空の応答")
 }

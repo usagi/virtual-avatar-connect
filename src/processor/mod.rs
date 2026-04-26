@@ -10,18 +10,18 @@
 //! ただし `ocr` / `screenshot` モジュールは Flowgraph ノード実装から直接呼ばれる低レベルユーティリティ
 //! として残している（Windows Media OCR バインディング、Win32 GDI キャプチャなど）。
 
-pub(crate) mod voicevox_engine;
 pub(crate) mod ingress;
 pub(crate) mod ocr;
 pub(crate) mod screenshot;
-#[cfg(feature = "voice-vosk")]
-mod voice_vosk_model;
+pub(crate) mod voice;
 #[cfg(feature = "voice-vosk")]
 mod voice_vosk;
-#[cfg(feature = "voice-whisper")]
-mod voice_whisper_model;
+#[cfg(feature = "voice-vosk")]
+mod voice_vosk_model;
 #[cfg(feature = "voice-whisper")]
 mod voice_whisper;
-pub(crate) mod voice;
+#[cfg(feature = "voice-whisper")]
+mod voice_whisper_model;
+pub(crate) mod voicevox_engine;
 
 pub use voicevox_engine::{VoicevoxSpeaker, VoicevoxStyle};

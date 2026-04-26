@@ -83,10 +83,7 @@ pub fn spawn_program(
 		let shutdown = async move {
 			let _ = shutdown_rx.recv().await;
 		};
-		match program
-			.run_forever_with_bus(&mut ctx, trigger_for_ctx, rx, shutdown)
-			.await
-		{
+		match program.run_forever_with_bus(&mut ctx, trigger_for_ctx, rx, shutdown).await {
 			Ok(run) => log::info!(
 				"《Flowgraph》 ランタイムワーカー終了 (generation={}, exec_nodes={})",
 				run.generation,

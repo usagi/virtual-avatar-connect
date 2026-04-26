@@ -5,8 +5,7 @@
 //! - `compare.float_lt` / `compare.float_gt`
 
 use crate::flowgraph::node::{
- get_required_float, get_required_int, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec,
- PortSpec, PureNode,
+	get_required_float, get_required_int, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec, PureNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
@@ -19,65 +18,55 @@ pub struct EqNode;
 pub struct NeqNode;
 
 impl NodeDescriptor for EqNode {
- fn describe(&self) -> NodeSpec {
-  NodeSpec {
-   feature: "flowgraph.compare.eq".into(),
-   title: "Equal".into(),
-   category: "compare".into(),
-   description: Some("Json 値同士を比較".into()),
-   inputs: vec![
-    PortSpec::input("a", "A", SocketType::Json),
-    PortSpec::input("b", "B", SocketType::Json),
-   ],
-   outputs: vec![PortSpec::output("result", "Result", SocketType::Bool)],
-   properties: vec![],
-  }
- }
+	fn describe(&self) -> NodeSpec {
+		NodeSpec {
+			feature: "flowgraph.compare.eq".into(),
+			title: "Equal".into(),
+			category: "compare".into(),
+			description: Some("Json 値同士を比較".into()),
+			inputs: vec![
+				PortSpec::input("a", "A", SocketType::Json),
+				PortSpec::input("b", "B", SocketType::Json),
+			],
+			outputs: vec![PortSpec::output("result", "Result", SocketType::Bool)],
+			properties: vec![],
+		}
+	}
 }
 
 #[async_trait]
 impl PureNode for EqNode {
- async fn compute(
-  &self,
-  _p: &InputMap,
-  inputs: &InputMap,
-  _fired: &ExecFireSet,
- ) -> Result<NodeOutput, NodeExecError> {
-  let a = crate::flowgraph::node::get_required_json(inputs, "a")?;
-  let b = crate::flowgraph::node::get_required_json(inputs, "b")?;
-  Ok(NodeOutput::new().set_data("result", SocketValue::Bool(a == b)))
- }
+	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+		let a = crate::flowgraph::node::get_required_json(inputs, "a")?;
+		let b = crate::flowgraph::node::get_required_json(inputs, "b")?;
+		Ok(NodeOutput::new().set_data("result", SocketValue::Bool(a == b)))
+	}
 }
 
 impl NodeDescriptor for NeqNode {
- fn describe(&self) -> NodeSpec {
-  NodeSpec {
-   feature: "flowgraph.compare.neq".into(),
-   title: "Not Equal".into(),
-   category: "compare".into(),
-   description: None,
-   inputs: vec![
-    PortSpec::input("a", "A", SocketType::Json),
-    PortSpec::input("b", "B", SocketType::Json),
-   ],
-   outputs: vec![PortSpec::output("result", "Result", SocketType::Bool)],
-   properties: vec![],
-  }
- }
+	fn describe(&self) -> NodeSpec {
+		NodeSpec {
+			feature: "flowgraph.compare.neq".into(),
+			title: "Not Equal".into(),
+			category: "compare".into(),
+			description: None,
+			inputs: vec![
+				PortSpec::input("a", "A", SocketType::Json),
+				PortSpec::input("b", "B", SocketType::Json),
+			],
+			outputs: vec![PortSpec::output("result", "Result", SocketType::Bool)],
+			properties: vec![],
+		}
+	}
 }
 
 #[async_trait]
 impl PureNode for NeqNode {
- async fn compute(
-  &self,
-  _p: &InputMap,
-  inputs: &InputMap,
-  _fired: &ExecFireSet,
- ) -> Result<NodeOutput, NodeExecError> {
-  let a = crate::flowgraph::node::get_required_json(inputs, "a")?;
-  let b = crate::flowgraph::node::get_required_json(inputs, "b")?;
-  Ok(NodeOutput::new().set_data("result", SocketValue::Bool(a != b)))
- }
+	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+		let a = crate::flowgraph::node::get_required_json(inputs, "a")?;
+		let b = crate::flowgraph::node::get_required_json(inputs, "b")?;
+		Ok(NodeOutput::new().set_data("result", SocketValue::Bool(a != b)))
+	}
 }
 
 // ----- int 比較 -------------------------------------------------------------
@@ -164,55 +153,77 @@ float_cmp_node!(FloatGtNode, "flowgraph.compare.float_gt", "Float >", >);
 
 #[cfg(test)]
 mod tests {
- use super::*;
+	use super::*;
 
- fn int_inputs(a: i64, b: i64) -> InputMap {
-  [("a".into(), SocketValue::Int(a)), ("b".into(), SocketValue::Int(b))].into_iter().collect()
- }
+	fn int_inputs(a: i64, b: i64) -> InputMap {
+		[("a".into(), SocketValue::Int(a)), ("b".into(), SocketValue::Int(b))]
+			.into_iter()
+			.collect()
+	}
 
- fn json_inputs(a: serde_json::Value, b: serde_json::Value) -> InputMap {
-  [("a".into(), SocketValue::Json(a)), ("b".into(), SocketValue::Json(b))].into_iter().collect()
- }
+	fn json_inputs(a: serde_json::Value, b: serde_json::Value) -> InputMap {
+		[("a".into(), SocketValue::Json(a)), ("b".into(), SocketValue::Json(b))]
+			.into_iter()
+			.collect()
+	}
 
- #[tokio::test]
- async fn eq_compares_json() {
-  let n = EqNode;
-  let out = n
-   .compute(&InputMap::new(), &json_inputs(serde_json::json!(1), serde_json::json!(1)), &ExecFireSet::new())
-   .await
-   .unwrap();
-  assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
+	#[tokio::test]
+	async fn eq_compares_json() {
+		let n = EqNode;
+		let out = n
+			.compute(
+				&InputMap::new(),
+				&json_inputs(serde_json::json!(1), serde_json::json!(1)),
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
 
-  let out = n
-   .compute(
-    &InputMap::new(),
-    &json_inputs(serde_json::json!({"x": 1}), serde_json::json!({"x": 2})),
-    &ExecFireSet::new(),
-   )
-   .await
-   .unwrap();
-  assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(false)));
- }
+		let out = n
+			.compute(
+				&InputMap::new(),
+				&json_inputs(serde_json::json!({"x": 1}), serde_json::json!({"x": 2})),
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(false)));
+	}
 
- #[tokio::test]
- async fn int_cmp_basic() {
-  let out = IntLtNode.compute(&InputMap::new(), &int_inputs(1, 2), &ExecFireSet::new()).await.unwrap();
-  assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
+	#[tokio::test]
+	async fn int_cmp_basic() {
+		let out = IntLtNode
+			.compute(&InputMap::new(), &int_inputs(1, 2), &ExecFireSet::new())
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
 
-  let out = IntGtNode.compute(&InputMap::new(), &int_inputs(5, 3), &ExecFireSet::new()).await.unwrap();
-  assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
+		let out = IntGtNode
+			.compute(&InputMap::new(), &int_inputs(5, 3), &ExecFireSet::new())
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
 
-  let out = IntLeNode.compute(&InputMap::new(), &int_inputs(2, 2), &ExecFireSet::new()).await.unwrap();
-  assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
+		let out = IntLeNode
+			.compute(&InputMap::new(), &int_inputs(2, 2), &ExecFireSet::new())
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
 
-  let out = IntGeNode.compute(&InputMap::new(), &int_inputs(2, 3), &ExecFireSet::new()).await.unwrap();
-  assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(false)));
- }
+		let out = IntGeNode
+			.compute(&InputMap::new(), &int_inputs(2, 3), &ExecFireSet::new())
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(false)));
+	}
 
- #[tokio::test]
- async fn float_cmp_basic() {
-  let inputs: InputMap = [("a".into(), SocketValue::Float(1.5)), ("b".into(), SocketValue::Float(2.5))].into_iter().collect();
-  let out = FloatLtNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
-  assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
- }
+	#[tokio::test]
+	async fn float_cmp_basic() {
+		let inputs: InputMap = [("a".into(), SocketValue::Float(1.5)), ("b".into(), SocketValue::Float(2.5))]
+			.into_iter()
+			.collect();
+		let out = FloatLtNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
+	}
 }

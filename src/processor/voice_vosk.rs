@@ -42,76 +42,75 @@ pub(crate) fn spawn_from_flowgraph(
 	let stop_flag_worker = stop_flag.clone();
 	let join_handle = std::thread::Builder::new()
 		.name("vac-voice-vosk-fg".into())
-		.spawn(move || {
-			match run_vosk_loop(tokio_handle, sink, model_dir, source_label.clone(), stop_flag_worker) {
-				Ok(()) => {},
+		.spawn(
+			move || match run_vosk_loop(tokio_handle, sink, model_dir, source_label.clone(), stop_flag_worker) {
+				Ok(()) => {}
 				Err(e) => {
 					log::error!("《Flowgraph/Voice》: Vosk スレッドが終了しました: {} ({})", e, source_label)
-				},
-			}
-		})
+				}
+			},
+		)
 		.ok()?;
 
 	Some(VoiceIngress { join_handle, stop_flag })
 }
 
 fn linear_resample_mono(mono: &[f32], from_hz: u32, to_hz: u32) -> Vec<f32> {
- if from_hz == to_hz || mono.is_empty() {
-  return mono.to_vec();
- }
- let ratio = from_hz as f64 / to_hz as f64;
- let out_len = ((mono.len() as f64) / ratio).floor() as usize;
- if out_len == 0 {
-  return Vec::new();
- }
- let mut out = Vec::with_capacity(out_len);
- for i in 0..out_len {
-  let src_f = i as f64 * ratio;
-  let i0 = src_f.floor() as usize;
-  let frac = src_f - i0 as f64;
-  let s0 = mono.get(i0).copied().unwrap_or(0.0);
-  let s1 = mono.get(i0 + 1).copied().unwrap_or(s0);
-  out.push((s0 as f64 * (1.0 - frac) + s1 as f64 * frac) as f32);
- }
- out
+	if from_hz == to_hz || mono.is_empty() {
+		return mono.to_vec();
+	}
+	let ratio = from_hz as f64 / to_hz as f64;
+	let out_len = ((mono.len() as f64) / ratio).floor() as usize;
+	if out_len == 0 {
+		return Vec::new();
+	}
+	let mut out = Vec::with_capacity(out_len);
+	for i in 0..out_len {
+		let src_f = i as f64 * ratio;
+		let i0 = src_f.floor() as usize;
+		let frac = src_f - i0 as f64;
+		let s0 = mono.get(i0).copied().unwrap_or(0.0);
+		let s1 = mono.get(i0 + 1).copied().unwrap_or(s0);
+		out.push((s0 as f64 * (1.0 - frac) + s1 as f64 * frac) as f32);
+	}
+	out
 }
 
 fn interleaved_to_mono(data: &[f32], channels: usize) -> Vec<f32> {
- if channels <= 1 {
-  return data.to_vec();
- }
- if data.len() < channels {
-  return Vec::new();
- }
- let frames = data.len() / channels;
- let mut mono = Vec::with_capacity(frames);
- for f in 0..frames {
-  let base = f * channels;
-  let mut sum = 0.0_f32;
-  for c in 0..channels {
-   sum += data[base + c];
-  }
-  mono.push(sum / channels as f32);
- }
- mono
+	if channels <= 1 {
+		return data.to_vec();
+	}
+	if data.len() < channels {
+		return Vec::new();
+	}
+	let frames = data.len() / channels;
+	let mut mono = Vec::with_capacity(frames);
+	for f in 0..frames {
+		let base = f * channels;
+		let mut sum = 0.0_f32;
+		for c in 0..channels {
+			sum += data[base + c];
+		}
+		mono.push(sum / channels as f32);
+	}
+	mono
 }
 
 fn f32_mono_to_i16_16k(mono: &[f32]) -> Vec<i16> {
- mono
-  .iter()
-  .map(|&s| {
-   let v = (s * 32768.0).clamp(-32768.0, 32767.0);
-   v as i16
-  })
-  .collect()
+	mono.iter()
+		.map(|&s| {
+			let v = (s * 32768.0).clamp(-32768.0, 32767.0);
+			v as i16
+		})
+		.collect()
 }
 
 fn complete_result_text(r: CompleteResult<'_>) -> String {
- let raw = match r {
-  CompleteResult::Single(s) => s.text.trim().to_string(),
-  CompleteResult::Multiple(_) => String::new(),
- };
- crate::utility::normalize_interstitial_japanese_spaces(&raw)
+	let raw = match r {
+		CompleteResult::Single(s) => s.text.trim().to_string(),
+		CompleteResult::Multiple(_) => String::new(),
+	};
+	crate::utility::normalize_interstitial_japanese_spaces(&raw)
 }
 
 fn run_vosk_loop(
@@ -125,103 +124,91 @@ fn run_vosk_loop(
 
 	let model_dir = super::voice_vosk_model::resolve_vosk_model_dir(&model_dir)
 		.map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.into() })?;
-	let model_dir_str = model_dir
-		.to_str()
-		.ok_or("Vosk モデルパスが UTF-8 ではありません")?
-		.to_string();
+	let model_dir_str = model_dir.to_str().ok_or("Vosk モデルパスが UTF-8 ではありません")?.to_string();
+
+	log::info!("《Voice》: Vosk モデルを読み込みます dir={} ({})", model_dir_str, source_label);
+
+	let model = Model::new(model_dir_str.clone()).ok_or_else(|| {
+		format!(
+			"Vosk Model::new に失敗しました（パス・ファイル破損・モデル不一致の可能性）: {}",
+			model_dir_str
+		)
+	})?;
+
+	let mut recognizer = Recognizer::new(&model, 16000.0).ok_or("Vosk Recognizer::new に失敗しました")?;
+	// 部分認識は partial_result() のテキストのみ利用（単語メタデータは不要）
+	recognizer.set_partial_words(false);
+
+	let host = cpal::default_host();
+	let device = host.default_input_device().ok_or("既定の入力オーディオデバイスがありません")?;
+	let supported = device.default_input_config()?;
+	let sample_format = supported.sample_format();
+	let in_hz_u32 = supported.sample_rate();
+	let channels = supported.channels() as usize;
+	let stream_config: StreamConfig = supported.into();
 
 	log::info!(
-		"《Voice》: Vosk モデルを読み込みます dir={} ({})",
-		model_dir_str,
-		source_label
+		"《Voice》: 入力 {} Hz, {} ch, format={:?} (Vosk へは 16 kHz にリサンプル)",
+		in_hz_u32,
+		channels,
+		sample_format
 	);
 
- let model = Model::new(model_dir_str.clone()).ok_or_else(|| {
-  format!(
-   "Vosk Model::new に失敗しました（パス・ファイル破損・モデル不一致の可能性）: {}",
-   model_dir_str
-  )
- })?;
+	let native_buf: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
+	let native_cb = native_buf.clone();
+	let err_fn = |e| log::error!("《Voice》: cpal ストリームエラー: {}", e);
 
- let mut recognizer = Recognizer::new(&model, 16000.0).ok_or("Vosk Recognizer::new に失敗しました")?;
- // 部分認識は partial_result() のテキストのみ利用（単語メタデータは不要）
- recognizer.set_partial_words(false);
+	let stream: Stream = match sample_format {
+		SampleFormat::F32 => device.build_input_stream(
+			&stream_config,
+			move |data: &[f32], _| {
+				let mono = interleaved_to_mono(data, channels);
+				if let Ok(mut g) = native_cb.lock() {
+					g.extend_from_slice(&mono);
+					trim_native_buf(&mut g, in_hz_u32);
+				}
+			},
+			err_fn,
+			None,
+		)?,
+		SampleFormat::I16 => device.build_input_stream(
+			&stream_config,
+			move |data: &[i16], _| {
+				let f: Vec<f32> = data.iter().map(|&s| s as f32 / 32768.0).collect();
+				let mono = interleaved_to_mono(&f, channels);
+				if let Ok(mut g) = native_cb.lock() {
+					g.extend_from_slice(&mono);
+					trim_native_buf(&mut g, in_hz_u32);
+				}
+			},
+			err_fn,
+			None,
+		)?,
+		SampleFormat::U16 => device.build_input_stream(
+			&stream_config,
+			move |data: &[u16], _| {
+				let f: Vec<f32> = data.iter().map(|&s| ((s as i32) - 32768) as f32 / 32768.0).collect();
+				let mono = interleaved_to_mono(&f, channels);
+				if let Ok(mut g) = native_cb.lock() {
+					g.extend_from_slice(&mono);
+					trim_native_buf(&mut g, in_hz_u32);
+				}
+			},
+			err_fn,
+			None,
+		)?,
+		f => {
+			return Err(format!("未対応のサンプル形式: {:?}", f).into());
+		}
+	};
 
- let host = cpal::default_host();
- let device = host
-  .default_input_device()
-  .ok_or("既定の入力オーディオデバイスがありません")?;
- let supported = device.default_input_config()?;
- let sample_format = supported.sample_format();
- let in_hz_u32 = supported.sample_rate();
- let channels = supported.channels() as usize;
- let stream_config: StreamConfig = supported.into();
+	stream.play()?;
+	let _keep_stream_alive = stream;
 
- log::info!(
-  "《Voice》: 入力 {} Hz, {} ch, format={:?} (Vosk へは 16 kHz にリサンプル)",
-  in_hz_u32,
-  channels,
-  sample_format
- );
-
- let native_buf: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
- let native_cb = native_buf.clone();
- let err_fn = |e| log::error!("《Voice》: cpal ストリームエラー: {}", e);
-
- let stream: Stream = match sample_format {
-  SampleFormat::F32 => device.build_input_stream(
-   &stream_config,
-   move |data: &[f32], _| {
-    let mono = interleaved_to_mono(data, channels);
-    if let Ok(mut g) = native_cb.lock() {
-     g.extend_from_slice(&mono);
-     trim_native_buf(&mut g, in_hz_u32);
-    }
-   },
-   err_fn,
-   None,
-  )?,
-  SampleFormat::I16 => device.build_input_stream(
-   &stream_config,
-   move |data: &[i16], _| {
-    let f: Vec<f32> = data.iter().map(|&s| s as f32 / 32768.0).collect();
-    let mono = interleaved_to_mono(&f, channels);
-    if let Ok(mut g) = native_cb.lock() {
-     g.extend_from_slice(&mono);
-     trim_native_buf(&mut g, in_hz_u32);
-    }
-   },
-   err_fn,
-   None,
-  )?,
-  SampleFormat::U16 => device.build_input_stream(
-   &stream_config,
-   move |data: &[u16], _| {
-    let f: Vec<f32> = data
-     .iter()
-     .map(|&s| ((s as i32) - 32768) as f32 / 32768.0)
-     .collect();
-    let mono = interleaved_to_mono(&f, channels);
-    if let Ok(mut g) = native_cb.lock() {
-     g.extend_from_slice(&mono);
-     trim_native_buf(&mut g, in_hz_u32);
-    }
-   },
-   err_fn,
-   None,
-  )?,
-  f => {
-   return Err(format!("未対応のサンプル形式: {:?}", f).into());
-  },
- };
-
- stream.play()?;
- let _keep_stream_alive = stream;
-
- /// 一度に処理するネイティブサンプル数（おおよそ 80ms @48kHz 相当の上限）
- const MAX_PULL_NATIVE: usize = 4096;
- /// Vosk へ送る i16 チャンク長（約 200ms @16kHz）
- const VOSK_CHUNK: usize = 3200;
+	/// 一度に処理するネイティブサンプル数（おおよそ 80ms @48kHz 相当の上限）
+	const MAX_PULL_NATIVE: usize = 4096;
+	/// Vosk へ送る i16 チャンク長（約 200ms @16kHz）
+	const VOSK_CHUNK: usize = 3200;
 
 	let mut pending_i16: Vec<i16> = Vec::with_capacity(VOSK_CHUNK * 2);
 	let mut last_partial_sent: String = String::new();
@@ -241,7 +228,7 @@ fn run_vosk_loop(
 				Err(e) => {
 					log::warn!("《Voice》: バッファロック失敗: {}", e);
 					continue;
-				},
+				}
 			};
 			let take = guard.len().min(MAX_PULL_NATIVE);
 			if take == 0 {
@@ -265,7 +252,7 @@ fn run_vosk_loop(
 					log::trace!("《Voice》: 認識（Vosk・部分） {:?}", text);
 					last_partial_sent = text.clone();
 					sink.on_partial(&rt, text);
-				},
+				}
 				Ok(DecodingState::Finalized) => {
 					let text = complete_result_text(recognizer.result());
 					recognizer.reset();
@@ -274,10 +261,10 @@ fn run_vosk_loop(
 						log::debug!("《Voice》: 認識（Vosk・確定） {:?}", text);
 					}
 					sink.on_final(&rt, text);
-				},
+				}
 				Ok(DecodingState::Failed) => {
 					log::trace!("《Voice》: Vosk DecodingState::Failed（無音等）");
-				},
+				}
 				Err(e) => log::warn!("《Voice》: Vosk accept_waveform: {:?}", e),
 			}
 		}
@@ -285,10 +272,10 @@ fn run_vosk_loop(
 }
 
 fn trim_native_buf(g: &mut Vec<f32>, in_hz: u32) {
- const MAX_NATIVE_SECS: f32 = 30.0;
- let max_samples = (MAX_NATIVE_SECS * in_hz as f32) as usize;
- let len = g.len();
- if len > max_samples {
-  g.drain(0..(len - max_samples));
- }
+	const MAX_NATIVE_SECS: f32 = 30.0;
+	let max_samples = (MAX_NATIVE_SECS * in_hz as f32) as usize;
+	let len = g.len();
+	if len > max_samples {
+		g.drain(0..(len - max_samples));
+	}
 }

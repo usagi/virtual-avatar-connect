@@ -53,11 +53,7 @@ impl BridgeCatalog {
 	}
 
 	pub fn len(&self) -> usize {
-		self.web_input.len()
-			+ self.voice.len()
-			+ self.twitch.len()
-			+ self.twitch_eventsub.len()
-			+ self.channel_subscribe.len()
+		self.web_input.len() + self.voice.len() + self.twitch.len() + self.twitch_eventsub.len() + self.channel_subscribe.len()
 	}
 }
 
@@ -113,10 +109,7 @@ impl BridgeHandles {
 		for h in self.twitch_eventsub {
 			let node_id = h.node_id().to_string();
 			if tokio::time::timeout(std::time::Duration::from_secs(5), h.finish()).await.is_err() {
-				log::warn!(
-					"《Bridges》 twitch_eventsub finish タイムアウト node={}",
-					node_id
-				);
+				log::warn!("《Bridges》 twitch_eventsub finish タイムアウト node={}", node_id);
 			}
 		}
 		for h in self.twitch {
@@ -142,10 +135,7 @@ impl BridgeHandles {
 /// 戻りには web_input のスナップショットも入るが、actix HTTP server 側の route は
 /// 起動時に固定されるため、新しいエンドポイントが追加された場合は呼び出し側で差分を見て
 /// `RestartRecommended` 通知を出すこと（ここでは投げない）。
-pub async fn spawn_all_from_state(
-	state: &SharedState,
-	channel_datum_tx: &broadcast::Sender<ChannelDatum>,
-) -> BridgeHandles {
+pub async fn spawn_all_from_state(state: &SharedState, channel_datum_tx: &broadcast::Sender<ChannelDatum>) -> BridgeHandles {
 	let (catalog, trigger) = {
 		let s = state.read().await;
 		let fg = s.flowgraph.read().await;
@@ -186,10 +176,7 @@ pub async fn spawn_all_from_state(
 ///
 /// actix-web は route 登録を再起動無しに差し替えられないため、reload 時に本判定で変化を検出したら
 /// `RestartRecommended` 通知を出して再起動を促す。
-pub fn web_input_changed(
-	old: &[web_input::FlowgraphWebInputEndpoint],
-	new: &[web_input::FlowgraphWebInputEndpoint],
-) -> bool {
+pub fn web_input_changed(old: &[web_input::FlowgraphWebInputEndpoint], new: &[web_input::FlowgraphWebInputEndpoint]) -> bool {
 	fn key(ep: &web_input::FlowgraphWebInputEndpoint) -> (String, web_input::Method) {
 		(ep.path.clone(), ep.method)
 	}
@@ -257,11 +244,7 @@ mod tests {
 		let b_reorder = vec![ep("/y", Method::Get), ep("/x", Method::Post)];
 		assert!(!web_input_changed(&a, &b_reorder), "順序入れ替えは同一扱い");
 
-		let b_add = vec![
-			ep("/x", Method::Post),
-			ep("/y", Method::Get),
-			ep("/z", Method::Put),
-		];
+		let b_add = vec![ep("/x", Method::Post), ep("/y", Method::Get), ep("/z", Method::Put)];
 		assert!(web_input_changed(&a, &b_add), "追加は差分");
 
 		let b_rm = vec![ep("/x", Method::Post)];

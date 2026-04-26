@@ -69,7 +69,11 @@ impl FlowgraphTwitchIngress {
 			node_id: fq.to_string(),
 			mode: {
 				let m = get_str("mode");
-				if m.is_empty() { "irc".into() } else { m.to_ascii_lowercase() }
+				if m.is_empty() {
+					"irc".into()
+				} else {
+					m.to_ascii_lowercase()
+				}
 			},
 			channels,
 			access_token: get_str("access_token"),
@@ -103,10 +107,7 @@ pub(crate) fn build_meta(
 	let mut m = std::collections::BTreeMap::new();
 	m.insert("channel_login".into(), SocketValue::String(channel_login.to_string()));
 	m.insert("sender_login".into(), SocketValue::String(sender_login.to_string()));
-	m.insert(
-		"sender_display_name".into(),
-		SocketValue::String(sender_display_name.to_string()),
-	);
+	m.insert("sender_display_name".into(), SocketValue::String(sender_display_name.to_string()));
 	m.insert("multi_channel".into(), SocketValue::Bool(multi_channel));
 	m
 }
@@ -180,11 +181,7 @@ async fn resolve_access_token(entry: &FlowgraphTwitchIngress, state: &SharedStat
 ///
 /// login / channels が共に空のエントリには `conf.twitch.username` をフォールバックとして差し込む
 /// （`flowgraph.ingress.twitch_eventsub` の broadcaster_login フォールバックと対になる挙動）。
-pub async fn spawn(
-	entries: &[FlowgraphTwitchIngress],
-	trigger: Option<TriggerHandle>,
-	state: SharedState,
-) -> Vec<TwitchBridgeHandle> {
+pub async fn spawn(entries: &[FlowgraphTwitchIngress], trigger: Option<TriggerHandle>, state: SharedState) -> Vec<TwitchBridgeHandle> {
 	if entries.is_empty() {
 		return Vec::new();
 	}
@@ -199,10 +196,7 @@ pub async fn spawn(
 	// conf.twitch.username をフォールバックとして 1 度だけ取り出す。
 	let twitch_username_fallback = {
 		let s = state.read().await;
-		s.twitch
-			.as_ref()
-			.map(|t| t.username.trim().to_string())
-			.unwrap_or_default()
+		s.twitch.as_ref().map(|t| t.username.trim().to_string()).unwrap_or_default()
 	};
 
 	let mut handles = Vec::new();
@@ -259,9 +253,7 @@ fn spawn_one(entry: FlowgraphTwitchIngress, trigger: TriggerHandle, state: Share
 	let node_id = entry.node_id.clone();
 
 	// トークン解決は非同期。spawn 側で resolve する。
-	let (mut incoming_messages, client) = TwitchIRCClient::<SecureTCPTransport, StaticLoginCredentials>::new(
-		ClientConfig::default(),
-	);
+	let (mut incoming_messages, client) = TwitchIRCClient::<SecureTCPTransport, StaticLoginCredentials>::new(ClientConfig::default());
 
 	let trigger_for_task = trigger.clone();
 	let state_for_task = state.clone();
@@ -302,7 +294,11 @@ fn spawn_one(entry: FlowgraphTwitchIngress, trigger: TriggerHandle, state: Share
 					.with_override("__source_actor__", SocketValue::String(actor));
 				ev = ev.with_override("__meta__", SocketValue::Map(meta));
 				if let Err(e) = trigger_for_task.send(ev) {
-					log::warn!("《Flowgraph/Twitch》 node={} trigger 送信に失敗: {}（worker を終了）", node_id_for_task, e);
+					log::warn!(
+						"《Flowgraph/Twitch》 node={} trigger 送信に失敗: {}（worker を終了）",
+						node_id_for_task,
+						e
+					);
 					break;
 				}
 			}
@@ -339,10 +335,7 @@ mod tests {
 		props.insert("mode".into(), SocketValue::String("IRC".into()));
 		props.insert(
 			"channels".into(),
-			SocketValue::List(vec![
-				SocketValue::String("user_a".into()),
-				SocketValue::String("user_b".into()),
-			]),
+			SocketValue::List(vec![SocketValue::String("user_a".into()), SocketValue::String("user_b".into())]),
 		);
 		props.insert("login".into(), SocketValue::String("bot".into()));
 		props.insert("token_key".into(), SocketValue::String("broadcaster".into()));

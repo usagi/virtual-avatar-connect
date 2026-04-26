@@ -22,8 +22,8 @@
 //! この方が拡張も可読性も高く、Pure に保てる。
 
 use crate::flowgraph::node::{
- get_optional_string, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError,
- NodeOutput, NodeSpec, PortSpec, PropertySpec, PureNode,
+	get_optional_string, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput,
+	NodeSpec, PortSpec, PropertySpec, PureNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
@@ -32,129 +32,122 @@ use serde_json::Value as JsonValue;
 pub struct CommandMatchNode;
 
 impl NodeDescriptor for CommandMatchNode {
- fn describe(&self) -> NodeSpec {
-  NodeSpec {
-   feature: "flowgraph.command.match".into(),
-   title: "Command Match".into(),
-   category: "command".into(),
-   description: Some("prefix 付きコマンド文字列を verb + args にパースして exec を分岐".into()),
-   inputs: vec![
-    PortSpec::exec_input("exec_in", "Exec"),
-    PortSpec::input("content", "Content", SocketType::String),
-    PortSpec::input("prefix", "Prefix", SocketType::String).with_default(SocketValue::String("/".into())),
-   ],
-   outputs: vec![
-    PortSpec::exec_output("on_command", "On Command"),
-    PortSpec::exec_output("on_other", "On Other"),
-    PortSpec::output("command", "Command", SocketType::String),
-    PortSpec::output("args", "Args", SocketType::List(Box::new(SocketType::String))),
-    PortSpec::output("original", "Original", SocketType::String),
-   ],
-   properties: vec![],
-  }
- }
+	fn describe(&self) -> NodeSpec {
+		NodeSpec {
+			feature: "flowgraph.command.match".into(),
+			title: "Command Match".into(),
+			category: "command".into(),
+			description: Some("prefix 付きコマンド文字列を verb + args にパースして exec を分岐".into()),
+			inputs: vec![
+				PortSpec::exec_input("exec_in", "Exec"),
+				PortSpec::input("content", "Content", SocketType::String),
+				PortSpec::input("prefix", "Prefix", SocketType::String).with_default(SocketValue::String("/".into())),
+			],
+			outputs: vec![
+				PortSpec::exec_output("on_command", "On Command"),
+				PortSpec::exec_output("on_other", "On Other"),
+				PortSpec::output("command", "Command", SocketType::String),
+				PortSpec::output("args", "Args", SocketType::List(Box::new(SocketType::String))),
+				PortSpec::output("original", "Original", SocketType::String),
+			],
+			properties: vec![],
+		}
+	}
 }
 
 #[async_trait]
 impl PureNode for CommandMatchNode {
- async fn compute(
-  &self,
-  _props: &InputMap,
-  inputs: &InputMap,
-  fired_exec: &ExecFireSet,
- ) -> Result<NodeOutput, NodeExecError> {
-  if !fired_exec.contains("exec_in") {
-   return Ok(NodeOutput::new());
-  }
-  let content = get_required_string(inputs, "content")?;
-  let prefix = get_optional_string(inputs, "prefix", "/")?;
+	async fn compute(&self, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+		if !fired_exec.contains("exec_in") {
+			return Ok(NodeOutput::new());
+		}
+		let content = get_required_string(inputs, "content")?;
+		let prefix = get_optional_string(inputs, "prefix", "/")?;
 
-  let mut out = NodeOutput::new().set_data("original", SocketValue::String(content.clone()));
+		let mut out = NodeOutput::new().set_data("original", SocketValue::String(content.clone()));
 
-  if !prefix.is_empty() && content.starts_with(&prefix) {
-   let body = content.trim_start_matches(&prefix);
-   let mut tokens = body.split_whitespace();
-   let verb = tokens.next().unwrap_or("").to_string();
-   let args: Vec<SocketValue> = tokens.map(|t| SocketValue::String(t.to_string())).collect();
-   out = out
-    .set_data("command", SocketValue::String(verb))
-    .set_data("args", SocketValue::List(args))
-    .fire_exec("on_command");
-  } else {
-   out = out
-    .set_data("command", SocketValue::String(String::new()))
-    .set_data("args", SocketValue::List(vec![]))
-    .fire_exec("on_other");
-  }
-  Ok(out)
- }
+		if !prefix.is_empty() && content.starts_with(&prefix) {
+			let body = content.trim_start_matches(&prefix);
+			let mut tokens = body.split_whitespace();
+			let verb = tokens.next().unwrap_or("").to_string();
+			let args: Vec<SocketValue> = tokens.map(|t| SocketValue::String(t.to_string())).collect();
+			out = out
+				.set_data("command", SocketValue::String(verb))
+				.set_data("args", SocketValue::List(args))
+				.fire_exec("on_command");
+		} else {
+			out = out
+				.set_data("command", SocketValue::String(String::new()))
+				.set_data("args", SocketValue::List(vec![]))
+				.fire_exec("on_other");
+		}
+		Ok(out)
+	}
 }
 
 #[cfg(test)]
 mod tests {
- use super::*;
+	use super::*;
 
- fn fired() -> ExecFireSet {
-  let mut f = ExecFireSet::new();
-  f.insert("exec_in");
-  f
- }
+	fn fired() -> ExecFireSet {
+		let mut f = ExecFireSet::new();
+		f.insert("exec_in");
+		f
+	}
 
- #[tokio::test]
- async fn matches_slash_command_and_splits_args() {
-  let node = CommandMatchNode;
-  let inputs: InputMap = [("content".into(), SocketValue::String("/set foo bar".into()))]
-   .into_iter()
-   .collect();
-  let out = node.compute(&InputMap::new(), &inputs, &fired()).await.unwrap();
-  assert!(out.fired_exec.contains("on_command"));
-  assert!(!out.fired_exec.contains("on_other"));
-  assert_eq!(out.data.get("command"), Some(&SocketValue::String("set".into())));
-  let args = out.data.get("args").cloned().unwrap();
-  assert_eq!(
-   args,
-   SocketValue::List(vec![SocketValue::String("foo".into()), SocketValue::String("bar".into())])
-  );
- }
+	#[tokio::test]
+	async fn matches_slash_command_and_splits_args() {
+		let node = CommandMatchNode;
+		let inputs: InputMap = [("content".into(), SocketValue::String("/set foo bar".into()))]
+			.into_iter()
+			.collect();
+		let out = node.compute(&InputMap::new(), &inputs, &fired()).await.unwrap();
+		assert!(out.fired_exec.contains("on_command"));
+		assert!(!out.fired_exec.contains("on_other"));
+		assert_eq!(out.data.get("command"), Some(&SocketValue::String("set".into())));
+		let args = out.data.get("args").cloned().unwrap();
+		assert_eq!(
+			args,
+			SocketValue::List(vec![SocketValue::String("foo".into()), SocketValue::String("bar".into())])
+		);
+	}
 
- #[tokio::test]
- async fn non_command_triggers_on_other() {
-  let node = CommandMatchNode;
-  let inputs: InputMap = [("content".into(), SocketValue::String("hello world".into()))]
-   .into_iter()
-   .collect();
-  let out = node.compute(&InputMap::new(), &inputs, &fired()).await.unwrap();
-  assert!(out.fired_exec.contains("on_other"));
-  assert!(!out.fired_exec.contains("on_command"));
-  assert_eq!(out.data.get("command"), Some(&SocketValue::String("".into())));
-  assert_eq!(out.data.get("args"), Some(&SocketValue::List(vec![])));
-  assert_eq!(out.data.get("original"), Some(&SocketValue::String("hello world".into())));
- }
+	#[tokio::test]
+	async fn non_command_triggers_on_other() {
+		let node = CommandMatchNode;
+		let inputs: InputMap = [("content".into(), SocketValue::String("hello world".into()))]
+			.into_iter()
+			.collect();
+		let out = node.compute(&InputMap::new(), &inputs, &fired()).await.unwrap();
+		assert!(out.fired_exec.contains("on_other"));
+		assert!(!out.fired_exec.contains("on_command"));
+		assert_eq!(out.data.get("command"), Some(&SocketValue::String("".into())));
+		assert_eq!(out.data.get("args"), Some(&SocketValue::List(vec![])));
+		assert_eq!(out.data.get("original"), Some(&SocketValue::String("hello world".into())));
+	}
 
- #[tokio::test]
- async fn custom_prefix_works() {
-  let node = CommandMatchNode;
-  let inputs: InputMap = [
-   ("content".into(), SocketValue::String("!quit".into())),
-   ("prefix".into(), SocketValue::String("!".into())),
-  ]
-  .into_iter()
-  .collect();
-  let out = node.compute(&InputMap::new(), &inputs, &fired()).await.unwrap();
-  assert!(out.fired_exec.contains("on_command"));
-  assert_eq!(out.data.get("command"), Some(&SocketValue::String("quit".into())));
- }
+	#[tokio::test]
+	async fn custom_prefix_works() {
+		let node = CommandMatchNode;
+		let inputs: InputMap = [
+			("content".into(), SocketValue::String("!quit".into())),
+			("prefix".into(), SocketValue::String("!".into())),
+		]
+		.into_iter()
+		.collect();
+		let out = node.compute(&InputMap::new(), &inputs, &fired()).await.unwrap();
+		assert!(out.fired_exec.contains("on_command"));
+		assert_eq!(out.data.get("command"), Some(&SocketValue::String("quit".into())));
+	}
 
- #[tokio::test]
- async fn no_exec_firing_is_noop() {
-  let node = CommandMatchNode;
-  let inputs: InputMap = [("content".into(), SocketValue::String("/x".into()))]
-   .into_iter()
-   .collect();
-  let out = node.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
-  assert!(out.fired_exec.is_empty());
-  assert!(out.data.is_empty());
- }
+	#[tokio::test]
+	async fn no_exec_firing_is_noop() {
+		let node = CommandMatchNode;
+		let inputs: InputMap = [("content".into(), SocketValue::String("/x".into()))].into_iter().collect();
+		let out = node.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		assert!(out.fired_exec.is_empty());
+		assert!(out.data.is_empty());
+	}
 }
 
 // ---------------------------------------------------------------------
@@ -214,15 +207,8 @@ impl NodeDescriptor for CommandSetNode {
 				PortSpec::output("entry_count", "Entry Count", SocketType::Int),
 			],
 			properties: vec![
-				PropertySpec::new(
-					"sets",
-					"Sets",
-					SocketType::Json,
-					SocketValue::Json(JsonValue::Array(Vec::new())),
-				)
-				.description(
-					"コマンドセット配列。各要素は `{ name, pre?, post?, channel_contents? }` を持つ JSON。",
-				),
+				PropertySpec::new("sets", "Sets", SocketType::Json, SocketValue::Json(JsonValue::Array(Vec::new())))
+					.description("コマンドセット配列。各要素は `{ name, pre?, post?, channel_contents? }` を持つ JSON。"),
 				PropertySpec::new(
 					"pre_post_channel",
 					"Pre/Post Channel",
@@ -393,9 +379,7 @@ mod set_tests {
 	async fn missing_command_name_fires_on_none() {
 		let node = CommandSetNode;
 		let mut ctx = ExecCtx::default();
-		let inputs: InputMap = [("command_name".into(), SocketValue::String("".into()))]
-			.into_iter()
-			.collect();
+		let inputs: InputMap = [("command_name".into(), SocketValue::String("".into()))].into_iter().collect();
 		let out = node.execute(&mut ctx, &InputMap::new(), &inputs, &fired()).await.unwrap();
 		assert!(out.fired_exec.contains("on_none"));
 	}
@@ -407,9 +391,7 @@ mod set_tests {
 		let sets = serde_json::json!([{"name": "a", "channel_contents": [{"channel": "c", "content": "x"}]}]);
 		let mut props = InputMap::new();
 		props.insert("sets".into(), SocketValue::Json(sets));
-		let inputs: InputMap = [("command_name".into(), SocketValue::String("b".into()))]
-			.into_iter()
-			.collect();
+		let inputs: InputMap = [("command_name".into(), SocketValue::String("b".into()))].into_iter().collect();
 		let out = node.execute(&mut ctx, &props, &inputs, &fired()).await.unwrap();
 		assert!(out.fired_exec.contains("on_none"));
 		assert_eq!(out.data.get("entry_count"), Some(&SocketValue::Int(0)));
@@ -422,9 +404,7 @@ mod set_tests {
 		let sets = serde_json::json!([{"name": "a", "channel_contents": [{"channel": "c", "content": "x"}]}]);
 		let mut props = InputMap::new();
 		props.insert("sets".into(), SocketValue::Json(sets));
-		let inputs: InputMap = [("command_name".into(), SocketValue::String("a".into()))]
-			.into_iter()
-			.collect();
+		let inputs: InputMap = [("command_name".into(), SocketValue::String("a".into()))].into_iter().collect();
 		let out = node.execute(&mut ctx, &props, &inputs, &fired()).await.unwrap();
 		// state_handle が None のため push 不能 → on_none、matched_name は返す
 		assert!(out.fired_exec.contains("on_none"));

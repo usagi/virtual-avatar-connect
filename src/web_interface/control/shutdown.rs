@@ -29,64 +29,59 @@ use crate::SharedState;
 /// `graceful_ms`（cleanup 完了までの最大待ち時間ヒント）を受け付けられるようにする。
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct ShutdownRequest {
- /// 予約済み。現時点では無視する（cleanup の各段は内部で固定値を使う）。
- #[serde(default)]
- pub graceful_ms: Option<u64>,
+	/// 予約済み。現時点では無視する（cleanup の各段は内部で固定値を使う）。
+	#[serde(default)]
+	pub graceful_ms: Option<u64>,
 }
 
 /// `POST /api/v1/control/shutdown` のレスポンス。
 #[derive(Debug, Serialize)]
 pub struct ShutdownResponse {
- /// 常に `"shutting_down"`。broker.trigger が冪等なので 2 回目以降でも同じ文字列を返す。
- pub status: &'static str,
- /// 停止要求を受け付けた側（呼び出し先）の PID。デバッグ用。
- pub current_pid: u32,
+	/// 常に `"shutting_down"`。broker.trigger が冪等なので 2 回目以降でも同じ文字列を返す。
+	pub status: &'static str,
+	/// 停止要求を受け付けた側（呼び出し先）の PID。デバッグ用。
+	pub current_pid: u32,
 }
 
 #[post("/shutdown")]
-pub async fn post_shutdown(
- state: Data<SharedState>,
- body: Option<Json<ShutdownRequest>>,
-) -> impl Responder {
- // body は省略可能。JSON が来ていないリクエスト (Content-Length: 0) でも 202 で受ける。
- let _req = body.map(|b| b.into_inner()).unwrap_or_default();
+pub async fn post_shutdown(state: Data<SharedState>, body: Option<Json<ShutdownRequest>>) -> impl Responder {
+	// body は省略可能。JSON が来ていないリクエスト (Content-Length: 0) でも 202 で受ける。
+	let _req = body.map(|b| b.into_inner()).unwrap_or_default();
 
- let current_pid = std::process::id();
+	let current_pid = std::process::id();
 
- // broker を引き抜くためだけの短い read ロック。以後の trigger 中は ロックを外した状態で行う。
- let broker = {
-  let s = state.read().await;
-  s.shutdown.clone()
- };
+	// broker を引き抜くためだけの短い read ロック。以後の trigger 中は ロックを外した状態で行う。
+	let broker = {
+		let s = state.read().await;
+		s.shutdown.clone()
+	};
 
- log::info!(
-  "《Shutdown》 Control API からの停止要求を受信しました (current_pid={current_pid})。"
- );
- broker.trigger(ShutdownReason::ControlApi);
+	log::info!("《Shutdown》 Control API からの停止要求を受信しました (current_pid={current_pid})。");
+	broker.trigger(ShutdownReason::ControlApi);
 
- HttpResponse::Accepted().json(ShutdownResponse {
-  status: "shutting_down",
-  current_pid,
- })
+	HttpResponse::Accepted().json(ShutdownResponse {
+		status: "shutting_down",
+		current_pid,
+	})
 }
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
- cfg.service(post_shutdown);
+	cfg.service(post_shutdown);
 }
 
 #[cfg(test)]
 mod tests {
- use super::*;
+	use super::*;
 
- #[test]
- fn shutdown_request_accepts_empty_body() {
-  let parsed: ShutdownRequest = serde_json::from_str("{}").unwrap();
-  assert!(parsed.graceful_ms.is_none());
- }
+	#[test]
+	fn shutdown_request_accepts_empty_body() {
+		let parsed: ShutdownRequest = serde_json::from_str("{}").unwrap();
+		assert!(parsed.graceful_ms.is_none());
+	}
 
- #[test]
- fn shutdown_request_partial() {
-  let parsed: ShutdownRequest = serde_json::from_str(r#"{"graceful_ms":500}"#).unwrap();
-  assert_eq!(parsed.graceful_ms, Some(500));
- }
+	#[test]
+	fn shutdown_request_partial() {
+		let parsed: ShutdownRequest = serde_json::from_str(r#"{"graceful_ms":500}"#).unwrap();
+		assert_eq!(parsed.graceful_ms, Some(500));
+	}
 }

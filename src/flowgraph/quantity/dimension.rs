@@ -50,16 +50,7 @@ impl Dimension {
 		angle: 0,
 	};
 
-	pub const fn new(
-		length: i8,
-		mass: i8,
-		time: i8,
-		current: i8,
-		temperature: i8,
-		amount: i8,
-		luminous: i8,
-		angle: i8,
-	) -> Self {
+	pub const fn new(length: i8, mass: i8, time: i8, current: i8, temperature: i8, amount: i8, luminous: i8, angle: i8) -> Self {
 		Self {
 			length,
 			mass,

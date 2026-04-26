@@ -9,12 +9,12 @@
 //! 入力 Table の Arc identity → version → content_hash の 3 段階でキャッシュ再利用する。
 
 use crate::flowgraph::node::{
-	get_optional_string, get_required_string, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput,
-	NodeSpec, PortSpec, PropertySpec, PureNode, StatefulCtx, StatefulNode,
+	get_optional_string, get_required_string, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
+	PropertySpec, PureNode, StatefulCtx, StatefulNode,
 };
+use crate::flowgraph::nodes::table_ops::dictionary_schema;
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use crate::flowgraph::table::{Row, Table};
-use crate::flowgraph::nodes::table_ops::dictionary_schema;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder, MatchKind};
 use async_trait::async_trait;
 use regex::Regex;
@@ -64,7 +64,9 @@ fn row_bool(table: &Table, row: &Row, name: &str, default: bool) -> bool {
 }
 
 fn is_expired(row: &Row, table: &Table, now: &jiff::Timestamp) -> bool {
-	let Some(s) = row_opt_str(table, row, col::EXPIRES_AT) else { return false };
+	let Some(s) = row_opt_str(table, row, col::EXPIRES_AT) else {
+		return false;
+	};
 	if s.is_empty() {
 		return false;
 	}
@@ -103,9 +105,7 @@ impl CompiledDictionary {
 	fn compile(table: &Table) -> Self {
 		let now = jiff::Timestamp::now();
 		let mut indexed: Vec<(usize, &Row)> = table.rows().iter().enumerate().collect();
-		indexed.retain(|(_, r)| {
-			row_bool(table, r, col::ENABLED, true) && !is_expired(r, table, &now)
-		});
+		indexed.retain(|(_, r)| row_bool(table, r, col::ENABLED, true) && !is_expired(r, table, &now));
 		indexed.sort_by(|(ia, a), (ib, b)| {
 			let pa = row_i64(table, a, col::PRIORITY);
 			let pb = row_i64(table, b, col::PRIORITY);
@@ -130,7 +130,11 @@ impl CompiledDictionary {
 			let replacement = row_str(table, row, col::REPLACEMENT);
 			let kind = {
 				let k = row_str(table, row, col::KIND);
-				if k.is_empty() { "literal" } else { k }
+				if k.is_empty() {
+					"literal"
+				} else {
+					k
+				}
 			};
 			let entry = CompiledEntry {
 				source: source.to_string(),
@@ -166,7 +170,11 @@ impl CompiledDictionary {
 				.ok()
 		};
 
-		Self { ac, literal_entries, regex_entries }
+		Self {
+			ac,
+			literal_entries,
+			regex_entries,
+		}
 	}
 
 	fn is_empty(&self) -> bool {
@@ -248,8 +256,7 @@ impl NodeDescriptor for DictionaryReplaceNode {
 			),
 			inputs: vec![
 				PortSpec::input("content", "Content", SocketType::String),
-				PortSpec::input("dictionary", "Dictionary", SocketType::Table)
-					.with_default(SocketValue::Table(Table::empty())),
+				PortSpec::input("dictionary", "Dictionary", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
 			],
 			outputs: vec![
 				PortSpec::output("result", "Result", SocketType::String),
@@ -335,23 +342,16 @@ impl NodeDescriptor for DictionaryMatchNode {
 			feature: "flowgraph.dictionary.match".into(),
 			title: "Dictionary Match".into(),
 			category: "dictionary".into(),
-			description: Some(
-				"Table 辞書で text を照合し、一致エントリと captures を取り出す。exec 分岐可能。Stateful".into(),
-			),
+			description: Some("Table 辞書で text を照合し、一致エントリと captures を取り出す。exec 分岐可能。Stateful".into()),
 			inputs: vec![
 				PortSpec::exec_input("exec_in", "Exec"),
 				PortSpec::input("text", "Text", SocketType::String),
-				PortSpec::input("dictionary", "Dictionary", SocketType::Table)
-					.with_default(SocketValue::Table(Table::empty())),
+				PortSpec::input("dictionary", "Dictionary", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
 			],
 			outputs: vec![
 				PortSpec::exec_output("on_match", "On Match"),
 				PortSpec::exec_output("on_no_match", "On No Match"),
-				PortSpec::output(
-					"matched_entries",
-					"Matched Entries",
-					SocketType::List(Box::new(SocketType::Json)),
-				),
+				PortSpec::output("matched_entries", "Matched Entries", SocketType::List(Box::new(SocketType::Json))),
 				PortSpec::output("matched_count", "Matched Count", SocketType::Int),
 				PortSpec::output(
 					"captures",
@@ -368,13 +368,8 @@ impl NodeDescriptor for DictionaryMatchNode {
 					SocketValue::String("first".into()),
 				)
 				.description("first / all / longest"),
-				PropertySpec::new(
-					"anchor",
-					"Anchor",
-					SocketType::String,
-					SocketValue::String("anywhere".into()),
-				)
-				.description("anywhere / prefix / full"),
+				PropertySpec::new("anchor", "Anchor", SocketType::String, SocketValue::String("anywhere".into()))
+					.description("anywhere / prefix / full"),
 			],
 		}
 	}
@@ -439,11 +434,7 @@ impl StatefulNode for DictionaryMatchNode {
 		let mut first_replacement = String::new();
 		for (idx, hit) in hits.iter().enumerate() {
 			entries_out.push(SocketValue::Json(hit.entry_json.clone()));
-			let caps_list: Vec<SocketValue> = hit
-				.captures
-				.iter()
-				.map(|c| SocketValue::String(c.clone()))
-				.collect();
+			let caps_list: Vec<SocketValue> = hit.captures.iter().map(|c| SocketValue::String(c.clone())).collect();
 			captures_out.push(SocketValue::List(caps_list));
 			if idx == 0 {
 				first_replacement = hit.replacement.clone();
@@ -472,13 +463,7 @@ struct MatchHit {
 	end: usize,
 }
 
-fn match_with(
-	text: &str,
-	dict: &CompiledDictionary,
-	policy: MatchPolicy,
-	anchor: Anchor,
-	source_table: &Table,
-) -> Vec<MatchHit> {
+fn match_with(text: &str, dict: &CompiledDictionary, policy: MatchPolicy, anchor: Anchor, source_table: &Table) -> Vec<MatchHit> {
 	let mut hits: Vec<MatchHit> = Vec::new();
 
 	// literal (AC)
@@ -524,14 +509,10 @@ fn match_with(
 	hits.sort_by_key(|h| (h.start, usize::MAX - (h.end - h.start)));
 	match policy {
 		MatchPolicy::All => hits,
-		MatchPolicy::First => {
-			hits.into_iter().take(1).collect()
-		}
+		MatchPolicy::First => hits.into_iter().take(1).collect(),
 		MatchPolicy::Longest => {
 			// 入力内で「一番長い」マッチを 1 つ選ぶ（位置問わず）
-			let best = hits
-				.into_iter()
-				.max_by_key(|h| (h.end - h.start, usize::MAX - h.start));
+			let best = hits.into_iter().max_by_key(|h| (h.end - h.start, usize::MAX - h.start));
 			best.into_iter().collect()
 		}
 	}
@@ -568,28 +549,18 @@ impl NodeDescriptor for DictionaryLearnNode {
 			feature: "flowgraph.dictionary.learn".into(),
 			title: "Dictionary Learn".into(),
 			category: "dictionary".into(),
-			description: Some(
-				"Table 辞書に 11 カラムエントリを append。同値エントリは duplicate 検出して no-op"
-					.into(),
-			),
+			description: Some("Table 辞書に 11 カラムエントリを append。同値エントリは duplicate 検出して no-op".into()),
 			inputs: vec![
 				PortSpec::exec_input("exec_in", "Exec"),
-				PortSpec::input("dictionary", "Dictionary", SocketType::Table)
-					.with_default(SocketValue::Table(Table::empty())),
+				PortSpec::input("dictionary", "Dictionary", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
 				PortSpec::input("source", "Source", SocketType::String),
 				PortSpec::input("replacement", "Replacement", SocketType::String),
-				PortSpec::input("kind", "Kind", SocketType::String)
-					.with_default(SocketValue::String("literal".into())),
-				PortSpec::input("priority", "Priority", SocketType::Int)
-					.with_default(SocketValue::Int(0)),
-				PortSpec::input("by", "By", SocketType::String)
-					.with_default(SocketValue::String(String::new())),
-				PortSpec::input("tags", "Tags", SocketType::String)
-					.with_default(SocketValue::String(String::new())),
-				PortSpec::input("note", "Note", SocketType::String)
-					.with_default(SocketValue::String(String::new())),
-				PortSpec::input("expires_at", "Expires At", SocketType::String)
-					.with_default(SocketValue::String(String::new())),
+				PortSpec::input("kind", "Kind", SocketType::String).with_default(SocketValue::String("literal".into())),
+				PortSpec::input("priority", "Priority", SocketType::Int).with_default(SocketValue::Int(0)),
+				PortSpec::input("by", "By", SocketType::String).with_default(SocketValue::String(String::new())),
+				PortSpec::input("tags", "Tags", SocketType::String).with_default(SocketValue::String(String::new())),
+				PortSpec::input("note", "Note", SocketType::String).with_default(SocketValue::String(String::new())),
+				PortSpec::input("expires_at", "Expires At", SocketType::String).with_default(SocketValue::String(String::new())),
 			],
 			outputs: vec![
 				PortSpec::exec_output("on_learned", "On Learned"),
@@ -611,20 +582,12 @@ impl NodeDescriptor for DictionaryLearnNode {
 
 #[async_trait]
 impl PureNode for DictionaryLearnNode {
-	async fn compute(
-		&self,
-		_props: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let base_table = get_required_table(inputs, "dictionary")?.clone();
 		let source = get_required_string(inputs, "source")?;
 		let replacement = get_required_string(inputs, "replacement")?;
 		let kind = get_optional_string(inputs, "kind", "literal")?;
-		let priority = inputs
-			.get("priority")
-			.and_then(|v| v.as_i64().ok())
-			.unwrap_or(0);
+		let priority = inputs.get("priority").and_then(|v| v.as_i64().ok()).unwrap_or(0);
 		let by = get_optional_string(inputs, "by", "")?;
 		let tags = get_optional_string(inputs, "tags", "")?;
 		let note = get_optional_string(inputs, "note", "")?;
@@ -639,8 +602,7 @@ impl PureNode for DictionaryLearnNode {
 				&& !is_expired(r, &table, &now)
 				&& row_str(&table, r, col::SOURCE) == source
 				&& row_str(&table, r, col::REPLACEMENT) == replacement
-				&& (row_str(&table, r, col::KIND).is_empty() && kind == "literal"
-					|| row_str(&table, r, col::KIND) == kind)
+				&& (row_str(&table, r, col::KIND).is_empty() && kind == "literal" || row_str(&table, r, col::KIND) == kind)
 		});
 
 		if is_duplicate {
@@ -703,10 +665,7 @@ fn ensure_dictionary_schema(table: Table) -> Table {
 	let schema = table.schema();
 	let dict = dictionary_schema();
 	// カラム名が辞書スキーマをすべて含むかどうかで判定
-	let ok = dict
-		.columns
-		.iter()
-		.all(|c| schema.column_index(&c.name).is_some());
+	let ok = dict.columns.iter().all(|c| schema.column_index(&c.name).is_some());
 	if ok && schema.len() == dict.len() {
 		table
 	} else if table.is_empty() {
@@ -741,19 +700,13 @@ impl NodeDescriptor for DictionaryForgetNode {
 			feature: "flowgraph.dictionary.forget".into(),
 			title: "Dictionary Forget".into(),
 			category: "dictionary".into(),
-			description: Some(
-				"Table 辞書から source (+ replacement) 一致行を削除。mode=latest/all/exact、is_locked 保護"
-					.into(),
-			),
+			description: Some("Table 辞書から source (+ replacement) 一致行を削除。mode=latest/all/exact、is_locked 保護".into()),
 			inputs: vec![
 				PortSpec::exec_input("exec_in", "Exec"),
-				PortSpec::input("dictionary", "Dictionary", SocketType::Table)
-					.with_default(SocketValue::Table(Table::empty())),
+				PortSpec::input("dictionary", "Dictionary", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
 				PortSpec::input("source", "Source", SocketType::String),
-				PortSpec::input("replacement", "Replacement", SocketType::String)
-					.with_default(SocketValue::String(String::new())),
-				PortSpec::input("mode", "Mode", SocketType::String)
-					.with_default(SocketValue::String("latest".into())),
+				PortSpec::input("replacement", "Replacement", SocketType::String).with_default(SocketValue::String(String::new())),
+				PortSpec::input("mode", "Mode", SocketType::String).with_default(SocketValue::String("latest".into())),
 			],
 			outputs: vec![
 				PortSpec::exec_output("on_forgotten", "On Forgotten"),
@@ -777,12 +730,7 @@ impl NodeDescriptor for DictionaryForgetNode {
 
 #[async_trait]
 impl PureNode for DictionaryForgetNode {
-	async fn compute(
-		&self,
-		_props: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let base_table = get_required_table(inputs, "dictionary")?.clone();
 		let source = get_required_string(inputs, "source")?;
 		let replacement = get_optional_string(inputs, "replacement", "")?;
@@ -812,9 +760,8 @@ impl PureNode for DictionaryForgetNode {
 		match mode.as_str() {
 			"all" => {
 				let pred_table_clone = table.clone();
-				removed = table.remove_all_where(|r| {
-					match_pred(r, &pred_table_clone) && !row_bool(&pred_table_clone, r, col::IS_LOCKED, false)
-				});
+				removed =
+					table.remove_all_where(|r| match_pred(r, &pred_table_clone) && !row_bool(&pred_table_clone, r, col::IS_LOCKED, false));
 			}
 			"exact" => {
 				// replacement 必須
@@ -828,9 +775,8 @@ impl PureNode for DictionaryForgetNode {
 						.fire_exec("on_nothing"));
 				}
 				let pred_table_clone = table.clone();
-				let had = table.remove_last_where(|r| {
-					match_pred(r, &pred_table_clone) && !row_bool(&pred_table_clone, r, col::IS_LOCKED, false)
-				});
+				let had =
+					table.remove_last_where(|r| match_pred(r, &pred_table_clone) && !row_bool(&pred_table_clone, r, col::IS_LOCKED, false));
 				if had {
 					removed = 1;
 				}
@@ -838,9 +784,8 @@ impl PureNode for DictionaryForgetNode {
 			_ => {
 				// "latest" or default
 				let pred_table_clone = table.clone();
-				let had = table.remove_last_where(|r| {
-					match_pred(r, &pred_table_clone) && !row_bool(&pred_table_clone, r, col::IS_LOCKED, false)
-				});
+				let had =
+					table.remove_last_where(|r| match_pred(r, &pred_table_clone) && !row_bool(&pred_table_clone, r, col::IS_LOCKED, false));
 				if had {
 					removed = 1;
 				}
@@ -887,10 +832,40 @@ mod tests {
 	fn sample_dict() -> Table {
 		let schema = dictionary_schema();
 		let rows = vec![
-			dict_row("hello", "こんにちは", "literal", 0, false, true, "user:a", "2026-04-01T00:00:00Z", None),
+			dict_row(
+				"hello",
+				"こんにちは",
+				"literal",
+				0,
+				false,
+				true,
+				"user:a",
+				"2026-04-01T00:00:00Z",
+				None,
+			),
 			dict_row("Rust", "ラスト", "literal", 10, true, true, "system", "2026-04-01T00:00:00Z", None),
-			dict_row(r"(\d+)円", "$1 yen", "regex", 50, false, true, "system", "2026-04-01T00:00:00Z", None),
-			dict_row("expired", "期限切れ", "literal", 0, false, true, "system", "2026-04-01T00:00:00Z", Some("2026-04-02T00:00:00Z")),
+			dict_row(
+				r"(\d+)円",
+				"$1 yen",
+				"regex",
+				50,
+				false,
+				true,
+				"system",
+				"2026-04-01T00:00:00Z",
+				None,
+			),
+			dict_row(
+				"expired",
+				"期限切れ",
+				"literal",
+				0,
+				false,
+				true,
+				"system",
+				"2026-04-01T00:00:00Z",
+				Some("2026-04-02T00:00:00Z"),
+			),
 		];
 		Table::new(schema, rows)
 	}
@@ -928,7 +903,10 @@ mod tests {
 	}
 
 	fn sctx<'a>() -> StatefulCtx<'a> {
-		StatefulCtx { node_id: "n", trigger: None }
+		StatefulCtx {
+			node_id: "n",
+			trigger: None,
+		}
 	}
 
 	// ----- Replace -----
@@ -940,8 +918,13 @@ mod tests {
 		let mut inputs = InputMap::new();
 		inputs.insert("content".into(), SocketValue::String("hello Rust! 100円".into()));
 		inputs.insert("dictionary".into(), SocketValue::Table(sample_dict()));
-		let out = node.compute(state.as_mut(), &InputMap::new(), &inputs, &fire("exec_in"), &sctx()).await.unwrap();
-		let SocketValue::String(result) = out.data.get("result").unwrap() else { panic!() };
+		let out = node
+			.compute(state.as_mut(), &InputMap::new(), &inputs, &fire("exec_in"), &sctx())
+			.await
+			.unwrap();
+		let SocketValue::String(result) = out.data.get("result").unwrap() else {
+			panic!()
+		};
 		assert!(result.contains("こんにちは"));
 		assert!(result.contains("ラスト"));
 		assert!(result.contains("100 yen"));
@@ -955,7 +938,10 @@ mod tests {
 		let mut inputs = InputMap::new();
 		inputs.insert("content".into(), SocketValue::String("hello".into()));
 		inputs.insert("dictionary".into(), SocketValue::Table(dict.clone()));
-		let _ = node.compute(state.as_mut(), &InputMap::new(), &inputs, &ExecFireSet::new(), &sctx()).await.unwrap();
+		let _ = node
+			.compute(state.as_mut(), &InputMap::new(), &inputs, &ExecFireSet::new(), &sctx())
+			.await
+			.unwrap();
 		// 2 回目: キャッシュヒット（state の last_arc_ptr が更新されている）
 		let cache = state.as_mut().downcast_mut::<DictionaryCache>().unwrap();
 		assert!(cache.last_version.is_some());
@@ -969,8 +955,13 @@ mod tests {
 		let mut inputs = InputMap::new();
 		inputs.insert("content".into(), SocketValue::String("expired entry".into()));
 		inputs.insert("dictionary".into(), SocketValue::Table(sample_dict()));
-		let out = node.compute(state.as_mut(), &InputMap::new(), &inputs, &ExecFireSet::new(), &sctx()).await.unwrap();
-		let SocketValue::String(result) = out.data.get("result").unwrap() else { panic!() };
+		let out = node
+			.compute(state.as_mut(), &InputMap::new(), &inputs, &ExecFireSet::new(), &sctx())
+			.await
+			.unwrap();
+		let SocketValue::String(result) = out.data.get("result").unwrap() else {
+			panic!()
+		};
 		// "expired" は「期限切れ」に置換されない（expires_at が過去）
 		assert_eq!(result, "expired entry");
 	}
@@ -987,13 +978,13 @@ mod tests {
 		let mut inputs = InputMap::new();
 		inputs.insert("text".into(), SocketValue::String("hello world".into()));
 		inputs.insert("dictionary".into(), SocketValue::Table(sample_dict()));
-		let out = node.compute(state.as_mut(), &props, &inputs, &fire("exec_in"), &sctx()).await.unwrap();
+		let out = node
+			.compute(state.as_mut(), &props, &inputs, &fire("exec_in"), &sctx())
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("on_match"));
 		assert_eq!(out.data.get("matched_count"), Some(&SocketValue::Int(1)));
-		assert_eq!(
-			out.data.get("first_replacement"),
-			Some(&SocketValue::String("こんにちは".into()))
-		);
+		assert_eq!(out.data.get("first_replacement"), Some(&SocketValue::String("こんにちは".into())));
 	}
 
 	#[tokio::test]
@@ -1006,9 +997,14 @@ mod tests {
 		let mut inputs = InputMap::new();
 		inputs.insert("text".into(), SocketValue::String("100円と200円".into()));
 		inputs.insert("dictionary".into(), SocketValue::Table(sample_dict()));
-		let out = node.compute(state.as_mut(), &props, &inputs, &fire("exec_in"), &sctx()).await.unwrap();
+		let out = node
+			.compute(state.as_mut(), &props, &inputs, &fire("exec_in"), &sctx())
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("on_match"));
-		let SocketValue::List(caps) = out.data.get("captures").unwrap() else { panic!() };
+		let SocketValue::List(caps) = out.data.get("captures").unwrap() else {
+			panic!()
+		};
 		// 2 マッチ、各マッチに 1 キャプチャ
 		assert_eq!(caps.len(), 2);
 		if let SocketValue::List(g0) = &caps[0] {
@@ -1024,7 +1020,10 @@ mod tests {
 		let mut inputs = InputMap::new();
 		inputs.insert("text".into(), SocketValue::String("nothing here".into()));
 		inputs.insert("dictionary".into(), SocketValue::Table(sample_dict()));
-		let out = node.compute(state.as_mut(), &InputMap::new(), &inputs, &fire("exec_in"), &sctx()).await.unwrap();
+		let out = node
+			.compute(state.as_mut(), &InputMap::new(), &inputs, &fire("exec_in"), &sctx())
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("on_no_match"));
 		assert_eq!(out.data.get("matched_count"), Some(&SocketValue::Int(0)));
 	}
@@ -1038,7 +1037,10 @@ mod tests {
 		let mut inputs = InputMap::new();
 		inputs.insert("text".into(), SocketValue::String("hello world".into()));
 		inputs.insert("dictionary".into(), SocketValue::Table(sample_dict()));
-		let out = node.compute(state.as_mut(), &props, &inputs, &fire("exec_in"), &sctx()).await.unwrap();
+		let out = node
+			.compute(state.as_mut(), &props, &inputs, &fire("exec_in"), &sctx())
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("on_match"));
 		// 先頭に "hello" なので OK
 		assert_eq!(out.data.get("matched_count"), Some(&SocketValue::Int(1)));
@@ -1046,7 +1048,10 @@ mod tests {
 		let mut inputs2 = InputMap::new();
 		inputs2.insert("text".into(), SocketValue::String("say hello".into()));
 		inputs2.insert("dictionary".into(), SocketValue::Table(sample_dict()));
-		let out2 = node.compute(state.as_mut(), &props, &inputs2, &fire("exec_in"), &sctx()).await.unwrap();
+		let out2 = node
+			.compute(state.as_mut(), &props, &inputs2, &fire("exec_in"), &sctx())
+			.await
+			.unwrap();
 		assert!(out2.fired_exec.contains("on_no_match"));
 	}
 
@@ -1061,7 +1066,9 @@ mod tests {
 		inputs.insert("replacement".into(), SocketValue::String("bar".into()));
 		let out = node.compute(&InputMap::new(), &inputs, &fire("exec_in")).await.unwrap();
 		assert!(out.fired_exec.contains("on_learned"));
-		let SocketValue::Table(t) = out.data.get("updated_dictionary").unwrap() else { panic!() };
+		let SocketValue::Table(t) = out.data.get("updated_dictionary").unwrap() else {
+			panic!()
+		};
 		assert_eq!(t.len(), 1);
 	}
 
@@ -1092,7 +1099,9 @@ mod tests {
 		learn_in.insert("source".into(), SocketValue::String("foo".into()));
 		learn_in.insert("replacement".into(), SocketValue::String("new".into()));
 		let learned = learn.compute(&InputMap::new(), &learn_in, &fire("exec_in")).await.unwrap();
-		let SocketValue::Table(t1) = learned.data.get("updated_dictionary").unwrap().clone() else { panic!() };
+		let SocketValue::Table(t1) = learned.data.get("updated_dictionary").unwrap().clone() else {
+			panic!()
+		};
 		assert_eq!(t1.len(), 2);
 
 		// Forget (latest): newest "new" が消え、"old" が復活
@@ -1101,7 +1110,9 @@ mod tests {
 		forget_in.insert("source".into(), SocketValue::String("foo".into()));
 		forget_in.insert("mode".into(), SocketValue::String("latest".into()));
 		let forgotten = forget.compute(&InputMap::new(), &forget_in, &fire("exec_in")).await.unwrap();
-		let SocketValue::Table(t2) = forgotten.data.get("updated_dictionary").unwrap().clone() else { panic!() };
+		let SocketValue::Table(t2) = forgotten.data.get("updated_dictionary").unwrap().clone() else {
+			panic!()
+		};
 		assert_eq!(t2.len(), 1);
 		assert_eq!(
 			t2.rows()[0].get(1).and_then(|v| v.as_str()),
@@ -1123,7 +1134,9 @@ mod tests {
 		inp.insert("mode".into(), SocketValue::String("all".into()));
 		let out = forget.compute(&InputMap::new(), &inp, &fire("exec_in")).await.unwrap();
 		assert_eq!(out.data.get("removed_count"), Some(&SocketValue::Int(2)));
-		let SocketValue::Table(t2) = out.data.get("updated_dictionary").unwrap() else { panic!() };
+		let SocketValue::Table(t2) = out.data.get("updated_dictionary").unwrap() else {
+			panic!()
+		};
 		assert_eq!(t2.len(), 1);
 	}
 
@@ -1156,10 +1169,7 @@ mod tests {
 	fn ensure_schema_reprojects_foreign_schema() {
 		// カラム名が一致しないテーブル
 		let custom = Table::new(
-			TableSchema::new(vec![crate::flowgraph::table::ColumnSpec::new(
-				"something",
-				SocketType::String,
-			)]),
+			TableSchema::new(vec![crate::flowgraph::table::ColumnSpec::new("something", SocketType::String)]),
 			Vec::new(),
 		);
 		let t2 = ensure_dictionary_schema(custom);
@@ -1174,17 +1184,7 @@ mod tests {
 
 	fn single_row_table_with_expires(expires_at: Option<&str>) -> Table {
 		let schema = dictionary_schema();
-		let row = dict_row(
-			"src",
-			"dst",
-			"literal",
-			0,
-			false,
-			true,
-			"test",
-			"2026-04-01T00:00:00Z",
-			expires_at,
-		);
+		let row = dict_row("src", "dst", "literal", 0, false, true, "test", "2026-04-01T00:00:00Z", expires_at);
 		Table::new(schema, vec![row])
 	}
 

@@ -116,7 +116,13 @@ fn normalize_path(p: &str) -> String {
 
 fn sanitize_path_segment(fq: &str) -> String {
 	fq.chars()
-		.map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+		.map(|c| {
+			if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+				c
+			} else {
+				'_'
+			}
+		})
 		.collect()
 }
 
@@ -128,10 +134,7 @@ fn sanitize_path_segment(fq: &str) -> String {
 ///
 /// Trigger は `Arc<Option<TriggerHandle>>` 相当を `Data` で渡す想定。
 /// Flowgraph ワーカー未起動時は全ハンドラが 503 を返す。
-pub fn register_routes(
-	cfg: &mut web::ServiceConfig,
-	endpoints: &[FlowgraphWebInputEndpoint],
-) {
+pub fn register_routes(cfg: &mut web::ServiceConfig, endpoints: &[FlowgraphWebInputEndpoint]) {
 	use std::collections::HashSet;
 	let mut seen: HashSet<(String, Method)> = HashSet::new();
 	for ep in endpoints {
@@ -212,12 +215,7 @@ async fn handle_post(
 	forward(&ep, &trigger, content, actor).await
 }
 
-async fn forward(
-	ep: &FlowgraphWebInputEndpoint,
-	trigger: &Arc<Option<TriggerHandle>>,
-	content: String,
-	actor: String,
-) -> HttpResponse {
+async fn forward(ep: &FlowgraphWebInputEndpoint, trigger: &Arc<Option<TriggerHandle>>, content: String, actor: String) -> HttpResponse {
 	let Some(handle) = trigger.as_ref().as_ref() else {
 		return HttpResponse::ServiceUnavailable().body("flowgraph runtime not active");
 	};
@@ -234,10 +232,7 @@ async fn forward(
 	match handle.send(event) {
 		Ok(()) => HttpResponse::Ok().body("ok"),
 		Err(e) => {
-			log::warn!(
-				"《Flowgraph/WebInput》 trigger 送信失敗 node={} err={e}",
-				ep.node_id
-			);
+			log::warn!("《Flowgraph/WebInput》 trigger 送信失敗 node={} err={e}", ep.node_id);
 			HttpResponse::ServiceUnavailable().body(format!("trigger send failed: {e}"))
 		}
 	}
@@ -314,10 +309,7 @@ mod tests {
 		let ev = rx.recv().await.expect("event received");
 		assert_eq!(ev.node_id, "in");
 		assert!(ev.fired_exec.contains(&"__trigger__".to_string()));
-		assert_eq!(
-			ev.data_overrides.get("__content__").and_then(|v| v.as_str().ok()),
-			Some("hello")
-		);
+		assert_eq!(ev.data_overrides.get("__content__").and_then(|v| v.as_str().ok()), Some("hello"));
 		assert_eq!(
 			ev.data_overrides.get("__source_actor__").and_then(|v| v.as_str().ok()),
 			Some("alice")

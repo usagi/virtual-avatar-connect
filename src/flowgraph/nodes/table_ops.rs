@@ -10,8 +10,8 @@
 //! - `flowgraph.table.write_tsv` (Effectful): Table + path → exec（atomic rename）
 
 use crate::flowgraph::node::{
-	get_optional_string, get_required_list, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap,
-	NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec, PureNode,
+	get_optional_string, get_required_list, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor,
+	NodeExecError, NodeOutput, NodeSpec, PortSpec, PureNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use crate::flowgraph::table::{ColumnSpec, Row, Table, TableSchema};
@@ -26,15 +26,11 @@ fn sv_to_json(v: &SocketValue) -> JsonValue {
 	match v {
 		SocketValue::Bool(b) => JsonValue::Bool(*b),
 		SocketValue::Int(i) => JsonValue::Number((*i).into()),
-		SocketValue::Float(f) => serde_json::Number::from_f64(*f)
-			.map(JsonValue::Number)
-			.unwrap_or(JsonValue::Null),
+		SocketValue::Float(f) => serde_json::Number::from_f64(*f).map(JsonValue::Number).unwrap_or(JsonValue::Null),
 		SocketValue::String(s) => JsonValue::String(s.clone()),
 		SocketValue::Json(j) => j.clone(),
 		SocketValue::List(xs) => JsonValue::Array(xs.iter().map(sv_to_json).collect()),
-		SocketValue::Map(m) => {
-			JsonValue::Object(m.iter().map(|(k, v)| (k.clone(), sv_to_json(v))).collect())
-		}
+		SocketValue::Map(m) => JsonValue::Object(m.iter().map(|(k, v)| (k.clone(), sv_to_json(v))).collect()),
 		SocketValue::Table(t) => t.to_json_array(),
 		// Phase ξ §6.4: table 化境界は value のみ（pass-through）。
 		SocketValue::Quantity(q) => serde_json::Number::from_f64(q.value)
@@ -59,8 +55,7 @@ impl NodeDescriptor for TableFromJsonNode {
 			category: "table".into(),
 			description: Some("List<Json> (object の配列) を Table に変換。スキーマは先頭 object から推論".into()),
 			inputs: vec![
-				PortSpec::input("json", "JSON", SocketType::List(Box::new(SocketType::Json)))
-					.with_default(SocketValue::List(vec![])),
+				PortSpec::input("json", "JSON", SocketType::List(Box::new(SocketType::Json))).with_default(SocketValue::List(vec![]))
 			],
 			outputs: vec![
 				PortSpec::output("table", "Table", SocketType::Table),
@@ -73,12 +68,7 @@ impl NodeDescriptor for TableFromJsonNode {
 
 #[async_trait]
 impl PureNode for TableFromJsonNode {
-	async fn compute(
-		&self,
-		_props: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let list = get_required_list(inputs, "json")?;
 		let arr: Vec<JsonValue> = list.iter().map(sv_to_json).collect();
 		let table = Table::from_json_array(&arr, None).unwrap_or_else(|_| Table::empty());
@@ -102,9 +92,7 @@ impl NodeDescriptor for TableToJsonNode {
 			title: "Table To JSON".into(),
 			category: "table".into(),
 			description: Some("Table を List<Json> (object の配列) に変換".into()),
-			inputs: vec![
-				PortSpec::input("table", "Table", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
-			],
+			inputs: vec![PortSpec::input("table", "Table", SocketType::Table).with_default(SocketValue::Table(Table::empty()))],
 			outputs: vec![
 				PortSpec::output("json", "JSON", SocketType::List(Box::new(SocketType::Json))),
 				PortSpec::output("row_count", "Row Count", SocketType::Int),
@@ -125,12 +113,7 @@ fn get_required_table<'a>(inputs: &'a InputMap, key: &str) -> Result<&'a Table, 
 
 #[async_trait]
 impl PureNode for TableToJsonNode {
-	async fn compute(
-		&self,
-		_props: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let table = get_required_table(inputs, "table")?;
 		let arr = match table.to_json_array() {
 			JsonValue::Array(a) => a,
@@ -156,14 +139,11 @@ impl NodeDescriptor for TableLoadTsvNode {
 			feature: "flowgraph.table.load_tsv".into(),
 			title: "Table Load TSV".into(),
 			category: "table".into(),
-			description: Some(
-				"TSV ファイルを Table に読み込む（auto / headerful / legacy_loose）。Effectful".into(),
-			),
+			description: Some("TSV ファイルを Table に読み込む（auto / headerful / legacy_loose）。Effectful".into()),
 			inputs: vec![
 				PortSpec::exec_input("exec_in", "Exec"),
 				PortSpec::input("path", "Path", SocketType::String),
-				PortSpec::input("mode", "Mode", SocketType::String)
-					.with_default(SocketValue::String("auto".into())),
+				PortSpec::input("mode", "Mode", SocketType::String).with_default(SocketValue::String("auto".into())),
 			],
 			outputs: vec![
 				PortSpec::exec_output("on_success", "On Success"),
@@ -232,9 +212,7 @@ impl NodeDescriptor for TableWriteTsvNode {
 			feature: "flowgraph.table.write_tsv".into(),
 			title: "Table Write TSV".into(),
 			category: "table".into(),
-			description: Some(
-				"Table を TSV ファイルに書き出す（atomic rename）。Effectful".into(),
-			),
+			description: Some("Table を TSV ファイルに書き出す（atomic rename）。Effectful".into()),
 			inputs: vec![
 				PortSpec::exec_input("exec_in", "Exec"),
 				PortSpec::input("table", "Table", SocketType::Table),
@@ -369,9 +347,7 @@ fn parse_headerful_tsv(contents: &str) -> Result<Table, TsvParseError> {
 	let mut lines = contents
 		.lines()
 		.filter(|l| !l.trim().is_empty() && !l.trim_start().starts_with('#'));
-	let header = lines
-		.next()
-		.ok_or_else(|| TsvParseError::Parse("空のファイル".into()))?;
+	let header = lines.next().ok_or_else(|| TsvParseError::Parse("空のファイル".into()))?;
 	let col_names: Vec<String> = header.split('\t').map(unescape_tsv_field).collect();
 	// 既知のカラム名は型を付与、未知カラムは json 扱い
 	let columns: Vec<ColumnSpec> = col_names
@@ -447,7 +423,10 @@ fn infer_type_for_column(name: &str) -> SocketType {
 
 fn string_to_json_for_column(col: &str, raw: &str) -> JsonValue {
 	match col {
-		"priority" => raw.parse::<i64>().map(|n| JsonValue::Number(n.into())).unwrap_or(JsonValue::Number(0.into())),
+		"priority" => raw
+			.parse::<i64>()
+			.map(|n| JsonValue::Number(n.into()))
+			.unwrap_or(JsonValue::Number(0.into())),
 		"is_locked" | "enabled" => match raw.to_ascii_lowercase().as_str() {
 			"true" | "1" | "yes" | "y" => JsonValue::Bool(true),
 			"false" | "0" | "no" | "n" => JsonValue::Bool(false),

@@ -214,11 +214,7 @@ fn parse_regex_space(contents: &str) -> Vec<(String, String)> {
 			}
 			None => {
 				// 先頭単語が replacement
-				let end = t
-					.char_indices()
-					.find(|(_, c)| c.is_whitespace())
-					.map(|(i, _)| i)
-					.unwrap_or(t.len());
+				let end = t.char_indices().find(|(_, c)| c.is_whitespace()).map(|(i, _)| i).unwrap_or(t.len());
 				let r = t[..end].to_string();
 				let p = t[end..].trim_start().to_string();
 				(r, p)
@@ -268,8 +264,7 @@ fn parse_regex_csv(contents: &str) -> Result<Vec<(String, String)>> {
 }
 
 fn convert_input(spec: &InputSpec, by_default: &str, locked: bool) -> Result<Vec<Row>> {
-	let contents =
-		fs::read_to_string(&spec.path).with_context(|| format!("read {}", spec.path.display()))?;
+	let contents = fs::read_to_string(&spec.path).with_context(|| format!("read {}", spec.path.display()))?;
 	let kind = detect_kind(&spec.path, spec.kind_hint);
 	let now = now_rfc3339();
 
@@ -288,12 +283,7 @@ fn convert_input(spec: &InputSpec, by_default: &str, locked: bool) -> Result<Vec
 
 	let by = spec.tag.as_deref().unwrap_or(by_default).to_string();
 	// ソース由来の tag も tags 列に詰める（by とは別軸のメタ）
-	let tag_string = spec
-		.path
-		.file_stem()
-		.and_then(|s| s.to_str())
-		.unwrap_or("")
-		.to_string();
+	let tag_string = spec.path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string();
 
 	let mut rows = Vec::with_capacity(pairs.len());
 	for (source, replacement) in pairs {
@@ -352,10 +342,7 @@ fn main() -> Result<()> {
 	} else {
 		let dst = PathBuf::from(&cli.output);
 		if dst.exists() && !cli.force {
-			bail!(
-				"{} が既に存在します。上書きするには --force を指定してください",
-				dst.display()
-			);
+			bail!("{} が既に存在します。上書きするには --force を指定してください", dst.display());
 		}
 		let tmp = dst.with_extension("tmp");
 		fs::write(&tmp, &out).with_context(|| format!("write tmp {}", tmp.display()))?;

@@ -7,8 +7,8 @@
 //! Spec source: [`docs/roadmap/backlog-nodes.md`](../../../../docs/roadmap/backlog-nodes.md) \u00a71.
 
 use crate::flowgraph::node::{
-	get_optional_bool, get_optional_float, get_optional_int, ExecFireSet, InputMap, NodeDescriptor, NodeExecError,
-	NodeOutput, NodeSpec, PortSpec, StatefulCtx, StatefulNode, TriggerEvent, TriggerHandle,
+	get_optional_bool, get_optional_float, get_optional_int, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec,
+	PortSpec, StatefulCtx, StatefulNode, TriggerEvent, TriggerHandle,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
@@ -143,10 +143,7 @@ impl StatefulNode for TimerIntervalNode {
 			}
 
 			let now = Instant::now();
-			let elapsed_sec = st
-				.last_emit_at
-				.map(|t| now.duration_since(t).as_secs_f64())
-				.unwrap_or(interval_sec);
+			let elapsed_sec = st.last_emit_at.map(|t| now.duration_since(t).as_secs_f64()).unwrap_or(interval_sec);
 			st.tick_count = st.tick_count.saturating_add(1);
 			st.last_emit_at = Some(now);
 			st.armed_id = None;
@@ -288,7 +285,10 @@ mod tests {
 		.into_iter()
 		.collect();
 
-		let sctx = StatefulCtx { node_id: "ti", trigger: None };
+		let sctx = StatefulCtx {
+			node_id: "ti",
+			trigger: None,
+		};
 		let out = node
 			.compute(state.as_mut(), &InputMap::new(), &inputs, &fired, &sctx)
 			.await

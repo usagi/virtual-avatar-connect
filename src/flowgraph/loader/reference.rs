@@ -62,9 +62,7 @@ pub fn parse_port_ref(s: &str) -> Result<PortRefStr, String> {
 		}
 	}
 
-	let colon_idx = colon_idx.ok_or_else(|| {
-		format!("port 参照に ':' が無い: '{s}'（期待形式: 'node:port' または 'path::node:port'）")
-	})?;
+	let colon_idx = colon_idx.ok_or_else(|| format!("port 参照に ':' が無い: '{s}'（期待形式: 'node:port' または 'path::node:port'）"))?;
 
 	let node_part = &s[..colon_idx];
 	let port = s[colon_idx + 1..].trim();

@@ -40,23 +40,23 @@ use actix_web::web;
 /// `app_data` に [`ControlApiRuntime`] と [`crate::SharedState`] が挿入されている前提。
 /// `lib.rs` の `run_services` から呼ばれる。
 pub fn register(cfg: &mut web::ServiceConfig) {
- cfg.service(
-  web::scope("/api/v1/control")
-   .wrap(actix_web::middleware::from_fn(auth::control_api_auth))
-   .service(ping::ping)
-   .service(ping::whoami)
-   .service(ws::events_ws)
-   .configure(actions::configure)
-   .configure(reload::configure)
-   .configure(restart::configure)
-   .configure(shutdown::configure)
-   .configure(profiles::configure)
-   .configure(run_with::configure)
-   .configure(bos::configure)
-   .configure(managed_app::configure)
-   .configure(oauth_twitch::configure)
-   .configure(ingress::configure)
-   .configure(flowgraph::configure)
-   .configure(table::configure),
- );
+	cfg.service(
+		web::scope("/api/v1/control")
+			.wrap(actix_web::middleware::from_fn(auth::control_api_auth))
+			.service(ping::ping)
+			.service(ping::whoami)
+			.service(ws::events_ws)
+			.configure(actions::configure)
+			.configure(reload::configure)
+			.configure(restart::configure)
+			.configure(shutdown::configure)
+			.configure(profiles::configure)
+			.configure(run_with::configure)
+			.configure(bos::configure)
+			.configure(managed_app::configure)
+			.configure(oauth_twitch::configure)
+			.configure(ingress::configure)
+			.configure(flowgraph::configure)
+			.configure(table::configure),
+	);
 }

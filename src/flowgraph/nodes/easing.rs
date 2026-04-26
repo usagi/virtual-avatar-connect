@@ -14,8 +14,7 @@
 //! output bounded to the curve's design range for `t \u{2208} [0, 1]`.
 
 use crate::flowgraph::node::{
-	get_required_float, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
-	PropertySpec, PureNode,
+	get_required_float, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec, PropertySpec, PureNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
@@ -226,17 +225,12 @@ impl NodeDescriptor for EasingApplyNode {
 			inputs: vec![PortSpec::input("t", "t", SocketType::Float)],
 			outputs: vec![PortSpec::output("value", "Value", SocketType::Float)],
 			properties: vec![
-				PropertySpec::new(
-					"curve",
-					"Curve",
-					SocketType::String,
-					SocketValue::String("linear".into()),
-				)
-				.description(
-					"Easing curve name. One of: linear, quad_in/out/inout, cubic_in/out/inout, sine_in/out/inout, \
+				PropertySpec::new("curve", "Curve", SocketType::String, SocketValue::String("linear".into()))
+					.description(
+						"Easing curve name. One of: linear, quad_in/out/inout, cubic_in/out/inout, sine_in/out/inout, \
 					 expo_in/out/inout, elastic_in/out/inout, bounce_in/out/inout.",
-				)
-				.with_choices(Curve::all_names()),
+					)
+					.with_choices(Curve::all_names()),
 				PropertySpec::new("clamp_t", "Clamp t to [0, 1]", SocketType::Bool, SocketValue::Bool(true))
 					.description("When true, t is clamped to [0, 1] before the curve is applied. Default true."),
 			],
@@ -246,12 +240,7 @@ impl NodeDescriptor for EasingApplyNode {
 
 #[async_trait]
 impl PureNode for EasingApplyNode {
-	async fn compute(
-		&self,
-		properties: &InputMap,
-		inputs: &InputMap,
-		_fired: &ExecFireSet,
-	) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let mut t = get_required_float(inputs, "t")?;
 		let curve_name = properties
 			.get("curve")
@@ -396,11 +385,7 @@ mod tests {
 	#[tokio::test]
 	async fn unknown_curve_errors() {
 		let out = EasingApplyNode
-			.compute(
-				&props("my_fancy_ease", true),
-				&input_t(0.5),
-				&ExecFireSet::new(),
-			)
+			.compute(&props("my_fancy_ease", true), &input_t(0.5), &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(out, NodeExecError::Generic(_)));
@@ -410,10 +395,7 @@ mod tests {
 	async fn default_curve_is_linear() {
 		// Omit curve property \u{2192} should fall back to "linear".
 		let props: InputMap = [("clamp_t".into(), SocketValue::Bool(true))].into_iter().collect();
-		let out = EasingApplyNode
-			.compute(&props, &input_t(0.42), &ExecFireSet::new())
-			.await
-			.unwrap();
+		let out = EasingApplyNode.compute(&props, &input_t(0.42), &ExecFireSet::new()).await.unwrap();
 		let y = out.data.get("value").and_then(|v| v.as_f64().ok()).unwrap();
 		assert!((y - 0.42).abs() < 1e-12);
 	}

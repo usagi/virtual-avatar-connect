@@ -6,9 +6,9 @@
 //! cheap gate to catch accidental regressions while the migration is in flight.
 
 use jiff::{
-	SignedDuration, Timestamp, Zoned,
 	fmt::temporal::DateTimeParser,
 	tz::{Offset, TimeZone},
+	SignedDuration, Timestamp, Zoned,
 };
 
 #[test]
@@ -30,7 +30,10 @@ fn timestamp_from_rfc3339_utc_z() {
 fn timestamp_from_rfc3339_with_offset() {
 	let ts: Timestamp = "2026-04-24T21:34:56+09:00".parse().expect("parse RFC3339 +09:00");
 	let as_utc = ts.to_string();
-	assert!(as_utc.starts_with("2026-04-24T12:34:56"), "JST 21:34 must normalize to UTC 12:34, got {as_utc}");
+	assert!(
+		as_utc.starts_with("2026-04-24T12:34:56"),
+		"JST 21:34 must normalize to UTC 12:34, got {as_utc}"
+	);
 }
 
 #[test]

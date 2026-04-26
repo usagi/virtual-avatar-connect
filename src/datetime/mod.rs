@@ -27,19 +27,7 @@ use thiserror::Error;
 ///
 /// inner フィールドは `pub` にしてあるので、拡張パターンマッチや直接の
 /// `Timestamp` 取り出しが可能。
-#[derive(
-	Clone,
-	Copy,
-	Debug,
-	PartialEq,
-	Eq,
-	Hash,
-	PartialOrd,
-	Ord,
-	Default,
-	Serialize,
-	Deserialize,
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct DateTime(pub Timestamp);
 

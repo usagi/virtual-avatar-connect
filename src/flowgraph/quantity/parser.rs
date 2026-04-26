@@ -105,9 +105,9 @@ fn split_exponent(token: &str) -> Result<(&str, i8), UnitParseError> {
 	if let Some(idx) = token.find('^') {
 		let atom = &token[..idx];
 		let exp_str = &token[idx + 1..];
-		let exp = exp_str.parse::<i8>().map_err(|_| UnitParseError::InvalidExponent {
-			raw: exp_str.to_string(),
-		})?;
+		let exp = exp_str
+			.parse::<i8>()
+			.map_err(|_| UnitParseError::InvalidExponent { raw: exp_str.to_string() })?;
 		Ok((atom, exp))
 	} else {
 		Ok((token, 1))
@@ -453,11 +453,7 @@ mod tests {
 	#[test]
 	fn atoms_layout_matches_for_force() {
 		let u = parse_unit("kg\u{00B7}m/s^2").unwrap();
-		let expected = atoms_map(&[
-			(BaseUnitId::Kilogram, 1),
-			(BaseUnitId::Metre, 1),
-			(BaseUnitId::Second, -2),
-		]);
+		let expected = atoms_map(&[(BaseUnitId::Kilogram, 1), (BaseUnitId::Metre, 1), (BaseUnitId::Second, -2)]);
 		assert_eq!(u.atoms, expected);
 		let _ = atoms_vec(&u);
 	}

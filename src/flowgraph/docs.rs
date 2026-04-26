@@ -40,12 +40,7 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 	for (category, specs) in &by_category {
 		out.push_str(&format!("- **{}**\n", category));
 		for spec in specs {
-			out.push_str(&format!(
-				"  - [`{}`](#{}) — {}\n",
-				spec.feature,
-				anchor(&spec.feature),
-				spec.title,
-			));
+			out.push_str(&format!("  - [`{}`](#{}) — {}\n", spec.feature, anchor(&spec.feature), spec.title,));
 		}
 	}
 	out.push('\n');
@@ -92,12 +87,7 @@ fn render_node(out: &mut String, spec: &NodeSpec) {
 		out.push_str("| Output | Type | Note |\n");
 		out.push_str("|---|---|---|\n");
 		for p in &outputs {
-			out.push_str(&format!(
-				"| `{}` | {} | {} |\n",
-				p.name,
-				port_type(p),
-				port_note(p),
-			));
+			out.push_str(&format!("| `{}` | {} | {} |\n", p.name, port_type(p), port_note(p),));
 		}
 		out.push('\n');
 	}

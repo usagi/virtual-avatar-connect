@@ -42,7 +42,11 @@ impl FlowgraphVoiceIngress {
 	pub fn from_meta(fq: &str, meta: &LoadedNodeMeta) -> Option<Self> {
 		let p = &meta.properties;
 		let get_str = |k: &str| -> String {
-			p.get(k).and_then(|v| v.as_str().ok()).map(str::trim).map(str::to_string).unwrap_or_default()
+			p.get(k)
+				.and_then(|v| v.as_str().ok())
+				.map(str::trim)
+				.map(str::to_string)
+				.unwrap_or_default()
 		};
 		let get_int = |k: &str| -> i64 { p.get(k).and_then(|v| v.as_i64().ok()).unwrap_or(0) };
 		Some(Self {
@@ -84,11 +88,7 @@ impl FlowgraphVoiceIngress {
 /// `trigger` が None の場合（Flowgraph 未起動）は warn ログのみ出して何も spawn しない。
 ///
 /// 戻り値は起動に成功した `VoiceIngress` ハンドル一覧。shutdown 時に `.finish().await` すること。
-pub fn spawn(
-	entries: &[FlowgraphVoiceIngress],
-	trigger: Option<TriggerHandle>,
-	tokio_handle: tokio::runtime::Handle,
-) -> Vec<VoiceIngress> {
+pub fn spawn(entries: &[FlowgraphVoiceIngress], trigger: Option<TriggerHandle>, tokio_handle: tokio::runtime::Handle) -> Vec<VoiceIngress> {
 	if entries.is_empty() {
 		return Vec::new();
 	}
@@ -114,18 +114,16 @@ pub fn spawn(
 		);
 		match crate::processor::voice::spawn_from_flowgraph(e, tokio_handle.clone(), trigger.clone()) {
 			Some(h) => {
-				log::info!(
-					"《Flowgraph/Voice》 ワーカー起動成功 node={} engine={}",
-					e.node_id, e.engine
-				);
+				log::info!("《Flowgraph/Voice》 ワーカー起動成功 node={} engine={}", e.node_id, e.engine);
 				handles.push(h);
-			},
+			}
 			None => {
 				log::error!(
 					"《Flowgraph/Voice》 ワーカー起動失敗 node={} engine={}（model_path / feature ビルドを確認してください）",
-					e.node_id, e.engine
+					e.node_id,
+					e.engine
 				);
-			},
+			}
 		}
 	}
 	handles

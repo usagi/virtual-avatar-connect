@@ -59,9 +59,7 @@ impl FlowgraphChannelSubscribe {
 				})
 				.unwrap_or_default()
 		};
-		let get_bool = |k: &str, default: bool| -> bool {
-			p.get(k).and_then(|v| v.as_bool().ok()).unwrap_or(default)
-		};
+		let get_bool = |k: &str, default: bool| -> bool { p.get(k).and_then(|v| v.as_bool().ok()).unwrap_or(default) };
 		Some(Self {
 			node_id: fq.to_string(),
 			channels: get_string_list("channels"),
@@ -169,11 +167,7 @@ pub fn spawn(
 						}
 						let ev = sub.build_trigger(&cd);
 						if let Err(e) = trigger.send(ev) {
-							log::warn!(
-								"《Flowgraph/ChannelSubscribe》 node={} trigger.send 失敗: {:?}",
-								sub.node_id,
-								e
-							);
+							log::warn!("《Flowgraph/ChannelSubscribe》 node={} trigger.send 失敗: {:?}", sub.node_id, e);
 						}
 					}
 					Err(broadcast::error::RecvError::Lagged(n)) => {
@@ -249,10 +243,7 @@ mod tests {
 	#[test]
 	fn matches_filters_by_channel() {
 		let mut p = InputMap::new();
-		p.insert(
-			"channels".into(),
-			SocketValue::List(vec![SocketValue::String("user".into())]),
-		);
+		p.insert("channels".into(), SocketValue::List(vec![SocketValue::String("user".into())]));
 		p.insert("require_final".into(), SocketValue::Bool(false));
 		let sub = FlowgraphChannelSubscribe::from_meta("n", &meta_with(p)).unwrap();
 		let on_user = ChannelDatum::new("user".into(), "hi".into());
@@ -275,11 +266,9 @@ mod tests {
 		let mut p = InputMap::new();
 		p.insert("require_final".into(), SocketValue::Bool(false));
 		let sub = FlowgraphChannelSubscribe::from_meta("n", &meta_with(p)).unwrap();
-		let echoed = ChannelDatum::new("ai".into(), "x".into())
-			.with_meta("source_actor", "flowgraph:emit_ai");
+		let echoed = ChannelDatum::new("ai".into(), "x".into()).with_meta("source_actor", "flowgraph:emit_ai");
 		assert!(!sub.matches(&echoed));
-		let external = ChannelDatum::new("ai".into(), "x".into())
-			.with_meta("source_actor", "user");
+		let external = ChannelDatum::new("ai".into(), "x".into()).with_meta("source_actor", "user");
 		assert!(sub.matches(&external));
 	}
 
@@ -306,16 +295,11 @@ mod tests {
 			"require_flags".into(),
 			SocketValue::List(vec![SocketValue::String("needed".into())]),
 		);
-		p.insert(
-			"drop_flags".into(),
-			SocketValue::List(vec![SocketValue::String("dirty".into())]),
-		);
+		p.insert("drop_flags".into(), SocketValue::List(vec![SocketValue::String("dirty".into())]));
 		let sub = FlowgraphChannelSubscribe::from_meta("n", &meta_with(p)).unwrap();
 		let missing_required = ChannelDatum::new("x".into(), "".into());
 		let has_required = ChannelDatum::new("x".into(), "".into()).with_flag("needed");
-		let has_required_but_dropped = ChannelDatum::new("x".into(), "".into())
-			.with_flag("needed")
-			.with_flag("dirty");
+		let has_required_but_dropped = ChannelDatum::new("x".into(), "".into()).with_flag("needed").with_flag("dirty");
 		assert!(!sub.matches(&missing_required));
 		assert!(sub.matches(&has_required));
 		assert!(!sub.matches(&has_required_but_dropped));

@@ -206,19 +206,10 @@ fn paste_into_single_file(
 
 	let mut merged_doc = existing.unwrap_or_default();
 	let mut rewrite_map: HashMap<(String, String), String> = HashMap::new(); // (source_fq, src_id) → new_id
-	let mut existing_ids: HashSet<String> =
-		merged_doc.nodes.iter().map(|n| n.id.clone()).collect();
+	let mut existing_ids: HashSet<String> = merged_doc.nodes.iter().map(|n| n.id.clone()).collect();
 
 	for ff in &fragment.files {
-		merge_nodes_into(
-			ff,
-			target_fq,
-			&mut merged_doc,
-			&mut rewrite_map,
-			&mut existing_ids,
-			options,
-			report,
-		);
+		merge_nodes_into(ff, target_fq, &mut merged_doc, &mut rewrite_map, &mut existing_ids, options, report);
 	}
 	merge_edges_into(fragment, target_fq, &mut merged_doc, &rewrite_map);
 	apply_remaps_into(fragment, target_fq, &mut merged_doc, &rewrite_map, options, report);
@@ -266,36 +257,15 @@ fn paste_into_folder(
 				OnConflictFile::Rename => {
 					let renamed_fq = find_unused_rename(root, &final_fq);
 					let renamed_path = fq_to_file_path(root, &renamed_fq);
-					paste_single_fragment_file_fresh(
-						ff,
-						&renamed_fq,
-						&renamed_path,
-						fragment,
-						options,
-						report,
-					)?;
+					paste_single_fragment_file_fresh(ff, &renamed_fq, &renamed_path, fragment, options, report)?;
 					continue;
 				}
 				OnConflictFile::Overwrite => {
-					paste_single_fragment_file_fresh(
-						ff,
-						&final_fq,
-						&dest_path,
-						fragment,
-						options,
-						report,
-					)?;
+					paste_single_fragment_file_fresh(ff, &final_fq, &dest_path, fragment, options, report)?;
 					continue;
 				}
 				OnConflictFile::Merge => {
-					paste_single_fragment_file_merge(
-						ff,
-						&final_fq,
-						&dest_path,
-						fragment,
-						options,
-						report,
-					)?;
+					paste_single_fragment_file_merge(ff, &final_fq, &dest_path, fragment, options, report)?;
 					continue;
 				}
 			}
@@ -428,10 +398,7 @@ fn merge_nodes_into(
 	}
 }
 
-fn apply_position_offset(
-	p: Option<[f64; 2]>,
-	offset: Option<[f64; 2]>,
-) -> Option<[f64; 2]> {
+fn apply_position_offset(p: Option<[f64; 2]>, offset: Option<[f64; 2]>) -> Option<[f64; 2]> {
 	match (p, offset) {
 		(Some([x, y]), Some([dx, dy])) => Some([x + dx, y + dy]),
 		(Some(v), None) => Some(v),
@@ -454,12 +421,7 @@ fn allocate_suffixed_id(base: &str, existing: &HashSet<String>) -> String {
 // Edge merge
 // ---------------------------------------------------------------------------
 
-fn merge_edges_into(
-	fragment: &Fragment,
-	target_fq: &str,
-	doc: &mut FlowgraphFile,
-	rewrite: &HashMap<(String, String), String>,
-) {
+fn merge_edges_into(fragment: &Fragment, target_fq: &str, doc: &mut FlowgraphFile, rewrite: &HashMap<(String, String), String>) {
 	for ff in &fragment.files {
 		for e in &ff.edges {
 			// 元 fragment では fragment 内 edge だけがここに来る（dangling は別）。
@@ -475,11 +437,7 @@ fn merge_edges_into(
 	let _ = target_fq;
 }
 
-fn rewrite_edge_endpoints(
-	e: &EdgeEntry,
-	_target_fq: &str,
-	rewrite: &HashMap<(String, String), String>,
-) -> EdgeEntry {
+fn rewrite_edge_endpoints(e: &EdgeEntry, _target_fq: &str, rewrite: &HashMap<(String, String), String>) -> EdgeEntry {
 	EdgeEntry {
 		from: rewrite_single_endpoint(&e.from, rewrite),
 		to: rewrite_single_endpoint(&e.to, rewrite),
@@ -490,10 +448,7 @@ fn rewrite_edge_endpoints(
 /// rewrite key は `(ff.path, source_id)`。ファイルを問わず書き換え対象になりうるが、簡易実装
 /// として ff.path に依らず source_id が一致すれば rewrite する方針（scope=nodes で
 /// 十分安全、scope=file でも通常 1 ファイルに収まる）。
-fn rewrite_single_endpoint(
-	s: &str,
-	rewrite: &HashMap<(String, String), String>,
-) -> String {
+fn rewrite_single_endpoint(s: &str, rewrite: &HashMap<(String, String), String>) -> String {
 	let Ok(pr) = parse_port_ref(s) else {
 		return s.to_string();
 	};
@@ -536,9 +491,7 @@ fn apply_remaps_into(
 			Some(Some(new_ref)) => {
 				// 新しい参照文字列でエッジを再構築。
 				// edge_from/edge_to と external_side が必要（schema v1 拡張フィールド）。
-				let (Some(ef), Some(et), Some(es)) =
-					(&d.edge_from, &d.edge_to, &d.external_side)
-				else {
+				let (Some(ef), Some(et), Some(es)) = (&d.edge_from, &d.edge_to, &d.external_side) else {
 					// 情報不足。unresolved に残す。
 					report.unresolved_danglings.push(d.clone());
 					continue;
@@ -551,11 +504,7 @@ fn apply_remaps_into(
 						continue;
 					}
 				};
-				let rewritten = rewrite_edge_endpoints(
-					&EdgeEntry { from, to },
-					target_fq,
-					rewrite,
-				);
+				let rewritten = rewrite_edge_endpoints(&EdgeEntry { from, to }, target_fq, rewrite);
 				if !edge_already_present(&doc.edges, &rewritten) {
 					doc.edges.push(rewritten);
 				}
@@ -598,12 +547,7 @@ fn load_existing_file(path: &Path) -> Result<Option<FlowgraphFile>, PasteError> 
 	Ok(Some(doc))
 }
 
-fn write_file_atomic(
-	path: &Path,
-	doc: &FlowgraphFile,
-	make_backup: bool,
-	report: &mut PasteReport,
-) -> Result<(), PasteError> {
+fn write_file_atomic(path: &Path, doc: &FlowgraphFile, make_backup: bool, report: &mut PasteReport) -> Result<(), PasteError> {
 	if let Some(parent) = path.parent() {
 		std::fs::create_dir_all(parent).map_err(|err| PasteError::Io {
 			path: parent.to_path_buf(),
@@ -613,14 +557,9 @@ fn write_file_atomic(
 	if make_backup && path.exists() {
 		let bak = path.with_extension("toml.bak");
 		if let Err(err) = std::fs::copy(path, &bak) {
-			return Err(PasteError::Io {
-				path: bak.clone(),
-				err,
-			});
+			return Err(PasteError::Io { path: bak.clone(), err });
 		}
-		report
-			.backups
-			.push(bak.display().to_string().replace('\\', "/"));
+		report.backups.push(bak.display().to_string().replace('\\', "/"));
 	}
 	let text = serialize_flowgraph_file(doc)?;
 	std::fs::write(path, text).map_err(|err| PasteError::Io {
@@ -642,17 +581,14 @@ fn serialize_flowgraph_file(doc: &FlowgraphFile) -> Result<String, PasteError> {
 	}
 	// nodes / edges は必ず配列として配置（Vec が空でも書き出しは省略）。
 	if !doc.nodes.is_empty() {
-		let v = toml::Value::try_from(&doc.nodes)
-			.map_err(|e| PasteError::Parse(format!("nodes: {e}")))?;
+		let v = toml::Value::try_from(&doc.nodes).map_err(|e| PasteError::Parse(format!("nodes: {e}")))?;
 		root.insert("nodes".into(), v);
 	}
 	if !doc.edges.is_empty() {
-		let v = toml::Value::try_from(&doc.edges)
-			.map_err(|e| PasteError::Parse(format!("edges: {e}")))?;
+		let v = toml::Value::try_from(&doc.edges).map_err(|e| PasteError::Parse(format!("edges: {e}")))?;
 		root.insert("edges".into(), v);
 	}
-	toml::to_string_pretty(&toml::Value::Table(root))
-		.map_err(|e| PasteError::Parse(format!("serialize: {e}")))
+	toml::to_string_pretty(&toml::Value::Table(root)).map_err(|e| PasteError::Parse(format!("serialize: {e}")))
 }
 
 fn find_unused_rename(root: &Path, base_fq: &str) -> String {
@@ -695,15 +631,11 @@ fn normalize_folder_prefix(s: &str) -> Result<String, PasteError> {
 fn sanitize_fragment_path(path: &str) -> Result<String, PasteError> {
 	let trimmed = path.trim().replace('\\', "/");
 	if trimmed.starts_with('/') {
-		return Err(PasteError::InvalidFragmentPath(format!(
-			"絶対パス不可: '{trimmed}'"
-		)));
+		return Err(PasteError::InvalidFragmentPath(format!("絶対パス不可: '{trimmed}'")));
 	}
 	for seg in trimmed.split('/') {
 		if seg == ".." || seg == "." || seg.is_empty() {
-			return Err(PasteError::InvalidFragmentPath(format!(
-				"'..' / '.' / 空セグ不可: '{trimmed}'"
-			)));
+			return Err(PasteError::InvalidFragmentPath(format!("'..' / '.' / 空セグ不可: '{trimmed}'")));
 		}
 	}
 	let fq = if trimmed == SCRATCH_PATH {
@@ -711,11 +643,7 @@ fn sanitize_fragment_path(path: &str) -> Result<String, PasteError> {
 	} else {
 		trimmed
 			.strip_suffix(".flowgraph.toml")
-			.ok_or_else(|| {
-				PasteError::InvalidFragmentPath(format!(
-					"'.flowgraph.toml' で終わっていない: '{trimmed}'"
-				))
-			})?
+			.ok_or_else(|| PasteError::InvalidFragmentPath(format!("'.flowgraph.toml' で終わっていない: '{trimmed}'")))?
 			.to_string()
 	};
 	Ok(fq)
@@ -728,9 +656,7 @@ fn sanitize_fragment_path(path: &str) -> Result<String, PasteError> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::flowgraph::fragment::{
-		serialize_fragment, Fragment, FragmentHeader, FragmentScope, FRAGMENT_SCHEMA_V1,
-	};
+	use crate::flowgraph::fragment::{serialize_fragment, Fragment, FragmentHeader, FragmentScope, FRAGMENT_SCHEMA_V1};
 	use crate::flowgraph::loader::file::NodeEntry;
 	use std::fs;
 	use std::io::Write;
@@ -752,10 +678,7 @@ mod tests {
 		static SEQ: AtomicU64 = AtomicU64::new(0);
 		let ns = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
 		let seq = SEQ.fetch_add(1, Ordering::Relaxed);
-		let dir = std::env::temp_dir().join(format!(
-			"vac-fg-paste-{}-{ns}-{seq}",
-			std::process::id()
-		));
+		let dir = std::env::temp_dir().join(format!("vac-fg-paste-{}-{ns}-{seq}", std::process::id()));
 		fs::create_dir_all(&dir).unwrap();
 		TempDir(dir)
 	}
