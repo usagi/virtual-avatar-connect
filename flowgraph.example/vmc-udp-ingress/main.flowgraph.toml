@@ -1,0 +1,30 @@
+# Phase M1: `flowgraph.ingress.vmc_udp` の最小例。
+# 受信 UDP ペイロードを Base64 した文字列が `content` に入り、`util.log` で観測できる。
+#
+# 手元検証: 別ターミナルで `nc -u 127.0.0.1 39539` 等からバイナリを送る。
+# bind は環境に合わせて変更すること（ポート競合に注意）。
+
+[meta]
+title = "vmc udp ingress demo"
+description = "VMC UDP ingress → log"
+tags = ["example", "vmc", "ingress"]
+
+[[nodes]]
+id = "vmc_in"
+feature = "flowgraph.ingress.vmc_udp"
+position = [100, 100]
+properties.bind = "127.0.0.1:39539"
+properties.fixed_channel = ""
+
+[[nodes]]
+id = "log_1"
+feature = "flowgraph.util.log"
+position = [400, 100]
+
+[[edges]]
+from = "vmc_in:exec_out"
+to = "log_1:exec_in"
+
+[[edges]]
+from = "vmc_in:content"
+to = "log_1:value"

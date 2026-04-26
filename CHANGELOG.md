@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### Phase M1 — `flowgraph.ingress.vmc_udp` + VMC UDP ブリッジ
+
+- **ノード**: `flowgraph.ingress.vmc_udp`（ingress echo パターン）。`properties.bind`（`host:port`）で UDP 受信。`content` は受信ペイロードの **Base64**。
+- **ブリッジ**: [`src/bridges/vmc_ingress.rs`](src/bridges/vmc_ingress.rs) — `recv_from` → `` `TriggerEvent` ``（`ShutdownBroker` で終了）。`BridgeCatalog` / `BridgeHandles` / `collect_all` / `spawn_all_from_state` に統合。
+- **ドキュメント**: [`docs/roadmap/phase-mu-vmc-motion-m0.md`](docs/roadmap/phase-mu-vmc-motion-m0.md) §8、[`docs/roadmap.md`](docs/roadmap.md) Phase M の M-1 tick。例: [`flowgraph.example/vmc-udp-ingress/main.flowgraph.toml`](flowgraph.example/vmc-udp-ingress/main.flowgraph.toml)。`docs/manual/node-catalog.md` 再生成。
+
 ### スタイル（stable rustfmt 一括適用）
 
 - `.rustfmt.toml`（stable 互換）に沿い、`src/**` / `build.rs` / `tests/jiff_smoke.rs` を **`cargo fmt` で全面整形**。ロジック変更なし。`cargo test --lib` 全通過で確認。

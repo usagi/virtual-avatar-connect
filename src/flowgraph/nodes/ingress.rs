@@ -14,6 +14,7 @@
 //! - 実際の外部 I/O は engine の外側（V1 Twitch/Voice/WebInput のブリッジレイヤー、δ-4d）が担う。
 //! - 各 ingress の出力フィールドは V1 の `ChannelDatum` を参考に代表的なものを揃える:
 //!   `content`（本文）/ `source_actor`（発信者識別子）/ `source_kind`（種別）/ `meta`（自由）
+//! - **Phase M1**: `flowgraph.ingress.vmc_udp` + `bridges::vmc_ingress` — VMC 互換の生 UDP。
 //!
 //! ## 入力ポートが `__` プレフィックス始まりの理由
 //!
@@ -487,6 +488,47 @@ impl PureNode for ChannelSubscribeIngressNode {
 }
 
 // ---------------------------------------------------------------------
+// ingress.vmc_udp（Phase M1）
+// ---------------------------------------------------------------------
+//
+// VMC 互換の **生 UDP** を [`crate::bridges::vmc_ingress`] が受信し、各データグラムごとに
+// `TriggerEvent` を投入する。`content` にはペイロードの **Base64**（`__content__` 経由で echo）、
+// `meta` に `remote` / `byte_len` / `encoding` を載せる。
+
+pub struct VmcUdpIngressNode;
+
+impl NodeDescriptor for VmcUdpIngressNode {
+	fn describe(&self) -> NodeSpec {
+		NodeSpec {
+			feature: "flowgraph.ingress.vmc_udp".into(),
+			title: "VMC UDP Ingress".into(),
+			category: "ingress".into(),
+			description: Some("VMC 互換の生 UDP を受信し、各データグラムを ingress echo で下流へ流す。`content` は Base64 文字列。".into()),
+			inputs: ingress_inputs(),
+			outputs: ingress_outputs(),
+			properties: vec![
+				PropertySpec::new("bind", "Bind", SocketType::String, SocketValue::String(String::new()))
+					.description("受信 UDP の \"host:port\"（例 \"0.0.0.0:39539\"）。空のときブリッジは起動しない。"),
+				PropertySpec::new(
+					"fixed_channel",
+					"Source Kind Override",
+					SocketType::String,
+					SocketValue::String(String::new()),
+				)
+				.description("空なら `source_kind` は `vmc_udp`。任意のラベルに上書き可能。"),
+			],
+		}
+	}
+}
+
+#[async_trait]
+impl PureNode for VmcUdpIngressNode {
+	async fn compute(&self, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+		ingress_compute(inputs, fired_exec).await
+	}
+}
+
+// ---------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------
 
@@ -617,5 +659,38 @@ mod tests {
 		let out = node.compute(&InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
 		assert!(out.fired_exec.is_empty());
 		assert!(out.data.is_empty());
+	}
+
+	#[tokio::test]
+	async fn vmc_udp_ingress_echoes_base64_content() {
+		let mut b = FlowgraphBuilder::new();
+		b.add_node("vmc", NodeImpl::pure(Arc::new(VmcUdpIngressNode)), InputMap::new());
+		b.add_node("log", NodeImpl::effectful(Arc::new(LogNode)), InputMap::new());
+		b.connect_exec(PortRef::new("vmc", "exec_out"), PortRef::new("log", "exec_in"));
+		b.connect(PortRef::new("vmc", "content"), PortRef::new("log", "value"));
+		let mut prog = b.build().expect("build");
+
+		let (handle, rx) = create_trigger_bus();
+		let external = handle.clone();
+		let mut ctx = ExecCtx::default();
+
+		let sender = tokio::spawn(async move {
+			tokio::time::sleep(Duration::from_millis(30)).await;
+			let _ = external.send(
+				TriggerEvent::new("vmc")
+					.with_exec("__trigger__")
+					.with_override("__content__", SocketValue::String("QUJD".into()))
+					.with_override("__source_actor__", SocketValue::String("127.0.0.1:39539".into()))
+					.with_override("__source_kind__", SocketValue::String("vmc_udp".into())),
+			);
+		});
+		let shutdown = tokio::time::sleep(Duration::from_millis(150));
+		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown)
+			.await
+			.expect("run_forever_with_bus");
+		sender.await.unwrap();
+
+		assert_eq!(ctx.trace.len(), 1);
+		assert!(ctx.trace[0].contains("QUJD"), "trace: {:?}", ctx.trace);
 	}
 }

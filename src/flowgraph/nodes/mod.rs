@@ -51,6 +51,7 @@
 //! δ-9 Part E:
 //! - `ingress.channel_subscribe`: V1 ChannelDatum → Flowgraph 入口。`State.channel_datum_tx` を bridges 経由で
 //!   subscribe し、`TriggerEvent` として graph に投入する。`channel.emit` と対称。
+//! - `ingress.vmc_udp` (Phase M1): 生 UDP → Base64 `content` + `TriggerEvent`。ブリッジは `bridges::vmc_ingress`。
 
 pub mod channel;
 pub mod collection;

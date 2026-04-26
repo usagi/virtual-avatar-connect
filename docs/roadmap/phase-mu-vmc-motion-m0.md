@@ -3,10 +3,10 @@
 親計画: [`v2-vmc-and-restructure.md`](v2-vmc-and-restructure.md)  
 ロードマップ進捗: [`../roadmap.md`](../roadmap.md) の **Phase M** 節。
 
-## 1. スコープ
+## 1. スコープ（M0）
 
 - `src/motion/` を新設し、**パースなし**の UDP 受信 → 同一ペイロードの複数宛 `send_to` を実装する。
-- Flowgraph / `` `TriggerEvent` `` / bridges には **まだ触れない**（M1）。
+- **M0 時点**では `conf.toml` の `[motion]` のみ。Flowgraph ノード・bridges の `` `TriggerEvent` `` は **M1**（§8）。
 - Control API / GUI には触れない（M3）。
 
 ## 2. 設定スキーマ（`conf.toml`）
@@ -32,7 +32,6 @@
 ## 4. 非目標（M0 ではやらない）
 
 - OSC パース、`MotionFrame`、Flowgraph ノード（M4 / ρ）。
-- `flowgraph.ingress.vmc_udp`（M1）。
 - 転送先の hot-reload（将来: conf reload または Control API）。
 
 ## 5. 実装マップ
@@ -54,3 +53,41 @@
 ## 7. Commit メッセージ例
 
 `M-0 feat(motion): VMC UDP passthrough + [motion] conf`
+
+---
+
+## 8. Phase M1 — `flowgraph.ingress.vmc_udp` + `vmc_ingress` ブリッジ
+
+### 8.1 スコープ
+
+- ノード **`flowgraph.ingress.vmc_udp`**（他 ingress と同型の echo + `__trigger__` パターン）。
+- [`src/bridges/vmc_ingress.rs`](../../src/bridges/vmc_ingress.rs): `bind` で UDP を受信し、各データグラムを `` `TriggerEvent` `` で該当ノードに投入。
+
+### 8.2 プロパティ（ノード `properties`）
+
+| key | 説明 |
+|-----|------|
+| `bind` | `"host:port"`。空ならブリッジを起動しない（警告ログ）。 |
+| `fixed_channel` | 任意。空なら `source_kind` に `vmc_udp`、非空ならその文字列を使用。 |
+
+### 8.3 データマッピング
+
+| 内部ポート | 値 |
+|------------|-----|
+| `__content__` | ペイロードの **Base64**（`String` ポート経由で echo） |
+| `__source_actor__` | 送信元 `ip:port` |
+| `__source_kind__` | `fixed_channel` または `vmc_udp` |
+| `__meta__` | JSON: `remote`, `byte_len`, `encoding: "base64"` |
+
+### 8.4 ライフサイクル
+
+- [`bridges::spawn_all_from_state`](../../src/bridges/mod.rs) が `State.shutdown` を共有し、UDP ループは `ShutdownBroker::wait` で終了。
+- [`BridgeHandles::finish_all`](../../src/bridges/mod.rs) で `vmc_udp` タスクを `abort`。
+
+### 8.5 例
+
+[`flowgraph.example/vmc-udp-ingress/main.flowgraph.toml`](../../flowgraph.example/vmc-udp-ingress/main.flowgraph.toml)
+
+### 8.6 Commit メッセージ例
+
+`M-1 feat(flowgraph,bridges): flowgraph.ingress.vmc_udp + vmc_ingress bridge`

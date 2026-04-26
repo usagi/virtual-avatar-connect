@@ -11,6 +11,7 @@
 //!   - [`twitch`] (stub): IRC / EventSub 起動（実装は V1 processor 側を再利用する予定）。
 //!   - [`channel_subscribe`] (δ-9 Part E): `State.channel_datum_tx` broadcast を subscribe し、
 //!     フィルタ通過 datum を `TriggerEvent` として投入する。`channel.emit` の対称入口。
+//!   - `vmc_ingress` (Phase M1): `flowgraph.ingress.vmc_udp` — 生 UDP を受信し Base64 化して `TriggerEvent` 投入。
 //!
 //! ## 典型的な使い方
 //!
@@ -24,6 +25,7 @@
 pub mod channel_subscribe;
 pub mod twitch;
 pub mod twitch_eventsub;
+pub mod vmc_ingress;
 pub mod voice;
 pub mod web_input;
 
@@ -41,6 +43,7 @@ pub struct BridgeCatalog {
 	pub twitch: Vec<twitch::FlowgraphTwitchIngress>,
 	pub twitch_eventsub: Vec<twitch_eventsub::FlowgraphTwitchEventsubIngress>,
 	pub channel_subscribe: Vec<channel_subscribe::FlowgraphChannelSubscribe>,
+	pub vmc_udp: Vec<vmc_ingress::FlowgraphVmcUdpIngress>,
 }
 
 impl BridgeCatalog {
@@ -50,10 +53,16 @@ impl BridgeCatalog {
 			&& self.twitch.is_empty()
 			&& self.twitch_eventsub.is_empty()
 			&& self.channel_subscribe.is_empty()
+			&& self.vmc_udp.is_empty()
 	}
 
 	pub fn len(&self) -> usize {
-		self.web_input.len() + self.voice.len() + self.twitch.len() + self.twitch_eventsub.len() + self.channel_subscribe.len()
+		self.web_input.len()
+			+ self.voice.len()
+			+ self.twitch.len()
+			+ self.twitch_eventsub.len()
+			+ self.channel_subscribe.len()
+			+ self.vmc_udp.len()
 	}
 }
 
@@ -71,6 +80,7 @@ pub struct BridgeHandles {
 	pub(crate) twitch_eventsub: Vec<twitch_eventsub::TwitchEventsubBridgeHandle>,
 	pub(crate) voice: Vec<crate::processor::voice::VoiceIngress>,
 	pub(crate) channel_subscribe: Vec<tokio::task::JoinHandle<()>>,
+	pub(crate) vmc_udp: Vec<tokio::task::JoinHandle<()>>,
 	/// actix に登録済みの web_input エンドポイントのスナップショット。reload 差分検出専用。
 	pub(crate) web_input_snapshot: Vec<web_input::FlowgraphWebInputEndpoint>,
 }
@@ -88,6 +98,7 @@ impl std::fmt::Debug for BridgeHandles {
 			.field("twitch_eventsub", &self.twitch_eventsub.len())
 			.field("voice", &self.voice.len())
 			.field("channel_subscribe", &self.channel_subscribe.len())
+			.field("vmc_udp", &self.vmc_udp.len())
 			.field("web_input_snapshot", &self.web_input_snapshot.len())
 			.finish()
 	}
@@ -100,6 +111,7 @@ impl BridgeHandles {
 			twitch_eventsub: Vec::new(),
 			voice: Vec::new(),
 			channel_subscribe: Vec::new(),
+			vmc_udp: Vec::new(),
 			web_input_snapshot: Vec::new(),
 		}
 	}
@@ -127,6 +139,9 @@ impl BridgeHandles {
 		for h in self.channel_subscribe {
 			h.abort();
 		}
+		for h in self.vmc_udp {
+			h.abort();
+		}
 	}
 }
 
@@ -147,27 +162,35 @@ pub async fn spawn_all_from_state(state: &SharedState, channel_datum_tx: &broadc
 
 	if !catalog.is_empty() {
 		log::info!(
-			"《Flowgraph/Bridges》 ingress 合計 {} 件: web_input={}, voice={}, twitch={}, twitch_eventsub={}, channel_subscribe={}",
+			"《Flowgraph/Bridges》 ingress 合計 {} 件: web_input={}, voice={}, twitch={}, twitch_eventsub={}, channel_subscribe={}, vmc_udp={}",
 			catalog.len(),
 			catalog.web_input.len(),
 			catalog.voice.len(),
 			catalog.twitch.len(),
 			catalog.twitch_eventsub.len(),
-			catalog.channel_subscribe.len()
+			catalog.channel_subscribe.len(),
+			catalog.vmc_udp.len()
 		);
 	}
+
+	let shutdown = {
+		let s = state.read().await;
+		s.shutdown.clone()
+	};
 
 	let tokio_handle = tokio::runtime::Handle::current();
 	let voice = voice::spawn(&catalog.voice, trigger.clone(), tokio_handle);
 	let twitch = twitch::spawn(&catalog.twitch, trigger.clone(), state.clone()).await;
 	let twitch_eventsub = twitch_eventsub::spawn(&catalog.twitch_eventsub, trigger.clone(), state.clone());
 	let channel_subscribe = channel_subscribe::spawn(&catalog.channel_subscribe, trigger.clone(), channel_datum_tx);
+	let vmc_udp = vmc_ingress::spawn(&catalog.vmc_udp, trigger.clone(), shutdown);
 
 	BridgeHandles {
 		twitch,
 		twitch_eventsub,
 		voice,
 		channel_subscribe,
+		vmc_udp,
 		web_input_snapshot: catalog.web_input,
 	}
 }
@@ -217,6 +240,11 @@ pub fn collect_all(node_meta: &HashMap<String, LoadedNodeMeta>) -> BridgeCatalog
 					cat.channel_subscribe.push(s);
 				}
 			}
+			"flowgraph.ingress.vmc_udp" => {
+				if let Some(v) = vmc_ingress::FlowgraphVmcUdpIngress::from_meta(fq, meta) {
+					cat.vmc_udp.push(v);
+				}
+			}
 			_ => {}
 		}
 	}
@@ -264,6 +292,7 @@ mod tests {
 		assert!(h.twitch_eventsub.is_empty());
 		assert!(h.voice.is_empty());
 		assert!(h.channel_subscribe.is_empty());
+		assert!(h.vmc_udp.is_empty());
 		assert!(h.web_input_snapshot.is_empty());
 	}
 

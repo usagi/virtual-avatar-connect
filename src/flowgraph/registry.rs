@@ -309,6 +309,7 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::ingress::TwitchIngressNode));
 	r.register_pure(Arc::new(nodes::ingress::TwitchEventsubIngressNode));
 	r.register_pure(Arc::new(nodes::ingress::ChannelSubscribeIngressNode));
+	r.register_pure(Arc::new(nodes::ingress::VmcUdpIngressNode));
 
 	// --- state (δ-3c) ---
 	r.register_stateful(Arc::new(nodes::state::BoolStateNode));
@@ -440,6 +441,7 @@ mod tests {
 			"flowgraph.ingress.twitch",
 			"flowgraph.ingress.twitch_eventsub",
 			"flowgraph.ingress.channel_subscribe",
+			"flowgraph.ingress.vmc_udp",
 			"flowgraph.channel.emit",
 			"flowgraph.unit.assign",
 			"flowgraph.unit.convert",

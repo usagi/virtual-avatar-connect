@@ -171,11 +171,11 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 
 ### Phase M — VMC パススルーと motion 層（[`v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md)）
 
-ギリシャ文字フェーズ（δ / φ …）とは別ラベルの **M0〜M5** で追う。全体方針・アーキ図は [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md)。**M0 の実装・設定スキーマの正本**は [`roadmap/phase-mu-vmc-motion-m0.md`](roadmap/phase-mu-vmc-motion-m0.md)。
+ギリシャ文字フェーズ（δ / φ …）とは別ラベルの **M0〜M5** で追う。全体方針・アーキ図は [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md)。**M0 / M1 の実装メモ**は [`roadmap/phase-mu-vmc-motion-m0.md`](roadmap/phase-mu-vmc-motion-m0.md)（M1 は同文書 §8）。
 
 - [x] M-0 docs: `phase-mu-vmc-motion-m0.md` 新設 + `roadmap.md` Active 化 + `architecture.md` / `conf-reference.md` + `v2-vmc-and-restructure.md` cross-link + `conf.example-motion.toml`
 - [x] M-0 feat(motion): `src/motion/`（`vmc_raw` + `router` + `osc` プレースホルダ）+ `[motion]` / `MotionHandles` 起動・`ShutdownBroker` 連携
-- [ ] M-1 feat(bridges,flowgraph): `flowgraph.ingress.vmc_udp` + `vmc_ingress` ブリッジ + `` `TriggerEvent` `` 投入
+- [x] M-1 feat(flowgraph,bridges): `flowgraph.ingress.vmc_udp` + `vmc_ingress` ブリッジ + `` `TriggerEvent` `` 投入（`phase-mu` §8、`flowgraph.example/vmc-udp-ingress`）
 - [ ] M-2 feat(motion): パススルー・ハブ運用の conf / ログ整備（複数受信ソケットの運用例）
 - [ ] M-3 feat(web_interface,gui): Control API `POST /api/v1/vmc/*` + トレイ/Web UI の転送先管理
 - [ ] M-4 feat(flowgraph): `MotionFrame` / `flowgraph.motion.*`（後段）

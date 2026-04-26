@@ -56,6 +56,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.ingress.channel_subscribe`](#flowgraph-ingress-channel-subscribe) — Channel Subscribe Ingress
   - [`flowgraph.ingress.twitch`](#flowgraph-ingress-twitch) — Twitch Ingress
   - [`flowgraph.ingress.twitch_eventsub`](#flowgraph-ingress-twitch-eventsub) — Twitch EventSub Ingress
+  - [`flowgraph.ingress.vmc_udp`](#flowgraph-ingress-vmc-udp) — VMC UDP Ingress
   - [`flowgraph.ingress.voice`](#flowgraph-ingress-voice) — Voice Ingress
   - [`flowgraph.ingress.web_input`](#flowgraph-ingress-web-input) — Web Input Ingress
 - **json**
@@ -803,6 +804,31 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `event_types` | `list<string>` | `[]` |  | 購読する sub_type リスト（例: `["channel.cheer", "channel.raid"]`）。空なら conf.twitch.eventsub の 各 bool トグル（stream.online / channel.cheer ...）をフォールバックとして使う。 |
 | `channel_points_reward_id` | `string` | `""` |  | `channel.channel_points_custom_reward_redemption.add` を個別 reward に絞りたい時の UUID。空なら報酬を自動列挙してすべて購読する。 |
 | `fixed_channel` | `string` | `""` |  | （予約）将来 V1 channel に押し戻すブリッジ用。今はコメントのみ。 |
+
+### `flowgraph.ingress.vmc_udp`
+
+**VMC UDP Ingress** — VMC 互換の生 UDP を受信し、各データグラムを ingress echo で下流へ流す。`content` は Base64 文字列。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `__trigger__` | `exec` (in) | — |  |
+| `__content__` | `string` | `""` |  |
+| `__source_actor__` | `string` | `""` |  |
+| `__source_kind__` | `string` | `""` |  |
+| `__meta__` | `json` | `null` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `content` | `string` |  |
+| `source_actor` | `string` |  |
+| `source_kind` | `string` |  |
+| `meta` | `json` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `bind` | `string` | `""` |  | 受信 UDP の "host:port"（例 "0.0.0.0:39539"）。空のときブリッジは起動しない。 |
+| `fixed_channel` | `string` | `""` |  | 空なら `source_kind` は `vmc_udp`。任意のラベルに上書き可能。 |
 
 ### `flowgraph.ingress.voice`
 
