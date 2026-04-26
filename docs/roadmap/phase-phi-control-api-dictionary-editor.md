@@ -63,14 +63,14 @@
 
 ## 3. Control API — Table File Endpoints
 
-既存 [src/web_interface/control/flowgraph.rs](../../src/web_interface/control/flowgraph.rs) と同じ scope (`/api/v1/control/*`) 内に、新ファイル `src/web_interface/control/table.rs` を追加する想定。
+既存 [src/web_interface/control/flowgraph/mod.rs](../../src/web_interface/control/flowgraph/mod.rs) と同じ scope (`/api/v1/control/*`) 内に、新ファイル `src/web_interface/control/table.rs` を追加する想定。
 
 ### 3.1 `GET /control/table/{fq_path}`
 
 **用途**: 11 カラム TSV をパースして行 ID 付き JSON で返す。
 
 **パラメータ**:
-- Path `fq_path`: `{profile}::{relative_path}` 形式。例: `main::dictionary.chat.dict.tsv`。[src/web_interface/control/flowgraph.rs](../../src/web_interface/control/flowgraph.rs) の `get_file` と同じエンコード規則
+- Path `fq_path`: `{profile}::{relative_path}` 形式。例: `main::dictionary.chat.dict.tsv`。[src/web_interface/control/flowgraph/mod.rs](../../src/web_interface/control/flowgraph/mod.rs) の `get_file` と同じエンコード規則
 
 **レスポンス例**:
 
@@ -163,7 +163,7 @@ pub struct TableEntryDto {
 
 ### 3.6 エラーコード
 
-[src/web_interface/control/flowgraph.rs](../../src/web_interface/control/flowgraph.rs) の既存 diagnostic error style に合わせ:
+[src/web_interface/control/flowgraph/mod.rs](../../src/web_interface/control/flowgraph/mod.rs) の既存 diagnostic error style に合わせ:
 
 - `404 NotFound` — allow-list 外 / ファイル不在
 - `403 Locked` — locked 行への破壊的操作
@@ -465,7 +465,7 @@ pub struct NodeSpec {
 ## 12. References
 
 - 保留元: [phase-eta-dictionary-unification.md §9.2 / §9.3](phase-eta-dictionary-unification.md)
-- 既存 Control API 実装: [src/web_interface/control/](../../src/web_interface/control/) 配下、特に [flowgraph.rs](../../src/web_interface/control/flowgraph.rs) / [auth.rs](../../src/web_interface/control/auth.rs) / [dto.rs](../../src/web_interface/control/dto.rs)
+- 既存 Control API 実装: [src/web_interface/control/](../../src/web_interface/control/) 配下、特に [flowgraph/mod.rs](../../src/web_interface/control/flowgraph/mod.rs) / [auth.rs](../../src/web_interface/control/auth.rs) / [dto.rs](../../src/web_interface/control/dto.rs)
 - V1 死体: 過去 `gui/src/lib/DictionaryQuickAddWidget.svelte`（`modify` processor 前提で dead code 化、V2 δ-9 で削除）
 - Flowgraph node spec: [src/flowgraph/node.rs](../../src/flowgraph/node.rs)、[src/flowgraph/registry.rs](../../src/flowgraph/registry.rs)
 - 関連メモ: [v2-merge-pr.md](v2-merge-pr.md) の η→φ 移行計画

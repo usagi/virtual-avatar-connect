@@ -651,7 +651,7 @@ export function assertNever(x: never): never {
 // Phase δ-6: Flowgraph Control API DTOs
 // ---------------------------------------------------------------------------
 //
-// Rust 側: src/web_interface/control/flowgraph.rs
+// Rust 側: src/web_interface/control/flowgraph/mod.rs 等
 //         + src/flowgraph/node.rs (NodeSpec / PortSpec / PropertySpec)
 //         + src/flowgraph/loader/{file,diagnostic}.rs
 //
@@ -880,7 +880,7 @@ export type FlowgraphReloadResponse = {
 //   - src/flowgraph/fragment/mod.rs  (CopyRequest / CopyTarget / Fragment / FragmentDangling …)
 //   - src/flowgraph/fragment/paste.rs (PasteRequest / PasteTarget / PasteOptions / PasteReport …)
 //   - src/flowgraph/fragment/zip_codec.rs (ZipImportOptions / ZipImportOutcome …)
-//   - src/web_interface/control/flowgraph.rs (CopyResponse / PasteResponse)
+//   - src/web_interface/control/flowgraph/fragment_zip.rs (CopyResponse / PasteResponse)
 
 export type FragmentScope = 'nodes' | 'file' | 'folder' | 'mixed';
 
@@ -1018,7 +1018,7 @@ export type ZipImportOutcome = ZipImportPreview | ZipImportReport;
 //
 // Rust 側:
 //   - src/web_interface/control/table.rs          (TableCatalogItem / TableFileDto 等)
-//   - src/web_interface/control/flowgraph.rs      (TriggerNodeRequest / TriggerNodeResponse)
+//   - src/web_interface/control/flowgraph/trigger.rs (TriggerNodeRequest / TriggerNodeResponse)
 //   - src/conf/mod.rs                              (ControlTableQuickAdd)
 // ---------------------------------------------------------------------------
 

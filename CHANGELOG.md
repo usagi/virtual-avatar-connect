@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### 内部リファクタ — Control API `flowgraph` モジュール分割
+
+- **`src/web_interface/control/flowgraph/`**: 旧単一 `flowgraph.rs` を `mod.rs`（ツリー・ファイル CRUD・reload）、`util.rs`（パス安全・node-catalog ヒント）、`reload.rs`（ランタイム再構築 + WS）、`trigger.rs`（外部トリガ）、`fragment_zip.rs`（fragment / ZIP）に分割。`reload_runtime` は引き続き `flowgraph::reload_runtime` で `pub(crate)` 公開。
+
 ### 内部リファクタ — Control イベント型
 
 - **`src/control_events.rs`**: `ControlEvent` / `ChannelDatumPhase` / `ProcessorInvocationOutcome` を定義。`state` は **`web_interface` に依存しない**（`from_channel_datum` は `state` 内の `impl ControlEvent`）。[`docs/architecture.md`](docs/architecture.md) の境界表を追随。
