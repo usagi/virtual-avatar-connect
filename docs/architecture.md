@@ -120,7 +120,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 - `lib.rs` / `main.rs` は全 feature モジュールに依存
 - `conf` / `state` / `shutdown` は core utility 相当、他モジュールから参照されるが自身は最小依存
 - `flowgraph` は `state` / `conf` / `shutdown` に依存、ingress 系（`twitch` / `bridges`）とは broadcast 経由で疎結合
-- `motion` は `conf` / `shutdown` のみに依存（Flowgraph 非依存）。将来 `vmc_ingress` ブリッジから利用予定（Phase M1）
+- `motion` は `conf` / `shutdown` のみに依存（Flowgraph 非依存）。**Phase M1 済み**: UDP 受信は `bridges::vmc_ingress`、パススルーは `motion`（`[motion]`）で分離
 - `ai` は `state` / `conf` / `shutdown` に依存、`flowgraph` とは独立（Flowgraph ノードとしての embedding は将来拡張）
 - `web_interface` は全モジュールに依存（Control API が runtime 状態を触るため）
 - `gui` は HTTP/WS 経由でのみ `web_interface` に依存、Rust コードへの直接依存なし
@@ -128,6 +128,18 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 **Phase χ 以降の内部細分**:
 
 - `ai/openai_responses/` サブモジュールは `crate::*` に依存しない（`SharedState` / `ChannelDatum` 非参照、input/output は自己完結型）。将来 `vac-openai-responses` crate への切り出しを可能にする
+
+### レイヤ境界（Step 4 / crate 分割の下準備）
+
+次表は **現状の `crate::` 直接依存の意図**と、ワークスペース化時に先に直した方がよい **例外**を示す（正本の補足: [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §3 Step 4）。
+
+| モジュール | 許容する主な下位依存 | 備考 |
+|------------|----------------------|------|
+| `motion` | `conf`, `shutdown`, 自 `motion::*` | Flowgraph / `state` / `bridges` へ **依存しない**（UDP パススルーは conf のみ）。 |
+| `bridges` | `flowgraph`（loader / node / socket）, `state`（共有型）, `shutdown`（例: VMC ingress）, `processor`（voice） | ingress → Flowgraph の **一方向**。`motion` へは触れない。 |
+| `flowgraph` | `conf`, `state`, `shutdown`, 自ツリー | `bridges` / `web_interface` へ **依存しない**（ノード doc 内のブリッジ名は説明用コメントのみ）。 |
+| `web_interface` | `state`, `flowgraph`, `bridges`, `ai`, … | Control API がランタイムを操作する **最上位の集約層**のまま。 |
+| `state` | `conf`, `flowgraph`, `shutdown`, `ai`, `runtime`, **`web_interface`**（下記） | **`ControlEvent` / `OAuthSessions` 等のため `web_interface::control` に依存**している。将来 `vac-core` 化ではイベント型を中立クレートへ移すなどの整理対象。 |
 
 ---
 

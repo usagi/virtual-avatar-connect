@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### v2 Step 4（一段）— モジュール境界の文書化
+
+- **[`docs/architecture.md`](docs/architecture.md)**: 「レイヤ境界（Step 4）」表（`motion` / `bridges` / `flowgraph` / `web_interface` / `state` と `state→web_interface` 例外）。
+- **Rustdoc**: [`src/motion/mod.rs`](src/motion/mod.rs)、[`src/bridges/mod.rs`](src/bridges/mod.rs)、[`src/state/mod.rs`](src/state/mod.rs) に依存契約・逆流メモ。
+- **[`docs/roadmap/v2-vmc-and-restructure.md`](docs/roadmap/v2-vmc-and-restructure.md)** Step 4、[`docs/roadmap.md`](docs/roadmap.md) v2 メタ。
+
 ### ドキュメント（v2 CI 方針メモ）
 
 - **部分 CI は入れない**: [`docs/roadmap/v2-vmc-and-restructure.md`](docs/roadmap/v2-vmc-and-restructure.md) §1.3。Step 6b / CI はワークスペース確定後にまとめて設計。[`docs/roadmap.md`](docs/roadmap.md) v2 メタの Step 6b 表記を整合。

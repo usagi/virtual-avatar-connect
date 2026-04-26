@@ -1,3 +1,10 @@
+//! ランタイム共有状態。`flowgraph` / `ai` / `bridges` 等と接続する。
+//!
+//! ## 既知のレイヤ逆流（Step 4 メモ）
+//!
+//! `ControlEvent` / `OAuthSessions` のため **`web_interface::control`** に依存している。
+//! `vac-core` 等へ分割するときは、イベント型の中立クレート化などで解消する候補。
+
 mod channel_attach;
 mod channel_datum;
 mod speech_floor;

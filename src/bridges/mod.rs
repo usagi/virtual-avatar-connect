@@ -21,6 +21,12 @@
 //!
 //! 全ブリッジは `TriggerHandle` を clone して所有するだけなので、program ワーカーとは
 //! 非同期疎結合。program 停止時に `TriggerHandle.send` が失敗したら warn ログを出して落ちる。
+//!
+//! ## Crate 分割時の依存契約（Step 4）
+//!
+//! - **許容**: `flowgraph`（`loader` / `node` / `socket` 等）、`state` の共有型、`shutdown`（ingress の寿命）、`processor`（voice）。
+//! - **禁止**: `motion` への参照（UDP パススルーは motion 層が単独で完結）。`web_interface` へも直接依存しない。
+//! 詳細表は [`docs/architecture.md`](../../docs/architecture.md)「レイヤ境界（Step 4）」。
 
 pub mod channel_subscribe;
 pub mod twitch;

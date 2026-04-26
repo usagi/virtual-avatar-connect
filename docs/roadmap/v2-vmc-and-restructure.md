@@ -313,9 +313,10 @@ flowgraph.motion.map
 
 * Flowgraph（ingress ノード・`TriggerHandle` 経路）と接続する
 
-#### Step 4
+#### Step 4（文書・契約の一段）
 
-* モジュール境界を整理する（`motion` / `bridges` / `web_interface` の依存矢印を v2 の crate 図に寄せる下準備）
+* **実施（本段）**: [`architecture.md`](../architecture.md)「レイヤ境界（Step 4）」に `motion` / `bridges` / `flowgraph` / `web_interface` / `state` の **許容依存と例外**（`state → web_interface`）を表形式で固定。`motion` / `bridges` の crate 先頭ドキュメントに同趣旨の **依存契約**を追記。
+* **残り（後続 PR）**: `state` が `web_interface` に抱える型の中立化、`web_interface::control::flowgraph` の肥大分解、他モジュールの同様の表化など。
 
 #### Step 5（一部完了）
 

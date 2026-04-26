@@ -2,6 +2,11 @@
 //!
 //! 設計の正本: [`docs/roadmap/v2-vmc-and-restructure.md`](../../docs/roadmap/v2-vmc-and-restructure.md)  
 //! M0 詳細: [`docs/roadmap/phase-mu-vmc-motion-m0.md`](../../docs/roadmap/phase-mu-vmc-motion-m0.md)
+//!
+//! ## Crate 分割時の依存契約（Step 4）
+//!
+//! このモジュールツリーは **`crate::conf`** と **`crate::shutdown`**（および自サブモジュール）のみを参照する。
+//! **`flowgraph` / `bridges` / `state` / `web_interface` へは依存しない**（VMC の Flowgraph 入口は `bridges::vmc_ingress`）。
 
 mod osc;
 mod router;
