@@ -411,7 +411,7 @@ pub struct NodeSpec {
 
 ## 9. Security / 認証
 
-- 既存 [ControlApiRuntime](../../src/web_interface/control/auth.rs) の Bearer トークン認証を**そのまま流用**
+- 既存 [ControlApiRuntime](../../src/web_interface/control/auth/mod.rs) の Bearer トークン認証を**そのまま流用**
 - allow-list 外パスは 404（存在隠蔽）
 - `is_locked=true` 行の破壊的操作は 403
 - Trigger API は `control_triggerable=true` のノードに限定。任意ノード trigger は許さない
@@ -465,7 +465,7 @@ pub struct NodeSpec {
 ## 12. References
 
 - 保留元: [phase-eta-dictionary-unification.md §9.2 / §9.3](phase-eta-dictionary-unification.md)
-- 既存 Control API 実装: [src/web_interface/control/](../../src/web_interface/control/) 配下、特に [flowgraph/mod.rs](../../src/web_interface/control/flowgraph/mod.rs) / [auth.rs](../../src/web_interface/control/auth.rs) / [dto.rs](../../src/web_interface/control/dto.rs)
+- 既存 Control API 実装: [src/web_interface/control/](../../src/web_interface/control/) 配下、特に [flowgraph/mod.rs](../../src/web_interface/control/flowgraph/mod.rs) / [auth/mod.rs](../../src/web_interface/control/auth/mod.rs) / [dto.rs](../../src/web_interface/control/dto.rs)
 - V1 死体: 過去 `gui/src/lib/DictionaryQuickAddWidget.svelte`（`modify` processor 前提で dead code 化、V2 δ-9 で削除）
 - Flowgraph node spec: [src/flowgraph/node.rs](../../src/flowgraph/node.rs)、[src/flowgraph/registry.rs](../../src/flowgraph/registry.rs)
 - 関連メモ: [v2-merge-pr.md](v2-merge-pr.md) の η→φ 移行計画

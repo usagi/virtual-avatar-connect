@@ -273,7 +273,7 @@ parse 対象文字列の TZ 情報の有無を以下で判定:
 | 6 | `src/web_interface/control/ping.rs` | 26 | 同上 | 同上 | |
 | 7 | `src/web_interface/control/dto.rs` | 101 | 同上 | 同上 | |
 | 8 | `src/web_interface/control/restart/mod.rs` | 該当行 | `chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339()` | `Timestamp::try_from(t).map(\|ts\| ts.to_string())` | `SystemTime` → `Timestamp` 変換は `try_from` |
-| 9 | `src/web_interface/control/oauth_twitch.rs` | 122 | `use chrono::{DateTime, Utc}` | `use jiff::Timestamp` | |
+| 9 | `src/web_interface/control/oauth_twitch/mod.rs` | 該当行 | `use chrono::{DateTime, Utc}` | `use jiff::Timestamp` | |
 | 10 | `src/web_interface/control/profiles/util.rs` | （`backup_path`） | `chrono::Local::now().format("%Y%m%d-%H%M%S").to_string()` | `Zoned::now().strftime("%Y%m%d-%H%M%S").to_string()` | Local → `Zoned::now()` は system tz 利用 |
 | 11 | `src/web_interface/control/run_with/mod.rs` | 該当行 | 同上 | 同上 | |
 | 12 | `src/web_interface/control/flowgraph/mod.rs` | （分割後） | 同上 | 同上 | |

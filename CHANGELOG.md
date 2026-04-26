@@ -5,6 +5,12 @@
 
 ## [Unreleased]
 
+### 内部リファクタ — Control API `auth` / `oauth_twitch` / `managed_app` モジュール分割
+
+- **`src/web_interface/control/auth/`**: 旧 `auth.rs` を `mod.rs`、`runtime.rs`（`ControlApiRuntime` / `TokenSource` / トークン解決）、`middleware.rs`（`control_api_auth` と結合・単体テスト）に分割。モジュール先頭の rustdoc を日本語で整理。
+- **`src/web_interface/control/oauth_twitch/`**: 旧 `oauth_twitch.rs` を `mod.rs`（ハンドラ・`OAuthStartResponse`）と `start_flow.rs`（Device Code Flow の開始とポーリングタスク登録）に分割。
+- **`src/web_interface/control/managed_app/`**: 旧 `managed_app.rs` を `mod.rs`（DTO・ハンドラ）と `lookup.rs`（`lookup_entry` / `lookup_spec_status`）に分割。
+
 ### 内部リファクタ — Control API `restart` / `run_with` モジュール分割
 
 - **`src/web_interface/control/restart/`**: 旧 `restart.rs` を `mod.rs`（ハンドラ・DTO）と `util.rs`（`resolve_new_conf_path` / `label_from_filename` / `paths_equivalent` と単体テスト）に分割。

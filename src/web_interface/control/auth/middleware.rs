@@ -1,129 +1,22 @@
-//! Control API ? Bearer ????????????????
-//!
-//! ??????**???** ? **????** ????:
-//!   - ??? ([`TokenSource`]): ???? > ?????? > ????
-//!   - ???? ([`ControlApiRuntime::require_token_for_loopback`] / `..._non_loopback`):
-//!     ??????? loopback ??????????
-//!
-//! ???????????? PC Tauri ?????????? LAN ??????? Bearer ???????
-//! ??????????? 1 ???????????
+//! Control API の認証ミドルウェア（`control_api_auth`）。
 
 use actix_web::body::{BoxBody, MessageBody};
 use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_web::middleware::Next;
 use actix_web::web::Data;
 use actix_web::{Error, HttpResponse};
-use anyhow::{Context, Result};
-use base64::Engine as _;
-use std::path::PathBuf;
 
-use crate::conf::{Conf, ControlApiConf, ControlTableEntry};
-use crate::SharedState;
+use super::runtime::ControlApiRuntime;
 
-/// Bearer ??????????? `/whoami` ???????
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TokenSource {
-	/// `VAC_CONTROL_API_BEARER_TOKEN` ???????????
-	Env,
-	/// `[control_api].bearer_token` ???????
-	Config,
-	/// ???????????`<runtime_root>/control-token.txt` ?????????
-	Generated,
-}
-
-/// Control API ?????????actix-web ? `Data<ControlApiRuntime>` ?????????????
-#[derive(Debug, Clone)]
-pub struct ControlApiRuntime {
-	/// ????? Bearer ??????????????? require_token ? false ????????
-	pub token: String,
-	/// ?????/?????
-	pub token_source: TokenSource,
-	/// loopback (127.0.0.1 / ::1) ?????? Bearer ?????????
-	pub require_token_for_loopback: bool,
-	/// ? loopback (LAN ?) ?????? Bearer ?????????
-	pub require_token_for_non_loopback: bool,
-	/// ?????????????????????????`Generated` ????? `Some`??
-	pub written_token_file: Option<PathBuf>,
-	/// Phase φ-1: Control API Table CRUD の allow-list スナップショット。
-	///
-	/// `ControlApiConf::tables` を init 時にコピーしたもの。`[[control_api.tables]]` を増やすには
-	/// 現状 VAC の再起動 (`POST /api/v1/control/restart`) が必要。GUI からの動的追加は φ 後続で検討。
-	pub tables: Vec<ControlTableEntry>,
-}
-
-impl ControlApiRuntime {
-	/// ????????????????????????
-	///
-	/// ????????? `<runtime_root>/control-token.txt` ??????????????
-	/// ??????????????? OS ???? ACL ?????Windows `%LOCALAPPDATA%` ??????????
-	pub async fn init(conf: &Conf, state: &SharedState) -> Result<Self> {
-		let policy = conf.control_api.clone().unwrap_or_default();
-
-		let (token, token_source, written_token_file) = resolve_token(&policy, state).await?;
-
-		Ok(Self {
-			token,
-			token_source,
-			require_token_for_loopback: policy.require_token_for_loopback,
-			require_token_for_non_loopback: policy.require_token_for_non_loopback,
-			written_token_file,
-			tables: policy.tables.clone(),
-		})
-	}
-
-	/// `peer_addr` ? loopback ??????????????? Bearer ?????????
-	pub fn require_token_for(&self, is_loopback: bool) -> bool {
-		if is_loopback {
-			self.require_token_for_loopback
-		} else {
-			self.require_token_for_non_loopback
-		}
-	}
-}
-
-/// ?????????????????????????????
-async fn resolve_token(policy: &ControlApiConf, state: &SharedState) -> Result<(String, TokenSource, Option<PathBuf>)> {
-	// 1) ?????????
-	if let Ok(t) = std::env::var("VAC_CONTROL_API_BEARER_TOKEN") {
-		let t = t.trim().to_string();
-		if !t.is_empty() {
-			return Ok((t, TokenSource::Env, None));
-		}
-	}
-	// 2) ??????
-	if let Some(t) = policy.bearer_token.as_ref() {
-		let t = t.trim().to_string();
-		if !t.is_empty() {
-			return Ok((t, TokenSource::Config, None));
-		}
-	}
-	// 3) ???? + ????
-	let token = generate_token();
-	let runtime_paths = state.read().await.runtime_paths.clone();
-	let path = runtime_paths.root.join("control-token.txt");
-	// ?????????????????????????? RuntimePaths ?????????
-	std::fs::write(&path, &token).with_context(|| format!("Control API ????????????????: {:?}", path))?;
-	Ok((token, TokenSource::Generated, Some(path)))
-}
-
-/// 32 byte ????? URL-safe Base64 (no pad) ?????????
-fn generate_token() -> String {
-	let mut bytes = [0u8; 32];
-	for b in &mut bytes {
-		*b = rand::random::<u8>();
-	}
-	base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
-}
-
-/// actix-web `middleware::from_fn` ??????
+/// actix-web `middleware::from_fn` 用ハンドラ。
 ///
-/// ???????? `peer_addr` ?? loopback/? loopback ?????policy ???? Bearer ??????
+/// 接続元 `peer_addr` が loopback / 非 loopback かに応じてポリシーどおり Bearer を検証する。
 pub async fn control_api_auth(
 	req: ServiceRequest,
 	next: Next<impl MessageBody + 'static>,
 ) -> std::result::Result<ServiceResponse<BoxBody>, Error> {
 	let Some(runtime) = req.app_data::<Data<ControlApiRuntime>>().cloned() else {
-		log::error!("?ControlAPI? ControlApiRuntime ? app_data ????????????");
+		log::error!("《ControlAPI》 app_data に ControlApiRuntime がありません");
 		return Ok(req.into_response(unauthorized("server misconfigured")));
 	};
 
@@ -131,7 +24,7 @@ pub async fn control_api_auth(
 	let require_token = runtime.require_token_for(is_loopback);
 
 	if require_token {
-		// 1) Authorization: Bearer <token>?HTTP / fetch ??
+		// 1) Authorization: Bearer <token>（HTTP / fetch 用）
 		let from_header = req
 			.headers()
 			.get("Authorization")
@@ -139,13 +32,13 @@ pub async fn control_api_auth(
 			.and_then(|s| s.strip_prefix("Bearer ").or_else(|| s.strip_prefix("bearer ")))
 			.map(|s| s.trim().to_string());
 
-		// 2) ?token=<token> ????????? WebSocket ??????????????WS upgrade ? fallback?
+		// 2) ?token=<token>（ブラウザ WebSocket 等で `Authorization` が付けにくい場合のフォールバック）
 		let from_query = extract_query_token(req.query_string());
 
 		let provided = from_header.or(from_query).unwrap_or_default();
 		if !constant_time_eq(provided.as_bytes(), runtime.token.as_bytes()) {
 			log::warn!(
-				"?ControlAPI?Bearer ????: peer={:?} loopback={} path={}",
+				"《ControlAPI》 Bearer 不一致: peer={:?} loopback={} path={}",
 				req.peer_addr(),
 				is_loopback,
 				req.path()
@@ -164,10 +57,10 @@ fn unauthorized(reason: &str) -> HttpResponse {
 		.body(format!(r#"{{"error":"unauthorized","reason":"{}"}}"#, reason))
 }
 
-/// query string ?? `token=...` / `access_token=...` ??????percent-decoded ???????
+/// query string から `token=...` / `access_token=...` を取り、percent-decode する。
 ///
-/// WebSocket ? `new WebSocket("ws://.../events?token=xxx")` ????????????????????
-/// `Authorization` ????????????????????????HTTP GET ???????
+/// WebSocket で `new WebSocket("ws://.../events?token=xxx")` とする場合など、
+/// `Authorization` が付けられないクライアント向け。HTTP GET のクエリにも使われる。
 fn extract_query_token(query: &str) -> Option<String> {
 	for part in query.split('&') {
 		let mut it = part.splitn(2, '=');
@@ -212,7 +105,7 @@ fn from_hex(b: u8) -> Option<u8> {
 	}
 }
 
-/// ?????????????`==` ??? return ????????
+/// 定時間比較。長さが違っても分岐タイミングで内容が漏れないよう `==` だけにしない。
 fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 	if a.len() != b.len() {
 		return false;
@@ -233,8 +126,11 @@ mod tests {
 	use actix_web::{web, App, HttpResponse};
 	use std::net::SocketAddr;
 
-	/// ??????? peer_addr ? policy ???????????????????
-	/// middleware ????????????TestRequest ? peer_addr ??????????????
+	use crate::conf::ControlTableEntry;
+	use super::super::runtime::{ControlApiRuntime, TokenSource};
+
+	/// テスト用に `peer_addr` とポリシーを切り替えたランタイムを組む。
+	/// ミドルウェア結合テストでは `TestRequest` に `peer_addr` を載せる。
 	fn make_runtime(loopback_req: bool, non_loopback_req: bool) -> ControlApiRuntime {
 		ControlApiRuntime {
 			token: "correct-token-xxxxxxxx".to_string(),
@@ -242,7 +138,7 @@ mod tests {
 			require_token_for_loopback: loopback_req,
 			require_token_for_non_loopback: non_loopback_req,
 			written_token_file: None,
-			tables: Vec::new(),
+			tables: Vec::<ControlTableEntry>::new(),
 		}
 	}
 
@@ -313,7 +209,7 @@ mod tests {
 
 	#[actix_web::test]
 	async fn full_trust_lan_policy_allows_without_token() {
-		// require_token_for_non_loopback = false?LAN ???????????????? LAN ???
+		// require_token_for_non_loopback = false → LAN からもトークン不要
 		let rt = make_runtime(false, false);
 		assert_eq!(exercise(rt, Some(lan()), None).await, 200);
 	}
@@ -326,7 +222,7 @@ mod tests {
 
 	#[actix_web::test]
 	async fn lan_token_via_query_string_passes() {
-		// Authorization ???????token=... ????? (WebSocket upgrade ???????)
+		// Authorization なしで token=... のみ（WebSocket upgrade 想定）
 		let rt = make_runtime(false, true);
 		assert_eq!(exercise_uri(rt, Some(lan()), None, "/g/ok?token=correct-token-xxxxxxxx").await, 200);
 	}
@@ -355,7 +251,7 @@ mod tests {
 		let bytes = [0xE3u8, 0x81, 0x82];
 		let expected = std::str::from_utf8(&bytes).unwrap();
 		assert_eq!(percent_decode("%E3%81%82"), expected);
-		// ??? percent ????????????????
+		// 不正な percent シーケンスはそのまま残す
 		assert_eq!(percent_decode("%ZZ"), "%ZZ");
 	}
 

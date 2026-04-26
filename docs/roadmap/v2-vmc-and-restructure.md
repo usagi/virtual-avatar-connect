@@ -322,6 +322,9 @@ flowgraph.motion.map
 * **実施（追記）**: `web_interface/control/profiles/` を **`mod.rs` + `util`** に分割（旧 `profiles.rs` を廃止）。
 * **実施（追記）**: `web_interface/control/restart/` を **`mod.rs` + `util.rs`** に分割（旧単一 `restart.rs` を廃止。パス解決・ラベル・パス同値判定は `util`）。
 * **実施（追記）**: `web_interface/control/run_with/` を **`mod.rs` + `util.rs` + `toml_ops.rs`** に分割（旧単一 `run_with.rs` を廃止。TOML 配列操作と DTO→`Value` は `toml_ops`）。
+* **実施（追記）**: `web_interface/control/auth/` を **`mod.rs` + `runtime.rs` + `middleware.rs`** に分割（旧 `auth.rs` を廃止。トークン解決は `runtime`、`control_api_auth` とクエリ解析テストは `middleware`）。
+* **実施（追記）**: `web_interface/control/oauth_twitch/` を **`mod.rs` + `start_flow.rs`** に分割（旧 `oauth_twitch.rs` を廃止。DCF 開始〜ポーリング登録は `start_flow`）。
+* **実施（追記）**: `web_interface/control/managed_app/` を **`mod.rs` + `lookup.rs`** に分割（旧 `managed_app.rs` を廃止。registry 参照は `lookup`）。
 * **残り（後続 PR）**: 上記以外の `web_interface::control/*` の肥大化、他モジュールの同様の表化など。
 
 #### Step 5（一部完了）
