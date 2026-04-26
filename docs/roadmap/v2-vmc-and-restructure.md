@@ -56,6 +56,24 @@ VAC
 
 - ブラウザで LAN 越しに操作する経路は維持しつつ、**ネイティブウィンドウ＋トレイ**は desktop プロセスの shell として載せる（[`phase-epsilon-shutdown-and-tauri.md`](phase-epsilon-shutdown-and-tauri.md) §3 の方針と一致）。
 
+### 1.2 GUI 静的成果物の内蔵（`npm run dev` なしで設定 GUI）
+
+**狙い**: 配布バイナリだけで **desktop でも CLI でも** Control Panel（既存 Svelte GUI）を開ける。エンドユーザーが **別途 `npm run dev` を起動したり、`gui/dist` を手で置いたり**しなくてよい状態にする。
+
+**ソースとビルドの分離**
+
+- **編集・型チェック・高速ループ**はこれまでどおり `gui/`（Svelte + Vite）で行う。
+- **`npm run build` で得た `gui/dist/`** を、Rust の **ビルド時**に取り込み、**実行ファイルまたは専用クレートに同梱**する。取り込み方は実装フェーズで決める（例: ワークスペースに **`vac-gui-assets`** のような薄い crate を切り、`build.rs` で `dist` を走査して `include_bytes!` 用の生成ソースを吐く／[`rust-embed`](https://crates.io/crates/rust-embed)／Tauri の **bundler + custom protocol**／単一 `include_dir!` 等）。**コア（`vac-core`）と同様に「成果物だけを境界として持つ」**イメージで、Svelte 本体は `gui/` に残し、Rust 側は **ビルド済みアセットの配信責務**だけを持つモジュール／crate に閉じる。
+
+**ランタイムでの使い方（概念）**
+
+- **actix**（既存 `web_interface`）: ディスク上の `gui_dist_path` の代わりに、**メモリ上のバイト列**から `index.html` / chunk を配信するルートを用意すれば、**CLI runner でも** ローカル URL だけで設定 GUI が開ける。
+- **Tauri（desktop）**: WebView の入口 URL を **同梱静的**（`asset://` 相当）に切り替えられるなら、オフライン同梱と整合する。HTTP API は引き続きループバックの actix に向ける（[`phase-epsilon-shutdown-and-tauri.md`](phase-epsilon-shutdown-and-tauri.md) §3.5 と両立）。
+
+**開発ビルド**
+
+- 開発者向けには従来どおり **ファイルシステムの `gui/dist` または Vite dev server** を指す feature／環境変数を残してよい（リリースと開発の二経路）。
+
 ---
 
 ## 2. フェーズ設計

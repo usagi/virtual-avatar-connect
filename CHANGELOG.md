@@ -8,6 +8,7 @@
 ### ドキュメント（実行形態・工程順）
 
 - **desktop / CLI / Tauri の順序**: [`docs/architecture.md`](docs/architecture.md) に「実行入口（計画・工程順）」を追加。[`docs/roadmap/v2-vmc-and-restructure.md`](docs/roadmap/v2-vmc-and-restructure.md) §1.1（実行形態・desktop 命名理由・トレイ UX 目標）、[`docs/roadmap/phase-epsilon-shutdown-and-tauri.md`](docs/roadmap/phase-epsilon-shutdown-and-tauri.md) §3 / §4.3、[`docs/roadmap.md`](docs/roadmap.md) Phase ε を整合。
+- **GUI のリリース時内蔵**（`npm run dev` 不要）: v2 §1.2、architecture（Scope・実行入口）、phase-epsilon §3.6。
 
 ### Phase M2 — VMC パススルー・ハブ運用（conf / ログ）
 

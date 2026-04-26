@@ -10,7 +10,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 - **Windows / Linux / macOS 単独アプリ**（現状は `cargo run -- <conf>.toml` の **単一バイナリ**）
 - **Flowgraph-only アーキテクチャ**（v0.10.0〜）: ingress〜変換〜出口は `flowgraph_dir` 配下の `.flowgraph.toml` と Flowgraph Runtime で表現
 - **内蔵 HTTP サーバ**: `actix-web` で GUI 配信 + Control API + WebSocket
-- **GUI**: Svelte 5 + Vite、`gui/` 配下の独立プロジェクト（build 成果物は `gui/dist/`）
+- **GUI**: Svelte 5 + Vite、`gui/` 配下の独立プロジェクト（build 成果物は `gui/dist/`）。**リリース**では `gui/dist` をビルド時にバイナリへ取り込み、`npm run dev` なしで設定 GUI を扱う方針（[`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.2）
 
 ---
 
@@ -156,6 +156,8 @@ UNVET (`usagi/un-virtual-eye-tracker`) の convention を踏襲し、Phase χ �
 1. **crate 再構造化**（`vac-core` 等、`v2` 計画書 §3）— 境界が固まってから runner を増やす。
 2. **CLI runner と desktop runner** の詳細設計・実装 — どちらも単体起動可能（CLI はコンソール付き玄人向け、desktop はコンソール非表示・一般ユーザー向け入口）。
 3. **Tauri（Phase ε-2）** を **desktop 版に組み込む** — ネイティブウィンドウ／トレイ統合はコンソールを出さない側に寄せる。
+
+**GUI 静的ファイル**: Svelte の **ビルド済み** `gui/dist` を専用 crate またはモジュールに同梱し、CLI／desktop の両方から **内蔵配信**できるようにする（詳細は v2 計画書 §1.2）。
 
 HTTP/WS をそのまま使う Tauri shell 方針は [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md) §3 を参照。
 
