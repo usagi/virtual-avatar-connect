@@ -62,6 +62,9 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.json.get`](#flowgraph-json-get) — JSON Get
   - [`flowgraph.json.parse`](#flowgraph-json-parse) — JSON Parse
   - [`flowgraph.json.stringify`](#flowgraph-json-stringify) — JSON Stringify
+- **library**
+  - [`flowgraph.library.input`](#flowgraph-library-input) — Library Input
+  - [`flowgraph.library.output`](#flowgraph-library-output) — Library Output
 - **list**
   - [`flowgraph.list.get`](#flowgraph-list-get) — List Get
   - [`flowgraph.list.is_empty`](#flowgraph-list-is-empty) — List Is Empty
@@ -897,6 +900,28 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `text` | `string` |  |
+
+## library
+
+### `flowgraph.library.input`
+
+**Library Input** — Phase λ v0: 単一 string 境界（プロパティ value）。将来は接続駆動の動的ポートを予定。
+
+| Output | Type | Note |
+|---|---|---|
+| `value` | `string` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `value` | `string` | `""` |  |  |
+
+### `flowgraph.library.output`
+
+**Library Output** — Phase λ v0: 単一 string 境界（入力 value を受ける）。将来は外向き動的ポートを予定。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `string` | — |  |
 
 ## list
 

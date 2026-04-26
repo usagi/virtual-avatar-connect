@@ -5,7 +5,22 @@
 
 ## [Unreleased]
 
-### ξ: Dimensional Quantity System (ξ-0 .. ξ-4, ξ-6)
+### Phase λ — Flowgraph Enum + ライブラリ再利用（初版）
+
+- **設計**: [`docs/roadmap/phase-lambda-flowgraph-enum-and-library.md`](docs/roadmap/phase-lambda-flowgraph-enum-and-library.md) を正本化。`docs/roadmap.md` で Phase λ を **Completed** に移動し Phase υ / Unscheduled へ cross-link、`phase-delta-spec.md` §8.6 にスキーマ拡張を追記。
+- **閉集合 string**: `PortSpec.closed_string_variants`（serde 付き）。`FlowgraphProgram::build` で両端に閉集合があるとき upstream ⊆ downstream を検証。ローダは `flowgraph.literal.string` → 閉集合入力のとき `value` を検証。`flowgraph.tts.speak` の `engine` に TTS レジストリ名を適用。
+- **TOML**: `FlowgraphFile.enums`（`[[enums]]`）、`FileMeta` に `author` / `name` / `version` / `license` / `repos` / `library_uses`。`normalized_library_id()` を追加。
+- **ライブラリ**: `flowgraph.library.input` / `flowgraph.library.output`（v0 スタブ）を registry に登録。
+- **依存**: `load_flowgraph_dir` が `library_uses` の参照存在と閉路を検証（新診断コード）。
+- **GUI**: `closed_string_variants` を踏まえた配線判定、`[[enums]]` をパレット `user_defined` に合成、保存時に `[[enums]]` と拡張 `[meta]` をシリアライズ。
+- **手動**: [`docs/manual/flowgraph-enum-and-library.md`](docs/manual/flowgraph-enum-and-library.md)。例: [`flowgraph.example/lambda-demo/main.flowgraph.toml`](flowgraph.example/lambda-demo/main.flowgraph.toml)。
+
+### VoicePeak（TTS 実行ファイルパス）
+
+- `conf.toml` に任意の `[voicepeak]`（`path`）を追加。未指定または空のとき、Windows は `%ProgramFiles%\VOICEPEAK\voicepeak.exe`（`ProgramW6432` 優先）、非 Windows はバイナリ名 `voicepeak` をグローバル既定として `State` に保持し、`flowgraph.tts.speak` で `engine="voicepeak"` かつ `endpoint` が空のときに exe として自動補填する。
+- VoicePeak ドライバは exe 解決を **`endpoint` を正**とし、`params_schema` の `executable` ヒントを削除。後方互換のため `extra.executable` は `endpoint` が空のときのみ参照し、プロセスあたり 1 回 `warn!` で非推奨を通知する。
+
+### ξ: Dimensional Quantity System (ξ-0 .. ξ-6)
 
 Flowgraph の数値型に **SI 準拠の単位次元システム**を第一級概念として導入。数値に unit を付与、unit は 8 成分次元（Length · Mass · Time · Current · Temperature · Amount · Luminous + 疑似次元 Angle）を持つ。strict default（次元不一致は engine error）+ 明示 escape hatch（`flowgraph.unit.strip`）の方針。既存フローは暗黙 coerce（`Float → dimensionless Quantity`）で完全後方互換。設計詳細: [`docs/roadmap/phase-ksi-dimensional-quantity-system.md`](docs/roadmap/phase-ksi-dimensional-quantity-system.md)、ユーザ向け解説: [`docs/manual/dimensional-quantity-system.md`](docs/manual/dimensional-quantity-system.md)。
 
@@ -31,7 +46,7 @@ Flowgraph の数値型に **SI 準拠の単位次元システム**を第一級�
   - `flowgraph.util.format` PureNode 新設。プロパティ: `include_unit: Bool = true` / `precision: Int = -1`（-1 = default Display）/ `unit_override: String = ""`（同次元への事前変換）。精度 / 単位表示 ON/OFF / 表示単位の差し替えを明示制御。
   - `log` / `channel.emit` の node description に stringify ルール（Quantity は自動 `"{value} {unit}"` 化、value-only 欲しければ `strip` か `format(include_unit=false)`）を明記。
   - Integration test `log_receives_quantity_as_formatted_string`: `Float → UnitAssign(m/s^2) → Log` を engine 経由で実行し trace に integrated 表示が載ることを確認。
-- **ξ-5 GUI**: 未着手。`FlowgraphNodeCard.svelte` に unit バッジ + Dimension family 色分け + hover tooltip、property editor の unit text input + parse error 表示、e2e 拡充を予定。ο-1 以降と並行実施可。
+- **ξ-5 GUI** (`gui/src/lib/flowgraph/FlowgraphNodeCard.svelte` / `FlowgraphCanvas.svelte` / `FlowgraphPropertyEditor.svelte` / `quantityDisplay.ts`): Quantity ポート専用ハンドル色 + 次元 family 別の色、`default` から復元できる場合のみ unit バッジ + 詳細 tooltip。キャンバス接続判定を engine の `compatible_with` に揃え（Float↔Quantity 等）、型不一致エッジを赤破線表示。プロパティ `unit` / `target_unit` / `unit_override` は `GET /flowgraph/parse-unit` で debounce 検証。`GET /flowgraph/node-catalog` の各 Quantity ポート JSON に `quantity_dim` / `quantity_unit_badge` / `quantity_unit_full` を注入。E2E: `flowgraph-canvas-basic` に `math.float_add` の Quantity handle 回帰を追加。
 - **ξ-6 ドキュメント** (`docs/manual/dimensional-quantity-system.md` (new) / `docs/manual/index.md` / `docs/roadmap.md` / `CHANGELOG.md` / `docs/manual/node-catalog.md`)
   - ユーザ向け解説ドキュメント `dimensional-quantity-system.md` を新設。動機 / Quantity と Unit の基本 / 使える単位 7 + 10 + 接頭辞 / 単位文字列 parser 文法 / `flowgraph.unit.*` 7 種と `flowgraph.util.format` / 暗黙 coerce ルール / flow TOML リテラル 3 形式 / よくあるパターン 5 件 / FAQ 7 件。
   - `manual/index.md` 目次に追加、Flowgraph 用語の Socket 型列に `quantity` と `table` を追記。

@@ -1,0 +1,27 @@
+# Phase λ 最小例: ユーザ定義 [[enums]] + ライブラリ境界スタブ
+[meta]
+title = "lambda-demo"
+description = "enums / library.input / library.output の構文サンプル（実行用途は任意）"
+
+[[enums]]
+id = "demo_lang"
+variants = ["ja", "en"]
+
+[[nodes]]
+id = "lang"
+feature = "flowgraph.literal.string"
+properties.value = "ja"
+
+[[nodes]]
+id = "lib_in"
+feature = "flowgraph.library.input"
+[nodes.properties]
+value = ""
+
+[[nodes]]
+id = "lib_out"
+feature = "flowgraph.library.output"
+
+[[edges]]
+from = "lang:value"
+to = "lib_out:value"

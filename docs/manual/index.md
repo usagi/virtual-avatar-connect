@@ -16,6 +16,7 @@ v2 では「チャンネル名で繋ぐ v1 プロセッサー列」から **Flow
 - [Node Catalog](./node-catalog.md) — 組み込みノードの全ポート・全プロパティ（自動生成）
 - [Dimensional Quantity System](./dimensional-quantity-system.md) — SI 準拠の単位次元システム（Phase ξ）。数値に単位を貼り付け、次元不一致をエンジンで検知する
 - [DateTime System](./datetime-system.md) — 絶対時刻の `datetime` 型と `flowgraph.datetime.*` ノード（Phase π）。Duration は `quantity`（時間次元）に統一
+- [Flowgraph Enum & Library](./flowgraph-enum-and-library.md) — 閉集合 `string`、`[[enums]]`、ライブラリ境界ノード、`library_uses`（Phase λ）
 
 ### Tutorials（各 `flowgraph.example/` の解説）
 
