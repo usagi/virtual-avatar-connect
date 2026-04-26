@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### 内部リファクタ — Control API `profiles` モジュール分割
+
+- **`src/web_interface/control/profiles/`**: 旧 `profiles.rs` を `mod.rs`（DTO・ハンドラ）と `util.rs`（パス検証・バックアップ・`is_current`、単体テスト）に分割。
+
 ### 内部リファクタ — Control API `table` モジュール分割
 
 - **`src/web_interface/control/table/`**: 旧単一 `table.rs` を `mod.rs`（DTO・ハンドラ・結合テスト）と `util.rs`（allow-list / If-Match / TSV I/O・行ロック）に分割。
