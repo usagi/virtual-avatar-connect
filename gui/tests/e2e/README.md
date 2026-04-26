@@ -20,6 +20,11 @@ gui/tests/e2e/
 - `live-quick-add-learn-undo.spec.ts`
 - `channels-ws-live-update.spec.ts`
 
+GUI redesign specs are added incrementally and should stay narrow:
+
+- `now-dashboard.spec.ts`
+- `main-navigation.spec.ts`
+
 ## Running locally
 
 From the repository root:
