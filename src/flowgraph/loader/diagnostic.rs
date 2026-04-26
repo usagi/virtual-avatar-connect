@@ -43,6 +43,16 @@ pub enum DiagnosticCode {
 	Io,
 	/// 曖昧な main 省略参照（`X::id` に対して `X/main.flowgraph.toml` が無い）。
 	AmbiguousMainRef,
+	/// Phase λ: 閉集合 string ポートへ接続した `flowgraph.literal.string` の値が許容集合外。
+	ClosedStringLiteralOutOfEnum,
+	/// Phase λ: 同一ファイル内で `[[enums]]` の `id` が重複。
+	DuplicateEnumId,
+	/// Phase λ: `[[enums]]` エントリが不正（空 id / 空 variants 等）。
+	InvalidEnumDefinition,
+	/// Phase λ: `library_uses` が参照する fq が walk 集合に存在しない。
+	UnknownLibraryRef,
+	/// Phase λ: `library_uses` の依存グラフに閉路がある。
+	LibraryDependencyCycle,
 }
 
 /// 単一診断メッセージ。

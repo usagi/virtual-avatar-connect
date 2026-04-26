@@ -336,8 +336,7 @@ pub fn copy_targets(root: &Path, req: &CopyRequest) -> Result<Fragment, CopyErro
 			meta: if nodes_only {
 				Some(FileMeta {
 					title: Some("Copied nodes".to_string()),
-					description: None,
-					tags: None,
+					..Default::default()
 				})
 			} else {
 				file.doc.meta.clone()
@@ -827,8 +826,7 @@ value = "x"
 				path: SCRATCH_PATH.to_string(),
 				meta: Some(FileMeta {
 					title: Some("x".into()),
-					description: None,
-					tags: None,
+					..Default::default()
 				}),
 				nodes: vec![NodeEntry {
 					id: "a".into(),

@@ -319,6 +319,7 @@ fn paste_single_fragment_file_fresh(
 		meta: ff.meta.clone(),
 		nodes: Vec::new(),
 		edges: Vec::new(),
+		enums: Vec::new(),
 	};
 	let mut rewrite: HashMap<(String, String), String> = HashMap::new();
 	let mut existing_ids: HashSet<String> = HashSet::new();

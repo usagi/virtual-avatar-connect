@@ -64,6 +64,7 @@ pub mod easing;
 pub mod flow;
 pub mod ingress;
 pub mod json_ops;
+pub mod library_boundary;
 pub mod literal;
 pub mod log;
 pub mod logic;

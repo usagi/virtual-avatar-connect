@@ -14,7 +14,8 @@
 //!   - `speed` (Float, default 1.0)
 //!   - `pitch` (Float, default 0.0)
 //!   - `volume` (Float, default 1.0)
-//!   - `endpoint` (String, default `""`): HTTP base URL / TCP `host:port`。空で driver 既定
+//!   - `endpoint` (String, default `""`): HTTP base URL / TCP `host:port` / **VoicePeak では `voicepeak.exe` の絶対パス**。
+//!     VoicePeak で空のときは起動時に解決した `[voicepeak]` + OS 既定パスが State から注入される。
 //!   - `extra` (Map<Json>, default `{}`): エンジン固有の escape hatch
 //!   - `save_path` (String, default `""`): 合成 WAV 保存先。`{T}` は UTC ISO 日時（`:`、`-` を除去）に展開
 //! - 出力:
@@ -29,6 +30,7 @@ use crate::flowgraph::node::{
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use crate::flowgraph::tts::driver::{AudioContext, TtsRequest};
+use crate::flowgraph::tts::registry::registry;
 use async_trait::async_trait;
 
 pub struct TtsSpeakNode;
@@ -44,7 +46,8 @@ impl NodeDescriptor for TtsSpeakNode {
    ),
    inputs: vec![
     PortSpec::exec_input("exec_in", "Exec"),
-    PortSpec::input("engine", "Engine", SocketType::String),
+    PortSpec::input("engine", "Engine", SocketType::String)
+     .with_closed_string_variants(registry().names().iter().copied()),
     PortSpec::input("text", "Text", SocketType::String),
     PortSpec::input("voice", "Voice", SocketType::String).with_default(SocketValue::String(String::new())),
     PortSpec::input("speed", "Speed", SocketType::Float).with_default(SocketValue::Float(1.0)),
@@ -98,7 +101,13 @@ impl EffectfulNode for TtsSpeakNode {
   let speed = get_optional_float(inputs, "speed", 1.0)?;
   let pitch = get_optional_float(inputs, "pitch", 0.0)?;
   let volume = get_optional_float(inputs, "volume", 1.0)?;
-  let endpoint = get_optional_string(inputs, "endpoint", "")?;
+  let mut endpoint = get_optional_string(inputs, "endpoint", "")?;
+  if engine.eq_ignore_ascii_case("voicepeak") && endpoint.is_empty() {
+   if let Some(wk) = ctx.state_handle.as_ref().and_then(|w| w.upgrade()) {
+    let st = wk.read().await;
+    endpoint = st.voicepeak_fallback_exe.clone();
+   }
+  }
   let save_path = get_optional_string(inputs, "save_path", "")?;
   let extra_map = get_optional_map(inputs, "extra")?;
 

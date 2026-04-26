@@ -11,7 +11,8 @@
 //!   cache key に state version を含めて staleness を防ぐ。
 
 use crate::flowgraph::node::{
- ExecCtx, ExecFireSet, InputMap, NodeExecError, NodeImpl, PortDirection, StatefulCtx, TriggerEvent, TriggerHandle,
+ ExecCtx, ExecFireSet, InputMap, NodeExecError, NodeImpl, PortDirection, PortSpec, StatefulCtx, TriggerEvent,
+ TriggerHandle,
 };
 use crate::flowgraph::socket::{coerce_to_type, SocketType, SocketValue};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -522,6 +523,17 @@ impl ProgramRun {
 // 構築時検証
 // ---------------------------------------------------------------------
 
+/// Phase λ: 両ポートが `string` のとき、閉集合メタが両方ある場合のみ upstream ⊆ downstream を要求する。
+fn string_ports_closed_compatible(from_port: &PortSpec, to_port: &PortSpec) -> bool {
+	if from_port.ty != SocketType::String || to_port.ty != SocketType::String {
+		return true;
+	}
+	match (&from_port.closed_string_variants, &to_port.closed_string_variants) {
+		(Some(from_set), Some(to_set)) => from_set.iter().all(|v| to_set.contains(v)),
+		_ => true,
+	}
+}
+
 fn build_program(raw_nodes: Vec<NodeInstance>, raw_edges: Vec<Edge>) -> Result<FlowgraphProgram, BuildError> {
  let mut nodes: HashMap<NodeId, NodeInstance> = HashMap::new();
  for n in raw_nodes {
@@ -560,6 +572,14 @@ fn build_program(raw_nodes: Vec<NodeInstance>, raw_edges: Vec<Edge>) -> Result<F
     from_ty: fp.ty.clone(),
     to: e.to.clone(),
     to_ty: tp.ty.clone(),
+   })));
+  }
+  if !fp.is_exec && !string_ports_closed_compatible(fp, tp) {
+   return Err(BuildError::StringClosedSetMismatch(Box::new(StringClosedSetMismatchDetail {
+    from: e.from.clone(),
+    to: e.to.clone(),
+    upstream: fp.closed_string_variants.clone().unwrap_or_default(),
+    downstream: tp.closed_string_variants.clone().unwrap_or_default(),
    })));
   }
  }
@@ -718,6 +738,14 @@ pub enum BuildError {
  ExecDataMixed(Box<ExecDataMixedDetail>),
  #[error("エッジの型不一致: {from:?}({from_ty}) -> {to:?}({to_ty})", from = _0.from, from_ty = _0.from_ty, to = _0.to, to_ty = _0.to_ty)]
  TypeMismatch(Box<TypeMismatchDetail>),
+ #[error(
+  "閉集合 string の包含関係不成立: {from:?} ({upstream:?}) -> {to:?} ({downstream:?})",
+  from = _0.from,
+  to = _0.to,
+  upstream = _0.upstream,
+  downstream = _0.downstream
+ )]
+ StringClosedSetMismatch(Box<StringClosedSetMismatchDetail>),
  #[error("single-input ポートに複数入力: {0:?}")]
  FanInOnNonMulti(PortRef),
  #[error("{0} DAG に循環を検出")]
@@ -730,6 +758,14 @@ pub struct TypeMismatchDetail {
  pub from_ty: SocketType,
  pub to: PortRef,
  pub to_ty: SocketType,
+}
+
+#[derive(Debug)]
+pub struct StringClosedSetMismatchDetail {
+ pub from: PortRef,
+ pub to: PortRef,
+ pub upstream: Vec<String>,
+ pub downstream: Vec<String>,
 }
 
 #[derive(Debug)]

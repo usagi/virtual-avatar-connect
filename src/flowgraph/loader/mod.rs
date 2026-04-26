@@ -30,5 +30,8 @@ pub mod reference;
 
 pub use diagnostic::{Diagnostic, DiagnosticCode, LoadError, LoadReport, LoadedNodeMeta, Severity};
 pub use dir::{fq_path_of_file, is_flowgraph_file, load_flowgraph_dir, walk_flowgraph_dir};
-pub use file::{load_file, parse_flowgraph_file, EdgeEntry, FileMeta, FlowgraphFile, NodeEntry};
+pub use file::{
+	load_file, parse_flowgraph_file, normalized_library_id, EdgeEntry, FileMeta, FlowgraphEnumDef, FlowgraphFile,
+	NodeEntry,
+};
 pub use reference::{parse_port_ref, resolve_fq_ref, PortRefStr, ResolveContext};

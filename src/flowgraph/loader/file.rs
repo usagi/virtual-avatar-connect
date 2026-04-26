@@ -12,7 +12,7 @@ use crate::flowgraph::loader::diagnostic::{
 use crate::flowgraph::loader::reference::parse_port_ref;
 use crate::flowgraph::node::{InputMap, NodeSpec};
 use crate::flowgraph::registry::{registry, NodeRegistry};
-use crate::flowgraph::socket::from_toml_value;
+use crate::flowgraph::socket::{from_toml_value, SocketValue};
 use crate::flowgraph::{FlowgraphBuilder, FlowgraphProgram, PortRef};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -30,6 +30,20 @@ pub struct FlowgraphFile {
 	pub nodes: Vec<NodeEntry>,
 	#[serde(default)]
 	pub edges: Vec<EdgeEntry>,
+	/// Phase λ: ユーザ定義閉集合（`[[enums]]`）。未指定は空。
+	#[serde(default)]
+	pub enums: Vec<FlowgraphEnumDef>,
+}
+
+/// TOML `[[enums]]` 1 行相当。
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct FlowgraphEnumDef {
+	pub id: String,
+	/// 将来用。v0 は `string`（または省略）のみ扱う。
+	#[serde(default)]
+	pub primitive: Option<String>,
+	#[serde(default)]
+	pub variants: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -40,6 +54,49 @@ pub struct FileMeta {
 	pub description: Option<String>,
 	#[serde(default)]
 	pub tags: Option<Vec<String>>,
+	#[serde(default)]
+	pub author: Option<String>,
+	#[serde(default)]
+	pub name: Option<String>,
+	#[serde(default)]
+	pub version: Option<String>,
+	#[serde(default)]
+	pub license: Option<String>,
+	#[serde(default)]
+	pub repos: Option<String>,
+	/// Phase λ: 依存先フローの fq（`sub/pkg/graph` 形式、拡張子なし）。
+	#[serde(default)]
+	pub library_uses: Option<Vec<String>>,
+}
+
+/// Phase λ: `author` / `name` / `version` がすべて非空のときの表示用安定 ID。
+pub fn normalized_library_id(meta: &FileMeta) -> Option<String> {
+	let author = meta.author.as_deref()?.trim();
+	let name = meta.name.as_deref()?.trim();
+	let ver = meta.version.as_deref()?.trim();
+	if author.is_empty() || name.is_empty() || ver.is_empty() {
+		return None;
+	}
+	fn norm_token(s: &str) -> String {
+		let t: String = s
+			.chars()
+			.map(|c| {
+				if c.is_ascii_alphanumeric() {
+					c.to_ascii_lowercase()
+				} else {
+					'_'
+				}
+			})
+			.collect();
+		t.trim_matches('_').to_string()
+	}
+	let a = norm_token(author);
+	let n = norm_token(name);
+	let v = norm_token(ver);
+	if a.is_empty() || n.is_empty() || v.is_empty() {
+		return None;
+	}
+	Some(format!("{a}::{n}::{v}"))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -118,6 +175,55 @@ pub fn load_file(
 // Build context（単一ファイル・複数ファイル共通）
 // ---------------------------------------------------------------------
 
+fn validate_enum_definitions(file: &FlowgraphFile, file_path: &Path, diagnostics: &mut Vec<Diagnostic>) {
+	let mut seen: HashSet<String> = HashSet::new();
+	for (idx, e) in file.enums.iter().enumerate() {
+		let hint = format!("[[enums]][{idx}]");
+		if e.id.trim().is_empty() {
+			diagnostics.push(
+				Diagnostic::error(DiagnosticCode::InvalidEnumDefinition, "enums.id が空")
+					.with_file(file_path.to_path_buf())
+					.with_hint(hint.clone()),
+			);
+			continue;
+		}
+		if !seen.insert(e.id.clone()) {
+			diagnostics.push(
+				Diagnostic::error(
+					DiagnosticCode::DuplicateEnumId,
+					format!("enums.id 重複: '{}'", e.id),
+				)
+				.with_file(file_path.to_path_buf())
+				.with_hint(hint.clone()),
+			);
+		}
+		if e.variants.is_empty() {
+			diagnostics.push(
+				Diagnostic::error(
+					DiagnosticCode::InvalidEnumDefinition,
+					format!("enums '{}' の variants が空", e.id),
+				)
+				.with_file(file_path.to_path_buf())
+				.with_hint(hint.clone()),
+			);
+			continue;
+		}
+		if let Some(ref prim) = e.primitive {
+			let p = prim.trim();
+			if !p.is_empty() && p != "string" {
+				diagnostics.push(
+					Diagnostic::warning(
+						DiagnosticCode::PropertyTypeMismatch,
+						format!("enums '{}' の primitive='{prim}' は v0 で string のみサポート", e.id),
+					)
+					.with_file(file_path.to_path_buf())
+					.with_hint(hint.clone()),
+				);
+			}
+		}
+	}
+}
+
 /// 複数ファイルの統合ビルド用文脈。単一ファイル loader も同じ経路を通る（files が 1 件）。
 pub(crate) struct BuildContext {
 	/// (fq_path, ファイルパス, パース済み構造)
@@ -129,6 +235,9 @@ pub(crate) struct BuildContext {
 impl BuildContext {
 	pub(crate) fn build(self, reg: &NodeRegistry) -> Result<LoadReport, LoadError> {
 		let mut diagnostics: Vec<Diagnostic> = Vec::new();
+		for (_, file_path, file) in &self.files {
+			validate_enum_definitions(file, file_path, &mut diagnostics);
+		}
 		let mut builder = FlowgraphBuilder::new();
 		let mut node_meta: HashMap<String, LoadedNodeMeta> = HashMap::new();
 
@@ -346,6 +455,32 @@ impl BuildContext {
 					);
 					continue;
 				};
+
+				// Phase λ: 閉集合 string 入力 ← string リテラル のとき、プロパティ value を検証。
+				if !from_port.is_exec && !to_port.is_exec {
+					if let Some(allowed) = to_port.closed_string_variants.as_ref().filter(|v| !v.is_empty()) {
+						if let Some(meta_from) = node_meta.get(&from_fq_name) {
+							if meta_from.feature == "flowgraph.literal.string" {
+								if let Some(SocketValue::String(s)) = meta_from.properties.get("value") {
+									if !allowed.iter().any(|v| v == s) {
+										diagnostics.push(
+											Diagnostic::error(
+												DiagnosticCode::ClosedStringLiteralOutOfEnum,
+												format!(
+													"文字列リテラルの値 '{}' が port '{}' の閉集合に無い: {:?}",
+													s, parsed_to.port, allowed
+												),
+											)
+											.with_file(file_path.clone())
+											.with_node(parsed_from.node_id.clone())
+											.with_hint(edge_hint.clone()),
+										);
+									}
+								}
+							}
+						}
+					}
+				}
 
 				let is_exec = from_port.is_exec && to_port.is_exec;
 				if from_port.is_exec != to_port.is_exec {
@@ -727,6 +862,88 @@ mod tests {
 			report.diagnostics.iter().all(|d| d.severity != Severity::Error),
 			"unexpected errors: {:?}",
 			report.diagnostics,
+		);
+	}
+
+	#[test]
+	fn parse_enums_section() {
+		let src = r#"
+			[[enums]]
+			id = "color"
+			variants = ["red", "green"]
+
+			[[nodes]]
+			id = "lit"
+			feature = "flowgraph.literal.string"
+		"#;
+		let f = parse_flowgraph_file(src, None).unwrap();
+		assert_eq!(f.enums.len(), 1);
+		assert_eq!(f.enums[0].id, "color");
+		assert_eq!(f.enums[0].variants, vec!["red", "green"]);
+	}
+
+	#[test]
+	fn load_duplicate_enum_id_errors() {
+		let path = write_tmp(
+			"graph.flowgraph.toml",
+			r#"
+				[[enums]]
+				id = "x"
+				variants = ["a"]
+
+				[[enums]]
+				id = "x"
+				variants = ["b"]
+
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "a"
+			"#,
+		);
+		let err = load_file(&path, None).expect_err("should fail");
+		assert!(err.errors().any(|d| d.code == DiagnosticCode::DuplicateEnumId));
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
+	fn load_rejects_literal_tts_engine_not_in_closed_set() {
+		let path = write_tmp(
+			"graph.flowgraph.toml",
+			r#"
+				[[nodes]]
+				id = "e"
+				feature = "flowgraph.literal.string"
+				[nodes.properties]
+				value = "not_a_registered_tts_engine"
+
+				[[nodes]]
+				id = "t"
+				feature = "flowgraph.tts.speak"
+
+				[[edges]]
+				from = "e:value"
+				to = "t:engine"
+			"#,
+		);
+		let err = load_file(&path, None).expect_err("should fail");
+		assert!(err
+			.errors()
+			.any(|d| d.code == DiagnosticCode::ClosedStringLiteralOutOfEnum));
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
+	fn normalized_library_id_joins_meta_fields() {
+		let m = FileMeta {
+			author: Some(" Alice ".into()),
+			name: Some("Core-Lib".into()),
+			version: Some("1.0.0".into()),
+			..Default::default()
+		};
+		assert_eq!(
+			normalized_library_id(&m).unwrap(),
+			"alice::core_lib::1_0_0"
 		);
 	}
 

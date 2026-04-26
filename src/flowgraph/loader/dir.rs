@@ -5,11 +5,122 @@
 //! - 隠しフォルダ（`.` 始まり）・アンダースコア始まりフォルダ（`_` 始まり）は skip。
 //! - 全ファイルの fq path を集め、`BuildContext` を構成して単一グラフへ統合。
 
-use crate::flowgraph::loader::diagnostic::{Diagnostic, DiagnosticCode, LoadError, LoadReport};
+use crate::flowgraph::loader::diagnostic::{Diagnostic, DiagnosticCode, LoadError, LoadReport, Severity};
 use crate::flowgraph::loader::file::{parse_flowgraph_file, BuildContext, FlowgraphFile};
 use crate::flowgraph::registry::registry;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+
+fn normalize_library_use_fq(s: &str) -> String {
+	let mut t = s.trim().replace('\\', "/");
+	if let Some(stripped) = t.strip_suffix(".flowgraph.toml") {
+		t = stripped.to_string();
+	}
+	t.trim_matches('/').to_string()
+}
+
+/// `[meta].library_uses` の参照先検証と閉路検出（エラー時はロード失敗）。
+fn library_use_dependency_diagnostics(
+	files: &[(String, PathBuf, FlowgraphFile)],
+	known: &HashSet<String>,
+) -> Vec<Diagnostic> {
+	let mut diagnostics: Vec<Diagnostic> = Vec::new();
+	let mut adj: HashMap<String, Vec<String>> = HashMap::new();
+
+	for (fq, path, file) in files {
+		let Some(meta) = file.meta.as_ref() else {
+			continue;
+		};
+		let Some(uses) = meta.library_uses.as_ref() else {
+			continue;
+		};
+		for raw in uses {
+			let target = normalize_library_use_fq(raw);
+			if target.is_empty() {
+				diagnostics.push(
+					Diagnostic::error(DiagnosticCode::UnknownLibraryRef, "library_uses に空エントリ")
+						.with_file(path.clone())
+						.with_hint(format!("[meta].library_uses / {raw:?}")),
+				);
+				continue;
+			}
+			if !known.contains(&target) {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::UnknownLibraryRef,
+						format!("library_uses の参照先 '{target}' が flowgraph ルート内に存在しない"),
+					)
+					.with_file(path.clone())
+					.with_hint(raw.clone()),
+				);
+				continue;
+			}
+			adj.entry(fq.clone()).or_default().push(target);
+		}
+	}
+
+	if adj.is_empty() {
+		return diagnostics;
+	}
+
+	let mut vertices: HashSet<String> = HashSet::new();
+	for (a, bs) in &adj {
+		vertices.insert(a.clone());
+		for b in bs {
+			vertices.insert(b.clone());
+		}
+	}
+
+	let mut path_stack: Vec<String> = Vec::new();
+	let mut in_stack: HashSet<String> = HashSet::new();
+	let mut finished: HashSet<String> = HashSet::new();
+
+	fn dfs_visit(
+		u: &str,
+		adj: &HashMap<String, Vec<String>>,
+		path_stack: &mut Vec<String>,
+		in_stack: &mut HashSet<String>,
+		finished: &mut HashSet<String>,
+	) -> Option<Vec<String>> {
+		if finished.contains(u) {
+			return None;
+		}
+		if in_stack.contains(u) {
+			let idx = path_stack.iter().position(|x| x == u)?;
+			let mut cyc = path_stack[idx..].to_vec();
+			cyc.push(u.to_string());
+			return Some(cyc);
+		}
+		in_stack.insert(u.to_string());
+		path_stack.push(u.to_string());
+		for v in adj.get(u).into_iter().flatten() {
+			if let Some(c) = dfs_visit(v, adj, path_stack, in_stack, finished) {
+				return Some(c);
+			}
+		}
+		path_stack.pop();
+		in_stack.remove(u);
+		finished.insert(u.to_string());
+		None
+	}
+
+	for v in vertices {
+		if finished.contains(&v) {
+			continue;
+		}
+		path_stack.clear();
+		in_stack.clear();
+		if let Some(cyc) = dfs_visit(&v, &adj, &mut path_stack, &mut in_stack, &mut finished) {
+			diagnostics.push(Diagnostic::error(
+				DiagnosticCode::LibraryDependencyCycle,
+				format!("library_uses に閉路: {}", cyc.join(" -> ")),
+			));
+			break;
+		}
+	}
+
+	diagnostics
+}
 
 /// 指定パスが `*.flowgraph.toml`（`.disabled` は除外）か。
 pub fn is_flowgraph_file(p: &Path) -> bool {
@@ -155,10 +266,13 @@ pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 		}
 	}
 
-	if parse_diags
-		.iter()
-		.any(|d| d.severity == crate::flowgraph::loader::Severity::Error)
-	{
+	if parse_diags.iter().any(|d| d.severity == Severity::Error) {
+		return Err(LoadError::new(parse_diags));
+	}
+
+	let mut lib_diags = library_use_dependency_diagnostics(&parsed, &known_file_fqs);
+	if lib_diags.iter().any(|d| d.severity == Severity::Error) {
+		parse_diags.append(&mut lib_diags);
 		return Err(LoadError::new(parse_diags));
 	}
 
@@ -169,6 +283,7 @@ pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 	let mut report = ctx.build(registry())?;
 	// パース時の warning を合流
 	let mut all = parse_diags;
+	all.append(&mut lib_diags);
 	all.append(&mut report.diagnostics);
 	report.diagnostics = all;
 	Ok(report)
@@ -181,7 +296,7 @@ pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::flowgraph::loader::Severity;
+	use crate::flowgraph::loader::{DiagnosticCode, Severity};
 
 	fn tmp_root() -> PathBuf {
 		use std::time::{SystemTime, UNIX_EPOCH};
@@ -371,6 +486,33 @@ mod tests {
 		// multi-file サンプル
 		assert!(report.node_meta.contains_key("chat-echo/main::in"));
 		assert!(report.node_meta.contains_key("chat-echo/tts::speaker"));
+	}
+
+	#[test]
+	fn library_uses_cycle_returns_error() {
+		let root = tmp_root();
+		write(
+			&root.join("a.flowgraph.toml"),
+			r#"[meta]
+library_uses = ["b"]
+
+"#,
+		);
+		write(
+			&root.join("b.flowgraph.toml"),
+			r#"[meta]
+library_uses = ["a"]
+
+"#,
+		);
+		let err = load_flowgraph_dir(&root).expect_err("cycle");
+		assert!(
+			err.errors()
+				.any(|d| d.code == DiagnosticCode::LibraryDependencyCycle),
+			"{:#?}",
+			err.diagnostics
+		);
+		let _ = std::fs::remove_dir_all(&root);
 	}
 
 	/// 開発者用の `flowgraph.local/`（conf.local.*.toml が `flowgraph_dir` で指す）を

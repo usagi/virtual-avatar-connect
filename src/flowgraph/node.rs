@@ -52,6 +52,9 @@ pub struct PortSpec {
  pub multi: bool,
  #[serde(default, skip_serializing_if = "Option::is_none")]
  pub description: Option<String>,
+ /// Phase λ: `SocketType::String` ポートに限り、取りうる文字列の閉集合（ワイヤ型は `string` のまま）。
+ #[serde(default, skip_serializing_if = "Option::is_none")]
+ pub closed_string_variants: Option<Vec<String>>,
 }
 
 impl PortSpec {
@@ -66,6 +69,7 @@ impl PortSpec {
    default: None,
    multi: false,
    description: None,
+   closed_string_variants: None,
   }
  }
 
@@ -80,6 +84,7 @@ impl PortSpec {
    default: None,
    multi: false,
    description: None,
+   closed_string_variants: None,
   }
  }
 
@@ -94,6 +99,7 @@ impl PortSpec {
    default: None,
    multi: false,
    description: None,
+   closed_string_variants: None,
   }
  }
 
@@ -108,6 +114,7 @@ impl PortSpec {
    default: None,
    multi: false,
    description: None,
+   closed_string_variants: None,
   }
  }
 
@@ -124,6 +131,16 @@ impl PortSpec {
 
  pub fn with_multi(mut self) -> Self {
   self.multi = true;
+  self
+ }
+
+ /// Phase λ: 文字列ポートの閉集合（`SocketType::String` 向け）。
+ pub fn with_closed_string_variants<I, S>(mut self, variants: I) -> Self
+ where
+  I: IntoIterator<Item = S>,
+  S: Into<String>,
+ {
+  self.closed_string_variants = Some(variants.into_iter().map(Into::into).collect());
   self
  }
 }

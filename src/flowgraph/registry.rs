@@ -128,6 +128,9 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::literal::IntLiteralNode));
 	r.register_pure(Arc::new(nodes::literal::FloatLiteralNode));
 	r.register_pure(Arc::new(nodes::literal::StringLiteralNode));
+	// --- library boundary (Phase λ) ---
+	r.register_pure(Arc::new(nodes::library_boundary::LibraryInputNode));
+	r.register_pure(Arc::new(nodes::library_boundary::LibraryOutputNode));
 	r.register_pure(Arc::new(nodes::literal::JsonLiteralNode));
 
 	// --- flow ---
@@ -422,6 +425,8 @@ mod tests {
 			"flowgraph.noise.perlin_2d",
 			"flowgraph.util.log",
 			"flowgraph.tts.speak",
+			"flowgraph.library.input",
+			"flowgraph.library.output",
 			"flowgraph.twitch.chat_send",
 			"flowgraph.twitch.get_token",
 			"flowgraph.twitch.validate_token",
