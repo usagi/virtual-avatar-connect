@@ -3,7 +3,7 @@
 配信中の「誤読だったので今すぐ辞書に追加したい」「過去の学習を取り消したい」を **GUI だけで完結**させるためのチュートリアル。
 
 > 関連ソース:
-> - Control API: [`src/web_interface/control/table.rs`](../../../src/web_interface/control/table.rs) /
+> - Control API: [`src/web_interface/control/table/mod.rs`](../../../src/web_interface/control/table/mod.rs) /
 >   [`src/web_interface/control/flowgraph/mod.rs`](../../../src/web_interface/control/flowgraph/mod.rs)
 > - GUI: [`gui/src/lib/control/dictionary/`](../../../gui/src/lib/control/dictionary/)
 > - ロードマップ仕様: [phase-phi-control-api-dictionary-editor.md](../../roadmap/phase-phi-control-api-dictionary-editor.md)

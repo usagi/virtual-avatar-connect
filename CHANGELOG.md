@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### 内部リファクタ — Control API `table` モジュール分割
+
+- **`src/web_interface/control/table/`**: 旧単一 `table.rs` を `mod.rs`（DTO・ハンドラ・結合テスト）と `util.rs`（allow-list / If-Match / TSV I/O・行ロック）に分割。
+
 ### 内部リファクタ — Control API `flowgraph` モジュール分割
 
 - **`src/web_interface/control/flowgraph/`**: 旧単一 `flowgraph.rs` を `mod.rs`（ツリー・ファイル CRUD・reload）、`util.rs`（パス安全・node-catalog ヒント）、`reload.rs`（ランタイム再構築 + WS）、`trigger.rs`（外部トリガ）、`fragment_zip.rs`（fragment / ZIP）に分割。`reload_runtime` は引き続き `flowgraph::reload_runtime` で `pub(crate)` 公開。

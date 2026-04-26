@@ -63,7 +63,7 @@
 
 ## 3. Control API — Table File Endpoints
 
-既存 [src/web_interface/control/flowgraph/mod.rs](../../src/web_interface/control/flowgraph/mod.rs) と同じ scope (`/api/v1/control/*`) 内に、新ファイル `src/web_interface/control/table.rs` を追加する想定。
+既存 [src/web_interface/control/flowgraph/mod.rs](../../src/web_interface/control/flowgraph/mod.rs) と同じ scope (`/api/v1/control/*`) 内に、[`src/web_interface/control/table/`](../../src/web_interface/control/table/)（`mod.rs` + `util.rs`）を置く想定。
 
 ### 3.1 `GET /control/table/{fq_path}`
 
@@ -424,13 +424,13 @@ pub struct NodeSpec {
 
 ### 10.1 Unit (Rust `cargo test`)
 
-- `src/web_interface/control/table.rs`:
+- `src/web_interface/control/table/mod.rs`（補助: `util.rs`）:
   - `GET` roundtrip（書いた内容がそのまま返る）
   - `PUT` with correct If-Match → 200, with wrong → 409
   - `POST /entry` append → row_index が正しく採番
   - `DELETE` on `is_locked=true` → 403
   - allow-list 外パス → 404
-- `src/web_interface/control/flowgraph_trigger.rs`:
+- `src/web_interface/control/flowgraph/trigger.rs`:
   - `control_triggerable=false` のノードに対する POST → 400
   - `instance_id` 不明 → 404
   - inputs の型 mismatch → 422

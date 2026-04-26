@@ -1017,7 +1017,7 @@ export type ZipImportOutcome = ZipImportPreview | ZipImportReport;
 // Phase φ-1/φ-2/φ-3: Control Table CRUD + Flowgraph Trigger DTOs
 //
 // Rust 側:
-//   - src/web_interface/control/table.rs          (TableCatalogItem / TableFileDto 等)
+//   - src/web_interface/control/table/mod.rs      (TableCatalogItem / TableFileDto 等)
 //   - src/web_interface/control/flowgraph/trigger.rs (TriggerNodeRequest / TriggerNodeResponse)
 //   - src/conf/mod.rs                              (ControlTableQuickAdd)
 // ---------------------------------------------------------------------------
