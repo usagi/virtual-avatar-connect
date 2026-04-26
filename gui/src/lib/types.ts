@@ -2,9 +2,9 @@
  * VAC Control API の DTO を TypeScript に写したもの。
  *
  * **本ファイルは Rust 側の真実の写し** であり、以下のファイルと 1:1 で整合させること:
- *   - src/web_interface/control/ping.rs       → PingResponse / WhoAmIResponse
- *   - src/web_interface/control/dto.rs        → StateSnapshot / *Summary
- *   - src/web_interface/control/actions.rs    → PauseTarget / PauseOutcome
+ *   - src/web_interface/control/ping/mod.rs   → PingResponse / WhoAmIResponse
+ *   - src/web_interface/control/dto/mod.rs  → StateSnapshot / *Summary
+ *   - src/web_interface/control/actions/mod.rs → PauseTarget / PauseOutcome
  *   - src/web_interface/control/reload/mod.rs → ReloadRequest / ReloadResponse
  *   - src/twitch_oauth_sessions.rs（Control API は oauth_twitch/）→ OAuth* 一式
  *   - src/control_events.rs                   → ControlEvent (discriminated union)

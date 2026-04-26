@@ -10,14 +10,17 @@
 //!
 //! レスポンスには `id`（ChannelDatum の連番）と解決された `channel` を返す。GUI は WS の `channel_datum`
 //! イベントとこの id を突き合わせれば自分の送信がパイプラインを流れたか追跡できる（将来拡張）。
+//!
+//! ハンドラ本体は [`post`]。
 
-use actix_web::web::{self, Data, Json};
-use actix_web::{post, HttpResponse, Responder};
+mod post;
+
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 use crate::state::DataSource;
-use crate::{ChannelDatum, SharedState};
+
+use actix_web::web;
 
 /// `/ingress` リクエストボディ。`channel` と `content` 以外はすべて省略可能。
 #[derive(Debug, Deserialize)]
@@ -50,57 +53,6 @@ pub struct IngressResponse {
 	pub accepted: bool,
 }
 
-#[post("/ingress")]
-pub async fn post_ingress(state: Data<SharedState>, body: Json<IngressRequest>) -> impl Responder {
-	let req = body.into_inner();
-
-	let channel = req.channel.trim();
-	if channel.is_empty() {
-		return HttpResponse::BadRequest().json(serde_json::json!({
-		 "error": "bad_request",
-		 "reason": "channel is required and must not be empty",
-		}));
-	}
-	// content は空文字を許す（空文字の is_final で「区切りだけ」を送るユースケースがあり得る）。
-
-	let mut cd = ChannelDatum::new(channel.to_string(), req.content);
-	let is_final = req.is_final.unwrap_or(true);
-	cd = cd.with_flag_if(ChannelDatum::FLAG_IS_FINAL, is_final);
-
-	if let Some(flags) = req.flags {
-		for f in flags {
-			let f = f.trim();
-			if !f.is_empty() {
-				cd.flags.insert(f.to_string());
-			}
-		}
-	}
-
-	cd.source = req.source.or_else(|| Some(DataSource::new("control.ingress").with_actor("gui")));
-
-	if let Some(meta) = req.meta {
-		cd.meta = meta;
-	}
-
-	let id = cd.get_id();
-	let channel_out = cd.channel.clone();
-	log::info!(
-		"《ControlAPI/ingress》 投入: id={} channel={} content_len={} flags={:?} meta_keys={:?}",
-		id,
-		channel_out,
-		cd.content.len(),
-		cd.flags,
-		cd.meta.keys().collect::<Vec<_>>(),
-	);
-	state.read().await.push_channel_datum(cd).await;
-
-	HttpResponse::Ok().json(IngressResponse {
-		id,
-		channel: channel_out,
-		accepted: true,
-	})
-}
-
 pub fn configure(cfg: &mut web::ServiceConfig) {
-	cfg.service(post_ingress);
+	cfg.service(post::post_ingress);
 }

@@ -133,7 +133,7 @@
 
 ### 3.5 DTO 定義
 
-[src/web_interface/control/dto.rs](../../src/web_interface/control/dto.rs) に以下を追加:
+[src/web_interface/control/dto/mod.rs](../../src/web_interface/control/dto/mod.rs) に以下を追加:
 
 ```rust
 #[derive(Serialize, Deserialize)]
@@ -465,7 +465,7 @@ pub struct NodeSpec {
 ## 12. References
 
 - 保留元: [phase-eta-dictionary-unification.md §9.2 / §9.3](phase-eta-dictionary-unification.md)
-- 既存 Control API 実装: [src/web_interface/control/](../../src/web_interface/control/) 配下、特に [flowgraph/mod.rs](../../src/web_interface/control/flowgraph/mod.rs) / [auth/mod.rs](../../src/web_interface/control/auth/mod.rs) / [dto.rs](../../src/web_interface/control/dto.rs)
+- 既存 Control API 実装: [src/web_interface/control/](../../src/web_interface/control/) 配下、特に [flowgraph/mod.rs](../../src/web_interface/control/flowgraph/mod.rs) / [auth/mod.rs](../../src/web_interface/control/auth/mod.rs) / [dto/mod.rs](../../src/web_interface/control/dto/mod.rs)
 - V1 死体: 過去 `gui/src/lib/DictionaryQuickAddWidget.svelte`（`modify` processor 前提で dead code 化、V2 δ-9 で削除）
 - Flowgraph node spec: [src/flowgraph/node.rs](../../src/flowgraph/node.rs)、[src/flowgraph/registry.rs](../../src/flowgraph/registry.rs)
 - 関連メモ: [v2-merge-pr.md](v2-merge-pr.md) の η→φ 移行計画

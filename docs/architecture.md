@@ -138,7 +138,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 | `motion` | `conf`, `shutdown`, 自 `motion::*` | Flowgraph / `state` / `bridges` へ **依存しない**（UDP パススルーは conf のみ）。 |
 | `bridges` | `flowgraph`（loader / node / socket）, `state`（共有型）, `shutdown`（例: VMC ingress）, `processor`（voice） | ingress → Flowgraph の **一方向**。`motion` へは触れない。 |
 | `flowgraph` | `conf`, `state`, `shutdown`, 自ツリー | `bridges` / `web_interface` へ **依存しない**（ノード doc 内のブリッジ名は説明用コメントのみ）。 |
-| `web_interface` | `state`, `flowgraph`, `bridges`, `ai`, … | Control API がランタイムを操作する **最上位の集約層**のまま。`control/flowgraph/`・`control/table/`・`control/profiles/`・`control/restart/`・`control/run_with/`・`control/auth/`・`control/oauth_twitch/`・`control/managed_app/`・`control/bos/`・`control/reload/`・`control/ws/` は `mod` + 補助サブモジュールに分割済み。 |
+| `web_interface` | `state`, `flowgraph`, `bridges`, `ai`, … | Control API がランタイムを操作する **最上位の集約層**のまま。`control/*` のうちハンドラ群（`flowgraph` / `table` / `profiles` / `restart` / `run_with` / `auth` / `oauth_twitch` / `managed_app` / `bos` / `reload` / `ws` / `actions` / `dto` / `ping` / `shutdown` / `ingress`）はいずれもディレクトリ + 補助サブモジュールに分割済み。`events`・`mod` は単一ファイルのまま。 |
 | `state` | `conf`, `flowgraph`, `shutdown`, `ai`, `runtime`, `twitch_oauth_sessions`, `control_events` | **`web_interface` に依存しない**（Control イベント型は `control_events`）。`vac-core` 化時は本モジュール群をクレート境界に沿って再配置する整理対象。 |
 
 ---

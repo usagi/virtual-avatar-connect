@@ -270,8 +270,8 @@ parse 対象文字列の TZ 情報の有無を以下で判定:
 | 3 | `src/web_interface/ws.rs` | 6 | `use chrono::{DateTime, Utc}` | `use jiff::Timestamp` | |
 | 4 | `src/web_interface/output.rs` | 92 | `retrieved_timestamp.parse::<chrono::DateTime<chrono::Utc>>().unwrap()` | `retrieved_timestamp.parse::<Timestamp>()?` | unwrap → ? (呼出元 Result 化必要) |
 | 5 | `src/web_interface/control/ws/actor.rs` | 該当行 | `chrono::Utc::now().to_rfc3339()` | `Timestamp::now().to_string()` | RFC3339 互換、subsec 有無要確認 |
-| 6 | `src/web_interface/control/ping.rs` | 26 | 同上 | 同上 | |
-| 7 | `src/web_interface/control/dto.rs` | 101 | 同上 | 同上 | |
+| 6 | `src/web_interface/control/ping/mod.rs` | 該当行 | 同上 | 同上 | |
+| 7 | `src/web_interface/control/dto/mod.rs` | 該当行 | 同上 | 同上 | |
 | 8 | `src/web_interface/control/restart/mod.rs` | 該当行 | `chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339()` | `Timestamp::try_from(t).map(\|ts\| ts.to_string())` | `SystemTime` → `Timestamp` 変換は `try_from` |
 | 9 | `src/web_interface/control/oauth_twitch/mod.rs` | 該当行 | `use chrono::{DateTime, Utc}` | `use jiff::Timestamp` | |
 | 10 | `src/web_interface/control/profiles/util.rs` | （`backup_path`） | `chrono::Local::now().format("%Y%m%d-%H%M%S").to_string()` | `Zoned::now().strftime("%Y%m%d-%H%M%S").to_string()` | Local → `Zoned::now()` は system tz 利用 |

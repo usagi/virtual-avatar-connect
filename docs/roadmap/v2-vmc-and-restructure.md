@@ -328,7 +328,12 @@ flowgraph.motion.map
 * **実施（追記）**: `web_interface/control/bos/` を **`mod.rs` + `util.rs`** に分割（旧 `bos.rs` を廃止。カテゴリ推定・channel 検出・タイトル生成は `util`）。
 * **実施（追記）**: `web_interface/control/reload/` を **`mod.rs` + `ai_persona.rs`** に分割（旧 `reload.rs` を廃止。AI persona 適用は `ai_persona`）。
 * **実施（追記）**: `web_interface/control/ws/` を **`mod.rs` + `actor.rs`** に分割（旧 `ws.rs` を廃止。`ControlEventsWs` は `actor`）。
-* **残り（後続 PR）**: 上記以外の `web_interface::control/*` の肥大化、他モジュールの同様の表化など。
+* **実施（追記）**: `web_interface/control/actions/` を **`mod.rs` + `pause.rs`** に分割（旧 `actions.rs` を廃止）。
+* **実施（追記）**: `web_interface/control/dto/` を **`mod.rs` + `twitch_summary.rs`** に分割（旧 `dto.rs` を廃止。モジュール先頭 rustdoc を日本語で整理）。
+* **実施（追記）**: `web_interface/control/ping/` を **`mod.rs` + `responses.rs`** に分割（旧 `ping.rs` を廃止）。
+* **実施（追記）**: `web_interface/control/shutdown/` を **`mod.rs` + `types.rs`** に分割（旧 `shutdown.rs` を廃止）。
+* **実施（追記）**: `web_interface/control/ingress/` を **`mod.rs` + `post.rs`** に分割（旧 `ingress.rs` を廃止）。
+* **残り（後続 PR）**: `web_interface/control/events.rs` や `control/mod.rs` の肥大化が顕在化した場合の分割、他モジュールの同様の表化など。
 
 #### Step 5（一部完了）
 

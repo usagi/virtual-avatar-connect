@@ -5,6 +5,14 @@
 
 ## [Unreleased]
 
+### 内部リファクタ — Control API `actions` / `dto` / `ping` / `shutdown` / `ingress` モジュール分割
+
+- **`src/web_interface/control/actions/`**: 旧 `actions.rs` を `mod.rs`（snapshot・`PauseTarget`・ルート）と `pause.rs`（pause/resume 適用・`resolve_ai_index`・単体テスト）に分割。
+- **`src/web_interface/control/dto/`**: 旧 `dto.rs` を `mod.rs`（snapshot DTO・`snapshot`）と `twitch_summary.rs`（`compute_twitch_authorized`）に分割。先頭 rustdoc の文字化けを修正。
+- **`src/web_interface/control/ping/`**: 旧 `ping.rs` を `mod.rs` と `responses.rs`（`Pong` / `WhoAmI`）に分割。
+- **`src/web_interface/control/shutdown/`**: 旧 `shutdown.rs` を `mod.rs`（ハンドラ）と `types.rs`（DTO・serde テスト）に分割。
+- **`src/web_interface/control/ingress/`**: 旧 `ingress.rs` を `mod.rs`（DTO・`configure`）と `post.rs`（`POST /ingress`）に分割。
+
 ### 内部リファクタ — Control API `bos` / `reload` / `ws` モジュール分割
 
 - **`src/web_interface/control/bos/`**: 旧 `bos.rs` を `mod.rs`（DTO・`GET /bos`）と `util.rs`（カテゴリ推定・channel 検出・タイトル・単体テスト）に分割。
