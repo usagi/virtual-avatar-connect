@@ -140,6 +140,7 @@ Existing `ToolsTab` can remain here until split further.
 ### GR-1 Shell IA
 
 - Replace top-level tab list with `Now / Modes / Flowgraph Studio / Resources / Observability / Settings`.
+- Use a responsive navigation shell: horizontal on narrow screens, left rail on desktop.
 - Keep old hash redirects:
   - `#live` -> `#now`
   - `#setup` -> `#resources`
