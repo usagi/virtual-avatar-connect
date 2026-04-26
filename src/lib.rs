@@ -2,6 +2,7 @@ pub(crate) mod ai;
 mod args;
 pub(crate) mod bridges;
 mod conf;
+mod motion;
 pub(crate) mod datetime;
 mod error;
 mod logger;
@@ -177,6 +178,10 @@ pub async fn run() -> Result<()> {
   let mut slot = s.bridge_handles.lock().await;
   *slot = initial_bridges;
  }
+
+ // Phase M0: VMC 生 UDP パススルー（Flowgraph 非依存）。`[motion]` 省略時は何もしない。
+ let motion_handles = motion::MotionHandles::spawn_all(&conf, shutdown.clone());
+
  let flowgraph_trigger_data: std::sync::Arc<Option<flowgraph::node::TriggerHandle>> =
   std::sync::Arc::new(flowgraph_trigger.clone());
 
@@ -232,6 +237,9 @@ pub async fn run() -> Result<()> {
    outcome.terminated_pids
   );
  }
+
+ // Phase M0: motion ワーカー停止（UDP ソケット解放）。
+ motion_handles.finish_all().await;
 
  // ζ-3: bridges の後処理は `State.bridge_handles` に集約。reload と同じ経路で閉じる。
  {

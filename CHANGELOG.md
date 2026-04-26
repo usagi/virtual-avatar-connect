@@ -5,6 +5,13 @@
 
 ## [Unreleased]
 
+### Phase M0 — motion 層: VMC 生 UDP パススルー
+
+- **設計**: [`docs/roadmap/v2-vmc-and-restructure.md`](docs/roadmap/v2-vmc-and-restructure.md) を親計画として `docs/roadmap.md` **Active（Phase M）** にリンク。M0 の正本は [`docs/roadmap/phase-mu-vmc-motion-m0.md`](docs/roadmap/phase-mu-vmc-motion-m0.md)。
+- **`src/motion/`**: `vmc_raw`（UDP bind + `recv_from` + `ShutdownBroker` 待機）+ `router`（マルチ `send_to`）。`osc` は M4 までプレースホルダ。
+- **`[motion]` / `[[motion.vmc_passthrough]]`**: `bind` と `forward_to`（`host:port` 文字列）。パースなしのペイロードコピー転送。例: [`conf.example-motion.toml`](conf.example-motion.toml)。
+- **ドキュメント**: `docs/architecture.md`（`motion` 依存方向）、`docs/manual/conf-reference.md` §3.1。
+
 ### Phase λ — Flowgraph Enum + ライブラリ再利用（初版）
 
 - **設計**: [`docs/roadmap/phase-lambda-flowgraph-enum-and-library.md`](docs/roadmap/phase-lambda-flowgraph-enum-and-library.md) を正本化。`docs/roadmap.md` で Phase λ を **Completed** に移動し Phase υ / Unscheduled へ cross-link、`phase-delta-spec.md` §8.6 にスキーマ拡張を追記。

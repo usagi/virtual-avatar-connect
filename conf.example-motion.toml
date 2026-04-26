@@ -1,0 +1,20 @@
+# VMC 生 UDP パススルー（Phase M0）の最小例。
+# コピー後は bind / forward_to を環境に合わせて変更すること。
+#
+# 詳細: docs/roadmap/phase-mu-vmc-motion-m0.md
+
+web_ui_address = "127.0.0.1:57000"
+log_level = "Info"
+
+# Flowgraph を使う場合のみ指定（未指定でも VAC は起動する）。
+# flowgraph_dir = "flowgraph"
+
+[motion]
+# 受信 39539 → 127.0.0.1:39540 と 127.0.0.1:39541 へ同一ペイロードを転送（パースなし）。
+[[motion.vmc_passthrough]]
+enabled = true
+bind = "0.0.0.0:39539"
+forward_to = [
+  "127.0.0.1:39540",
+  "127.0.0.1:39541",
+]

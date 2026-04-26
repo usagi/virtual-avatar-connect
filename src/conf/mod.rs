@@ -1,6 +1,8 @@
+mod motion;
 mod processor_conf;
 
 pub use anyhow::{bail, Result};
+pub use motion::{MotionConf, VmcPassthroughSpec};
 pub use processor_conf::*;
 
 use crate::ai::AiConf;
@@ -562,6 +564,10 @@ pub struct Conf {
  /// VoicePeak CLI のグローバルパス（`[voicepeak]`）。未指定時は [`resolve_voicepeak_fallback_executable`] と同じ既定。
  #[serde(default)]
  pub voicepeak: Option<VoicepeakConfig>,
+
+ /// Phase M0: VMC 生 UDP パススルー等。未指定時は motion ワーカーを起動しない。
+ #[serde(default, skip_serializing_if = "Option::is_none")]
+ pub motion: Option<MotionConf>,
 
  #[serde(default)]
  pub run_with: Vec<RunWith>,

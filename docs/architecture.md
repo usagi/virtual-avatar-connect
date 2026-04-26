@@ -80,6 +80,11 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 - Flowgraph ⇄ ingress/egress のブリッジ配線
 - reload 時に `BridgeHandles` を `SharedState` に保持して graceful 再配線
 
+### `src/motion/`（Phase M0〜）
+
+- VMC 互換の **生 UDP パススルー**（`[motion]`、`ShutdownBroker` 連携）。パースは後段（M4 / Phase ρ 系）
+- 設計: [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md)、M0 正本: [`roadmap/phase-mu-vmc-motion-m0.md`](roadmap/phase-mu-vmc-motion-m0.md)
+
 ### `src/twitch/`
 
 - EventSub / Helix / IRC
@@ -115,6 +120,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 - `lib.rs` / `main.rs` は全 feature モジュールに依存
 - `conf` / `state` / `shutdown` は core utility 相当、他モジュールから参照されるが自身は最小依存
 - `flowgraph` は `state` / `conf` / `shutdown` に依存、ingress 系（`twitch` / `bridges`）とは broadcast 経由で疎結合
+- `motion` は `conf` / `shutdown` のみに依存（Flowgraph 非依存）。将来 `vmc_ingress` ブリッジから利用予定（Phase M1）
 - `ai` は `state` / `conf` / `shutdown` に依存、`flowgraph` とは独立（Flowgraph ノードとしての embedding は将来拡張）
 - `web_interface` は全モジュールに依存（Control API が runtime 状態を触るため）
 - `gui` は HTTP/WS 経由でのみ `web_interface` に依存、Rust コードへの直接依存なし

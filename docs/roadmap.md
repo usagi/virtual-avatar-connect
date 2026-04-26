@@ -169,13 +169,25 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 
 ## Active Phases
 
-（現在アクティブなマイルストーンなし。Phase λ を Completed に移動済み。）
+### Phase M — VMC パススルーと motion 層（[`v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md)）
+
+ギリシャ文字フェーズ（δ / φ …）とは別ラベルの **M0〜M5** で追う。全体方針・アーキ図は [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md)。**M0 の実装・設定スキーマの正本**は [`roadmap/phase-mu-vmc-motion-m0.md`](roadmap/phase-mu-vmc-motion-m0.md)。
+
+- [x] M-0 docs: `phase-mu-vmc-motion-m0.md` 新設 + `roadmap.md` Active 化 + `architecture.md` / `conf-reference.md` + `v2-vmc-and-restructure.md` cross-link + `conf.example-motion.toml`
+- [x] M-0 feat(motion): `src/motion/`（`vmc_raw` + `router` + `osc` プレースホルダ）+ `[motion]` / `MotionHandles` 起動・`ShutdownBroker` 連携
+- [ ] M-1 feat(bridges,flowgraph): `flowgraph.ingress.vmc_udp` + `vmc_ingress` ブリッジ + `` `TriggerEvent` `` 投入
+- [ ] M-2 feat(motion): パススルー・ハブ運用の conf / ログ整備（複数受信ソケットの運用例）
+- [ ] M-3 feat(web_interface,gui): Control API `POST /api/v1/vmc/*` + トレイ/Web UI の転送先管理
+- [ ] M-4 feat(flowgraph): `MotionFrame` / `flowgraph.motion.*`（後段）
+- [ ] M-5 docs+flowgraph: 表情・ジェスチャ等の用途拡張（`v2-vmc` §5 参照）
 
 ---
 
 ## Backlog / Future
 
 ### Phase ρ — OSC / VMC / VRC bridge (TBD)
+
+**Phase M0〜M2** で VMC **生 UDP** のパススルーと（将来）Flowgraph ingress を先に切る。[`v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) / [`phase-mu-vmc-motion-m0.md`](roadmap/phase-mu-vmc-motion-m0.md)。本 Phase ρ は **OSC の型付き送受信・VRChat ヘルパー・Flowgraph ノード群**（`rosc` 等）の横串として従来どおり backlog に残す（M 系完了後の接続を想定）。
 
 Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・VRChat・その他 OSC 対応ソフト（VTube Studio の一部 / LiveLinkFace 等）を制御する基盤。VAC を「独自 avatar renderer を持つ前に、既存アバターアプリを Flowgraph から総合制御するハブ」に格上げする phase。
 
@@ -278,6 +290,8 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 ## Related Documents
 
 - [`architecture.md`](architecture.md) — VAC のレイヤ構成と Commit Granularity Rule
+- [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) — VMC 対応と再構造化（Phase **M0〜M5**）
+- [`roadmap/phase-mu-vmc-motion-m0.md`](roadmap/phase-mu-vmc-motion-m0.md) — motion 層 M0（VMC UDP パススルー）詳細
 - [`roadmap/phase-delta-spec.md`](roadmap/phase-delta-spec.md) — Flowgraph 基幹仕様
 - [`manual/index.md`](manual/index.md) — ユーザー向けマニュアル
 - [`../CHANGELOG.md`](../CHANGELOG.md) — Phase 単位の変更履歴
