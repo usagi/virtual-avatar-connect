@@ -22,7 +22,7 @@ pub use speech_floor::SpeechFloorManager;
 use crate::ai::Observation;
 use crate::conf::Twitch;
 use crate::flowgraph::{shared_flowgraph_new, SharedFlowgraph};
-use crate::runtime::RuntimePaths;
+use crate::runtime::{init_runtime_paths, RuntimePaths};
 use crate::shutdown::ShutdownBroker;
 use crate::control_events::{ChannelDatumPhase, ControlEvent};
 use crate::twitch_oauth_sessions::OAuthSessions;
@@ -244,7 +244,7 @@ impl State {
 		};
 		log::trace!("ChannelData の初期化が完了しました。");
 
-		let runtime_paths = Arc::new(RuntimePaths::init(conf)?);
+		let runtime_paths = Arc::new(init_runtime_paths(conf)?);
 
 		let (ai_observation_tx, _rx) = broadcast::channel::<Observation>(AI_OBSERVATION_CHANNEL_CAPACITY);
 		let (control_event_tx, _rx) = broadcast::channel::<ControlEvent>(CONTROL_EVENT_CHANNEL_CAPACITY);

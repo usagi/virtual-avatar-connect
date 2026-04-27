@@ -102,9 +102,10 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 
 - LibreTranslate HTTP クライアント + Managed App 連携
 
-### `crates/vac-core/src/shutdown.rs`
+### `crates/vac-core/src/`
 
-- `ShutdownBroker`（Ctrl+C / Control API / Desktop / Fatal の経路を単一 broker に集約）。root 側 `src/shutdown.rs` は互換用の再エクスポート。
+- `shutdown.rs`: `ShutdownBroker`（Ctrl+C / Control API / Desktop / Fatal の経路を単一 broker に集約）。root 側 `src/shutdown.rs` は互換用の再エクスポート。
+- `runtime.rs`: `RuntimePaths` / `RuntimePathConfig`（ランタイム一時ディレクトリ、セッション ID、inline attachment 上限）。root 側 `src/runtime.rs` は `Conf` から core 入力を作る adapter。
 
 ### `src/migrate/`
 
