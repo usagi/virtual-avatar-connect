@@ -24,11 +24,6 @@
 use super::prefix::SIPrefix;
 use super::unit::Unit;
 #[cfg(test)]
-use super::unit::BaseUnitId;
-#[cfg(test)]
-use std::collections::BTreeMap;
-
-#[cfg(test)]
 use super::BaseUnitId;
 #[cfg(test)]
 use std::collections::BTreeMap;

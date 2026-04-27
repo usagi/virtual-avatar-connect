@@ -42,8 +42,11 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 
 ### `src/lib.rs` / `src/main.rs` / `src/runtime.rs`
 
-- プロセスエントリ、`run()` の wiring
-- `ShutdownBroker` 初期化、Ctrl+C listener、cleanup フェーズ
+- プロセスエントリ: `main` → `lib::run()` はロガー・CLI 特殊モード・conf ロードまで。常駐本体は `src/app_core.rs` の `run_vac_application`（`ShutdownBroker` 以降〜 actix `run_services` 〜 cleanup）。
+
+### `src/app_core.rs`
+
+- 再構造化 Step 7 の一段: `ShutdownBroker` / `State::new` / bridges・motion・Control API・HTTP サーバ・shutdown cleanup を集約。将来 `vac-app` runner に移す境界の目印。
 
 ### `src/conf/`
 

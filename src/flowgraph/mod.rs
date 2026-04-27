@@ -13,6 +13,7 @@
 pub mod config;
 pub mod docs;
 pub mod engine;
+pub mod fixture_runner;
 pub mod fragment;
 pub mod loader;
 pub mod activation;

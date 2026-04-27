@@ -5,6 +5,16 @@
 
 ## [Unreleased]
 
+### M-4a / Step 7 / ρ 先取り — motion OSC パース、OSC 送信、fixture runner、`app_core`
+
+- **`rosc` 依存** + **`src/motion/frame.rs`** / **`vmc_osc.rs`**: UDP ペイロードの OSC デコード → JSON（`byte_len` / `osc_messages[]`）。
+- **`flowgraph.motion.vmc_parse`**（Pure）: `payload_b64` → `frame`（Json）。
+- **`flowgraph.osc.send`**（Effectful）: `host` / `port` / `path` / `args`（JSON 配列）で単発 OSC を UDP 送信、`on_success` / `on_error`。
+- **`src/flowgraph/fixture_runner.rs`**: `load_fixture_program` / `load_and_execute_once` + `flowgraph.example/lambda-demo` の lib テスト。
+- **`src/app_core.rs`**: `run_vac_application` + actix `run_services` を `lib::run` から分離（再構造化 Step 7 一段）。
+- **`lib.rs`**: `Arc` / `RwLock` をクレート根で `pub use`（既存 `crate::RwLock` パスを維持）。
+- **`docs/manual/node-catalog.md`**: 新ノード反映。
+
 ### RM-1 — `conf.toml` に `[modes.*]`（Runtime Mode 宣言）を追加
 
 - **`src/conf/runtime_mode.rs`**: `modes` / `default_runtime_mode` の serde 用型とロード時検証（Managed App ID と `run_with` の整合、enable/disable の重複禁止）。

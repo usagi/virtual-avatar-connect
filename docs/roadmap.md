@@ -181,7 +181,8 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] M-1 feat(flowgraph,bridges): `flowgraph.ingress.vmc_udp` + `vmc_ingress` ブリッジ + `` `TriggerEvent` `` 投入（`phase-mu` §8、`flowgraph.example/vmc-udp-ingress`）
 - [x] M-2 feat(motion): パススルー・ハブ運用の conf / ログ整備（複数受信ソケットの運用例）
 - [ ] M-3 feat(web_interface,gui): Control API `POST /api/v1/vmc/*` + トレイ/Web UI の転送先管理
-- [ ] M-4 feat(flowgraph): `MotionFrame` / `flowgraph.motion.*`（後段）
+- [x] M-4a feat(flowgraph,motion,deps): `flowgraph.motion.vmc_parse`（Base64→OSC→JSON）+ Phase ρ 先取り `flowgraph.osc.send`（UDP）+ `rosc` + `flowgraph::fixture_runner` 最小 + `src/app_core.rs`（Step 7 一段）
+- [ ] M-4 feat(flowgraph): `MotionFrame` 第一級型 + `flowgraph.motion.filter` / `.map`（M-4a 以降）
 - [ ] M-5 docs+flowgraph: 表情・ジェスチャ等の用途拡張（`v2-vmc` §5 参照）
 
 ### v2 crate / runner / GUI 同梱（再構造化メタ）
@@ -192,7 +193,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] Step 5（部分）: ワークスペース化（`vac-gui-assets` のみメンバ追加、`default-members = ["."]`）。他 crate の分割は継続
 - [x] Step 6a: Cargo feature **`embed-gui`** — `/gui/*` メモリ配信（`gui_embedded` / `gui_path`）
 - [x] Step 6b（crate）: **`vac-gui-assets`** メンバ（`include_dir` + `build.rs`）。**CI は §1.3 どおり未着手**
-- [ ] Step 7: `AppCore` boot / serve / cleanup 抽出（ε-2a）
+- [x] Step 7（一段）: `src/app_core.rs` の `run_vac_application`（`ShutdownBroker` 以降〜 cleanup）+ `run_services` 集約。将来 `vac-app` への切り出し境界
 - [ ] Step 8: CLI / desktop の 2 runner（仮称どおり）
 - [ ] Step 9: desktop に Tauri + 同梱静的 + トレイ
 
@@ -227,8 +228,9 @@ VAC GUI を「機能別の設定パネル」から「常駐ランタイムの管
 
 Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・VRChat・その他 OSC 対応ソフト（VTube Studio の一部 / LiveLinkFace 等）を制御する基盤。VAC を「独自 avatar renderer を持つ前に、既存アバターアプリを Flowgraph から総合制御するハブ」に格上げする phase。
 
-- [ ] `rosc` crate 追加 + `src/flowgraph/osc.rs` 基盤（UDP sender / receiver の ingress 型）
-- [ ] `flowgraph.osc.send`（address / args JSON / host / port）
+- [x] `rosc` crate 追加（`Cargo.toml`）— デコードは `src/motion/vmc_osc.rs`、単発送信は `flowgraph.osc.send`
+- [ ] `src/flowgraph/osc.rs` 共有基盤（UDP sender / receiver の ingress 型）— 現状は motion + ノード直実装
+- [x] `flowgraph.osc.send`（host / port / path / args JSON、`on_success` / `on_error`）
 - [ ] `flowgraph.ingress.osc`（bind port + address filter → exec + args 展開）
 - [ ] VMC Protocol pose send（アバター姿勢データを VMC プロトコル準拠 OSC で送出）
 - [ ] VMC Protocol pose recv（iFacialMocap / 各種トラッカーからの VMC 受信 ingress）

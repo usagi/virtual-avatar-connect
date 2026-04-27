@@ -141,11 +141,15 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.mode.equals`](#flowgraph-mode-equals) — Mode Equals
   - [`flowgraph.mode.get`](#flowgraph-mode-get) — Mode Get
   - [`flowgraph.mode.transit`](#flowgraph-mode-transit) — Mode Transit
+- **motion**
+  - [`flowgraph.motion.vmc_parse`](#flowgraph-motion-vmc-parse) — Motion: VMC OSC Parse
 - **noise**
   - [`flowgraph.noise.perlin_1d`](#flowgraph-noise-perlin-1d) — Perlin 1D
   - [`flowgraph.noise.perlin_2d`](#flowgraph-noise-perlin-2d) — Perlin 2D
 - **ocr**
   - [`flowgraph.ocr.recognize`](#flowgraph-ocr-recognize) — OCR Recognize
+- **osc**
+  - [`flowgraph.osc.send`](#flowgraph-osc-send) — OSC: UDP Send
 - **random**
   - [`flowgraph.random.normal`](#flowgraph-random-normal) — Random normal
   - [`flowgraph.random.uniform_float`](#flowgraph-random-uniform-float) — Random uniform (float)
@@ -1833,6 +1837,20 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 |---|---|---|---|---|
 | `noop_message` | `string` | `"noop"` |  | 実効 mode が変わらなかったときの `message` 文字列。 |
 
+## motion
+
+### `flowgraph.motion.vmc_parse`
+
+**Motion: VMC OSC Parse** — Base64 された UDP ペイロードを OSC として解釈し、address/args を JSON にまとめる（Phase M4 v0）
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `payload_b64` | `string` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `frame` | `json` |  |
+
 ## noise
 
 ### `flowgraph.noise.perlin_1d`
@@ -1881,6 +1899,27 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_success` | `exec` (out) |  |
 | `on_error` | `exec` (out) |  |
 | `text` | `string` |  |
+| `error` | `string` |  |
+
+## osc
+
+### `flowgraph.osc.send`
+
+**OSC: UDP Send** — 単一 OSC メッセージを UDP で送信する。args は JSON 配列（数値・文字列・真偽・null・ネスト配列）
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `host` | `string` | — |  |
+| `port` | `int` | — |  |
+| `path` | `string` | — |  |
+| `args` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `bytes_sent` | `int` |  |
 | `error` | `string` |  |
 
 ## random

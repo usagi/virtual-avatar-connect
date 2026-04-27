@@ -8,9 +8,13 @@
 //! このモジュールツリーは **`crate::conf`** と **`crate::shutdown`**（および自サブモジュール）のみを参照する。
 //! **`flowgraph` / `bridges` / `state` / `web_interface` へは依存しない**（VMC の Flowgraph 入口は `bridges::vmc_ingress`）。
 
+mod frame;
 mod osc;
 mod router;
 mod vmc_raw;
+mod vmc_osc;
+
+pub use vmc_osc::parse_vmc_payload;
 
 use crate::conf::Conf;
 use crate::conf::VmcPassthroughSpec;
