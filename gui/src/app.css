@@ -122,3 +122,46 @@ body {
  background:
   linear-gradient(180deg, color-mix(in oklch, var(--color-surface-100-900) 26%, transparent), transparent 340px);
 }
+
+.vac-panel,
+.vac-stat-card {
+ border: 1px solid var(--vac-chrome-border);
+ border-radius: var(--vac-panel-radius);
+ background:
+  linear-gradient(180deg, color-mix(in oklch, white 3%, transparent), transparent),
+  color-mix(in oklch, var(--color-surface-50-950) 96%, transparent);
+ box-shadow: 0 1px 0 var(--vac-chrome-hairline);
+}
+
+.vac-panel-muted {
+ border: 1px solid var(--vac-chrome-border);
+ border-radius: var(--vac-panel-radius);
+ background:
+  linear-gradient(180deg, color-mix(in oklch, var(--color-primary-500) 4%, transparent), transparent),
+  color-mix(in oklch, var(--color-surface-100-900) 90%, transparent);
+}
+
+.vac-panel-header {
+ border-bottom: 1px solid var(--vac-chrome-border);
+ background: color-mix(in oklch, var(--color-surface-100-900) 42%, transparent);
+}
+
+.vac-stat-card {
+ min-height: 6.25rem;
+}
+
+.vac-stat-label {
+ font-size: 0.72rem;
+ letter-spacing: 0;
+ opacity: 0.62;
+}
+
+.vac-stat-value {
+ font-variant-numeric: tabular-nums;
+ line-height: 1.1;
+}
+
+.vac-subtle-row {
+ border-radius: calc(var(--vac-panel-radius) - 0.125rem);
+ background: color-mix(in oklch, var(--color-surface-100-900) 72%, transparent);
+}
