@@ -64,4 +64,11 @@ mod tests {
 		// ソースが無い／pull のみのグラフでも完走すれば generation が進む
 		assert!(run.generation > 0);
 	}
+
+	#[tokio::test]
+	async fn osc_udp_ingress_example_loads() {
+		let dir = example_dir("osc-udp-ingress");
+		let ok = load_fixture_program(&dir).expect("load");
+		let _ = ok.program;
+	}
 }

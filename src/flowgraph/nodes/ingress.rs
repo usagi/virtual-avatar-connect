@@ -15,6 +15,7 @@
 //! - 各 ingress の出力フィールドは V1 の `ChannelDatum` を参考に代表的なものを揃える:
 //!   `content`（本文）/ `source_actor`（発信者識別子）/ `source_kind`（種別）/ `meta`（自由）
 //! - **Phase M1**: `flowgraph.ingress.vmc_udp` + `bridges::vmc_ingress` — VMC 互換の生 UDP。
+//! - **Phase ρ**: `flowgraph.ingress.osc_udp` + `bridges::osc_ingress` — 汎用 OSC/任意 UDP（`__meta__.profile = "osc_udp"`）。
 //!
 //! ## 入力ポートが `__` プレフィックス始まりの理由
 //!
@@ -523,6 +524,48 @@ impl NodeDescriptor for VmcUdpIngressNode {
 
 #[async_trait]
 impl PureNode for VmcUdpIngressNode {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+		ingress_compute(inputs, fired_exec).await
+	}
+}
+
+// ---------------------------------------------------------------------
+// ingress.osc_udp（Phase ρ）
+// ---------------------------------------------------------------------
+//
+// 汎用 **OSC over UDP**（および任意バイナリ）の入口。[`crate::bridges::osc_ingress`] が受信し、
+// `__meta__` に `profile: "osc_udp"` を載せる（VMC ingress のメタと区別）。
+
+pub struct OscUdpIngressNode;
+
+impl NodeDescriptor for OscUdpIngressNode {
+	fn describe(&self) -> NodeSpec {
+		NodeSpec {
+			feature: "flowgraph.ingress.osc_udp".into(),
+			title: "OSC UDP Ingress".into(),
+			category: "ingress".into(),
+			description: Some(
+				"汎用 OSC（UDP データグラム）を受信し、ingress echo で下流へ流す。`content` は Base64。`__meta__.profile` は `osc_udp`。".into(),
+			),
+			inputs: ingress_inputs(),
+			outputs: ingress_outputs(),
+			properties: vec![
+				PropertySpec::new("bind", "Bind", SocketType::String, SocketValue::String(String::new()))
+					.description("受信 UDP の \"host:port\"。空のときブリッジは起動しない。"),
+				PropertySpec::new(
+					"fixed_channel",
+					"Source Kind Override",
+					SocketType::String,
+					SocketValue::String(String::new()),
+				)
+				.description("空なら `source_kind` は `osc_udp`。任意のラベルに上書き可能。"),
+			],
+		}
+	}
+}
+
+#[async_trait]
+impl PureNode for OscUdpIngressNode {
 	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		ingress_compute(inputs, fired_exec).await
 	}

@@ -80,7 +80,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 
 ### `src/bridges/`
 
-- Flowgraph ⇄ ingress/egress のブリッジ配線（web_input / voice / twitch / twitch_eventsub / channel_subscribe / **vmc_ingress**（Phase M1））
+- Flowgraph ⇄ ingress/egress のブリッジ配線（web_input / voice / twitch / twitch_eventsub / channel_subscribe / **vmc_ingress**（Phase M1）/ **osc_ingress**（`flowgraph.ingress.osc_udp`、Phase ρ））
 - reload 時に `BridgeHandles` を `SharedState` に保持して graceful 再配線
 
 ### `src/motion/`（Phase M0〜）

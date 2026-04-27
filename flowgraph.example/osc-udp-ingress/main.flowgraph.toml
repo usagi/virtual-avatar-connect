@@ -1,0 +1,29 @@
+# Phase ρ: `flowgraph.ingress.osc_udp` の最小例。
+# VMC ingress とは別ノード。`__meta__.profile` は `osc_udp`（汎用 OSC / 任意 UDP ペイロード）。
+#
+# 手元検証: `nc -u 127.0.0.1 39540` 等からバイト列を送る。`motion.vmc_parse` は OSC バイト列なら解釈可能。
+
+[meta]
+title = "osc udp ingress demo"
+description = "OSC UDP ingress → log"
+tags = ["example", "osc", "ingress"]
+
+[[nodes]]
+id = "osc_in"
+feature = "flowgraph.ingress.osc_udp"
+position = [100, 100]
+properties.bind = "127.0.0.1:39540"
+properties.fixed_channel = ""
+
+[[nodes]]
+id = "log_1"
+feature = "flowgraph.util.log"
+position = [400, 100]
+
+[[edges]]
+from = "osc_in:exec_out"
+to = "log_1:exec_in"
+
+[[edges]]
+from = "osc_in:content"
+to = "log_1:value"

@@ -54,6 +54,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.flow.gate`](#flowgraph-flow-gate) — Gate
 - **ingress**
   - [`flowgraph.ingress.channel_subscribe`](#flowgraph-ingress-channel-subscribe) — Channel Subscribe Ingress
+  - [`flowgraph.ingress.osc_udp`](#flowgraph-ingress-osc-udp) — OSC UDP Ingress
   - [`flowgraph.ingress.twitch`](#flowgraph-ingress-twitch) — Twitch Ingress
   - [`flowgraph.ingress.twitch_eventsub`](#flowgraph-ingress-twitch-eventsub) — Twitch EventSub Ingress
   - [`flowgraph.ingress.vmc_udp`](#flowgraph-ingress-vmc-udp) — VMC UDP Ingress
@@ -750,6 +751,31 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `ignore_flowgraph_echo` | `bool` | `true` |  | true なら meta.source_actor が `flowgraph:` / `flowgraph` で始まる datum を drop。`channel.emit` による自グラフ押し返しを防ぐ既定動作。 |
 | `require_flags` | `list<string>` | `[]` |  | 指定フラグをすべて持つ datum のみ発火。例: `["is_final"]`。 |
 | `drop_flags` | `list<string>` | `[]` |  | 指定フラグを 1 つでも持つ datum を drop。例: voice_vosk 由来を遮断する等。 |
+
+### `flowgraph.ingress.osc_udp`
+
+**OSC UDP Ingress** — 汎用 OSC（UDP データグラム）を受信し、ingress echo で下流へ流す。`content` は Base64。`__meta__.profile` は `osc_udp`。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `__trigger__` | `exec` (in) | — |  |
+| `__content__` | `string` | `""` |  |
+| `__source_actor__` | `string` | `""` |  |
+| `__source_kind__` | `string` | `""` |  |
+| `__meta__` | `json` | `null` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `content` | `string` |  |
+| `source_actor` | `string` |  |
+| `source_kind` | `string` |  |
+| `meta` | `json` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `bind` | `string` | `""` |  | 受信 UDP の "host:port"。空のときブリッジは起動しない。 |
+| `fixed_channel` | `string` | `""` |  | 空なら `source_kind` は `osc_udp`。任意のラベルに上書き可能。 |
 
 ### `flowgraph.ingress.twitch`
 

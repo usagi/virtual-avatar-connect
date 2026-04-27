@@ -151,6 +151,11 @@ flowgraph.ingress.vmc_udp
 * `vmc_ingress` ブリッジが UDP を受信する。
 * `` `TriggerEvent` `` に変換し、生バイト列を payload（またはメタ）に載せる。
 
+#### 汎用 OSC UDP ingress（Phase ρ・メタ分離）
+
+* ノード: `flowgraph.ingress.osc_udp`、ブリッジ: `osc_ingress`。
+* VMC  ingress（`vmc_udp`）と **同一の Base64 運搬**だが、`__meta__` に `profile: "osc_udp"` を載せ、既定 `__source_kind__` は `osc_udp` とする（VMC 専用メタ・運用と混ぜない）。
+
 ---
 
 ### Phase M2: パススルー・ハブ化

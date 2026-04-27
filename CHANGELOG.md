@@ -10,6 +10,7 @@
 - **`rosc` 依存** + **`src/motion/frame.rs`** / **`vmc_osc.rs`**: UDP ペイロードの OSC デコード → JSON（`byte_len` / `osc_messages[]`）。
 - **`flowgraph.motion.vmc_parse`**（Pure）: `payload_b64` → `frame`（Json）。
 - **`flowgraph.motion.filter`**（Pure）: `vmc_parse` の `frame` から `osc_messages` を `address_prefix` / `address_substring` で絞り込み。
+- **`flowgraph.ingress.osc_udp`** + **`bridges::osc_ingress`**: 汎用 OSC/UDP ingress（`__meta__.profile = "osc_udp"`）。VMC ingress（`vmc_udp`）とメタ分離。
 - **`flowgraph.osc.send`**（Effectful）: `host` / `port` / `path` / `args`（JSON 配列）で単発 OSC を UDP 送信、`on_success` / `on_error`。
 - **`src/flowgraph/fixture_runner.rs`**: `load_fixture_program` / `load_and_execute_once` + `flowgraph.example/lambda-demo` の lib テスト。
 - **`src/app_core.rs`**: `run_vac_application` + actix `run_services` を `lib::run` から分離（再構造化 Step 7 一段）。
