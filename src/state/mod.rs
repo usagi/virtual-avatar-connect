@@ -12,7 +12,7 @@ mod runtime_mode_transition;
 mod speech_floor;
 
 pub use channel_attach::{Attachment, DataSource};
-pub use runtime_mode_apply::apply_runtime_mode_change;
+pub use runtime_mode_apply::{apply_runtime_mode_change, ApplyRuntimeModeError};
 pub use runtime_mode_transition::{apply_runtime_mode_transition_full, try_begin_runtime_mode_transition};
 pub use channel_datum::{ChannelData, ChannelDatum, SharedChannelData};
 pub use speech_floor::SpeechFloorManager;

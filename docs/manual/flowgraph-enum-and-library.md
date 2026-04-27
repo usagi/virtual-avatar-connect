@@ -49,6 +49,8 @@ default_enabled = true
 
 `POST /modes/plan` と `POST /modes/transit`（`dry_run`）で、遷移先宣言に基づく **プレビュー JSON**（`ModeTransitionPlan`）を取得できる。実際にスロットが変わったときは WebSocket `runtime_mode_changed` が飛ぶ。実効 ID が変わり **`[modes.*]` が空でない** ときは、その mode の `managed_apps` をサーバが順に適用し、結果は WS `runtime_mode_managed_apps` と（Control の本適用応答の）`managed_apps` に載る。`conf.toml` の `[flowgraph].runtime_mode_changed_trigger_node_id` に fq ノード ID を書くと、同タイミングでそのノードへ ingress 互換の **内部 `TriggerEvent`** が 1 発入る（`__source_kind__` = `runtime_mode_changed`）。並行遷移は 409 / Flowgraph ノードは `transition_busy` で拒否。
 
+**Quiesce（RM-5）**: 実効 Runtime Mode が変わる本適用の間、`TriggerGate` の **global exec suppress** が短時間オンになり、ingress 等からキューに入った **新規** `TriggerEvent` は exec 連鎖に入らない（Managed App の stop 等と重ならないよう吸収）。内部フック（`runtime_mode_changed_trigger_node_id`）は suppress 解除後に送る。
+
 ### RM-2 / RM-5 ノード
 
 | feature | 説明 |

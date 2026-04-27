@@ -7,6 +7,7 @@
 use crate::conf::Conf;
 use crate::flowgraph::loader::{Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, LoadedNodeMeta};
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
 /// `node_id`（`path/file::local` 形式）からファイル fq を取り出す。
@@ -125,6 +126,9 @@ pub fn mode_group_orphan_diagnostics(
 #[derive(Debug)]
 pub struct TriggerGate {
 	node_exec_active: RwLock<HashMap<String, bool>>,
+	/// RM-5 quiesce: `true` の間は RM-3 のマップに関わらず **すべてのノード**で exec を抑止する。
+	/// Runtime Mode 遷移（Managed App の stop 等）の短時間ウィンドウ用。
+	global_exec_suppress: AtomicBool,
 }
 
 impl TriggerGate {
@@ -137,6 +141,7 @@ impl TriggerGate {
 		let map = build_node_exec_active_map(conf, node_meta, file_activation, runtime_mode);
 		Arc::new(Self {
 			node_exec_active: RwLock::new(map),
+			global_exec_suppress: AtomicBool::new(false),
 		})
 	}
 
@@ -157,10 +162,19 @@ impl TriggerGate {
 	pub fn all_exec_active() -> Arc<Self> {
 		Arc::new(Self {
 			node_exec_active: RwLock::new(HashMap::new()),
+			global_exec_suppress: AtomicBool::new(false),
 		})
 	}
 
+	/// Mode 遷移などで ingress からの **新規** exec を一時的に止める。必ず `false` に戻すこと。
+	pub fn set_global_exec_suppress(&self, v: bool) {
+		self.global_exec_suppress.store(v, Ordering::Release);
+	}
+
 	pub fn is_exec_active(&self, node_id: &str) -> bool {
+		if self.global_exec_suppress.load(Ordering::Acquire) {
+			return false;
+		}
 		self.node_exec_active
 			.read()
 			.ok()
@@ -263,6 +277,27 @@ mod tests {
 		let meta = meta_groups(&["y"]);
 		assert!(!file_effective_exec_active("f", &meta, &conf, None));
 		assert!(file_effective_exec_active("f", &meta, &conf, Some("m2")));
+	}
+
+	#[test]
+	fn global_exec_suppress_blocks_all_nodes() {
+		let conf: Conf = toml::from_str("workers = 1").unwrap();
+		let mut node_meta = HashMap::new();
+		node_meta.insert(
+			"a::n".into(),
+			LoadedNodeMeta {
+				feature: "flowgraph.util.log".into(),
+				file: std::path::PathBuf::from("a"),
+				position: None,
+				properties: Default::default(),
+			},
+		);
+		let gate = TriggerGate::new(&conf, &node_meta, &HashMap::new(), None);
+		assert!(gate.is_exec_active("a::n"));
+		gate.set_global_exec_suppress(true);
+		assert!(!gate.is_exec_active("a::n"));
+		gate.set_global_exec_suppress(false);
+		assert!(gate.is_exec_active("a::n"));
 	}
 
 	#[test]

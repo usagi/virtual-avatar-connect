@@ -7,12 +7,15 @@ use crate::SharedState;
 #[derive(Debug)]
 pub enum ApplyRuntimeModeError {
 	UnknownMode(String),
+	/// `build_mode_transition_plan` が拒否したとき（`apply_runtime_mode_transition_full` の先頭）。
+	PlanFailed(String),
 }
 
 impl std::fmt::Display for ApplyRuntimeModeError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::UnknownMode(m) => write!(f, "unknown_mode: {m}"),
+			Self::PlanFailed(m) => write!(f, "plan_failed: {m}"),
 		}
 	}
 }

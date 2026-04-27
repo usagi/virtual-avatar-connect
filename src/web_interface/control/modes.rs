@@ -6,7 +6,7 @@ use actix_web::{get, post, put, HttpResponse, Responder};
 use crate::conf::{build_mode_transition_plan, Conf, ModeTransitionPlan};
 use crate::control_events::RuntimeModeManagedAppOp;
 use crate::state::{
-	apply_runtime_mode_change, apply_runtime_mode_transition_full, try_begin_runtime_mode_transition,
+	apply_runtime_mode_change, apply_runtime_mode_transition_full, try_begin_runtime_mode_transition, ApplyRuntimeModeError,
 };
 use crate::SharedState;
 
@@ -52,6 +52,19 @@ pub struct TransitResponse {
 	pub plan: ModeTransitionPlan,
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub managed_apps: Option<Vec<RuntimeModeManagedAppOp>>,
+}
+
+fn http_response_for_apply_runtime_mode_error(e: ApplyRuntimeModeError) -> HttpResponse {
+	match e {
+		ApplyRuntimeModeError::PlanFailed(msg) => HttpResponse::BadRequest().json(serde_json::json!({
+			"error": "plan_failed",
+			"message": msg,
+		})),
+		ApplyRuntimeModeError::UnknownMode(_) => HttpResponse::BadRequest().json(serde_json::json!({
+			"error": "unknown_mode",
+			"message": e.to_string(),
+		})),
+	}
 }
 
 fn normalize_body_mode(mode: Option<&String>) -> Option<String> {
@@ -159,10 +172,7 @@ pub async fn put_current_mode(state: Data<SharedState>, body: Json<PutCurrentMod
 					Some(out.managed_reports)
 				},
 			}),
-			Err(e) => HttpResponse::BadRequest().json(serde_json::json!({
-				"error": "unknown_mode",
-				"message": e.to_string(),
-			})),
+			Err(e) => http_response_for_apply_runtime_mode_error(e),
 		}
 	}
 }
@@ -277,10 +287,7 @@ pub async fn post_modes_transit(state: Data<SharedState>, body: Json<TransitBody
 					Some(out.managed_reports)
 				},
 			}),
-			Err(e) => HttpResponse::BadRequest().json(serde_json::json!({
-				"error": "unknown_mode",
-				"message": e.to_string(),
-			})),
+			Err(e) => http_response_for_apply_runtime_mode_error(e),
 		}
 	}
 }

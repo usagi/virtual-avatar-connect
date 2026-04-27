@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use crate::conf::Conf;
 use crate::control_events::ControlEvent;
+use crate::flowgraph::activation::TriggerGate;
 use crate::flowgraph::node::{PortDirection, TriggerEvent};
 use crate::flowgraph::socket::SocketValue;
 use crate::SharedState;
@@ -115,14 +116,50 @@ async fn fire_runtime_mode_changed_flowgraph_hook(state: &SharedState, conf: &Co
 	}
 }
 
+struct GlobalExecSuppressGuard(Arc<TriggerGate>);
+
+impl Drop for GlobalExecSuppressGuard {
+	fn drop(&mut self) {
+		self.0.set_global_exec_suppress(false);
+	}
+}
+
 /// スロット更新・`RuntimeModeChanged` WS に加え、`[modes]` があるときは Managed App 宣言の適用と
 /// （設定されていれば）Flowgraph への内部 trigger を行う。
+///
+/// 実効 ID が変わる遷移では、スロット更新の直前から Managed App 適用まで
+/// [`TriggerGate::set_global_exec_suppress`] を立て、ingress 等の exec を止める（フック直前に解除）。
 pub async fn apply_runtime_mode_transition_full(
 	state: &SharedState,
 	conf: &Conf,
 	normalized: Option<String>,
 	reason: Option<String>,
 ) -> Result<RuntimeModeTransitionOutcome, ApplyRuntimeModeError> {
+	let current_slot = {
+		let s = state.read().await;
+		s.runtime_mode_id.read().ok().and_then(|g| g.clone())
+	};
+	let will_mutate = match crate::conf::build_mode_transition_plan(conf, current_slot.as_deref(), normalized.as_deref()) {
+		Ok(p) => !p.noop,
+		Err(msg) => return Err(ApplyRuntimeModeError::PlanFailed(msg)),
+	};
+
+	let gate_for_guard = {
+		let s = state.read().await;
+		let fg = s.flowgraph.read().await;
+		fg.as_ref().and_then(|rt| rt.trigger_gate.clone())
+	};
+
+	let _global_suppress = if will_mutate {
+		gate_for_guard.map(|g| {
+			g.set_global_exec_suppress(true);
+			log::debug!("《RuntimeMode》 TriggerGate global_exec_suppress=ON（遷移開始）");
+			GlobalExecSuppressGuard(g)
+		})
+	} else {
+		None
+	};
+
 	let applied = apply_runtime_mode_change(state, conf, normalized, reason).await?;
 	let mut managed_reports = Vec::new();
 
@@ -143,6 +180,14 @@ pub async fn apply_runtime_mode_transition_full(
 				});
 			}
 		}
+	}
+
+	drop(_global_suppress);
+	if will_mutate {
+		log::debug!("《RuntimeMode》 TriggerGate global_exec_suppress=OFF（遷移フック手前）");
+	}
+
+	if !applied.noop {
 		fire_runtime_mode_changed_flowgraph_hook(state, conf, &applied).await;
 	}
 
