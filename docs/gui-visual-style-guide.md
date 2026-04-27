@@ -145,6 +145,8 @@ skin は見た目の差し替えであり、情報設計や操作語彙を変え
 
 初期テーマエンジンで用意するのは上記4系統までで十分。テーマ数を増やすより、token 設計、状態色の意味、dark/light の視認性、Flowgraph Studio の可読性を優先する。
 
+テーマの初期検証は Playwright の screenshot smoke に留める。固定 PNG baseline による visual regression は、フォント、密度、theme token が安定してから導入する。
+
 ---
 
 ## 7. 実装順

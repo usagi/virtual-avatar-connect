@@ -232,4 +232,5 @@ The remaining GUI roadmap is now mostly refinement work: visual polish, deeper d
 - [x] Apply shared panel chrome to Flowgraph Studio toolbar, command palette, workspace panes, and Problems pane.
 - [x] Add a lightweight `data-vac-theme` / localStorage theme engine and expose the initial 4-theme set from Settings.
 - [x] Avoid decorative skin work until the default operational cockpit baseline is stable.
-- [ ] Use Playwright screenshots for future visual regression checks once the baseline starts changing CSS substantially.
+- [x] Add Playwright screenshot smoke coverage for the initial theme set on key cockpit surfaces.
+- [ ] Promote screenshot smoke to stable `toHaveScreenshot` visual regression baselines once fonts, density, and theme tokens settle.

@@ -27,6 +27,8 @@ GUI redesign specs are added incrementally and should stay narrow:
 - `modes-planning.spec.ts`
 - `flowgraph-studio-layout.spec.ts`
 - `observability-layout.spec.ts`
+- `theme-switching.spec.ts`
+- `theme-visual-smoke.spec.ts`
 
 ## Running locally
 
@@ -60,3 +62,10 @@ Prefer `getByRole` / `getByLabel` / `getByText`. Only reach for
 `data-testid` when the role/name approach is genuinely unavailable
 (e.g. inside `@xyflow/svelte` canvas internals). If you add one, name
 it `vac-<area>-<role>`, e.g. `vac-flowgraph-node-<id>`.
+
+## Visual checks
+
+Theme visual checks intentionally use screenshot buffers without committing
+PNG baselines. This catches blank-screen or severe render regressions while
+the visual language is still moving. Stable `toHaveScreenshot` baselines are
+left for a later phase once fonts, density, and theme tokens settle.
