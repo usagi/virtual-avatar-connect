@@ -233,7 +233,7 @@ Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・
 - [x] `flowgraph.osc.send`（host / port / path / args JSON、`on_success` / `on_error`）
 - [x] `flowgraph.ingress.osc_udp`（`bind` + `fixed_channel`、メタ `profile: "osc_udp"`。アドレス前置フィルタは graph 側 `motion.filter` 等で）
 - [x] VMC Protocol pose send（`/VMC/Ext/Bone/Pos` / `/VMC/Ext/Root/Pos` の単発送出ノード + `flowgraph::vmc` ヘルパ。全骨ストリームはグラフ側ループ）
-- [ ] VMC Protocol pose recv（iFacialMocap / 各種トラッカーからの VMC 受信 ingress）
+- [x] VMC Protocol pose recv（UDP 受信は既存 `ingress.vmc_udp` / `ingress.osc_udp` + `motion.vmc_parse`。**抽出**: `flowgraph.vmc.extract_bone_pos` / `extract_root_pos` が `MotionFrame` から `/VMC/Ext/*/Pos` を JSON 化）
 - [ ] VRChat OSC 専用ヘルパー（avatar param set / chatbox send / typing indicator）
 - scope: iFacialMocap 単独ノードは VMC bridge 経由で吸収できる前提で外す。足りなければ長期 backlog に再掲
 

@@ -10,7 +10,8 @@
 - **`rosc` 依存** + **`src/motion/frame.rs`** / **`vmc_osc.rs`**: UDP ペイロードの OSC デコード → 第一級 **`MotionFrame`**（`byte_len` / `osc_messages[]`）。
 - **`SocketType::motion_frame`** + **`json` との双方向 coerce**（`flowgraph::socket`）。
 - **`src/flowgraph/osc.rs`**（Phase ρ）: JSON 引数 → OSC エンコード・UDP 単発送出の共有実装。`flowgraph.osc.send` は本モジュール経由。
-- **`src/flowgraph/vmc.rs`** + **`flowgraph.vmc.send_bone_pos`** / **`flowgraph.vmc.send_root_pos`**（Effectful）: VMC Protocol の Bone/Root 位置+姿勢を UDP で 1 メッセージ送出（protocol.vmc.info 準拠の OSC 形状）。
+- **`src/flowgraph/vmc.rs`** + **`flowgraph.vmc.send_bone_pos`** / **`send_root_pos`**（Effectful）: VMC Bone/Root Pos の UDP 単発送出。
+- **`flowgraph.vmc.extract_bone_pos`** / **`extract_root_pos`**（Pure）: `MotionFrame` から `/VMC/Ext/Bone/Pos` / `Root/Pos` を `{ bone, position, rotation }` JSON で取り出し（受信経路は ingress + `vmc_parse`）。
 - **`flowgraph.motion.vmc_parse`**（Pure）: `payload_b64` → `frame`（**`motion_frame`**）。
 - **`flowgraph.motion.filter`** / **`map`**: 入出力 **`motion_frame`**（`json` ポートへ接続可）。
 - **`flowgraph.ingress.osc_udp`** + **`bridges::osc_ingress`**: 汎用 OSC/UDP ingress（`__meta__.profile = "osc_udp"`）。VMC ingress（`vmc_udp`）とメタ分離。

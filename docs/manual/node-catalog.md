@@ -231,6 +231,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.vec3.sub`](#flowgraph-vec3-sub) — Vec3 sub
   - [`flowgraph.vec3.unpack`](#flowgraph-vec3-unpack) — Vec3 unpack
 - **vmc**
+  - [`flowgraph.vmc.extract_bone_pos`](#flowgraph-vmc-extract-bone-pos) — VMC: Extract Bone Pos
+  - [`flowgraph.vmc.extract_root_pos`](#flowgraph-vmc-extract-root-pos) — VMC: Extract Root Pos
   - [`flowgraph.vmc.send_bone_pos`](#flowgraph-vmc-send-bone-pos) — VMC: Send Bone Pos
   - [`flowgraph.vmc.send_root_pos`](#flowgraph-vmc-send-root-pos) — VMC: Send Root Pos
 
@@ -2979,6 +2981,31 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `z` | `float` |  |
 
 ## vmc
+
+### `flowgraph.vmc.extract_bone_pos`
+
+**VMC: Extract Bone Pos** — `MotionFrame` から `/VMC/Ext/Bone/Pos` を探し、`{ bone, position, rotation }` の JSON を返す。無ければ null
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `frame` | `motion_frame` | — |  |
+| `bone_name` | `string` | `""` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `pose` | `json` |  |
+
+### `flowgraph.vmc.extract_root_pos`
+
+**VMC: Extract Root Pos** — `MotionFrame` から `/VMC/Ext/Root/Pos` を探し、`{ bone, position, rotation }` の JSON を返す。無ければ null
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `frame` | `motion_frame` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `pose` | `json` |  |
 
 ### `flowgraph.vmc.send_bone_pos`
 

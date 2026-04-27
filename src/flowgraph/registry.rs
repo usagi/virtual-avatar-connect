@@ -321,6 +321,8 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_effectful(Arc::new(nodes::osc_send::OscSendNode));
 	r.register_effectful(Arc::new(nodes::vmc_send::VmcSendBonePosNode));
 	r.register_effectful(Arc::new(nodes::vmc_send::VmcSendRootPosNode));
+	r.register_pure(Arc::new(nodes::vmc_extract::VmcExtractBonePosNode));
+	r.register_pure(Arc::new(nodes::vmc_extract::VmcExtractRootPosNode));
 
 	// --- state (δ-3c) ---
 	r.register_stateful(Arc::new(nodes::state::BoolStateNode));
@@ -463,6 +465,8 @@ mod tests {
 			"flowgraph.osc.send",
 			"flowgraph.vmc.send_bone_pos",
 			"flowgraph.vmc.send_root_pos",
+			"flowgraph.vmc.extract_bone_pos",
+			"flowgraph.vmc.extract_root_pos",
 			"flowgraph.channel.emit",
 			"flowgraph.unit.assign",
 			"flowgraph.unit.convert",
