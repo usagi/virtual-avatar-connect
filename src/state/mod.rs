@@ -33,17 +33,14 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::broadcast;
 
-impl ControlEvent {
-	/// `ChannelDatum` から `ChannelDatum` バリアントを組む。flags は HashSet をそのまま Vec に。
-	pub fn from_channel_datum(phase: ChannelDatumPhase, cd: &ChannelDatum) -> Self {
-		Self::ChannelDatum {
-			phase,
-			id: cd.get_id(),
-			channel: cd.channel.clone(),
-			content: cd.content.clone(),
-			flags: cd.flags.iter().cloned().collect(),
-			datetime: cd.get_datetime().to_string(),
-		}
+fn control_event_from_channel_datum(phase: ChannelDatumPhase, cd: &ChannelDatum) -> ControlEvent {
+	ControlEvent::ChannelDatum {
+		phase,
+		id: cd.get_id(),
+		channel: cd.channel.clone(),
+		content: cd.content.clone(),
+		flags: cd.flags.iter().cloned().collect(),
+		datetime: cd.get_datetime().to_string(),
 	}
 }
 
@@ -464,7 +461,7 @@ impl State {
 				.iter()
 				.rev()
 				.find(|c| c.get_id() == id)
-				.map(|cd| ControlEvent::from_channel_datum(phase, cd))
+				.map(|cd| control_event_from_channel_datum(phase, cd))
 		};
 		if let Some(ev) = payload {
 			if let Err(e) = self.control_event_tx.send(ev) {
