@@ -5,9 +5,9 @@ import { tokenQuery } from './fixtures';
 const THEMES = ['dr-usagi-default', 'dark-crimson', 'light-silver', 'soft-cute'] as const;
 
 const SURFACES = [
- { hash: 'settings', marker: 'テーマ' },
- { hash: 'now', marker: 'Now' },
- { hash: 'flowgraph', marker: 'root =' },
+ { hash: 'settings', marker: (page: Page) => page.getByRole('radiogroup', { name: 'GUI テーマ' }) },
+ { hash: 'now', marker: (page: Page) => page.getByRole('main').getByText('Runtime cockpit') },
+ { hash: 'flowgraph', marker: (page: Page) => page.getByRole('heading', { name: 'Flowgraph Studio' }) },
 ] as const;
 
 async function openSurfaceWithTheme(page: Page, theme: string, hash: string) {
@@ -28,7 +28,7 @@ test.describe('GUI visual theme smoke', () => {
 
    for (const surface of SURFACES) {
     await openSurfaceWithTheme(page, theme, surface.hash);
-    await expect(page.getByText(surface.marker).first()).toBeVisible({ timeout: 15_000 });
+    await expect(surface.marker(page)).toBeVisible({ timeout: 15_000 });
 
     const screenshot = await page.screenshot({ fullPage: false });
     expect(screenshot.byteLength).toBeGreaterThan(20_000);

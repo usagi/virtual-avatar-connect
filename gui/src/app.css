@@ -227,6 +227,17 @@ body {
  box-shadow: inset 3px 0 0 var(--vac-theme-accent);
 }
 
+.vac-theme-active-badge {
+ border: 1px solid color-mix(in oklch, var(--vac-theme-accent) 48%, transparent);
+ border-radius: 999px;
+ padding: 0.125rem 0.45rem;
+ background: color-mix(in oklch, var(--vac-theme-accent) 12%, transparent);
+ color: var(--vac-theme-accent);
+ font-size: 0.68rem;
+ font-weight: 600;
+ line-height: 1.1;
+}
+
 .vac-theme-swatch {
  width: 2.5rem;
  height: 1.375rem;

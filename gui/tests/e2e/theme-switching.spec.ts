@@ -10,17 +10,17 @@ test.describe('GUI visual theme', () => {
    timeout: 15_000,
   });
 
-  await page.getByRole('button', { name: /Dark Crimson/ }).click();
+  await page.getByRole('radio', { name: /Dark Crimson/ }).click();
   await expect(page.locator('html')).toHaveAttribute('data-vac-theme', 'dark-crimson');
-  await expect(page.getByRole('button', { name: /Dark Crimson/ })).toHaveAttribute(
-   'aria-pressed',
+  await expect(page.getByRole('radio', { name: /Dark Crimson/ })).toHaveAttribute(
+   'aria-checked',
    'true',
   );
 
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-vac-theme', 'dark-crimson');
 
-  await page.getByRole('button', { name: /Light Silver/ }).click();
+  await page.getByRole('radio', { name: /Light Silver/ }).click();
   await expect(page.locator('html')).toHaveAttribute('data-vac-theme', 'light-silver');
   const storedTheme = await page.evaluate(() => window.localStorage.getItem('vac.gui.theme'));
   expect(storedTheme).toBe('light-silver');

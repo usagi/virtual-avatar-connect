@@ -29,19 +29,25 @@
      見た目だけを切り替えます。情報設計と操作語彙は共通です。
     </p>
    </div>
-   <div class="grid gap-2">
+   <div class="grid gap-2" role="radiogroup" aria-label="GUI テーマ">
     {#each VAC_THEMES as theme (theme.id)}
      {@const active = vacThemeStore.current === theme.id}
      <button
       type="button"
+      role="radio"
       class="vac-theme-choice rounded border p-3 text-left transition-colors"
       class:is-active={active}
-      aria-pressed={active}
+      aria-checked={active}
       onclick={() => setTheme(theme.id)}
      >
       <span class="flex items-center justify-between gap-3">
        <span class="min-w-0">
-        <span class="block text-sm font-semibold">{theme.label}</span>
+        <span class="flex flex-wrap items-center gap-2 text-sm font-semibold">
+         {theme.label}
+         {#if active}
+          <span class="vac-theme-active-badge">選択中</span>
+         {/if}
+        </span>
         <span class="block text-xs opacity-65">{theme.tone}</span>
        </span>
        <span class="vac-theme-swatch" data-theme-swatch={theme.id} aria-hidden="true"></span>
