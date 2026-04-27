@@ -281,6 +281,8 @@ class FlowgraphStore {
   const first = rows[0].position;
   const last = rows[rows.length - 1].position;
   const step = (axis === 'x' ? last[0] - first[0] : last[1] - first[1]) / (rows.length - 1);
+  // Local lookup for one layout command, not reactive UI state.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const positions = new Map<string, [number, number]>();
   rows.forEach((row, i) => {
    positions.set(

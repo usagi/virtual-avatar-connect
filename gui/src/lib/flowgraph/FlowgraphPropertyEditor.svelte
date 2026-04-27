@@ -20,8 +20,10 @@
  }
 
  /** propName → parse エラーメッセージ（valid 時はキー無し） */
- let unitParseByProp = $state<Record<string, string>>({});
- const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
+let unitParseByProp = $state<Record<string, string>>({});
+// Timer handles are imperative bookkeeping, not UI state.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity
+const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
  let prevSelectedNodeId = $state<string | null>(null);
  $effect(() => {

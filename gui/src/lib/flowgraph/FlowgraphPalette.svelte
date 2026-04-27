@@ -8,6 +8,7 @@
   * - Phase ο-6: カテゴリ単位の表示/非表示（localStorage 永続化）、HTML5 DnD で feature を dataTransfer に載せる。
   */
  import { onMount } from 'svelte';
+ import { SvelteSet } from 'svelte/reactivity';
  import { flowgraphStore } from '../flowgraphStore.svelte';
  import type { FlowgraphNodeSpec } from '../types';
 
@@ -26,7 +27,7 @@
  );
 
  /** 非表示カテゴリ（`spec.category` 文字列キー）。 */
- let hiddenCategories = $state<Set<string>>(new Set());
+ const hiddenCategories = new SvelteSet<string>();
 
  onMount(() => {
   try {
@@ -34,7 +35,10 @@
    if (!raw) return;
    const arr = JSON.parse(raw) as unknown;
    if (Array.isArray(arr)) {
-    hiddenCategories = new Set(arr.filter((x): x is string => typeof x === 'string'));
+    hiddenCategories.clear();
+    for (const x of arr) {
+     if (typeof x === 'string') hiddenCategories.add(x);
+    }
    }
   } catch {
    /* ignore */
@@ -50,10 +54,8 @@
  }
 
  function toggleCategoryVisibility(category: string) {
-  const next = new Set(hiddenCategories);
-  if (next.has(category)) next.delete(category);
-  else next.add(category);
-  hiddenCategories = next;
+  if (hiddenCategories.has(category)) hiddenCategories.delete(category);
+  else hiddenCategories.add(category);
   persistHidden();
  }
 

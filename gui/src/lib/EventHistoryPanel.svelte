@@ -101,7 +101,7 @@
   <div class="px-3 py-6 text-center text-sm opacity-60">No event history yet.</div>
  {:else}
   <ol class="max-h-72 overflow-y-auto">
-   {#each filtered.toReversed() as item}
+   {#each filtered.toReversed() as item (`${item.at}:${item.event.kind}:${summarize(item.event)}`)}
     <li class="border-b border-surface-200-800 px-3 py-2 last:border-b-0">
      <div class="flex items-center gap-2 text-[11px] opacity-60">
       <span>{new Date(item.at).toLocaleString()}</span>
