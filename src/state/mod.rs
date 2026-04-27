@@ -6,9 +6,11 @@
 
 mod channel_attach;
 mod channel_datum;
+mod runtime_mode_apply;
 mod speech_floor;
 
 pub use channel_attach::{Attachment, DataSource};
+pub use runtime_mode_apply::apply_runtime_mode_change;
 pub use channel_datum::{ChannelData, ChannelDatum, SharedChannelData};
 pub use speech_floor::SpeechFloorManager;
 

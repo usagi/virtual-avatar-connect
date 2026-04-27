@@ -140,6 +140,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 - **mode**
   - [`flowgraph.mode.equals`](#flowgraph-mode-equals) — Mode Equals
   - [`flowgraph.mode.get`](#flowgraph-mode-get) — Mode Get
+  - [`flowgraph.mode.transit`](#flowgraph-mode-transit) — Mode Transit
 - **noise**
   - [`flowgraph.noise.perlin_1d`](#flowgraph-noise-perlin-1d) — Perlin 1D
   - [`flowgraph.noise.perlin_2d`](#flowgraph-noise-perlin-2d) — Perlin 2D
@@ -1810,6 +1811,27 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `mode` | `string` |  |
+
+### `flowgraph.mode.transit`
+
+**Mode Transit** — 指定 mode へ Runtime Mode を切り替える（`State.runtime_mode_id` + TriggerGate 再計算）。`mode` が空なら default_runtime_mode 相当。`State` 未接続・conf 再読込失敗・未知 mode では on_reject。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `mode` | `string` | `""` |  |
+| `reason` | `string` | `""` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `on_reject` | `exec` (out) |  |
+| `accepted` | `bool` |  |
+| `message` | `string` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `noop_message` | `string` | `"noop"` |  | 実効 mode が変わらなかったときの `message` 文字列。 |
 
 ## noise
 

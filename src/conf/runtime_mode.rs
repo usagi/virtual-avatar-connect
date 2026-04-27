@@ -167,6 +167,90 @@ pub(crate) fn validate_runtime_modes(conf: &Conf) -> Result<()> {
 	Ok(())
 }
 
+/// スロット値の正規化（空・空白のみは `None`）。
+pub fn normalize_runtime_mode_slot(raw: Option<&str>) -> Option<String> {
+	raw.and_then(|s| {
+		let t = s.trim();
+		if t.is_empty() {
+			None
+		} else {
+			Some(t.to_string())
+		}
+	})
+}
+
+/// `State.runtime_mode_id` が未設定のときは `default_runtime_mode`、それも無ければ空文字。
+pub fn effective_runtime_mode_for_conf(conf: &Conf, slot: Option<&str>) -> String {
+	normalize_runtime_mode_slot(slot)
+		.or_else(|| conf.default_runtime_mode.clone().filter(|d| !d.trim().is_empty()))
+		.unwrap_or_default()
+}
+
+/// `POST /modes/plan` および dry-run 用の遷移プレビュー。
+#[derive(Debug, Clone, Serialize)]
+pub struct ModeTransitionPlan {
+	pub from_slot: Option<String>,
+	pub to_slot: Option<String>,
+	pub from_effective_id: String,
+	pub to_effective_id: String,
+	/// スロットも実効 ID も変化しないとき true。
+	pub noop: bool,
+	/// 遷移先モード定義に基づく Flowgraph グループ指定（定義が無ければ空）。
+	pub target_flowgraph_groups: FlowgraphGroupsModeSpec,
+	pub target_managed_apps: ManagedAppsModeDirective,
+	/// 遷移元の enable 集合に無かったが、遷移先の enable に含まれるグループ名。
+	pub flowgraph_enable_added_vs_from: Vec<String>,
+	/// 遷移元の disable 集合に無かったが、遷移先の disable に含まれるグループ名。
+	pub flowgraph_disable_added_vs_from: Vec<String>,
+}
+
+/// 現在スロットから `target` スロットへ移るときの宣言差分（Managed App の実行は含まない）。
+pub fn build_mode_transition_plan(conf: &Conf, from_slot: Option<&str>, to_slot: Option<&str>) -> Result<ModeTransitionPlan, String> {
+	let from_slot_norm = normalize_runtime_mode_slot(from_slot);
+	let to_slot_norm = normalize_runtime_mode_slot(to_slot);
+	if let Some(ref m) = to_slot_norm {
+		if !conf.modes.is_empty() && !conf.modes.contains_key(m) {
+			return Err(format!("modes に '{m}' が存在しません"));
+		}
+	}
+	let from_effective_id = effective_runtime_mode_for_conf(conf, from_slot_norm.as_deref());
+	let to_effective_id = effective_runtime_mode_for_conf(conf, to_slot_norm.as_deref());
+	let noop = from_slot_norm == to_slot_norm && from_effective_id == to_effective_id;
+
+	let from_def = conf
+		.modes
+		.get(from_effective_id.as_str())
+		.cloned()
+		.unwrap_or_default();
+	let to_def = conf
+		.modes
+		.get(to_effective_id.as_str())
+		.cloned()
+		.unwrap_or_default();
+
+	let from_en: HashSet<_> = from_def.flowgraph_groups.enable.iter().cloned().collect();
+	let from_dis: HashSet<_> = from_def.flowgraph_groups.disable.iter().cloned().collect();
+	let to_en: HashSet<_> = to_def.flowgraph_groups.enable.iter().cloned().collect();
+	let to_dis: HashSet<_> = to_def.flowgraph_groups.disable.iter().cloned().collect();
+
+	let mut flowgraph_enable_added_vs_from: Vec<String> = to_en.difference(&from_en).cloned().collect();
+	flowgraph_enable_added_vs_from.sort();
+	let mut flowgraph_disable_added_vs_from: Vec<String> = to_dis.difference(&from_dis).cloned().collect();
+	flowgraph_disable_added_vs_from.sort();
+
+	Ok(ModeTransitionPlan {
+		from_slot: from_slot_norm,
+		to_slot: to_slot_norm,
+		from_effective_id,
+		to_effective_id,
+		noop,
+		target_flowgraph_groups: to_def.flowgraph_groups,
+		target_managed_apps: to_def.managed_apps,
+		flowgraph_enable_added_vs_from,
+		flowgraph_disable_added_vs_from,
+	})
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -229,5 +313,37 @@ default_runtime_mode = "nope"
 		let raw = r#"default_runtime_mode = "daily""#;
 		let conf: Conf = toml::from_str(raw).unwrap();
 		assert!(validate_runtime_modes(&conf).is_err());
+	}
+
+	#[test]
+	fn transition_plan_diffs_enable_disable() {
+		let raw = r#"
+default_runtime_mode = "daily"
+[modes.daily]
+flowgraph_groups.enable = ["a"]
+flowgraph_groups.disable = []
+
+[modes.streaming]
+flowgraph_groups.enable = ["a", "b"]
+flowgraph_groups.disable = ["c"]
+"#;
+		let conf: Conf = toml::from_str(raw).unwrap();
+		validate_runtime_modes(&conf).unwrap();
+		let p = build_mode_transition_plan(&conf, None, Some("streaming")).unwrap();
+		assert_eq!(p.from_effective_id, "daily");
+		assert_eq!(p.to_effective_id, "streaming");
+		assert!(!p.noop);
+		assert_eq!(p.flowgraph_enable_added_vs_from, vec!["b".to_string()]);
+		assert_eq!(p.flowgraph_disable_added_vs_from, vec!["c".to_string()]);
+	}
+
+	#[test]
+	fn transition_plan_rejects_unknown_target_when_modes_nonempty() {
+		let raw = r#"
+[modes.daily]
+"#;
+		let conf: Conf = toml::from_str(raw).unwrap();
+		validate_runtime_modes(&conf).unwrap();
+		assert!(build_mode_transition_plan(&conf, None, Some("ghost")).is_err());
 	}
 }

@@ -33,6 +33,14 @@
 - **Control API**: `GET/PUT /api/v1/control/modes`、`GET .../modes/current`（`conf_source_path` 必須）。
 - **`PureEvalHost`**: `PureNode::compute` に engine から渡す隻参照（`runtime_mode` 共有スロット + `default_runtime_mode`）。`flowgraph.mode.get` / `flowgraph.mode.equals`（観測ノード、RM-2 節 `runtime-mode-roadmap.md` 対応）。
 
+### RM-5（一部）— plan / transit dry-run / WS / Flowgraph transit ノード
+
+- **`POST /api/v1/control/modes/plan`**: `ModeTransitionPlan`（実効 ID、noop、target の flowgraph_groups / managed_apps、enable/disable の宣言差分プレビュー）。
+- **`POST /api/v1/control/modes/transit`**: `dry_run` で再読込 conf のみ返却、本適用時は `plan` を同梱。
+- **`ControlEvent::RuntimeModeChanged`**: `/control/events` WebSocket に配信（実変化時のみ）。
+- **`state::apply_runtime_mode_change`**: Control API と共有。
+- **`flowgraph.mode.transit`**: Effectful ノード（`control_triggerable` は false）。
+
 ### 内部リファクタ — Control API `actions` / `dto` / `ping` / `shutdown` / `ingress` モジュール分割
 
 - **`src/web_interface/control/actions/`**: 旧 `actions.rs` を `mod.rs`（snapshot・`PauseTarget`・ルート）と `pause.rs`（pause/resume 適用・`resolve_ai_index`・単体テスト）に分割。

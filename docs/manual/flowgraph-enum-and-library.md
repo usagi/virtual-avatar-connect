@@ -47,6 +47,16 @@ default_enabled = true
 
 `PUT/GET` の modes 系 API は、**毎回** `conf.source_path` から `Conf` を再読し、`[modes.*]` の定義と照合する。in-memory なのは **現在選択 mode ID**（`default_runtime_mode` より優先）だけ。
 
+`POST /modes/plan` と `POST /modes/transit`（`dry_run`）で、遷移先宣言に基づく **プレビュー JSON**（`ModeTransitionPlan`）を取得できる。実際にスロットが変わったときは WebSocket `runtime_mode_changed` が飛ぶ。
+
+### RM-2 / RM-5 ノード
+
+| feature | 説明 |
+|---------|------|
+| `flowgraph.mode.get` | 実効 Runtime Mode ID（Pure）。 |
+| `flowgraph.mode.equals` | 指定文字列と実効 ID が一致するか（Pure）。 |
+| `flowgraph.mode.transit` | `exec_in` で mode 切替を要求（Effectful）。`State` / `conf_source_path` が無いと `on_reject`。外部 Control trigger は不可。 |
+
 ## ライブラリ境界ノード（v0）
 
 | feature | 説明 |

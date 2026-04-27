@@ -75,11 +75,13 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 
 ※ 環境変数 `VAC_CONTROL_API_BEARER_TOKEN` でもトークンを渡せる（`conf.toml` より優先）。
 
-#### Runtime Mode API（RM-3）
+#### Runtime Mode API（RM-3 / RM-5）
 
 - `GET /api/v1/control/modes` — 応答 `mode_ids: string[]`（`[modes.*]` のキー一覧）。
 - `GET /api/v1/control/modes/current` — 応答 `mode: string | null`（`null` は `default_runtime_mode` に従うことを意味する）。
-- `PUT /api/v1/control/modes/current` — 本文 JSON `{"mode": "..."}` または `{"mode": null}`。既知の mode 以外は 400。成功時に Flowgraph exec ゲートを再計算。
+- `PUT /api/v1/control/modes/current` — 本文 JSON `{"mode": "..."}` または `{"mode": null}`。既知の mode 以外は 400。成功時に Flowgraph exec ゲートを再計算し、変化があれば WebSocket `runtime_mode_changed` を送る。
+- `POST /api/v1/control/modes/plan` — 本文 `{"target": "..."}` または `{"target": null}`。遷移プレビュー（`ModeTransitionPlan`）。`modes` があるとき未知の `target` は 400。
+- `POST /api/v1/control/modes/transit` — 本文 `{"mode": "...", "dry_run": false, "reason": "..."}`。`dry_run: true` のときは状態を変えず `plan` のみ返す。`dry_run: false` で `PUT .../current` 相当＋応答に `plan` を含む。
 
 ### 5.1 `[[control_api.tables]]` — 辞書 / 汎用 Table の GUI 編集許可リスト (Phase φ)
 

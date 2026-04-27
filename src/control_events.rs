@@ -168,6 +168,21 @@ pub enum ControlEvent {
 		details: serde_json::Value,
 	},
 
+	/// RM-5 先取り: Runtime Mode のスロットまたは実効 ID が変化したとき。
+	///
+	/// `PUT /modes/current` / `POST /modes/transit` / `flowgraph.mode.transit` が実際に状態を変えた場合に送る。
+	/// `noop` 相当（同一スロット・同一実効）では発行しない。
+	RuntimeModeChanged {
+		#[serde(skip_serializing_if = "Option::is_none")]
+		previous_slot: Option<String>,
+		#[serde(skip_serializing_if = "Option::is_none")]
+		current_slot: Option<String>,
+		previous_effective_id: String,
+		current_effective_id: String,
+		#[serde(skip_serializing_if = "Option::is_none")]
+		reason: Option<String>,
+	},
+
 	/// Phase VI-α-5: Twitch Device Code Flow のセッション状態が変化したとき。
 	/// Control API `/oauth/twitch/{account}/start|cancel` や、ポーリングタスク完了時に送る。
 	OAuthStatus {
@@ -207,6 +222,20 @@ mod tests {
 		let s = serde_json::to_string(&ev).unwrap();
 		assert!(s.contains(r#""kind":"lagged""#), "bad: {s}");
 		assert!(s.contains(r#""dropped":7"#), "bad: {s}");
+	}
+
+	#[test]
+	fn serializes_runtime_mode_changed() {
+		let ev = ControlEvent::RuntimeModeChanged {
+			previous_slot: Some("daily".into()),
+			current_slot: Some("streaming".into()),
+			previous_effective_id: "daily".into(),
+			current_effective_id: "streaming".into(),
+			reason: Some("api".into()),
+		};
+		let s = serde_json::to_string(&ev).unwrap();
+		assert!(s.contains(r#""kind":"runtime_mode_changed""#), "bad: {s}");
+		assert!(s.contains(r#""current_effective_id":"streaming""#), "bad: {s}");
 	}
 
 	#[test]

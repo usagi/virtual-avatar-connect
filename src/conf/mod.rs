@@ -4,7 +4,8 @@ mod runtime_mode;
 
 pub use anyhow::{bail, Result};
 pub use runtime_mode::{
-	AiModeOverlay, FlowgraphGroupsModeSpec, ManagedAppsModeDirective, NotificationsModeOverlay,
+	AiModeOverlay, build_mode_transition_plan, effective_runtime_mode_for_conf, FlowgraphGroupsModeSpec,
+	ManagedAppsModeDirective, ModeTransitionPlan, normalize_runtime_mode_slot, NotificationsModeOverlay,
 	RuntimeModeDefinition,
 };
 pub use motion::{MotionConf, VmcPassthroughSpec};
