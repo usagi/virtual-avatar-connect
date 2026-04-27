@@ -152,6 +152,22 @@ export type ReloadResponse = {
 };
 
 // ---------------------------------------------------------------------------
+// /modes
+// ---------------------------------------------------------------------------
+
+export type ModesListResponse = {
+ mode_ids: string[];
+};
+
+export type CurrentModeResponse = {
+ mode: string | null;
+};
+
+export type PutCurrentModeBody = {
+ mode: string | null;
+};
+
+// ---------------------------------------------------------------------------
 // /oauth/twitch/*
 // ---------------------------------------------------------------------------
 

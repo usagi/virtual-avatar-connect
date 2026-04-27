@@ -190,6 +190,7 @@ Existing `ToolsTab` can remain here until split further.
 - Add dry-run transition plan preview.
 - Display Flowgraph activation and Managed App desired-state changes.
 - Before backend support, keep the Modes surface read-only: planned mode cards, static transition preview, and disabled transition action only.
+- After v2 Runtime Mode backend landed, connect Modes to `/modes` and `/modes/current`; keep planned mode previews visible, but enable transition only for modes present in `conf [modes]`.
 
 ### GR-7 Observability
 

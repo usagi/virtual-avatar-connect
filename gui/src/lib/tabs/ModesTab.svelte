@@ -1,4 +1,8 @@
 <script lang="ts">
+ import { onMount } from 'svelte';
+ import { api } from '../api';
+ import { ControlApiError } from '../types';
+
  type PlannedMode = {
   id: string;
   label: string;
@@ -6,6 +10,10 @@
   flowgraphGroups: string[];
   managedApps: string[];
   notifications: string;
+ };
+
+ type DisplayMode = PlannedMode & {
+  configured: boolean;
  };
 
  const plannedModes: PlannedMode[] = [
@@ -51,16 +59,93 @@
   },
  ] as const;
 
+ let configuredModeIds = $state<string[]>([]);
+ let currentModeId = $state<string | null>(null);
  let selectedModeId = $state('streaming');
- const selectedMode = $derived(plannedModes.find((m) => m.id === selectedModeId) ?? plannedModes[0]);
+ let loading = $state(true);
+ let loadError = $state<string | null>(null);
+ let mutating = $state(false);
+ let mutationError = $state<string | null>(null);
+
+ const displayModes = $derived.by<DisplayMode[]>(() => {
+  const configured = new Set(configuredModeIds);
+  const known = new Set(plannedModes.map((m) => m.id));
+  const plannedRows = plannedModes.map((m) => ({ ...m, configured: configured.has(m.id) }));
+  const customRows = configuredModeIds
+   .filter((id) => !known.has(id))
+   .map((id) => ({
+    id,
+    label: id,
+    description: 'Configured runtime mode from conf.',
+    flowgraphGroups: ['configured'],
+    managedApps: ['use configured desired state'],
+    notifications: 'configured',
+    configured: true,
+   }));
+  return [...customRows, ...plannedRows];
+ });
+
+ const selectedMode = $derived(displayModes.find((m) => m.id === selectedModeId) ?? displayModes[0]);
+ const selectedCanTransit = $derived(selectedMode?.configured === true);
+ const isCurrentSelected = $derived(selectedMode?.id === currentModeId);
+ const transitDisabled = $derived(
+  loading || mutating || loadError !== null || !selectedMode || !selectedCanTransit || isCurrentSelected,
+ );
+ const transitLabel = $derived.by(() => {
+  if (mutating) return 'Transiting...';
+  if (loadError) return 'Transit unavailable';
+  if (!selectedMode?.configured) return 'Configure mode first';
+  if (isCurrentSelected) return 'Current mode';
+  return 'Transit';
+ });
+
+ onMount(() => {
+  void refreshModes();
+ });
 
  function modeCardClass(selected: boolean): string {
   return [
    'rounded border p-4 text-left transition-colors',
    selected
     ? 'border-primary-500 bg-primary-500/10'
-    : 'border-surface-200-800 bg-surface-50-950 hover:bg-surface-100-900',
+   : 'border-surface-200-800 bg-surface-50-950 hover:bg-surface-100-900',
   ].join(' ');
+ }
+
+ async function refreshModes(): Promise<void> {
+  loading = true;
+  loadError = null;
+  try {
+   const [list, current] = await Promise.all([api.modesList(), api.currentMode()]);
+   configuredModeIds = list.mode_ids;
+   currentModeId = current.mode;
+   if (current.mode) selectedModeId = current.mode;
+   else if (list.mode_ids.length > 0) selectedModeId = list.mode_ids[0];
+  } catch (e) {
+   loadError = formatError(e);
+  } finally {
+   loading = false;
+  }
+ }
+
+ async function transitSelectedMode(): Promise<void> {
+  if (transitDisabled || !selectedMode) return;
+  mutating = true;
+  mutationError = null;
+  try {
+   const next = await api.putCurrentMode({ mode: selectedMode.id });
+   currentModeId = next.mode;
+  } catch (e) {
+   mutationError = formatError(e);
+  } finally {
+   mutating = false;
+  }
+ }
+
+ function formatError(e: unknown): string {
+  if (e instanceof ControlApiError) return `${e.status} ${e.statusText}`;
+  if (e instanceof Error) return e.message;
+  return String(e);
  }
 </script>
 
@@ -72,19 +157,38 @@
   </div>
   <div class="rounded border border-surface-200-800 bg-surface-50-950 px-3 py-2 text-xs">
    <span class="opacity-60">Current backend:</span>
-   <span class="ml-1 font-semibold text-warning-500">not available</span>
+   <span
+    class="ml-1 font-semibold"
+    class:text-warning-500={loading}
+    class:text-error-500={loadError !== null}
+    class:text-success-500={!loading && loadError === null}
+   >
+    {loading ? 'loading' : loadError ? 'error' : 'available'}
+   </span>
   </div>
  </div>
 
- <div class="rounded border border-warning-500/45 bg-warning-500/10 px-4 py-3 text-sm">
-  Runtime Mode backend is not available in this branch. This surface is reserved for
-  transition preview, mode switching, and Flowgraph / Managed App desired-state changes.
+ <div class="rounded border border-surface-200-800 bg-surface-50-950 px-4 py-3 text-sm">
+  <span class="font-semibold">Current mode:</span>
+  <code class="ml-2 rounded bg-surface-100-900 px-1.5 py-0.5">{currentModeId ?? '(default)'}</code>
+  <span class="ml-3 opacity-65">Configured modes: {configuredModeIds.length}</span>
  </div>
+
+ {#if loadError}
+  <div class="rounded border border-error-500 bg-error-100-900 px-4 py-3 text-sm text-error-900-100">
+   Runtime Mode API failed: {loadError}
+  </div>
+ {/if}
+ {#if mutationError}
+  <div class="rounded border border-error-500 bg-error-100-900 px-4 py-3 text-sm text-error-900-100">
+   Runtime Mode transition failed: {mutationError}
+  </div>
+ {/if}
 
  <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
   <div class="grid gap-3 md:grid-cols-2">
-   {#each plannedModes as mode}
-    {@const selected = selectedMode.id === mode.id}
+   {#each displayModes as mode}
+    {@const selected = selectedMode?.id === mode.id}
     <button
      type="button"
      class={modeCardClass(selected)}
@@ -94,7 +198,7 @@
      <div class="flex items-center justify-between gap-3">
       <div class="text-sm font-semibold">{mode.label}</div>
       <div class="rounded bg-surface-200-800 px-1.5 py-0.5 text-[10px] uppercase opacity-70">
-       planned
+       {mode.configured ? 'configured' : 'planned'}
       </div>
      </div>
      <p class="mt-2 text-xs leading-relaxed opacity-70">{mode.description}</p>
@@ -112,6 +216,7 @@
     Transition Preview
    </div>
    <div class="grid gap-4 p-4 text-sm">
+    {#if selectedMode}
     <div>
      <div class="text-xs uppercase tracking-wide opacity-60">Target</div>
      <div class="mt-1 text-lg font-semibold">{selectedMode.label}</div>
@@ -143,12 +248,18 @@
 
     <button
      type="button"
-     class="rounded border border-surface-300-700 px-3 py-1.5 text-xs opacity-55"
-     disabled
-     title="Runtime Mode backend is not implemented yet"
+     class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900 disabled:opacity-55 disabled:hover:bg-transparent"
+     disabled={transitDisabled}
+     title={selectedMode.configured
+      ? 'Request Runtime Mode transition'
+      : 'This planned mode is not present in conf [modes] yet'}
+     onclick={() => void transitSelectedMode()}
     >
-     Transit unavailable
+     {transitLabel}
     </button>
+    {:else}
+     <div class="px-2 py-6 text-center text-sm opacity-60">No runtime mode candidate.</div>
+    {/if}
    </div>
   </aside>
  </div>

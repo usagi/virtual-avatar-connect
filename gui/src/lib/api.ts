@@ -50,6 +50,9 @@ import {
  type ProfilesResponse,
  type ReloadRequest,
  type ReloadResponse,
+ type CurrentModeResponse,
+ type ModesListResponse,
+ type PutCurrentModeBody,
  type RestartRequest,
  type RestartResponse,
  type ShutdownRequest,
@@ -178,6 +181,17 @@ export const api = {
    method: 'POST',
    body: { target: 'modify_files', id } satisfies ReloadRequest,
   });
+ },
+
+ // --- Runtime Modes ---
+ modesList(): Promise<ModesListResponse> {
+  return request<ModesListResponse>('/modes');
+ },
+ currentMode(): Promise<CurrentModeResponse> {
+  return request<CurrentModeResponse>('/modes/current');
+ },
+ putCurrentMode(req: PutCurrentModeBody): Promise<CurrentModeResponse> {
+  return request<CurrentModeResponse>('/modes/current', { method: 'PUT', body: req });
  },
 
  // --- OAuth (Twitch DCF) ---
