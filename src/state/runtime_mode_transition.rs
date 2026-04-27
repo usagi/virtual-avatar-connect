@@ -394,3 +394,103 @@ pub async fn apply_runtime_mode_transition_full(
 		managed_reports,
 	})
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::shutdown::ShutdownBroker;
+	use crate::State;
+	use std::sync::atomic::Ordering;
+	use tokio::sync::Mutex;
+
+	async fn mk_state(conf: &Conf) -> SharedState {
+		let audio = std::sync::Arc::new(Mutex::new(
+			crate::AudioSink::open_default()
+				.expect("default audio output (rodio) required for State::new in tests"),
+		));
+		let shutdown = ShutdownBroker::new();
+		State::new(conf, audio, shutdown).await.expect("State::new")
+	}
+
+	fn modes_conf(tmp: &std::path::Path) -> Conf {
+		let mut conf: Conf = toml::from_str(
+			r#"
+default_runtime_mode = "daily"
+[modes.daily]
+flowgraph_groups.enable = ["x"]
+
+[modes.streaming]
+flowgraph_groups.enable = ["x", "y"]
+"#,
+		)
+		.expect("toml");
+		conf.runtime_dir = Some(tmp.to_path_buf());
+		conf.flowgraph_dir = None;
+		conf
+	}
+
+	fn tmp_session_dir() -> std::path::PathBuf {
+		let dir = std::env::temp_dir().join(format!("vac_rtm_{:08x}", rand::random::<u32>()));
+		std::fs::create_dir_all(&dir).expect("create_dir_all");
+		dir
+	}
+
+	#[tokio::test]
+	async fn try_begin_runtime_mode_transition_second_call_fails_until_drop() {
+		let tmp = tmp_session_dir();
+		let conf = modes_conf(&tmp);
+		let state = mk_state(&conf).await;
+		let g1 = try_begin_runtime_mode_transition(&state).await.expect("first lock");
+		assert!(try_begin_runtime_mode_transition(&state).await.is_none());
+		drop(g1);
+		assert!(try_begin_runtime_mode_transition(&state).await.is_some());
+	}
+
+	#[tokio::test]
+	async fn apply_runtime_mode_transition_full_plan_failed_unknown_target() {
+		let tmp = tmp_session_dir();
+		let conf = modes_conf(&tmp);
+		let state = mk_state(&conf).await;
+		let err = apply_runtime_mode_transition_full(&state, &conf, Some("nope".into()), None)
+			.await
+			.expect_err("unknown mode");
+		assert!(matches!(err, ApplyRuntimeModeError::PlanFailed(_)));
+	}
+
+	#[tokio::test]
+	async fn apply_runtime_mode_transition_full_noop_leaves_transition_status_unchanged() {
+		let tmp = tmp_session_dir();
+		let conf = modes_conf(&tmp);
+		let state = mk_state(&conf).await;
+		let before = state.read().await.runtime_mode_transition_status.read().await.clone();
+		// `State::new` seeds `runtime_mode_id` with `default_runtime_mode` (Some); re-applying the same slot is noop.
+		let out = apply_runtime_mode_transition_full(&state, &conf, Some("daily".into()), None)
+			.await
+			.expect("noop");
+		assert!(out.applied.noop);
+		let after = state.read().await.runtime_mode_transition_status.read().await.clone();
+		assert_eq!(after.seq, before.seq);
+		assert!(!after.active);
+		assert!(matches!(after.phase, RuntimeModeTransitionPhase::Idle));
+	}
+
+	#[tokio::test]
+	async fn apply_runtime_mode_transition_full_mutating_finishes_completed_and_clears_busy() {
+		let tmp = tmp_session_dir();
+		let conf = modes_conf(&tmp);
+		let state = mk_state(&conf).await;
+		let out = apply_runtime_mode_transition_full(&state, &conf, Some("streaming".into()), Some("test".into()))
+			.await
+			.expect("transition");
+		assert!(!out.applied.noop);
+		assert_eq!(out.applied.mode_slot.as_deref(), Some("streaming"));
+		assert_eq!(out.applied.current_effective_id, "streaming");
+		let status = state.read().await.runtime_mode_transition_status.read().await.clone();
+		assert!(!status.active);
+		assert!(matches!(status.phase, RuntimeModeTransitionPhase::Completed));
+		assert!(status.plan.is_some());
+		assert!(status.error.is_none());
+		assert_eq!(status.managed_apps.len(), 0);
+		assert!(!state.read().await.runtime_mode_transition_busy.load(Ordering::Acquire));
+	}
+}
