@@ -174,6 +174,7 @@ Existing `ToolsTab` can remain here until split further.
 - Rename property editor role to Inspector.
 - Move diagnostics into a Problems panel.
 - Add command palette and node search as primary node insertion path.
+- First slice: add a Studio heading, file / node / edge summary, named workspace regions, Inspector label, and Problems panel while keeping the existing editor behavior intact.
 
 ### GR-5 Editor Operations
 

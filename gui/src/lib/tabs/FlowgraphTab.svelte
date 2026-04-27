@@ -80,6 +80,9 @@ onMount(() => {
  const summary = $derived(summarizeDiagnostics(flowgraphStore.diagnostics?.diagnostics));
  const hasErrors = $derived(summary.error > 0);
  const hasWarnings = $derived(summary.warning > 0);
+ const fileCount = $derived(flowgraphStore.tree?.files.length ?? 0);
+ const nodeCount = $derived(flowgraphStore.draftNodes?.length ?? 0);
+ const edgeCount = $derived(flowgraphStore.draftEdges?.length ?? 0);
 
  async function onReload() {
   await flowgraphStore.reloadFromDisk();
@@ -129,7 +132,28 @@ function onImportZip() {
 }
 </script>
 
-<div class="flex h-[calc(100vh-9rem)] flex-col gap-2">
+<div class="flex h-[calc(100vh-9rem)] min-h-[42rem] flex-col gap-3">
+ <div class="flex flex-wrap items-start justify-between gap-3">
+  <div>
+   <h2 class="text-xl font-semibold">Flowgraph Studio</h2>
+   <p class="text-sm opacity-65">Author, inspect, and repair runtime dataflow files.</p>
+  </div>
+  <div class="grid grid-cols-3 overflow-hidden rounded border border-surface-200-800 bg-surface-50-950 text-center text-xs">
+   <div class="border-r border-surface-200-800 px-3 py-2">
+    <div class="font-semibold">{fileCount}</div>
+    <div class="opacity-60">Files</div>
+   </div>
+   <div class="border-r border-surface-200-800 px-3 py-2">
+    <div class="font-semibold">{nodeCount}</div>
+    <div class="opacity-60">Nodes</div>
+   </div>
+   <div class="px-3 py-2">
+    <div class="font-semibold">{edgeCount}</div>
+    <div class="opacity-60">Edges</div>
+   </div>
+  </div>
+ </div>
+
  <!-- Toolbar -->
  <div class="flex flex-wrap items-center gap-2 rounded border border-surface-200-800 bg-surface-100-900 px-3 py-2">
   <div class="flex items-baseline gap-2">
@@ -219,26 +243,52 @@ function onImportZip() {
 
 <FlowgraphShareDialog bind:open={dialogOpen} bind:mode={dialogMode} />
 
- <!-- Main 3-pane -->
- <div class="grid flex-1 min-h-0 gap-2" style="grid-template-columns: 260px minmax(0, 1fr) 320px;">
-  <div class="min-h-0 overflow-y-auto rounded border border-surface-200-800 bg-surface-50-950">
-   <FlowgraphTree />
-  </div>
-  <div class="min-h-0 overflow-hidden rounded border border-surface-200-800 bg-surface-50-950">
-   <FlowgraphCanvas />
-  </div>
-  <div class="flex min-h-0 flex-col gap-2">
-   <div class="flex-1 min-h-0 overflow-y-auto rounded border border-surface-200-800 bg-surface-50-950">
-    <FlowgraphPalette />
+ <!-- Studio workspace -->
+ <div class="grid min-h-0 flex-1 gap-2 xl:grid-cols-[260px_minmax(34rem,1fr)_320px]">
+  <section class="flex min-h-[16rem] flex-col overflow-hidden rounded border border-surface-200-800 bg-surface-50-950">
+   <div class="border-b border-surface-200-800 px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
+    Files
    </div>
-   <div class="flex-1 min-h-0 overflow-y-auto rounded border border-surface-200-800 bg-surface-50-950">
-    <FlowgraphPropertyEditor />
+   <div class="min-h-0 flex-1 overflow-y-auto">
+    <FlowgraphTree />
    </div>
+  </section>
+
+  <section class="flex min-h-[28rem] flex-col overflow-hidden rounded border border-surface-200-800 bg-surface-50-950">
+   <div class="flex items-center justify-between gap-2 border-b border-surface-200-800 px-3 py-2">
+    <span class="text-xs font-semibold uppercase tracking-wider opacity-60">Canvas</span>
+    <span class="truncate text-xs opacity-60">{flowgraphStore.currentFq ?? 'No file selected'}</span>
+   </div>
+   <div class="min-h-0 flex-1 overflow-hidden">
+    <FlowgraphCanvas />
+   </div>
+  </section>
+
+  <div class="grid min-h-[28rem] grid-rows-[minmax(12rem,1fr)_minmax(12rem,1fr)] gap-2">
+   <section class="flex min-h-0 flex-col overflow-hidden rounded border border-surface-200-800 bg-surface-50-950">
+    <div class="border-b border-surface-200-800 px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
+     Node Palette
+    </div>
+    <div class="min-h-0 flex-1 overflow-hidden">
+     <FlowgraphPalette />
+    </div>
+   </section>
+   <section class="flex min-h-0 flex-col overflow-hidden rounded border border-surface-200-800 bg-surface-50-950">
+    <div class="border-b border-surface-200-800 px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
+     Inspector
+    </div>
+    <div class="min-h-0 flex-1 overflow-y-auto">
+     <FlowgraphPropertyEditor />
+    </div>
+   </section>
   </div>
  </div>
 
- <!-- Diagnostics -->
- <div class="max-h-40 overflow-y-auto rounded border border-surface-200-800 bg-surface-50-950">
+ <!-- Problems -->
+ <section class="max-h-44 overflow-y-auto rounded border border-surface-200-800 bg-surface-50-950">
+  <div class="border-b border-surface-200-800 px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
+   Problems
+  </div>
   <FlowgraphDiagnostics />
- </div>
+ </section>
 </div>
