@@ -26,6 +26,7 @@ GUI redesign specs are added incrementally and should stay narrow:
 - `main-navigation.spec.ts`
 - `modes-planning.spec.ts`
 - `flowgraph-studio-layout.spec.ts`
+- `observability-layout.spec.ts`
 
 ## Running locally
 

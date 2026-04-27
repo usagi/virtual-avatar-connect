@@ -196,6 +196,7 @@ Existing `ToolsTab` can remain here until split further.
 - Flowgraph execution history.
 - Runtime mode transition history.
 - Managed App event history.
+- First slice: expose Observability as an explicit evidence surface around the existing runtime snapshot and event stream before adding new backend history APIs.
 
 ---
 
