@@ -29,6 +29,8 @@ test.describe('GUI redesign: Modes planning surface', () => {
   await expect(main.getByText('streaming').last()).toBeVisible();
   await expect(main.getByRole('button', { name: 'Transit' })).toBeEnabled();
   await main.getByRole('button', { name: 'Transit' }).click();
+  await expect(main.getByText('Transition Progress')).toBeVisible();
+  await expect(main.getByText(/completed|applying|firing|suppressing/)).toBeVisible();
   await expect(main.getByText('Current mode:')).toBeVisible();
   await expect(main.getByRole('button', { name: 'Current mode' })).toBeDisabled();
  });

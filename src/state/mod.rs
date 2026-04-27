@@ -13,7 +13,9 @@ mod speech_floor;
 
 pub use channel_attach::{Attachment, DataSource};
 pub use runtime_mode_apply::{apply_runtime_mode_change, ApplyRuntimeModeError};
-pub use runtime_mode_transition::{apply_runtime_mode_transition_full, try_begin_runtime_mode_transition};
+pub use runtime_mode_transition::{
+	apply_runtime_mode_transition_full, try_begin_runtime_mode_transition, RuntimeModeTransitionStatus,
+};
 pub use channel_datum::{ChannelData, ChannelDatum, SharedChannelData};
 pub use speech_floor::SpeechFloorManager;
 
@@ -231,6 +233,7 @@ pub struct State {
 	/// RM-5: `apply_runtime_mode_transition_full` が Managed App I/O 等を実行している間 true。
 	/// 再入の `try_begin_runtime_mode_transition` は失敗させる。
 	pub runtime_mode_transition_busy: Arc<AtomicBool>,
+	pub runtime_mode_transition_status: Arc<RwLock<RuntimeModeTransitionStatus>>,
 }
 
 impl State {
@@ -307,6 +310,7 @@ impl State {
 			voicepeak_fallback_exe,
 			shutdown,
 			runtime_mode_transition_busy: Arc::new(AtomicBool::new(false)),
+			runtime_mode_transition_status: Arc::new(RwLock::new(RuntimeModeTransitionStatus::idle())),
 		}));
 		spawn_control_event_history_recorder(control_event_tx.subscribe(), control_event_history);
 		log::trace!("State の生成が完了しました。");

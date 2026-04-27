@@ -58,6 +58,7 @@ import {
  type ModeTransitionPlan,
  type ModesListResponse,
  type PutCurrentModeBody,
+ type RuntimeModeTransitionStatus,
  type RestartRequest,
  type RestartResponse,
  type ShutdownRequest,
@@ -208,6 +209,9 @@ export const api = {
  },
  modeTransit(req: ModeTransitRequest): Promise<ModeTransitResponse> {
   return request<ModeTransitResponse>('/modes/transit', { method: 'POST', body: req });
+ },
+ modeTransition(): Promise<RuntimeModeTransitionStatus> {
+  return request<RuntimeModeTransitionStatus>('/modes/transition');
  },
 
  // --- OAuth (Twitch DCF) ---

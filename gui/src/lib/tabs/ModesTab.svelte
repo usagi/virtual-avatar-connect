@@ -1,7 +1,12 @@
 <script lang="ts">
  import { onMount } from 'svelte';
  import { api } from '../api';
- import { ControlApiError, type ModeTransitionPlan, type RuntimeModeManagedAppOp } from '../types';
+ import {
+  ControlApiError,
+  type ModeTransitionPlan,
+  type RuntimeModeManagedAppOp,
+  type RuntimeModeTransitionStatus,
+ } from '../types';
 
  type PlannedMode = {
   id: string;
@@ -69,6 +74,7 @@
  let planLoading = $state(false);
  let planError = $state<string | null>(null);
  let transitionPlan = $state<ModeTransitionPlan | null>(null);
+ let transitionStatus = $state<RuntimeModeTransitionStatus | null>(null);
  let managedAppOps = $state<RuntimeModeManagedAppOp[]>([]);
  let planRequestSeq = 0;
 
@@ -94,10 +100,22 @@
  const managedDesiredRows = $derived(managedDirectiveRows(transitionPlan));
  const selectedCanTransit = $derived(selectedMode?.configured === true);
  const isCurrentSelected = $derived(selectedMode?.id === currentModeId);
+ const transitionPercent = $derived.by(() => {
+  if (!transitionStatus || transitionStatus.step_count <= 0) return 0;
+  return Math.min(100, Math.round((transitionStatus.step_index / transitionStatus.step_count) * 100));
+ });
  const transitDisabled = $derived(
-  loading || mutating || planLoading || loadError !== null || !selectedMode || !selectedCanTransit || isCurrentSelected,
+  loading ||
+   mutating ||
+   transitionStatus?.active === true ||
+   planLoading ||
+   loadError !== null ||
+   !selectedMode ||
+   !selectedCanTransit ||
+   isCurrentSelected,
  );
  const transitLabel = $derived.by(() => {
+  if (transitionStatus?.active) return 'Transition running...';
   if (mutating) return 'Transiting...';
   if (planLoading) return 'Planning...';
   if (loadError) return 'Transit unavailable';
@@ -108,6 +126,11 @@
 
  onMount(() => {
   void refreshModes();
+  void refreshTransitionStatus();
+  const timer = window.setInterval(() => {
+   void refreshTransitionStatus();
+  }, 1200);
+  return () => window.clearInterval(timer);
  });
 
  $effect(() => {
@@ -162,10 +185,24 @@
    currentModeId = next.mode;
    transitionPlan = next.plan;
    managedAppOps = next.managed_apps ?? [];
+   await refreshTransitionStatus();
   } catch (e) {
    mutationError = formatError(e);
   } finally {
    mutating = false;
+  }
+ }
+
+ async function refreshTransitionStatus(): Promise<void> {
+  try {
+   const status = await api.modeTransition();
+   transitionStatus = status;
+   if (!status.active && status.phase === 'completed') {
+    if (status.plan) transitionPlan = status.plan;
+    if (status.managed_apps.length > 0) managedAppOps = status.managed_apps;
+   }
+  } catch {
+   // The main Runtime Mode API status already reports backend availability.
   }
  }
 
@@ -241,6 +278,31 @@
   <div class="rounded border border-error-500 bg-error-100-900 px-4 py-3 text-sm text-error-900-100">
    Runtime Mode transition failed: {mutationError}
   </div>
+ {/if}
+ {#if transitionStatus && transitionStatus.phase !== 'idle'}
+  <section class="rounded border border-surface-200-800 bg-surface-50-950 px-4 py-3">
+   <div class="flex flex-wrap items-center justify-between gap-2">
+    <div>
+     <div class="text-sm font-semibold">Transition Progress</div>
+     <div class="mt-1 text-xs opacity-65">
+      {transitionStatus.message}
+      <span class="ml-2 font-mono">{transitionStatus.phase}</span>
+     </div>
+    </div>
+    <div class="text-xs opacity-65">
+     step {transitionStatus.step_index}/{transitionStatus.step_count}
+    </div>
+   </div>
+   <div class="mt-3 h-2 overflow-hidden rounded bg-surface-200-800">
+    <div
+     class="h-full {transitionStatus.phase === 'failed' ? 'bg-error-500' : 'bg-primary-500'}"
+     style={`width: ${transitionPercent}%`}
+    ></div>
+   </div>
+   {#if transitionStatus.error}
+    <div class="mt-2 text-xs text-error-500">{transitionStatus.error}</div>
+   {/if}
+  </section>
  {/if}
 
  <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">

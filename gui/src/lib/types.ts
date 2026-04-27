@@ -216,6 +216,31 @@ export type ModeTransitResponse = {
  managed_apps?: RuntimeModeManagedAppOp[] | null;
 };
 
+export type RuntimeModeTransitionPhase =
+ | 'idle'
+ | 'planning'
+ | 'suppressing_flowgraph'
+ | 'applying_mode'
+ | 'applying_managed_apps'
+ | 'firing_flowgraph_hook'
+ | 'completed'
+ | 'failed';
+
+export type RuntimeModeTransitionStatus = {
+ seq: number;
+ active: boolean;
+ phase: RuntimeModeTransitionPhase;
+ step_index: number;
+ step_count: number;
+ message: string;
+ started_at?: string | null;
+ updated_at: string;
+ finished_at?: string | null;
+ error?: string | null;
+ plan?: ModeTransitionPlan | null;
+ managed_apps: RuntimeModeManagedAppOp[];
+};
+
 // ---------------------------------------------------------------------------
 // /oauth/twitch/*
 // ---------------------------------------------------------------------------

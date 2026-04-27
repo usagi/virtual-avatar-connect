@@ -1,6 +1,6 @@
 # VAC GUI Redesign Roadmap
 
-> Status: implementation branch active. The first cockpit shell, Runtime Mode surface, Flowgraph Studio framing, Resource / Settings split, Observability surface, and Playwright coverage are now implemented on the GUI branch. Remaining work is mainly deeper editor operations and backend-backed history surfaces.
+> Status: implementation branch active. The cockpit shell, Runtime Mode surface, Flowgraph Studio operations, Resource / Settings split, Observability history surfaces, transition progress UX, and Playwright coverage are now implemented on the GUI branch. Remaining work is refinement: visual polish, deeper domain-specific debugger views, and future backend integrations that are not yet specified.
 
 ---
 
@@ -190,7 +190,7 @@ Existing `ToolsTab` can remain here until split further.
 - [x] Request transitions via `/modes/transit`.
 - [x] Display Flowgraph activation and Managed App desired-state changes from the backend plan.
 - [x] Keep planned mode previews visible, but enable transition only for modes present in `conf [modes]`.
-- [ ] Add richer transition-progress UX if the backend later exposes long-running progress states.
+- [x] Add transition-progress UX backed by `/modes/transition` server-side progress state.
 
 ### GR-7 Observability - implemented first slice
 
@@ -213,6 +213,7 @@ The current GUI branch now includes these completed slices:
 - GR-4 Flowgraph Studio framing, resizable panes, and searchable command palette / node insert
 - GR-5 editor operation commands: undo / redo, multi-select, group-layout, align, distribute, duplicate, delete
 - GR-6 Runtime Mode backend wiring, dry-run preview, transit action, and desired-state display
+- GR-6 Runtime Mode transition progress API and UX
 - GR-7 Observability over snapshot + event stream + server-side event history
 - Playwright regression coverage for shell navigation, Now, Modes, Flowgraph Studio, and Observability
 
