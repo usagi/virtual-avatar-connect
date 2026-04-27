@@ -2,18 +2,18 @@ import { expect, test } from '@playwright/test';
 
 import { tokenQuery } from './fixtures';
 
-test.describe('GUI shell: Managed Apps drawer', () => {
- test('opens the drawer from the shell action', async ({ page }) => {
+test.describe('GUI shell: 連携アプリドロワー', () => {
+ test('shell action からドロワーを開ける', async ({ page }) => {
   await page.goto(`/gui/${tokenQuery()}`);
 
-  await page.getByRole('button', { name: 'Managed Apps...' }).click();
+  await page.getByRole('button', { name: '連携アプリ…' }).click();
 
-  const drawer = page.getByRole('complementary', { name: 'Managed Apps' });
-  await expect(drawer.getByRole('heading', { name: 'Managed Apps' })).toBeVisible({
+  const drawer = page.getByRole('complementary', { name: 'Managed app drawer' });
+  await expect(drawer.getByRole('heading', { name: '連携アプリ' })).toBeVisible({
    timeout: 15_000,
   });
-  await expect(drawer.getByText('Monitor and control apps registered through run_with.')).toBeVisible();
-  await expect(drawer.getByRole('button', { name: 'Refresh' })).toBeVisible();
-  await expect(drawer.getByRole('button', { name: 'Close' })).toBeVisible();
+  await expect(drawer.getByText('run_with で管理するアプリの監視と操作')).toBeVisible();
+  await expect(drawer.getByRole('button', { name: '再読込' })).toBeVisible();
+  await expect(drawer.getByRole('button', { name: '閉じる' })).toBeVisible();
  });
 });

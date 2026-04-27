@@ -48,13 +48,13 @@
    isCurrentSelected,
  );
  const transitLabel = $derived.by(() => {
-  if (transitionStatus?.active) return 'Transition running...';
-  if (mutating) return 'Transiting...';
-  if (planLoading) return 'Planning...';
-  if (loadError) return 'Transit unavailable';
-  if (!selectedMode?.configured) return 'Configure mode first';
-  if (isCurrentSelected) return 'Current mode';
-  return 'Transit';
+  if (transitionStatus?.active) return '遷移中...';
+  if (mutating) return '遷移要求中...';
+  if (planLoading) return '計画中...';
+  if (loadError) return '遷移不可';
+  if (!selectedMode?.configured) return '先に mode を設定';
+  if (isCurrentSelected) return '現在の mode';
+  return '遷移';
  });
 
  onMount(() => {
@@ -162,10 +162,10 @@
  <div class="flex flex-wrap items-start justify-between gap-3">
   <div>
    <h2 class="text-xl font-semibold">Modes</h2>
-   <p class="text-sm opacity-65">Runtime mode control</p>
+   <p class="text-sm opacity-65">Runtime Mode の切替と確認</p>
   </div>
   <div class="rounded border border-surface-200-800 bg-surface-50-950 px-3 py-2 text-xs">
-   <span class="opacity-60">Current backend:</span>
+   <span class="opacity-60">Backend:</span>
    <span
     class="ml-1 font-semibold"
     class:text-warning-500={loading}
@@ -178,26 +178,26 @@
  </div>
 
  <div class="rounded border border-surface-200-800 bg-surface-50-950 px-4 py-3 text-sm">
-  <span class="font-semibold">Current mode:</span>
+  <span class="font-semibold">現在の mode:</span>
   <code class="ml-2 rounded bg-surface-100-900 px-1.5 py-0.5">{currentModeId ?? '(default)'}</code>
-  <span class="ml-3 opacity-65">Configured modes: {configuredModeIds.length}</span>
+  <span class="ml-3 opacity-65">設定済み modes: {configuredModeIds.length}</span>
  </div>
 
  {#if loadError}
   <div class="rounded border border-error-500 bg-error-100-900 px-4 py-3 text-sm text-error-900-100">
-   Runtime Mode API failed: {loadError}
+   Runtime Mode API に接続できません: {loadError}
   </div>
  {/if}
  {#if mutationError}
   <div class="rounded border border-error-500 bg-error-100-900 px-4 py-3 text-sm text-error-900-100">
-   Runtime Mode transition failed: {mutationError}
+   Runtime Mode の遷移に失敗しました: {mutationError}
   </div>
  {/if}
  {#if transitionStatus && transitionStatus.phase !== 'idle'}
   <section class="rounded border border-surface-200-800 bg-surface-50-950 px-4 py-3">
    <div class="flex flex-wrap items-center justify-between gap-2">
     <div>
-     <div class="text-sm font-semibold">Transition Progress</div>
+     <div class="text-sm font-semibold">遷移進捗</div>
      <div class="mt-1 text-xs opacity-65">
       {transitionStatus.message}
       <span class="ml-2 font-mono">{transitionStatus.phase}</span>
@@ -232,7 +232,7 @@
      <div class="flex items-center justify-between gap-3">
       <div class="text-sm font-semibold">{mode.label}</div>
       <div class="rounded bg-surface-200-800 px-1.5 py-0.5 text-[10px] uppercase opacity-70">
-       {mode.configured ? 'configured' : 'planned'}
+       {mode.configured ? '設定済み' : '予定'}
       </div>
      </div>
      <p class="mt-2 text-xs leading-relaxed opacity-70">{mode.description}</p>
@@ -247,7 +247,7 @@
 
   <aside class="rounded border border-surface-200-800 bg-surface-50-950">
    <div class="border-b border-surface-200-800 px-4 py-2 text-sm font-semibold">
-    Transition Preview
+    遷移プレビュー
    </div>
    <div class="grid gap-4 p-4 text-sm">
     {#if selectedMode}
@@ -303,7 +303,7 @@
         </dd>
        </dl>
       {:else}
-       <div class="text-xs opacity-60">No dry-run plan.</div>
+       <div class="text-xs opacity-60">Dry-run plan はありません。</div>
       {/if}
      </div>
     {/if}
@@ -318,7 +318,7 @@
        {/each}
       </dl>
      {:else if transitionPlan}
-      <div class="rounded bg-surface-100-900 px-2 py-1 text-xs opacity-60">No managed app changes.</div>
+      <div class="rounded bg-surface-100-900 px-2 py-1 text-xs opacity-60">Managed App の変更はありません。</div>
      {:else}
       <ul class="grid gap-1">
        {#each selectedMode.managedApps as action (action)}
@@ -338,8 +338,8 @@
      class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900 disabled:opacity-55 disabled:hover:bg-transparent"
      disabled={transitDisabled}
      title={selectedMode.configured
-      ? 'Request Runtime Mode transition'
-      : 'This planned mode is not present in conf [modes] yet'}
+      ? 'Runtime Mode 遷移を要求'
+      : 'この予定 mode はまだ conf [modes] にありません'}
      onclick={() => void transitSelectedMode()}
     >
      {transitLabel}
@@ -359,7 +359,7 @@
      </div>
     {/if}
     {:else}
-     <div class="px-2 py-6 text-center text-sm opacity-60">No runtime mode candidate.</div>
+     <div class="px-2 py-6 text-center text-sm opacity-60">Runtime Mode 候補がありません。</div>
     {/if}
    </div>
   </aside>
