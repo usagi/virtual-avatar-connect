@@ -7,10 +7,10 @@
 
 ### M-4a / Step 7 / ρ 先取り — motion OSC パース、OSC 送信、fixture runner、`app_core`
 
-- **`rosc` 依存** + **`src/motion/frame.rs`** / **`vmc_osc.rs`**: UDP ペイロードの OSC デコード → JSON（`byte_len` / `osc_messages[]`）。
-- **`flowgraph.motion.vmc_parse`**（Pure）: `payload_b64` → `frame`（Json）。
-- **`flowgraph.motion.filter`**（Pure）: `vmc_parse` の `frame` から `osc_messages` を `address_prefix` / `address_substring` で絞り込み。
-- **`flowgraph.motion.map`**（Pure）: `frame` の各 `osc_messages[].args` 内の JSON 数値を `float_scale` 倍（配列・オブジェクトは再帰的）。
+- **`rosc` 依存** + **`src/motion/frame.rs`** / **`vmc_osc.rs`**: UDP ペイロードの OSC デコード → 第一級 **`MotionFrame`**（`byte_len` / `osc_messages[]`）。
+- **`SocketType::motion_frame`** + **`json` との双方向 coerce**（`flowgraph::socket`）。
+- **`flowgraph.motion.vmc_parse`**（Pure）: `payload_b64` → `frame`（**`motion_frame`**）。
+- **`flowgraph.motion.filter`** / **`map`**: 入出力 **`motion_frame`**（`json` ポートへ接続可）。
 - **`flowgraph.ingress.osc_udp`** + **`bridges::osc_ingress`**: 汎用 OSC/UDP ingress（`__meta__.profile = "osc_udp"`）。VMC ingress（`vmc_udp`）とメタ分離。
 - **`flowgraph.osc.send`**（Effectful）: `host` / `port` / `path` / `args`（JSON 配列）で単発 OSC を UDP 送信、`on_success` / `on_error`。
 - **`src/flowgraph/fixture_runner.rs`**: `load_fixture_program` / `load_and_execute_once` + `flowgraph.example/lambda-demo` の lib テスト。

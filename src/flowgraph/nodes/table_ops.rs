@@ -38,6 +38,7 @@ fn sv_to_json(v: &SocketValue) -> JsonValue {
 			.unwrap_or(JsonValue::Null),
 		// Phase π: Table セル内 DateTime は RFC3339 (Z suffix) 文字列として格納。
 		SocketValue::DateTime(dt) => JsonValue::String(dt.to_rfc3339()),
+		SocketValue::MotionFrame(m) => m.to_json_value(),
 	}
 }
 

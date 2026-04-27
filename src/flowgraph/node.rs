@@ -172,6 +172,7 @@ impl SocketValueRepr {
 			// Phase π: DateTime は RFC3339 (Z suffix) 文字列として wire に載せる。
 			// 受信側 `json_to_socket_value` はこの文字列を parse して DateTime に復元する。
 			SocketValue::DateTime(dt) => serde_json::Value::String(dt.to_rfc3339()),
+			SocketValue::MotionFrame(m) => serde_json::to_value(m).unwrap_or(serde_json::Value::Null),
 		})
 	}
 
@@ -211,6 +212,7 @@ pub(crate) fn json_to_socket_value(ty: &SocketType, v: &serde_json::Value) -> Op
 		// Phase π: JSON 文字列 → DateTime。parse 失敗は `None`（呼び出し側で
 		// `SocketValueRepr::to_socket_value` が default 値 fallback するなど既存挙動に合流）。
 		(SocketType::DateTime, J::String(s)) => crate::datetime::DateTime::from_rfc3339(s).ok().map(SocketValue::DateTime),
+		(SocketType::MotionFrame, v) => serde_json::from_value(v.clone()).ok().map(SocketValue::MotionFrame),
 		_ => None,
 	}
 }
@@ -399,6 +401,14 @@ pub fn get_required_datetime(inputs: &InputMap, key: &str) -> Result<crate::date
 pub fn get_required_json<'a>(inputs: &'a InputMap, key: &str) -> Result<&'a serde_json::Value, NodeExecError> {
 	let v = inputs.get(key).ok_or_else(|| NodeExecError::MissingRequiredInput(key.into()))?;
 	v.as_json().map_err(|_| type_err(key, SocketType::Json, v.type_of()))
+}
+
+/// M4: [`crate::motion::MotionFrame`] 入力（`motion_frame` ポート。`json` から coerce 済みでも可）。
+pub fn get_required_motion_frame(inputs: &InputMap, key: &str) -> Result<crate::motion::MotionFrame, NodeExecError> {
+	let v = inputs.get(key).ok_or_else(|| NodeExecError::MissingRequiredInput(key.into()))?;
+	v.as_motion_frame()
+		.map(|m| m.clone())
+		.map_err(|_| type_err(key, SocketType::MotionFrame, v.type_of()))
 }
 
 pub fn get_required_list<'a>(inputs: &'a InputMap, key: &str) -> Result<&'a [SocketValue], NodeExecError> {

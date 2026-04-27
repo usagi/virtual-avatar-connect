@@ -2,7 +2,7 @@
 //!
 //! パースのみ。転送は [`super::router`] / `bridges::vmc_ingress` の責務。
 
-use crate::motion::frame::{MotionFrameV0, OscMessageWire};
+use crate::motion::frame::{MotionFrame, OscMessageWire};
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use rosc::{decoder, OscPacket, OscType};
 use serde_json::{json, Value as JsonValue};
@@ -48,11 +48,11 @@ fn collect_messages(packet: &OscPacket, out: &mut Vec<OscMessageWire>) {
 }
 
 /// UDP 上の生バイト列を OSC として解釈し、M4 用 JSON オブジェクトにまとめる。
-pub fn parse_vmc_payload(bytes: &[u8]) -> Result<MotionFrameV0, String> {
+pub fn parse_vmc_payload(bytes: &[u8]) -> Result<MotionFrame, String> {
 	let (_, packet) = decoder::decode_udp(bytes).map_err(|e| format!("OSC decode: {e}"))?;
 	let mut osc_messages = Vec::new();
 	collect_messages(&packet, &mut osc_messages);
-	Ok(MotionFrameV0 {
+	Ok(MotionFrame {
 		byte_len: bytes.len(),
 		osc_messages,
 	})

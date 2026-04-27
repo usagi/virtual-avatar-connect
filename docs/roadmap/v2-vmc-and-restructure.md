@@ -228,6 +228,8 @@ flowgraph.motion.filter
 flowgraph.motion.map
 ```
 
+実装メモ（2026-04 時点）: 上記ノードのデータ経路は **`motion_frame`** ソケット（Rust の `MotionFrame` = `src/motion/frame.rs` の `byte_len` + `osc_messages`）と `json` との **coerce 往復**で統一。本節で概念化している `head_pose` / `bone_transforms` / `blendshapes` などの **意味付き IR** は未分解（M5 以降の拡張余地）。
+
 ---
 
 ### Phase M5: Flowgraph の用途拡張

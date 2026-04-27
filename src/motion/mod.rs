@@ -9,6 +9,8 @@
 //! **`flowgraph` / `bridges` / `state` / `web_interface` へは依存しない**（VMC の Flowgraph 入口は `bridges::vmc_ingress`）。
 
 mod frame;
+
+pub use frame::{MotionFrame, OscMessageWire};
 mod osc;
 mod router;
 mod vmc_raw;

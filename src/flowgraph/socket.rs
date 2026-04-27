@@ -8,6 +8,7 @@
 use crate::datetime::DateTime;
 use crate::flowgraph::quantity::{parse_unit, Quantity, Unit};
 use crate::flowgraph::table::Table;
+use crate::motion::MotionFrame;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -40,6 +41,9 @@ pub enum SocketType {
 	/// (= `jiff::Timestamp` の newtype)。文字列ポートとの暗黙 coerce は
 	/// [`coerce_to_type`] で RFC3339 往復によって行われる。
 	DateTime,
+	/// VMC / OSC ワイヤを解釈したフレーム（Phase M4）。`json` とは
+	/// [`MotionFrame`] の JSON オブジェクト形状で双方向に coerce 可能。
+	MotionFrame,
 }
 
 impl SocketType {
@@ -62,6 +66,10 @@ impl SocketType {
 			SocketType::Table => Some(SocketValue::Table(Table::empty())),
 			SocketType::Quantity => Some(SocketValue::Quantity(Quantity::dimensionless(0.0))),
 			SocketType::DateTime => Some(SocketValue::DateTime(DateTime::default())),
+			SocketType::MotionFrame => Some(SocketValue::MotionFrame(MotionFrame {
+				byte_len: 0,
+				osc_messages: Vec::new(),
+			})),
 		}
 	}
 
@@ -86,6 +94,7 @@ impl SocketType {
 	///   dimensionless なら `"{value}"`）で自動文字列化。ξ-4 で `flowgraph.util.log`
 	///   や `flowgraph.channel.emit` に Quantity を直接流せるようにするために導入。
 	///   逆方向 (`String → Quantity`) は任意文字列を確実に parse できないため非許容。
+	/// - `Json ↔ MotionFrame`: M4 フレームの JSON オブジェクト形状での往復（[`coerce_to_type`]）。
 	/// - それ以外は `==` と同じ
 	///
 	/// `List` / `Map` の inner は再帰的に `compatible_with` で判定する。
@@ -98,6 +107,7 @@ impl SocketType {
 			// parse 失敗はランタイムに [`coerce_to_type`] が [`CoerceError::DateTimeParseError`]
 			// として伝搬する（接続時点では型互換とみなす）。
 			(String, DateTime) | (DateTime, String) => true,
+			(Json, MotionFrame) | (MotionFrame, Json) => true,
 			(List(a), List(b)) => a.compatible_with(b),
 			(Map(a), Map(b)) => a.compatible_with(b),
 			(a, b) => a == b,
@@ -117,6 +127,8 @@ impl SocketType {
 /// - `Float → Quantity`: dimensionless Quantity としてラップ
 /// - `Quantity → Float`: dimensionless な場合に限り value を取り出す。非 dimensionless
 ///   は `Err(CoerceError::NotDimensionless)`（明示的な `flowgraph.unit.strip` を要求）
+/// - `Json → MotionFrame`: `serde` で復元。失敗は [`CoerceError::MotionFrameFromJsonError`]
+/// - `MotionFrame → Json`: [`MotionFrame::to_json_value`] へ
 /// - それ以外で target に既に一致している値はそのまま返す
 /// - 型が不一致でかつ上記 coerce に該当しない場合は `Err(CoerceError::TypeMismatch)`
 pub fn coerce_to_type(value: SocketValue, target: &SocketType) -> Result<SocketValue, CoerceError> {
@@ -161,6 +173,12 @@ pub fn coerce_to_type(value: SocketValue, target: &SocketType) -> Result<SocketV
 			}
 			Ok(SocketValue::Map(out))
 		}
+		(SocketValue::Json(j), SocketType::MotionFrame) => serde_json::from_value(j.clone())
+			.map(SocketValue::MotionFrame)
+			.map_err(|e| CoerceError::MotionFrameFromJsonError {
+				reason: e.to_string(),
+			}),
+		(SocketValue::MotionFrame(m), SocketType::Json) => Ok(SocketValue::Json(m.to_json_value())),
 		// 既に一致しているならそのまま
 		(v, t) if v.matches(t) => Ok(v),
 		// どれでもなければミスマッチ
@@ -179,6 +197,8 @@ pub enum CoerceError {
 	NotDimensionless { unit: String },
 	#[error("String → DateTime 変換失敗: '{input}' ({reason})")]
 	DateTimeParseError { input: String, reason: String },
+	#[error("JSON → motion_frame 変換失敗: {reason}")]
+	MotionFrameFromJsonError { reason: String },
 }
 
 impl fmt::Display for SocketType {
@@ -195,6 +215,7 @@ impl fmt::Display for SocketType {
 			SocketType::Table => f.write_str("table"),
 			SocketType::Quantity => f.write_str("quantity"),
 			SocketType::DateTime => f.write_str("datetime"),
+			SocketType::MotionFrame => f.write_str("motion_frame"),
 		}
 	}
 }
@@ -249,6 +270,7 @@ fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
 		"table" => return Ok(SocketType::Table),
 		"quantity" => return Ok(SocketType::Quantity),
 		"datetime" => return Ok(SocketType::DateTime),
+		"motion_frame" => return Ok(SocketType::MotionFrame),
 		_ => {}
 	}
 	// 複合型: list<T> / map<T> / map<string, T>
@@ -334,6 +356,8 @@ pub enum SocketValue {
 	/// 絶対時刻（Phase π）。内部は [`DateTime`] = `jiff::Timestamp` の newtype。
 	/// 文字列ポートとの暗黙 coerce は RFC3339 経由で双方向に行われる。
 	DateTime(DateTime),
+	/// M4 OSC フレーム（[`MotionFrame`]）。`json` との coerce でワイヤ JSON と往復。
+	MotionFrame(MotionFrame),
 	// Exec は値を持たないので variant なし。
 }
 
@@ -358,6 +382,7 @@ impl SocketValue {
 			SocketValue::Table(_) => SocketType::Table,
 			SocketValue::Quantity(_) => SocketType::Quantity,
 			SocketValue::DateTime(_) => SocketType::DateTime,
+			SocketValue::MotionFrame(_) => SocketType::MotionFrame,
 		}
 	}
 
@@ -452,6 +477,16 @@ impl SocketValue {
 		}
 	}
 
+	pub fn as_motion_frame(&self) -> Result<&MotionFrame, ValueCastError> {
+		match self {
+			SocketValue::MotionFrame(m) => Ok(m),
+			_ => Err(ValueCastError::Mismatch {
+				expected: "motion_frame",
+				actual: self.type_of(),
+			}),
+		}
+	}
+
 	/// 値の型が指定の `SocketType` に適合するかの軽量チェック。
 	/// `List`/`Map` の内部型は空の場合はパスとみなす。
 	pub fn matches(&self, expected: &SocketType) -> bool {
@@ -463,7 +498,8 @@ impl SocketValue {
 			| (SocketValue::Json(_), SocketType::Json)
 			| (SocketValue::Table(_), SocketType::Table)
 			| (SocketValue::Quantity(_), SocketType::Quantity)
-			| (SocketValue::DateTime(_), SocketType::DateTime) => true,
+			| (SocketValue::DateTime(_), SocketType::DateTime)
+			| (SocketValue::MotionFrame(_), SocketType::MotionFrame) => true,
 			(SocketValue::List(xs), SocketType::List(inner)) => xs.iter().all(|v| v.matches(inner)),
 			(SocketValue::Map(m), SocketType::Map(inner)) => m.values().all(|v| v.matches(inner)),
 			_ => false,
@@ -491,6 +527,13 @@ pub fn from_toml_value(expected: &SocketType, v: &toml::Value) -> Result<SocketV
 		(SocketType::Float, toml::Value::Integer(i)) => Ok(SocketValue::Float(*i as f64)),
 		(SocketType::String, toml::Value::String(s)) => Ok(SocketValue::String(s.clone())),
 		(SocketType::Json, any) => toml_to_json(any).map(SocketValue::Json),
+		(SocketType::MotionFrame, any) => {
+			let j = toml_to_json(any)?;
+			serde_json::from_value(j).map(SocketValue::MotionFrame).map_err(|e| FromTomlError::Mismatch {
+				expected: "motion_frame (byte_len + osc_messages JSON shape)".into(),
+				actual: format!("deserialize: {e}"),
+			})
+		},
 		(SocketType::List(inner), toml::Value::Array(arr)) => {
 			let mut out = Vec::with_capacity(arr.len());
 			for elem in arr {
@@ -680,6 +723,9 @@ mod tests {
 		assert_eq!(SocketType::parse("json").unwrap(), SocketType::Json);
 		assert_eq!(SocketType::parse("exec").unwrap(), SocketType::Exec);
 		assert_eq!(SocketType::parse("table").unwrap(), SocketType::Table);
+		let mf = SocketType::MotionFrame;
+		assert_eq!(mf.to_string(), "motion_frame");
+		assert_eq!(SocketType::parse("motion_frame").unwrap(), mf);
 	}
 
 	#[test]
@@ -858,6 +904,14 @@ mod tests {
 		assert!(!SocketType::DateTime.compatible_with(&SocketType::Json));
 	}
 
+	#[test]
+	fn motion_frame_compat_json_bidirectional() {
+		assert!(SocketType::Json.compatible_with(&SocketType::MotionFrame));
+		assert!(SocketType::MotionFrame.compatible_with(&SocketType::Json));
+		assert!(SocketType::MotionFrame.compatible_with(&SocketType::MotionFrame));
+		assert!(!SocketType::MotionFrame.compatible_with(&SocketType::String));
+	}
+
 	// --- coerce_to_type ---
 
 	#[test]
@@ -903,6 +957,54 @@ mod tests {
 		let dt = DateTime::from_rfc3339("2026-04-24T12:34:56Z").unwrap();
 		let err = coerce_to_type(SocketValue::DateTime(dt), &SocketType::Int).unwrap_err();
 		assert!(matches!(err, CoerceError::TypeMismatch { .. }));
+	}
+
+	// --- MotionFrame ↔ Json coerce ---
+
+	#[test]
+	fn coerce_json_to_motion_frame_roundtrip() {
+		let j = serde_json::json!({
+			"byte_len": 3,
+			"osc_messages": [{"address": "/t", "args": [1.0]}]
+		});
+		let mf = coerce_to_type(SocketValue::Json(j.clone()), &SocketType::MotionFrame).unwrap();
+		let SocketValue::MotionFrame(m) = mf else {
+			panic!("expected MotionFrame");
+		};
+		assert_eq!(m.byte_len, 3);
+		assert_eq!(m.osc_messages.len(), 1);
+		let back = coerce_to_type(SocketValue::MotionFrame(m), &SocketType::Json).unwrap();
+		let SocketValue::Json(out) = back else {
+			panic!("expected Json");
+		};
+		assert_eq!(out, j);
+	}
+
+	#[test]
+	fn coerce_json_to_motion_frame_invalid_errors() {
+		// JSON 配列ルートは `MotionFrame` オブジェクトとしては不正（serde が別解釈しないことを期待）
+		let err = coerce_to_type(
+			SocketValue::Json(serde_json::json!({"byte_len": "nan", "osc_messages": []})),
+			&SocketType::MotionFrame,
+		)
+		.unwrap_err();
+		assert!(matches!(err, CoerceError::MotionFrameFromJsonError { .. }));
+	}
+
+	#[test]
+	fn motion_frame_value_type_of_and_as() {
+		use crate::motion::{MotionFrame, OscMessageWire};
+		let m = MotionFrame {
+			byte_len: 0,
+			osc_messages: vec![OscMessageWire {
+				address: "/a".into(),
+				args: vec![],
+			}],
+		};
+		let v = SocketValue::MotionFrame(m.clone());
+		assert_eq!(v.type_of(), SocketType::MotionFrame);
+		assert!(v.matches(&SocketType::MotionFrame));
+		assert_eq!(v.as_motion_frame().unwrap(), &m);
 	}
 
 	// --- TOML from_toml_value ---

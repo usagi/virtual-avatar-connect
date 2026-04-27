@@ -201,6 +201,7 @@ fn socket_value_to_json(v: &SocketValue) -> serde_json::Value {
 		SocketValue::Quantity(q) => serde_json::json!(q.value),
 		// Phase π: DateTime は RFC3339 (Z suffix) 文字列として pass-through。
 		SocketValue::DateTime(dt) => serde_json::Value::String(dt.to_rfc3339()),
+		SocketValue::MotionFrame(m) => m.to_json_value(),
 	}
 }
 

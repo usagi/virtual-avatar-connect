@@ -1869,34 +1869,34 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ### `flowgraph.motion.filter`
 
-**Motion: Filter OSC Messages** — `vmc_parse` の frame JSON の `osc_messages` を、`address_prefix` と `address_substring`（両方省略可）でフィルタする
+**Motion: Filter OSC Messages** — `osc_messages` を `address_prefix` と `address_substring`（両方省略可）でフィルタする。入出力は `motion_frame`（`json` へ coerce 可）
 
 | Input | Type | Default | Note |
 |---|---|---|---|
-| `frame` | `json` | — |  |
+| `frame` | `motion_frame` | — |  |
 | `address_prefix` | `string` | `""` |  |
 | `address_substring` | `string` | `""` |  |
 
 | Output | Type | Note |
 |---|---|---|
-| `frame_out` | `json` |  |
+| `frame_out` | `motion_frame` |  |
 
 ### `flowgraph.motion.map`
 
-**Motion: Map Numeric Args** — `vmc_parse` の frame の各 `osc_messages[].args` に含まれる数値を再帰的に `float_scale` 倍する（配列ネスト可）
+**Motion: Map Numeric Args** — 各 `osc_messages[].args` の JSON 数値を再帰的に `float_scale` 倍する。入出力は `motion_frame`（`json` へ coerce 可）
 
 | Input | Type | Default | Note |
 |---|---|---|---|
-| `frame` | `json` | — |  |
+| `frame` | `motion_frame` | — |  |
 | `float_scale` | `float` | `1.0` |  |
 
 | Output | Type | Note |
 |---|---|---|
-| `frame_out` | `json` |  |
+| `frame_out` | `motion_frame` |  |
 
 ### `flowgraph.motion.vmc_parse`
 
-**Motion: VMC OSC Parse** — Base64 された UDP ペイロードを OSC として解釈し、address/args を JSON にまとめる（Phase M4 v0）
+**Motion: VMC OSC Parse** — Base64 された UDP ペイロードを OSC として解釈し、[`MotionFrame`]（`motion_frame`）を出力。`json` へ接続時は自動変換
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1904,7 +1904,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 | Output | Type | Note |
 |---|---|---|
-| `frame` | `json` |  |
+| `frame` | `motion_frame` |  |
 
 ## noise
 
