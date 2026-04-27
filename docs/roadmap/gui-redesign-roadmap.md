@@ -4,6 +4,8 @@
 
 > Copy policy: GUI copy と source comments は日本語を基準文体にしつつ、技術語・識別子・既存の英語 UI 慣習は自然に併用する。正本は [`../gui-copy-style-guide.md`](../gui-copy-style-guide.md)。
 
+> Visual policy: GUI のルック・アンド・フィールは「常駐ランタイムの管制卓」として、わかりやすさ、使いやすさ、さり気ないかっこよさを同時に満たす方向へ段階的に整える。正本は [`../gui-visual-style-guide.md`](../gui-visual-style-guide.md)。
+
 ---
 
 ## 0. Goal
@@ -220,3 +222,10 @@ The current GUI branch now includes these completed slices:
 - Playwright regression coverage for shell navigation, Now, Modes, Flowgraph Studio, and Observability
 
 The remaining GUI roadmap is now mostly refinement work: visual polish, deeper domain-specific debugger views, and future backend integrations that are not yet specified.
+
+### GR-8 Visual Baseline - planned
+
+- [ ] Establish a visual style guide for the default VAC GUI look and feel.
+- [ ] Keep the first implementation conservative: OS theme dark/light, controlled density, consistent panel hierarchy, and restrained state colors.
+- [ ] Avoid decorative skin work until the default operational cockpit baseline is stable.
+- [ ] Use Playwright screenshots for future visual regression checks once the baseline starts changing CSS substantially.
