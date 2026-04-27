@@ -1,31 +1,24 @@
 <script lang="ts">
  /**
-  * Phase VI-γ-1: ウィジェット配置用のスロット土台。
+  * Lightweight placeholder shell for planned dashboard widgets.
   *
-  * γ-1 では **見た目としての領域** だけ提供し、ウィジェット自体（OBS 連携、`!bsr` キュー、
-  * Twitch チャット等）は γ-2 以降で個別に作り込んで差し込む。ここでは API だけ先に固める:
-  *
-  *   - `title` を指定するとボーダー付きのカードで枠を持つ
-  *   - 空スロットのときは "この領域にウィジェットを配置できます" のプレースホルダ
-  *   - `compact` で枠線なし・余白最小の variant（ステータスバー近くに並べるとき用）
-  *
-  * ここで作った interface は γ-2 以降の実ウィジェットを <WidgetSlot>...</WidgetSlot> で包むか、
-  * あるいは slot 経由で注入する方式のどちらでも扱えるようにしている。
+  * The component gives unfinished resource, settings, and utility surfaces a
+  * consistent frame until a concrete widget replaces the placeholder content.
   */
  import type { Snippet } from 'svelte';
 
  interface Props {
-  /** カード左上に小さく出す見出し。省略可。 */
+  /** Card title shown in the header. */
   title?: string;
-  /** 右上に出す副情報（プロフィール名など）。省略可。 */
+  /** Small header note, usually status or scope. */
   subtitle?: string;
-  /** 子要素。未指定時はプレースホルダを出す。 */
+  /** Optional real widget content. */
   children?: Snippet;
-  /** 枠・余白を最小化する。 */
+  /** Render without the dashed card frame. */
   compact?: boolean;
-  /** プレースホルダに出す説明文。未指定時は定形文。 */
+  /** Text shown while no widget content is mounted. */
   placeholder?: string;
-  /** ref 用の id（URL フラグメントや a11y 用）。 */
+  /** Optional region id for links and tests. */
   id?: string;
  }
 
@@ -34,7 +27,7 @@
   subtitle,
   children,
   compact = false,
-  placeholder = 'このスロットにウィジェットを配置できます（γ-2 以降で実装）。',
+  placeholder = 'This widget slot is reserved for a planned GUI surface.',
   id,
  }: Props = $props();
 </script>

@@ -1,20 +1,10 @@
 <script lang="ts">
  /**
-  * Phase δ-6e: Flowgraph タブのトップレベル。
+  * Flowgraph Studio tab.
   *
-  * レイアウト:
-  *   ├── 上部: ツールバー（reload / save / open-external）
-  *   ├── 中央:
-  *   │    ├── 左サイドバー（ファイルツリー）
-  *   │    ├── キャンバス（Svelte Flow）
-  *   │    └── 右サイドバー（上: パレット / 下: プロパティエディタ）
-  *   └── 下部: 診断パネル
-  *
-  * 責務:
-  *   - マウント時に `flowgraphStore.refreshAll()` + WS 購読を開始
-  *   - アンマウント時に WS 購読を解除
-  *
-  * 子コンポーネントとの通信は `flowgraphStore` 経由。props は最小に保つ。
+  * Owns the high-level editor layout, command palette, keyboard shortcuts,
+  * and Flowgraph store lifecycle. Canvas, tree, palette, inspector, and
+  * diagnostics behavior stay in their focused child components.
   */
  import { onMount } from 'svelte';
  import { flowgraphStore, summarizeDiagnostics } from '../flowgraphStore.svelte';
@@ -45,7 +35,7 @@ type StudioCommand = {
 onMount(() => {
   void flowgraphStore.refreshAll();
   flowgraphStore.attachWsSubscriber();
-  // γ-4a: Ctrl+S / Cmd+S で現在ファイルを保存。フォーカスが input 系でも有効にするため window に付ける。
+  // Keep global editor shortcuts on window; form controls handle their own keys.
   const onKeyDown = (ev: KeyboardEvent) => {
    const t = ev.target as HTMLElement | null;
    if (t?.closest('input, textarea, select, [contenteditable="true"]')) return;
@@ -88,13 +78,13 @@ onMount(() => {
     ev.preventDefault();
     const ok = flowgraphStore.duplicateSelectedNode();
     if (ok) {
-     toastStore.success('複製しました', flowgraphStore.selectedNodeId ?? '');
+     toastStore.success('Duplicated', flowgraphStore.selectedNodeId ?? '');
     }
     return;
    }
   };
   window.addEventListener('keydown', onKeyDown);
-  // γ-4a: 未保存変更がある状態で閉じようとしたらブラウザにネイティブ確認ダイアログを出す。
+  // Ask the browser to confirm navigation while the current Flowgraph draft is dirty.
   const onBeforeUnload = (ev: BeforeUnloadEvent) => {
    if (!flowgraphStore.isDirty) return;
    ev.preventDefault();
@@ -110,7 +100,7 @@ onMount(() => {
 
  const isDirty = $derived(flowgraphStore.isDirty);
  const saveLabel = $derived(
-  flowgraphStore.mutating ? 'Saving…' : isDirty ? 'Save *' : 'Save',
+  flowgraphStore.mutating ? 'Saving...' : isDirty ? 'Save *' : 'Save',
  );
 
  const summary = $derived(summarizeDiagnostics(flowgraphStore.diagnostics?.diagnostics));
@@ -245,7 +235,7 @@ onMount(() => {
   return specs.slice(0, 250).map((spec) => ({
    id: `insert:${spec.feature}`,
    label: `Insert ${spec.title}`,
-   description: `${spec.category} · ${spec.feature}`,
+   description: `${spec.category} - ${spec.feature}`,
    disabled: !flowgraphStore.currentFq,
    run: () => {
     flowgraphStore.addCatalogNodeAt(spec, null);
@@ -279,7 +269,7 @@ async function onOpenExternal() {
 }
 
 async function onCopy() {
- // 選択中ノードがあればそれを、なければ現在ファイル全体を fragment 化。
+ // Copy selected nodes when available, otherwise copy the current file as a fragment.
  if (flowgraphStore.selectedNodeId) await flowgraphStore.fragmentCopySelectedNode();
  else await flowgraphStore.fragmentCopyCurrentFile();
 }
@@ -386,7 +376,7 @@ async function runStudioCommand(command: StudioCommand) {
   <button
    type="button"
    class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800"
-   title="ディスクから再ロード"
+   title="Reload Flowgraph files from disk"
    onclick={onReload}
   >
    Reload
@@ -395,7 +385,7 @@ async function runStudioCommand(command: StudioCommand) {
    type="button"
    class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800 disabled:opacity-40"
    disabled={!flowgraphStore.currentFq}
-   title="外部エディタで開く"
+   title="Open the selected Flowgraph file in an external editor"
    onclick={onOpenExternal}
   >
    Open external
@@ -404,7 +394,7 @@ async function runStudioCommand(command: StudioCommand) {
   type="button"
   class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800 disabled:opacity-40"
   disabled={!flowgraphStore.currentFq}
-  title="選択ノード、なければ現在ファイル全体を fragment TOML としてコピー"
+  title="Copy the selected nodes, or the current file when no node is selected"
   onclick={onCopy}
  >
   Copy
@@ -412,16 +402,16 @@ async function runStudioCommand(command: StudioCommand) {
  <button
   type="button"
   class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800"
-  title="fragment TOML を paste"
+  title="Paste a Flowgraph fragment"
   onclick={onPaste}
  >
-  Paste…
+  Paste...
  </button>
  <button
   type="button"
   class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800 disabled:opacity-40"
   disabled={!flowgraphStore.currentFq}
-  title="現在ファイルを ZIP でエクスポート"
+  title="Export the current Flowgraph file as a ZIP fragment"
   onclick={onExportZip}
  >
   Export ZIP
@@ -429,10 +419,10 @@ async function runStudioCommand(command: StudioCommand) {
  <button
   type="button"
   class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800"
-  title="ZIP を import（dry_run preview → 本番）"
+  title="Import a ZIP fragment with preview before applying changes"
   onclick={onImportZip}
  >
-  Import ZIP…
+  Import ZIP...
  </button>
  <button
   type="button"
@@ -442,7 +432,7 @@ async function runStudioCommand(command: StudioCommand) {
   class:bg-warning-500={isDirty}
   class:hover:bg-warning-600={isDirty}
   disabled={!flowgraphStore.currentFq || flowgraphStore.mutating}
-  title={isDirty ? '未保存の変更があります（Ctrl+S）' : '現在のファイルを保存（Ctrl+S）'}
+  title={isDirty ? 'Unsaved changes. Press Ctrl+S to save.' : 'Save the current Flowgraph file. Press Ctrl+S.'}
   onclick={onSave}
  >
   {saveLabel}
