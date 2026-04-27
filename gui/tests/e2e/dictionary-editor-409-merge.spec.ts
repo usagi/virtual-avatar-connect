@@ -121,9 +121,7 @@ test.describe('§3.3 dictionary-editor-409-merge', () => {
 		const preBody = (await preRes.json()) as TableDto;
 		const target = preBody.rows.find((row) => row.values.source === TARGET_SOURCE);
 		expect(target).toBeDefined();
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		const targetRowIndex = target!.row_index;
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		const targetValues = { ...target!.values, replacement: theirReplacement };
 
 		const extPatch = await request.patch(
@@ -189,7 +187,6 @@ test.describe('§3.3 dictionary-editor-409-merge', () => {
 				headers: { ...authHeader(), 'If-Match': `b3:${finalBody.content_hash}` },
 				data: {
 					values: {
-						// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 						...finalRow!.values,
 						replacement: ORIGINAL_REPLACEMENT,
 					},

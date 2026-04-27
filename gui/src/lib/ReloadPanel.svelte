@@ -31,6 +31,7 @@
  // Reload 成功時、サーバから `ControlEvent.reloaded` が飛んでくるので SnapshotView は自動追従する。
 
  import { onMount, onDestroy } from 'svelte';
+ import { SvelteMap } from 'svelte/reactivity';
  import { api } from './api';
  import {
   ControlApiError,
@@ -149,7 +150,7 @@ let openError = $state<string | null>(null);
 let openResult = $state<string | null>(null);
 
 const modifyProcessorById = $derived.by(() => {
- const map = new Map<string, ProcessorSummary>();
+ const map = new SvelteMap<string, ProcessorSummary>();
  for (const p of modifyProcessors) {
   if (p.id) map.set(p.id, p);
  }

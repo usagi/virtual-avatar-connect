@@ -307,7 +307,7 @@
 
  <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
   <div class="grid gap-3 md:grid-cols-2">
-   {#each displayModes as mode}
+   {#each displayModes as mode (mode.id)}
     {@const selected = selectedMode?.id === mode.id}
     <button
      type="button"
@@ -323,7 +323,7 @@
      </div>
      <p class="mt-2 text-xs leading-relaxed opacity-70">{mode.description}</p>
      <div class="mt-3 flex flex-wrap gap-1">
-      {#each mode.flowgraphGroups.slice(0, 3) as group}
+      {#each mode.flowgraphGroups.slice(0, 3) as group (group)}
        <code class="rounded bg-surface-100-900 px-1.5 py-0.5 text-[10px]">{group}</code>
       {/each}
      </div>
@@ -354,7 +354,7 @@
       </dl>
      {:else}
       <div class="flex flex-wrap gap-1">
-       {#each selectedMode.flowgraphGroups as group}
+       {#each selectedMode.flowgraphGroups as group (group)}
         <code class="rounded bg-surface-100-900 px-1.5 py-0.5 text-xs">{group}</code>
        {/each}
       </div>
@@ -398,7 +398,7 @@
      <div class="mb-1 text-xs font-semibold opacity-70">Managed App desired state</div>
      {#if managedDesiredRows.length > 0}
       <dl class="grid grid-cols-[64px_minmax(0,1fr)] gap-x-2 gap-y-1 text-xs">
-       {#each managedDesiredRows as row}
+       {#each managedDesiredRows as row (row.label)}
         <dt class="opacity-60">{row.label}</dt>
         <dd class="truncate font-mono">{joinList(row.values)}</dd>
        {/each}
@@ -407,7 +407,7 @@
       <div class="rounded bg-surface-100-900 px-2 py-1 text-xs opacity-60">No managed app changes.</div>
      {:else}
       <ul class="grid gap-1">
-       {#each selectedMode.managedApps as action}
+       {#each selectedMode.managedApps as action (action)}
         <li class="rounded bg-surface-100-900 px-2 py-1 text-xs">{action}</li>
        {/each}
       </ul>
@@ -434,7 +434,7 @@
      <div>
       <div class="mb-1 text-xs font-semibold opacity-70">Last Managed App ops</div>
       <ul class="grid gap-1">
-       {#each managedAppOps as op}
+       {#each managedAppOps as op (`${op.op}:${op.id}:${op.ok}:${op.detail ?? ''}`)}
         <li class="rounded bg-surface-100-900 px-2 py-1 text-xs">
          <span class="font-mono">{op.op}</span>
          <span class="ml-1">{op.id}</span>

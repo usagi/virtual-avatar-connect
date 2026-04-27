@@ -254,7 +254,7 @@
  {#if quickAddTables.length === 0}
   <p class="opacity-70">
    <code>[[control_api.tables]]</code> に
-   <code>quick_add = {'{'} node_id = &quot;...&quot; {'}'}</code>
+   <code>quick_add = &#123; node_id = &quot;...&quot; &#125;</code>
    を指定した Table がありません。conf.toml を見直してください。
   </p>
  {:else if !selectedTable}

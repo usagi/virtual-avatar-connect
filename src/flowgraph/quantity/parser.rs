@@ -21,10 +21,8 @@
 //!   `lookup_prefixable_base`; the unprefixed forms go through `lookup_derived`.
 //! - Parentheses are NOT supported in xi-1 (reserved for xi-2+).
 
-use std::collections::BTreeMap;
-
 use super::prefix::SIPrefix;
-use super::unit::{BaseUnitId, Unit};
+use super::unit::Unit;
 
 /// Errors produced while parsing a unit string.
 #[derive(Debug, Clone, thiserror::Error)]
