@@ -9,4 +9,9 @@ dirs = "6.0"
 jiff = { version = "0.2.24", features = ["serde"] }
 log = "0.4.29"
 rand = "0.10.1"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "2.0"
 tokio = { version = "1.52", features = ["macros", "signal", "sync", "time", "rt"] }
+
+[dev-dependencies]
+serde_json = "1.0"

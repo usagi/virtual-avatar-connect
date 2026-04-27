@@ -87,7 +87,7 @@ Phase ξ で「単位は型、事故を防ぐ砦」を貫いたのと同じ哲�
 ### 3.1 内部表現
 
 ```rust
-// src/datetime/mod.rs (新設。engine 全体から利用可能な boundary 型)
+// crates/vac-core/src/datetime.rs（root の src/datetime/mod.rs は互換再エクスポート）
 
 use jiff::Timestamp;
 
@@ -336,7 +336,7 @@ parse 対象文字列の TZ 情報の有無を以下で判定:
 
 ### π-4 — feat(flowgraph/datetime): 型基盤
 
-- `src/datetime/mod.rs` に `DateTime(pub Timestamp)` newtype + 変換関数 + エラー型
+- `crates/vac-core/src/datetime.rs` に `DateTime(pub Timestamp)` newtype + 変換関数 + エラー型（root `src/datetime/mod.rs` は互換再エクスポート）
 - `src/flowgraph/node.rs`:
   - `SocketType::DateTime` variant 追加
   - `SocketValue::DateTime(DateTime)` variant 追加
