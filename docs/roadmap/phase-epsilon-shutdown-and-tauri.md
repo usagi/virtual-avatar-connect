@@ -1,6 +1,6 @@
 # Phase ε — Shutdown 統合と Tauri 移行段取り
 
-**Status**: ε-1（ShutdownBroker）実装済み。ε-2（Tauri 化 / CLI 可視性ポリシー）は Windows desktop の tray + WebView first slice を実装中。
+**Status**: ε-1（ShutdownBroker）実装済み。ε-2（Tauri 化 / CLI 可視性ポリシー）は Windows desktop の tray + WebView first slice 実装済み。`embed-gui` release build による GUI 同梱配信も確認済み。
 
 **Scope**: VAC の「終了処理／実行形態／CLI 可視性」にまつわる長年の小さな引っかかりを解消し、最終的に Tauri ネイティブウィンドウ動作までの地盤を作る。Phase δ（Flowgraph）と直交するメタな作業。
 
@@ -88,7 +88,7 @@ flowchart LR
 
 ---
 
-## 3. ε-2: Tauri 移行の段取り（実装中）
+## 3. ε-2: Tauri 移行の段取り（first slice 実装済み）
 
 **工程順（2026 方針）**: crate **再構造化** → **CLI / desktop の 2 runner**（単体起動・コアは lib）の詳細設計・実装 → **Tauri GUI shell を desktop runner に組み込む**。一般ユーザー向け入口・コンソール非表示・トレイ UX は desktop 側に寄せ、CLI はターミナル実行・ログ確認・本体機能開発向けに残す。正本: [`v2-vmc-and-restructure.md`](v2-vmc-and-restructure.md) §1.1、概要: [`architecture.md`](../architecture.md)「実行入口（計画・工程順）」。
 
@@ -163,11 +163,19 @@ pub async fn run() -> Result<()> {
 
 ### 3.6 GUI 静的成果物の内蔵（設計メモ）
 
-**目的**: エンドユーザーが **`npm run dev` を起動しない**まま、Tauri WebView および（同一アセットを流用すれば）**CLI 経由の actix** から既存 Control Panel を開けるようにする。
+**目的**: エンドユーザーが **`npm run dev` を起動しない**まま、Tauri WebView および **CLI 経由の actix** から既存 Control Panel を開けるようにする。
 
 - **ソース**: 引き続き `gui/` で Svelte を編集し、CI／リリース前に `npm run build` で `gui/dist` を生成する。
 - **取り込み**: `gui/dist` を **ビルド時**に Rust 側へ埋め込む（`vac-gui-assets` 的 crate、`rust-embed`、`build.rs` 生成、`include_dir!` 等。詳細は実装時に [`v2-vmc-and-restructure.md`](v2-vmc-and-restructure.md) §1.2）。
-- **Tauri**: §3.3 の「初期 URL = `http://127.0.0.1:<port>`」は開発時のままにしつつ、**リリース**では **同梱静的**（custom protocol 等）へ切り替え、WebView がローカル actix の API だけ HTTP で叩く形にできる。
+- **Tauri**: first slice では WebView の初期 URL を loopback の `/gui/` にし、**リリース**では `embed-gui` feature により actix が同梱静的を返す。custom protocol は後続の最適化候補であり、Control API / WS は引き続き loopback HTTP を使う。
+
+配布用の基準コマンド:
+
+```powershell
+cargo build --release --features embed-gui
+```
+
+この build で `virtual-avatar-connect-cli.exe` / `virtual-avatar-connect-desktop.exe` の 2 本だけが生成され、desktop 側は tray + Tauri WebView で `/gui/` を開く。
 - **actix**: ディスクの `gui_dist_path` ではなく **埋め込みバイト列**から `index.html` / アセットを返す実装を追加すれば、**CLI 単体**でも同じ UI を配信できる。
 
 開発時は従来どおりファイルシステムや Vite を指す経路を残す（feature 分岐）。

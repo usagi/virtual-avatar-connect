@@ -108,7 +108,7 @@ Windows release の desktop 側だけ `windows_subsystem = "windows"` を使う�
 
 `state`、`web_interface`、`bridges` は相互依存が濃いので後回し。先に動かすと実装速度が落ちる。
 
-### R5: desktop tray 最小実装（Windows first slice 実装済み・手動確認待ち）
+### R5: desktop tray 最小実装（Windows first slice 実装済み・手動確認済み）
 
 desktop runner の tray 常駐責務を固定する。
 
@@ -116,8 +116,8 @@ desktop runner の tray 常駐責務を固定する。
 - [x] tray の `GUI を開く` と左ダブルクリックから Tauri WebView GUI を開ける。
 - [x] 終了時は `ShutdownBroker` を使う。
 - [x] 将来 tray から呼ぶ操作を Rust API として用意する。
-- [x] tray default icon は `resources/icons/vac-tray-default.png` を使う。正本は `assets/brand/vac/design-master/`、派生素材は `assets/brand/vac/derived/`。
-- [ ] 開発機で実際の Windows tray 表示、右クリック menu、終了導線を手動確認する。
+- [x] tray default icon は `assets/brand/vac/derived/vac-tray-default-16.png` を使う。正本は `assets/brand/vac/design-master/`、派生素材は `assets/brand/vac/derived/`。
+- [x] 開発機で実際の Windows tray 表示、右クリック menu、終了導線を手動確認する。
 
 tray menu の初期項目は次だけでよい。
 
@@ -138,6 +138,8 @@ Tauri GUI shell は desktop runner に載せる。CLI は従来型の開発者�
 - GUI は引き続き HTTP/WS Control API を叩く。
 - `invoke` は原則使わない。bootstrap 情報が必要な場合だけ薄く追加する。
 - tray close / window close / GUI 終了ボタンは `ShutdownBroker` へ合流させる。
+
+同梱 GUI release は `cargo build --release --features embed-gui` を正本にする。WebView は loopback の `/gui/` を開き、actix 側が `vac-gui-assets` に埋め込んだ `gui/dist` を返す。Tauri custom protocol は後続の最適化候補に留める。
 
 ---
 

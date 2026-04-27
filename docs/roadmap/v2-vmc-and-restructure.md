@@ -378,9 +378,9 @@ flowgraph.motion.map
 
 #### Step 9 — desktop Tauri GUI shell + 同梱静的 + tray
 
-* WebView の入口を **同梱 GUI**（§1.2、[`phase-epsilon-shutdown-and-tauri.md`](phase-epsilon-shutdown-and-tauri.md) §3.6）に切り替え可能にする。Control API はループバック HTTP のまま。
-* Tauri GUI shell は desktop runner に組み込む。desktop では tray の `GUI を開く` / 左ダブルクリックから window show / focus する。
-* tray / window / Control API の停止導線は `ShutdownBroker` に合流させる。
+* [x] WebView の入口は loopback `/gui/`。`embed-gui` release build では actix が **同梱 GUI**（§1.2、[`phase-epsilon-shutdown-and-tauri.md`](phase-epsilon-shutdown-and-tauri.md) §3.6）を返す。Control API はループバック HTTP のまま。
+* [x] Tauri GUI shell は desktop runner に組み込む。desktop では tray の `GUI を開く` / 左ダブルクリックから window show / focus する。
+* [x] tray / window / Control API の停止導線は `ShutdownBroker` に合流させる。
 
 ---
 
