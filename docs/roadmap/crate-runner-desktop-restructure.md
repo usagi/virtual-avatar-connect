@@ -92,12 +92,11 @@ pub async fn run_desktop_headless() -> Result<()>;
 `Cargo.toml` に runner を追加する。
 
 ```text
-virtual-avatar-connect          # 互換 alias。当面は CLI と同じ。
 virtual-avatar-connect-cli      # console runner
 virtual-avatar-connect-desktop  # desktop runner
 ```
 
-Windows release の desktop 側だけ `windows_subsystem = "windows"` を使う。開発中は console を残す。`virtual-avatar-connect` は移行期間の互換名として残し、どの時点で alias を変えるかは release note で決める。
+Windows release の desktop 側だけ `windows_subsystem = "windows"` を使う。開発中は console を残す。root package 名と同名の `virtual-avatar-connect` alias は配布物を紛らわしくするため作らない。
 
 ### R4: crate 物理分割の第一段
 
@@ -109,15 +108,16 @@ Windows release の desktop 側だけ `windows_subsystem = "windows"` を使う�
 
 `state`、`web_interface`、`bridges` は相互依存が濃いので後回し。先に動かすと実装速度が落ちる。
 
-### R5: desktop tray 最小実装
+### R5: desktop tray 最小実装（Windows first slice 実装済み・手動確認待ち）
 
 Tauri の前に、desktop runner の責務を固定する。
 
-- 起動時に VAC runtime を立ち上げる。
-- GUI を既定ブラウザで開ける。
-- 終了時は `ShutdownBroker` を使う。
-- 将来 tray から呼ぶ操作を Rust API として用意する。
-- tray default icon は `resources/icons/vac-tray-default.png` を使う。正本は `assets/brand/vac/design-master/`、派生素材は `assets/brand/vac/derived/`。
+- [x] 起動時に VAC runtime を立ち上げる。
+- [x] GUI を既定ブラウザで開ける。
+- [x] 終了時は `ShutdownBroker` を使う。
+- [x] 将来 tray から呼ぶ操作を Rust API として用意する。
+- [x] tray default icon は `resources/icons/vac-tray-default.png` を使う。正本は `assets/brand/vac/design-master/`、派生素材は `assets/brand/vac/derived/`。
+- [ ] 開発機で実際の Windows tray 表示、右クリック menu、終了導線を手動確認する。
 
 tray menu の初期項目は次だけでよい。
 

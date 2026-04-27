@@ -5,6 +5,7 @@ pub(crate) mod bridges;
 mod conf;
 mod control_events;
 pub(crate) mod datetime;
+mod desktop;
 mod error;
 mod libretranslate;
 mod logger;
@@ -44,7 +45,7 @@ pub struct AudioSink {
 }
 
 impl AudioSink {
-	fn open_default() -> crate::Result<Self> {
+	pub(crate) fn open_default() -> crate::Result<Self> {
 		let device = DeviceSinkBuilder::open_default_sink()?;
 		let player = Player::connect_new(device.mixer());
 		Ok(Self { _device: device, player })
@@ -59,6 +60,14 @@ impl std::fmt::Debug for AudioSink {
 }
 
 async fn run_with_standard_bootstrap() -> Result<()> {
+	let core = boot_with_standard_bootstrap().await?;
+	core.serve().await?;
+	core.cleanup().await?;
+
+	Ok(())
+}
+
+async fn boot_with_standard_bootstrap() -> Result<app_core::AppCore> {
 	// ロガーの実装を初期化
 	logger::init();
 
@@ -77,7 +86,7 @@ async fn run_with_standard_bootstrap() -> Result<()> {
 	// run_with 機能の実行
 	conf.execute_run_with()?;
 
-	app_core::run_vac_application(conf, audio_sink).await
+	app_core::AppCore::boot(conf, audio_sink).await
 }
 
 /// 互換入口。移行期間中は CLI runner と同じ動きをする。
@@ -96,4 +105,12 @@ pub async fn run_cli() -> Result<()> {
 /// 後続で system tray / Tauri shell をこの入口へ載せる。
 pub async fn run_desktop_headless() -> Result<()> {
 	run_with_standard_bootstrap().await
+}
+
+/// system tray 付きの desktop runner。
+///
+/// Windows では tray menu から GUI を開き、`ShutdownBroker` 経由で VAC を終了する。
+/// それ以外の OS は Tauri shell 導入まで headless desktop runner と同じ起動にする。
+pub fn run_desktop() -> Result<()> {
+	desktop::run()
 }

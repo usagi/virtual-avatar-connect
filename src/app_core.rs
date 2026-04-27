@@ -13,6 +13,7 @@ use crate::state::SharedState;
 use crate::{ai, flowgraph, web_interface, Result, SharedAudioSink};
 use actix_files::Files;
 use actix_web::web::Data;
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 /// conf ロード済み・`run_with` 済みの状態から起動する VAC 常駐ランタイム本体。
@@ -156,6 +157,15 @@ impl AppCore {
 		.await
 	}
 
+	pub fn shutdown_broker(&self) -> Arc<shutdown::ShutdownBroker> {
+		self.shutdown.clone()
+	}
+
+	pub fn gui_url(&self) -> String {
+		let address = normalize_loopback_address(self.conf.get_web_ui_address());
+		format!("http://{address}/gui/")
+	}
+
 	pub async fn cleanup(self) -> Result<()> {
 		let managed_stop = {
 			let s = self.state.read().await;
@@ -202,13 +212,23 @@ impl AppCore {
 	}
 }
 
-/// conf ロード済み・`run_with` 済みの状態から、VAC 常駐ランタイムを起動してサーバ停止までブロックする。
-pub async fn run_vac_application(conf: Conf, audio_sink: SharedAudioSink) -> Result<()> {
-	let core = AppCore::boot(conf, audio_sink).await?;
-	core.serve().await?;
-	core.cleanup().await?;
+fn normalize_loopback_address(address: &str) -> String {
+	if let Ok(socket) = address.parse::<SocketAddr>() {
+		let port = socket.port();
+		let ip = socket.ip();
+		if ip.is_unspecified() {
+			return format!("127.0.0.1:{port}");
+		}
+		if ip.is_ipv6() {
+			return format!("[{ip}]:{port}");
+		}
+		return socket.to_string();
+	}
 
-	Ok(())
+	address
+		.strip_prefix("0.0.0.0:")
+		.map(|port| format!("127.0.0.1:{port}"))
+		.unwrap_or_else(|| address.to_string())
 }
 
 async fn run_services(

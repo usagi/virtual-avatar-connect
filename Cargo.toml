@@ -3,7 +3,8 @@ name = "virtual-avatar-connect"
 version = "0.10.0"
 edition = "2021"
 build = "build.rs"
-default-run = "virtual-avatar-connect"
+autobins = false
+default-run = "virtual-avatar-connect-desktop"
 
 [workspace]
 members = [".", "vac-gui-assets"]
@@ -13,10 +14,6 @@ resolver = "2"
 [lib]
 name = "virtual_avatar_connect"
 path = "src/lib.rs"
-
-[[bin]]
-name = "virtual-avatar-connect"
-path = "src/main.rs"
 
 [[bin]]
 name = "virtual-avatar-connect-cli"
@@ -30,6 +27,7 @@ path = "src/bin/desktop.rs"
 [[bin]]
 name = "virtual-avatar-connect-migrate-dict"
 path = "src/bin/migrate_dict.rs"
+required-features = ["tools"]
 
 [dependencies]
 anyhow = "1.0.102"
@@ -128,6 +126,8 @@ optional = true
 default = ["voice-vosk"]
 # v2 Step 6: `vac-gui-assets` 経由で `gui/dist` を取り込み `/gui/*` をメモリ配信。事前に `cd gui && npm ci && npm run build` が必須。
 embed-gui = ["dep:vac-gui-assets"]
+# 明示ビルド用 tool。通常の `cargo build --release` では CLI / desktop runner だけを作る。
+tools = []
 # 《Voice》: Vosk。Windows では build.rs が vosk-win64 の zip を .vendors にキャッシュし DLL を target/{profile}/ へコピー（上書き: VOSK_LIB_PATH）
 voice-vosk = ["dep:vosk"]
 # 《Voice》: Whisper（whisper.cpp）。CMake・LLVM（libclang）・C++ が必要: `cargo build --features voice-whisper`
@@ -142,6 +142,8 @@ features = ["log_backend"]
 # Windows Only
 [target.'cfg(windows)'.dependencies]
 win-screenshot = "4.0.14"
+tao = "0.35"
+tray-icon = "0.22"
 windows = { version = "0.62", features = [
  "Media_Ocr",
  "Win32_Foundation",
