@@ -33,10 +33,10 @@
   };
 
   pane.addEventListener('dragover', onDragOver);
-  pane.addEventListener('drop', onDrop as EventListener);
+  pane.addEventListener('drop', onDrop);
   return () => {
    pane.removeEventListener('dragover', onDragOver);
-   pane.removeEventListener('drop', onDrop as EventListener);
+   pane.removeEventListener('drop', onDrop);
   };
  });
 </script>
