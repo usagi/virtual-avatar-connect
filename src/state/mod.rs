@@ -6,11 +6,14 @@
 
 mod channel_attach;
 mod channel_datum;
+mod managed_apps_mode_apply;
 mod runtime_mode_apply;
+mod runtime_mode_transition;
 mod speech_floor;
 
 pub use channel_attach::{Attachment, DataSource};
 pub use runtime_mode_apply::apply_runtime_mode_change;
+pub use runtime_mode_transition::{apply_runtime_mode_transition_full, try_begin_runtime_mode_transition};
 pub use channel_datum::{ChannelData, ChannelDatum, SharedChannelData};
 pub use speech_floor::SpeechFloorManager;
 
@@ -183,6 +186,10 @@ pub struct State {
 	/// 登録タイミングは `lib.rs::run()` 冒頭で `ShutdownBroker::new()` を生成し、
 	/// `State::new()` の引数として受け取る。
 	pub shutdown: Arc<ShutdownBroker>,
+
+	/// RM-5: `apply_runtime_mode_transition_full` が Managed App I/O 等を実行している間 true。
+	/// 再入の `try_begin_runtime_mode_transition` は失敗させる。
+	pub runtime_mode_transition_busy: Arc<AtomicBool>,
 }
 
 impl State {
@@ -256,6 +263,7 @@ impl State {
 			bridge_handles: std::sync::Arc::new(tokio::sync::Mutex::new(crate::bridges::BridgeHandles::empty())),
 			voicepeak_fallback_exe,
 			shutdown,
+			runtime_mode_transition_busy: Arc::new(AtomicBool::new(false)),
 		}));
 		log::trace!("State の生成が完了しました。");
 

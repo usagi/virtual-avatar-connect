@@ -4,7 +4,10 @@ use actix_web::web::{Data, Json};
 use actix_web::{get, post, put, HttpResponse, Responder};
 
 use crate::conf::{build_mode_transition_plan, Conf, ModeTransitionPlan};
-use crate::state::apply_runtime_mode_change;
+use crate::control_events::RuntimeModeManagedAppOp;
+use crate::state::{
+	apply_runtime_mode_change, apply_runtime_mode_transition_full, try_begin_runtime_mode_transition,
+};
 use crate::SharedState;
 
 #[derive(Debug, serde::Serialize)]
@@ -17,6 +20,9 @@ pub struct ModesListResponse {
 pub struct CurrentModeResponse {
 	/// 現在選択。`null` は `conf.default_runtime_mode` に従う。
 	pub mode: Option<String>,
+	/// 非 noop の `PUT` で Managed App を適用したときのみ（空なら省略）。
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub managed_apps: Option<Vec<RuntimeModeManagedAppOp>>,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -44,6 +50,8 @@ pub struct TransitResponse {
 	pub dry_run: bool,
 	pub mode: Option<String>,
 	pub plan: ModeTransitionPlan,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub managed_apps: Option<Vec<RuntimeModeManagedAppOp>>,
 }
 
 fn normalize_body_mode(mode: Option<&String>) -> Option<String> {
@@ -85,13 +93,22 @@ pub async fn get_current_mode(state: Data<SharedState>) -> impl Responder {
 		.read()
 		.ok()
 		.and_then(|g| g.clone());
-	HttpResponse::Ok().json(CurrentModeResponse { mode })
+	HttpResponse::Ok().json(CurrentModeResponse {
+		mode,
+		managed_apps: None,
+	})
 }
 
 #[put("/modes/current")]
 pub async fn put_current_mode(state: Data<SharedState>, body: Json<PutCurrentModeBody>) -> impl Responder {
-	let s = state.read().await;
-	let Some(path) = s.conf_source_path.as_ref() else {
+	let (path, current_slot) = {
+		let s = state.read().await;
+		(
+			s.conf_source_path.clone(),
+			s.runtime_mode_id.read().ok().and_then(|g| g.clone()),
+		)
+	};
+	let Some(path) = path.as_ref() else {
 		return HttpResponse::ServiceUnavailable().json(serde_json::json!({
 			"error": "conf_source_path_unset",
 			"message": "conf の出自パスが無いため mode を切り替えられません"
@@ -105,14 +122,48 @@ pub async fn put_current_mode(state: Data<SharedState>, body: Json<PutCurrentMod
 	};
 
 	let normalized = normalize_body_mode(body.mode.as_ref());
-	match apply_runtime_mode_change(state.get_ref(), &conf, normalized, None).await {
-		Ok(applied) => HttpResponse::Ok().json(CurrentModeResponse {
-			mode: applied.mode_slot,
-		}),
-		Err(e) => HttpResponse::BadRequest().json(serde_json::json!({
-			"error": "unknown_mode",
-			"message": e.to_string(),
-		})),
+	let plan = match build_mode_transition_plan(&conf, current_slot.as_deref(), normalized.as_deref()) {
+		Ok(p) => p,
+		Err(msg) => {
+			return HttpResponse::BadRequest().json(serde_json::json!({
+				"error": "plan_failed",
+				"message": msg,
+			}));
+		}
+	};
+
+	if plan.noop {
+		match apply_runtime_mode_change(state.get_ref(), &conf, normalized, None).await {
+			Ok(applied) => HttpResponse::Ok().json(CurrentModeResponse {
+				mode: applied.mode_slot,
+				managed_apps: None,
+			}),
+			Err(e) => HttpResponse::BadRequest().json(serde_json::json!({
+				"error": "unknown_mode",
+				"message": e.to_string(),
+			})),
+		}
+	} else {
+		let Some(_guard) = try_begin_runtime_mode_transition(state.get_ref()).await else {
+			return HttpResponse::Conflict().json(serde_json::json!({
+				"error": "transition_busy",
+				"message": "別の Runtime Mode 遷移を実行中です",
+			}));
+		};
+		match apply_runtime_mode_transition_full(state.get_ref(), &conf, normalized, None).await {
+			Ok(out) => HttpResponse::Ok().json(CurrentModeResponse {
+				mode: out.applied.mode_slot,
+				managed_apps: if out.managed_reports.is_empty() {
+					None
+				} else {
+					Some(out.managed_reports)
+				},
+			}),
+			Err(e) => HttpResponse::BadRequest().json(serde_json::json!({
+				"error": "unknown_mode",
+				"message": e.to_string(),
+			})),
+		}
 	}
 }
 
@@ -148,8 +199,14 @@ pub async fn post_modes_plan(state: Data<SharedState>, body: Json<PlanBody>) -> 
 
 #[post("/modes/transit")]
 pub async fn post_modes_transit(state: Data<SharedState>, body: Json<TransitBody>) -> impl Responder {
-	let s = state.read().await;
-	let Some(path) = s.conf_source_path.as_ref() else {
+	let (path, current) = {
+		let s = state.read().await;
+		(
+			s.conf_source_path.clone(),
+			s.runtime_mode_id.read().ok().and_then(|g| g.clone()),
+		)
+	};
+	let Some(path) = path.as_ref() else {
 		return HttpResponse::ServiceUnavailable().json(serde_json::json!({
 			"error": "conf_source_path_unset",
 			"message": "conf の出自パスが無いため transit できません"
@@ -162,11 +219,6 @@ pub async fn post_modes_transit(state: Data<SharedState>, body: Json<TransitBody
 		}));
 	};
 
-	let current = s
-		.runtime_mode_id
-		.read()
-		.ok()
-		.and_then(|g| g.clone());
 	let normalized = normalize_body_mode(body.mode.as_ref());
 
 	let plan = match build_mode_transition_plan(&conf, current.as_deref(), normalized.as_deref()) {
@@ -184,6 +236,7 @@ pub async fn post_modes_transit(state: Data<SharedState>, body: Json<TransitBody
 			dry_run: true,
 			mode: current,
 			plan,
+			managed_apps: None,
 		});
 	}
 
@@ -193,19 +246,42 @@ pub async fn post_modes_transit(state: Data<SharedState>, body: Json<TransitBody
 		.map(|s| s.trim().to_string())
 		.filter(|s| !s.is_empty());
 
-	match apply_runtime_mode_change(state.get_ref(), &conf, normalized.clone(), reason).await {
-		Ok(applied) => {
-			let mode_for_json = applied.mode_slot.clone();
-			HttpResponse::Ok().json(TransitResponse {
+	if plan.noop {
+		match apply_runtime_mode_change(state.get_ref(), &conf, normalized.clone(), reason).await {
+			Ok(applied) => HttpResponse::Ok().json(TransitResponse {
 				dry_run: false,
-				mode: mode_for_json,
+				mode: applied.mode_slot,
 				plan,
-			})
+				managed_apps: None,
+			}),
+			Err(e) => HttpResponse::BadRequest().json(serde_json::json!({
+				"error": "unknown_mode",
+				"message": e.to_string(),
+			})),
 		}
-		Err(e) => HttpResponse::BadRequest().json(serde_json::json!({
-			"error": "unknown_mode",
-			"message": e.to_string(),
-		})),
+	} else {
+		let Some(_guard) = try_begin_runtime_mode_transition(state.get_ref()).await else {
+			return HttpResponse::Conflict().json(serde_json::json!({
+				"error": "transition_busy",
+				"message": "別の Runtime Mode 遷移を実行中です",
+			}));
+		};
+		match apply_runtime_mode_transition_full(state.get_ref(), &conf, normalized.clone(), reason).await {
+			Ok(out) => HttpResponse::Ok().json(TransitResponse {
+				dry_run: false,
+				mode: out.applied.mode_slot.clone(),
+				plan,
+				managed_apps: if out.managed_reports.is_empty() {
+					None
+				} else {
+					Some(out.managed_reports)
+				},
+			}),
+			Err(e) => HttpResponse::BadRequest().json(serde_json::json!({
+				"error": "unknown_mode",
+				"message": e.to_string(),
+			})),
+		}
 	}
 }
 

@@ -36,6 +36,12 @@ pub struct FlowgraphInstanceConfig {
 	/// [`FlowgraphInstanceConfig::resolve_default_timezone`] で [`ConfigError`] を返す。
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub default_timezone: Option<String>,
+	/// RM-5: 実効 Runtime Mode が変わった直後（`noop` でない遷移の後）に、
+	/// 指定した Flowgraph ノードへ `TriggerEvent` を 1 発投入する。値はロード済みグラフの **ノード ID**（fq）。
+	/// `flowgraph.ingress.web_input` 等、`__trigger__` exec 入力を持つ ingress を想定。
+	/// `__content__` に JSON、`__source_kind__` に `runtime_mode_changed`、`__meta__` に同じ JSON を載せる。
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub runtime_mode_changed_trigger_node_id: Option<String>,
 }
 
 impl FlowgraphInstanceConfig {
@@ -183,6 +189,7 @@ mod tests {
 	fn config_with_plus_09_00_resolves() {
 		let cfg = FlowgraphInstanceConfig {
 			default_timezone: Some("+09:00".into()),
+			..Default::default()
 		};
 		assert_eq!(cfg.resolve_default_timezone().unwrap().seconds(), 9 * 3600);
 	}
@@ -191,6 +198,7 @@ mod tests {
 	fn config_with_invalid_tz_errs_strict() {
 		let cfg = FlowgraphInstanceConfig {
 			default_timezone: Some("Asia/Tokyo".into()),
+			..Default::default()
 		};
 		assert!(matches!(cfg.resolve_default_timezone(), Err(ConfigError::IanaNotSupported { .. })));
 	}
@@ -199,6 +207,7 @@ mod tests {
 	fn config_with_invalid_tz_falls_back_to_utc_with_warn() {
 		let cfg = FlowgraphInstanceConfig {
 			default_timezone: Some("Asia/Tokyo".into()),
+			..Default::default()
 		};
 		// warn ログは goes-to void だが UTC に fallback することを確認
 		assert_eq!(cfg.resolve_default_timezone_or_warn(), Offset::UTC);
@@ -208,6 +217,7 @@ mod tests {
 	fn config_serde_roundtrip_with_offset() {
 		let cfg = FlowgraphInstanceConfig {
 			default_timezone: Some("+09:00".into()),
+			..Default::default()
 		};
 		let toml = toml::to_string(&cfg).unwrap();
 		assert!(toml.contains("default_timezone"), "toml: {toml}");

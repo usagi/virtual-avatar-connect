@@ -189,7 +189,37 @@ impl EffectfulNode for ModeTransitNode {
 			}
 		};
 
-		match crate::state::apply_runtime_mode_change(&state_arc, &conf, normalized.clone(), reason_opt).await {
+		let current_slot = {
+			let g = state_arc.read().await;
+			g.runtime_mode_id.read().ok().and_then(|x| x.clone())
+		};
+		let plan = match crate::conf::build_mode_transition_plan(&conf, current_slot.as_deref(), normalized.as_deref()) {
+			Ok(p) => p,
+			Err(msg) => {
+				ctx.log(format!("mode.transit: plan 失敗: {msg}"));
+				return Ok(NodeOutput::new()
+					.set_data("accepted", SocketValue::Bool(false))
+					.set_data("message", SocketValue::String(format!("plan_failed: {msg}")))
+					.fire_exec("on_reject"));
+			}
+		};
+
+		let apply_result = if plan.noop {
+			crate::state::apply_runtime_mode_change(&state_arc, &conf, normalized.clone(), reason_opt).await
+		} else {
+			let Some(_guard) = crate::state::try_begin_runtime_mode_transition(&state_arc).await else {
+				ctx.log("mode.transit: transition_busy → on_reject");
+				return Ok(NodeOutput::new()
+					.set_data("accepted", SocketValue::Bool(false))
+					.set_data("message", SocketValue::String("transition_busy".into()))
+					.fire_exec("on_reject"));
+			};
+			crate::state::apply_runtime_mode_transition_full(&state_arc, &conf, normalized.clone(), reason_opt)
+				.await
+				.map(|o| o.applied)
+		};
+
+		match apply_result {
 			Ok(applied) => {
 				let msg = if applied.noop {
 					noop_msg

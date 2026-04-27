@@ -47,7 +47,7 @@ default_enabled = true
 
 `PUT/GET` の modes 系 API は、**毎回** `conf.source_path` から `Conf` を再読し、`[modes.*]` の定義と照合する。in-memory なのは **現在選択 mode ID**（`default_runtime_mode` より優先）だけ。
 
-`POST /modes/plan` と `POST /modes/transit`（`dry_run`）で、遷移先宣言に基づく **プレビュー JSON**（`ModeTransitionPlan`）を取得できる。実際にスロットが変わったときは WebSocket `runtime_mode_changed` が飛ぶ。
+`POST /modes/plan` と `POST /modes/transit`（`dry_run`）で、遷移先宣言に基づく **プレビュー JSON**（`ModeTransitionPlan`）を取得できる。実際にスロットが変わったときは WebSocket `runtime_mode_changed` が飛ぶ。実効 ID が変わり **`[modes.*]` が空でない** ときは、その mode の `managed_apps` をサーバが順に適用し、結果は WS `runtime_mode_managed_apps` と（Control の本適用応答の）`managed_apps` に載る。`conf.toml` の `[flowgraph].runtime_mode_changed_trigger_node_id` に fq ノード ID を書くと、同タイミングでそのノードへ ingress 互換の **内部 `TriggerEvent`** が 1 発入る（`__source_kind__` = `runtime_mode_changed`）。並行遷移は 409 / Flowgraph ノードは `transition_busy` で拒否。
 
 ### RM-2 / RM-5 ノード
 

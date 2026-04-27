@@ -41,6 +41,16 @@ pub enum ChannelDatumPhase {
 	Finalized,
 }
 
+/// RM-5: mode 遷移に伴う Managed App 操作 1 行ぶん（`POST /modes/transit` の `managed_apps` と同形）。
+#[derive(Debug, Clone, Serialize)]
+pub struct RuntimeModeManagedAppOp {
+	pub id: String,
+	pub op: String,
+	pub ok: bool,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub detail: Option<String>,
+}
+
 /// WebSocket で配信する 1 イベント。serde で JSON 化して `ws::text` で流す。
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -183,6 +193,13 @@ pub enum ControlEvent {
 		reason: Option<String>,
 	},
 
+	/// RM-5: Runtime Mode 遷移直後に `[modes.*].managed_apps` を適用した結果（1 件以上のときのみ発行）。
+	RuntimeModeManagedApps {
+		previous_effective_id: String,
+		current_effective_id: String,
+		ops: Vec<RuntimeModeManagedAppOp>,
+	},
+
 	/// Phase VI-α-5: Twitch Device Code Flow のセッション状態が変化したとき。
 	/// Control API `/oauth/twitch/{account}/start|cancel` や、ポーリングタスク完了時に送る。
 	OAuthStatus {
@@ -236,6 +253,23 @@ mod tests {
 		let s = serde_json::to_string(&ev).unwrap();
 		assert!(s.contains(r#""kind":"runtime_mode_changed""#), "bad: {s}");
 		assert!(s.contains(r#""current_effective_id":"streaming""#), "bad: {s}");
+	}
+
+	#[test]
+	fn serializes_runtime_mode_managed_apps() {
+		let ev = ControlEvent::RuntimeModeManagedApps {
+			previous_effective_id: "a".into(),
+			current_effective_id: "b".into(),
+			ops: vec![RuntimeModeManagedAppOp {
+				id: "obs".into(),
+				op: "stop".into(),
+				ok: true,
+				detail: Some("closed=1 terminated=0".into()),
+			}],
+		};
+		let s = serde_json::to_string(&ev).unwrap();
+		assert!(s.contains(r#""kind":"runtime_mode_managed_apps""#), "bad: {s}");
+		assert!(s.contains(r#""op":"stop""#), "bad: {s}");
 	}
 
 	#[test]

@@ -41,6 +41,14 @@
 - **`state::apply_runtime_mode_change`**: Control API と共有。
 - **`flowgraph.mode.transit`**: Effectful ノード（`control_triggerable` は false）。
 
+### RM-5（続き）— Managed App 適用・遷移ロック・Flowgraph 内部 trigger
+
+- **非 noop の遷移**（`PUT /modes/current` / `POST /modes/transit` の本適用 / `flowgraph.mode.transit`）では `State.runtime_mode_transition_busy` で再入を拒否（HTTP 409 / ノードは `transition_busy`）。
+- **`apply_runtime_mode_transition_full`**: `apply_runtime_mode_change` の後に、実効 mode の `[modes.*].managed_apps` を stop → start → minimize の順で best-effort 適用。
+- **`ControlEvent::RuntimeModeManagedApps`**: 上記の操作ログを WS に配信（1 件以上のとき）。
+- **API 応答**: `PUT .../current` と `POST .../transit`（本適用）に任意フィールド `managed_apps`（操作行の配列）。
+- **`[flowgraph].runtime_mode_changed_trigger_node_id`**: 実効 mode が変わった直後に、指定 fq ノードへ ingress 互換の `TriggerEvent`（`__content__` / `__meta__` に JSON）を 1 発投入。
+
 ### 内部リファクタ — Control API `actions` / `dto` / `ping` / `shutdown` / `ingress` モジュール分割
 
 - **`src/web_interface/control/actions/`**: 旧 `actions.rs` を `mod.rs`（snapshot・`PauseTarget`・ルート）と `pause.rs`（pause/resume 適用・`resolve_ai_index`・単体テスト）に分割。

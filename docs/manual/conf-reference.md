@@ -28,6 +28,13 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 |---|---|---|---|
 | `flowgraph_dir` | string | `"flowgraph"` | `*.flowgraph.toml` を再帰的に走査するルート。存在しなくても起動継続 |
 
+### `[flowgraph]` テーブル（instance スコープ）
+
+| キー | 型 | 既定値 | 説明 |
+|---|---|---|---|
+| `default_timezone` | string | なし | naive datetime 解釈の既定 TZ（`+09:00` 等）。未指定は UTC。詳細は Flowgraph 設定型の doc |
+| `runtime_mode_changed_trigger_node_id` | string | なし | **実効 Runtime Mode が変わった直後**（noop でない遷移のあと）に、ロード済みグラフの **ノード fq ID** へ内部 `TriggerEvent` を 1 発送る。`flowgraph.ingress.web_input` 等、`__trigger__` を持つ ingress を想定。`__source_kind__` は `runtime_mode_changed` |
+
 ## 3.1 `[motion]` — VMC 生 UDP パススルー（Phase M0）
 
 | キー | 型 | 既定値 | 説明 |
@@ -78,10 +85,10 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 #### Runtime Mode API（RM-3 / RM-5）
 
 - `GET /api/v1/control/modes` — 応答 `mode_ids: string[]`（`[modes.*]` のキー一覧）。
-- `GET /api/v1/control/modes/current` — 応答 `mode: string | null`（`null` は `default_runtime_mode` に従うことを意味する）。
-- `PUT /api/v1/control/modes/current` — 本文 JSON `{"mode": "..."}` または `{"mode": null}`。既知の mode 以外は 400。成功時に Flowgraph exec ゲートを再計算し、変化があれば WebSocket `runtime_mode_changed` を送る。
+- `GET /api/v1/control/modes/current` — 応答 `mode: string | null`（`null` は `default_runtime_mode` に従うことを意味する）。`managed_apps` は常に省略。
+- `PUT /api/v1/control/modes/current` — 本文 JSON `{"mode": "..."}` または `{"mode": null}`。既知の mode 以外は 400。成功時に Flowgraph exec ゲートを再計算し、変化があれば WebSocket `runtime_mode_changed` を送る。**非 noop** のときは `[modes.*].managed_apps` を適用し、操作ログを応答の `managed_apps`（任意）と WS `runtime_mode_managed_apps` で返す。別遷移が走っているときは **409** `transition_busy`。
 - `POST /api/v1/control/modes/plan` — 本文 `{"target": "..."}` または `{"target": null}`。遷移プレビュー（`ModeTransitionPlan`）。`modes` があるとき未知の `target` は 400。
-- `POST /api/v1/control/modes/transit` — 本文 `{"mode": "...", "dry_run": false, "reason": "..."}`。`dry_run: true` のときは状態を変えず `plan` のみ返す。`dry_run: false` で `PUT .../current` 相当＋応答に `plan` を含む。
+- `POST /api/v1/control/modes/transit` — 本文 `{"mode": "...", "dry_run": false, "reason": "..."}`。`dry_run: true` のときは状態を変えず `plan` のみ返す。`dry_run: false` で `PUT .../current` と同様の適用＋応答に `plan` を含む。**非 noop** 時は `managed_apps` 配列を任意同梱。再入時は **409**。
 
 ### 5.1 `[[control_api.tables]]` — 辞書 / 汎用 Table の GUI 編集許可リスト (Phase φ)
 
