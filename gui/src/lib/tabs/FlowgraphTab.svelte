@@ -28,6 +28,15 @@
 
 let dialogOpen = $state(false);
 let dialogMode = $state<'paste' | 'import_zip'>('paste');
+let commandPaletteOpen = $state(false);
+
+type StudioCommand = {
+ id: string;
+ label: string;
+ description: string;
+ disabled: boolean;
+ run: () => void | Promise<void>;
+};
 
 onMount(() => {
   void flowgraphStore.refreshAll();
@@ -42,6 +51,14 @@ onMount(() => {
     if (!flowgraphStore.currentFq || flowgraphStore.mutating) return;
     ev.preventDefault();
     void flowgraphStore.saveCurrent();
+    return;
+   }
+
+   const isCommandPalette =
+    (ev.ctrlKey || ev.metaKey) && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === 'k';
+   if (isCommandPalette) {
+    ev.preventDefault();
+    commandPaletteOpen = true;
     return;
    }
 
@@ -83,6 +100,57 @@ onMount(() => {
  const fileCount = $derived(flowgraphStore.tree?.files.length ?? 0);
  const nodeCount = $derived(flowgraphStore.draftNodes?.length ?? 0);
  const edgeCount = $derived(flowgraphStore.draftEdges?.length ?? 0);
+ const studioCommands: StudioCommand[] = $derived([
+  {
+   id: 'reload',
+   label: 'Reload from disk',
+   description: 'Refresh Flowgraph files and diagnostics from the configured root.',
+   disabled: flowgraphStore.mutating,
+   run: onReload,
+  },
+  {
+   id: 'save',
+   label: 'Save current file',
+   description: 'Write the current Flowgraph file to disk.',
+   disabled: !flowgraphStore.currentFq || flowgraphStore.mutating,
+   run: onSave,
+  },
+  {
+   id: 'open_external',
+   label: 'Open external editor',
+   description: 'Open the selected Flowgraph file in an external editor.',
+   disabled: !flowgraphStore.currentFq,
+   run: onOpenExternal,
+  },
+  {
+   id: 'copy_fragment',
+   label: 'Copy fragment',
+   description: 'Copy the selected node, or the current file when no node is selected.',
+   disabled: !flowgraphStore.currentFq,
+   run: onCopy,
+  },
+  {
+   id: 'paste_fragment',
+   label: 'Paste fragment',
+   description: 'Open the fragment paste dialog.',
+   disabled: false,
+   run: onPaste,
+  },
+  {
+   id: 'export_zip',
+   label: 'Export ZIP',
+   description: 'Export the current Flowgraph file as a ZIP fragment.',
+   disabled: !flowgraphStore.currentFq,
+   run: onExportZip,
+  },
+  {
+   id: 'import_zip',
+   label: 'Import ZIP',
+   description: 'Open the ZIP import preview dialog.',
+   disabled: false,
+   run: onImportZip,
+  },
+ ]);
 
  async function onReload() {
   await flowgraphStore.reloadFromDisk();
@@ -130,6 +198,12 @@ function onImportZip() {
  dialogMode = 'import_zip';
  dialogOpen = true;
 }
+
+async function runStudioCommand(command: StudioCommand) {
+ if (command.disabled) return;
+ commandPaletteOpen = false;
+ await command.run();
+}
 </script>
 
 <div class="flex h-[calc(100vh-9rem)] min-h-[42rem] flex-col gap-3">
@@ -166,6 +240,14 @@ function onImportZip() {
    </span>
   </div>
   <div class="flex-1"></div>
+  <button
+   type="button"
+   class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800"
+   title="Open command palette (Ctrl+K)"
+   onclick={() => (commandPaletteOpen = true)}
+  >
+   Commands
+  </button>
   <span
    class="rounded px-2 py-0.5 text-xs"
    class:bg-error-500={hasErrors}
@@ -242,6 +324,53 @@ function onImportZip() {
 </div>
 
 <FlowgraphShareDialog bind:open={dialogOpen} bind:mode={dialogMode} />
+
+{#if commandPaletteOpen}
+ <div
+  class="fixed inset-0 z-50 flex items-start justify-center bg-black/35 px-4 py-20"
+  role="presentation"
+  onclick={() => (commandPaletteOpen = false)}
+ >
+  <div
+   class="w-full max-w-xl overflow-hidden rounded border border-surface-300-700 bg-surface-50-950 shadow-xl"
+   role="dialog"
+   aria-modal="true"
+   aria-labelledby="flowgraph-command-palette-title"
+   tabindex="-1"
+   onkeydown={(ev) => {
+    if (ev.key === 'Escape') commandPaletteOpen = false;
+   }}
+   onclick={(ev) => ev.stopPropagation()}
+  >
+   <div class="flex items-center justify-between border-b border-surface-200-800 px-4 py-3">
+    <div>
+     <h3 id="flowgraph-command-palette-title" class="text-sm font-semibold">Command Palette</h3>
+     <p class="text-xs opacity-60">Flowgraph Studio operations</p>
+    </div>
+    <button
+     type="button"
+     class="rounded border border-surface-300-700 px-2 py-1 text-xs hover:bg-surface-200-800"
+     onclick={() => (commandPaletteOpen = false)}
+    >
+     Close
+    </button>
+   </div>
+   <div class="grid gap-1 p-2">
+    {#each studioCommands as command (command.id)}
+     <button
+      type="button"
+      class="rounded px-3 py-2 text-left hover:bg-surface-100-900 disabled:opacity-40 disabled:hover:bg-transparent"
+      disabled={command.disabled}
+      onclick={() => void runStudioCommand(command)}
+     >
+      <div class="text-sm font-semibold">{command.label}</div>
+      <div class="mt-0.5 text-xs opacity-60">{command.description}</div>
+     </button>
+   {/each}
+   </div>
+  </div>
+ </div>
+{/if}
 
  <!-- Studio workspace -->
  <div class="grid min-h-0 flex-1 gap-2 xl:grid-cols-[260px_minmax(34rem,1fr)_320px]">

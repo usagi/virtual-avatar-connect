@@ -175,6 +175,7 @@ Existing `ToolsTab` can remain here until split further.
 - Move diagnostics into a Problems panel.
 - Add command palette and node search as primary node insertion path.
 - First slice: add a Studio heading, file / node / edge summary, named workspace regions, Inspector label, and Problems panel while keeping the existing editor behavior intact.
+- Second slice: add a command palette entry point that groups existing Flowgraph operations before deeper editor command modeling lands.
 
 ### GR-5 Editor Operations
 

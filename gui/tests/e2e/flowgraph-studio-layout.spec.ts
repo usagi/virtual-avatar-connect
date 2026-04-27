@@ -20,4 +20,19 @@ test.describe('GUI redesign: Flowgraph Studio layout', () => {
   await expect(main.getByText('Nodes', { exact: true })).toBeVisible();
   await expect(main.getByText('Edges', { exact: true })).toBeVisible();
  });
+
+ test('Flowgraph Studio opens a command palette for editor operations', async ({ page }) => {
+  await page.goto(`/gui/${tokenQuery()}#flowgraph`);
+
+  const main = page.getByRole('main');
+  await main.getByRole('button', { name: 'Commands' }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Command Palette' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Reload from disk/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Save current file/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Import ZIP/ })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
+ });
 });
