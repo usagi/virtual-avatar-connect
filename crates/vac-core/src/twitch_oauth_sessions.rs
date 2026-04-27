@@ -106,7 +106,7 @@ fn system_time_to_rfc3339(t: SystemTime) -> String {
 /// Session map. `State` holds an `Arc` of this.
 #[derive(Debug)]
 pub struct OAuthSessions {
-	pub inner: RwLock<HashMap<OAuthAccount, OAuthSessionInternal>>,
+	inner: RwLock<HashMap<OAuthAccount, OAuthSessionInternal>>,
 }
 
 impl OAuthSessions {
@@ -122,6 +122,68 @@ impl OAuthSessions {
 
 	pub async fn snapshot_all(&self) -> Vec<OAuthSessionView> {
 		self.inner.read().await.values().map(OAuthSessionInternal::to_view).collect()
+	}
+
+	pub async fn active_pending_snapshot(&self, account: OAuthAccount, now: TokioInstant) -> Option<OAuthSessionView> {
+		let map = self.inner.read().await;
+		let existing = map.get(&account)?;
+		if matches!(existing.status, OAuthSessionStatus::Pending) && now < existing.expires_at_instant {
+			Some(existing.to_view())
+		} else {
+			None
+		}
+	}
+
+	pub async fn finish_session(
+		&self,
+		account: OAuthAccount,
+		status: OAuthSessionStatus,
+		last_error: Option<String>,
+	) -> Option<OAuthSessionView> {
+		let mut map = self.inner.write().await;
+		let session = map.get_mut(&account)?;
+		session.status = status;
+		session.last_error = last_error;
+		session.cancel_handle = None;
+		Some(session.to_view())
+	}
+
+	pub async fn replace_session(&self, account: OAuthAccount, session: OAuthSessionInternal) -> OAuthSessionView {
+		let mut map = self.inner.write().await;
+		if let Some(old) = map.insert(account, session) {
+			if let Some(h) = old.cancel_handle {
+				h.abort();
+			}
+		}
+		map.get(&account).expect("inserted OAuth session must exist").to_view()
+	}
+
+	pub async fn cancel_pending(&self, account: OAuthAccount) -> Option<(bool, OAuthSessionView)> {
+		let mut map = self.inner.write().await;
+		let session = map.get_mut(&account)?;
+		let canceled = match session.status {
+			OAuthSessionStatus::Pending => {
+				if let Some(h) = session.cancel_handle.take() {
+					h.abort();
+				}
+				session.status = OAuthSessionStatus::Canceled;
+				true
+			}
+			_ => false,
+		};
+		Some((canceled, session.to_view()))
+	}
+
+	pub async fn remove_and_abort(&self, account: OAuthAccount) -> bool {
+		let mut map = self.inner.write().await;
+		if let Some(session) = map.remove(&account) {
+			if let Some(h) = session.cancel_handle {
+				h.abort();
+			}
+			true
+		} else {
+			false
+		}
 	}
 }
 

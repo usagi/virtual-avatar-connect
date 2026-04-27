@@ -49,19 +49,16 @@ pub(super) async fn start_oauth(state: &SharedState, account: OAuthAccount) -> R
 	// 2) If a Pending session already exists, return it idempotently;
 	//    if already Authorized with a valid token, short-circuit.
 	{
-		let map = sessions.inner.read().await;
-		if let Some(existing) = map.get(&account) {
-			if matches!(existing.status, OAuthSessionStatus::Pending) && TokioInstant::now() < existing.expires_at_instant {
-				log::info!(
-					"[ControlAPI/oauth] {}: returning existing Pending session (user_code={})",
-					account.as_tag(),
-					existing.user_code
-				);
-				return Ok(OAuthStartResponse {
-					outcome: "already_pending",
-					session: Some(existing.to_view()),
-				});
-			}
+		if let Some(existing) = sessions.active_pending_snapshot(account, TokioInstant::now()).await {
+			log::info!(
+				"[ControlAPI/oauth] {}: returning existing Pending session (user_code={})",
+				account.as_tag(),
+				existing.user_code
+			);
+			return Ok(OAuthStartResponse {
+				outcome: "already_pending",
+				session: Some(existing),
+			});
 		}
 	}
 	// Stored tokens are still valid -> skip DCF.
@@ -158,17 +155,9 @@ pub(super) async fn start_oauth(state: &SharedState, account: OAuthAccount) -> R
 			}
 		};
 		// Update session map and notify WS subscribers.
-		let view = {
-			let mut map = sessions_for_task.inner.write().await;
-			if let Some(s) = map.get_mut(&ident_account_of_label(&ident_for_task)) {
-				s.status = new_status;
-				s.last_error = last_error.clone();
-				s.cancel_handle = None;
-				Some(s.to_view())
-			} else {
-				None
-			}
-		};
+		let view = sessions_for_task
+			.finish_session(ident_account_of_label(&ident_for_task), new_status, last_error.clone())
+			.await;
 		if let Some(view) = view {
 			let _ = tx_for_task.send(ControlEvent::OAuthStatus {
 				account: view.account,
@@ -179,9 +168,8 @@ pub(super) async fn start_oauth(state: &SharedState, account: OAuthAccount) -> R
 	});
 
 	// 6) Register new session (aborting any stale entry).
-	let view = {
-		let mut map = sessions.inner.write().await;
-		if let Some(old) = map.insert(
+	let view = sessions
+		.replace_session(
 			account,
 			OAuthSessionInternal {
 				account,
@@ -195,13 +183,8 @@ pub(super) async fn start_oauth(state: &SharedState, account: OAuthAccount) -> R
 				last_error: None,
 				cancel_handle: Some(handle),
 			},
-		) {
-			if let Some(h) = old.cancel_handle {
-				h.abort();
-			}
-		}
-		map.get(&account).unwrap().to_view()
-	};
+		)
+		.await;
 
 	log::info!(
 		"[ControlAPI/oauth] {}: DCF started (user_code={} uri={})",

@@ -93,27 +93,13 @@ pub async fn post_oauth_cancel(state: Data<SharedState>, path: web::Path<String>
 		(s.twitch_oauth.clone(), s.control_event_tx.clone())
 	};
 
-	let canceled = {
-		let mut map = sessions.inner.write().await;
-		let Some(session) = map.get_mut(&account) else {
+	let Some((canceled, view)) = sessions.cancel_pending(account).await else {
 			return HttpResponse::NotFound().json(serde_json::json!({
 			 "error": "no_session",
 			 "account": account.as_tag(),
 			}));
-		};
-		match session.status {
-			OAuthSessionStatus::Pending => {
-				if let Some(h) = session.cancel_handle.take() {
-					h.abort();
-				}
-				session.status = OAuthSessionStatus::Canceled;
-				true
-			}
-			_ => false,
-		}
 	};
 
-	let view = sessions.snapshot(account).await.unwrap();
 	if canceled {
 		log::info!("[ControlAPI/oauth] {} session canceled", account.as_tag());
 		let _ = tx.send(ControlEvent::OAuthStatus {
@@ -194,15 +180,7 @@ pub async fn delete_oauth_tokens(state: Data<SharedState>, path: web::Path<Strin
 			let s = state.read().await;
 			s.twitch_oauth.clone()
 		};
-		let mut map = sessions.inner.write().await;
-		if let Some(s) = map.remove(&account) {
-			if let Some(h) = s.cancel_handle {
-				h.abort();
-			}
-			true
-		} else {
-			false
-		}
+		sessions.remove_and_abort(account).await
 	};
 
 	log::info!(
