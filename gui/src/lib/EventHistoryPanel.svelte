@@ -74,15 +74,15 @@
 <section class="rounded border border-surface-200-800 bg-surface-50-950">
  <div class="flex flex-wrap items-center justify-between gap-2 border-b border-surface-200-800 px-3 py-2">
   <div>
-   <h3 class="text-sm font-semibold">Event History</h3>
-   <p class="text-xs opacity-60">Server-side ring buffer for operational evidence.</p>
+   <h3 class="text-sm font-semibold">イベント履歴</h3>
+   <p class="text-xs opacity-60">運用確認用の server-side ring buffer。</p>
   </div>
   <div class="flex items-center gap-2">
    <select class="rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1 text-xs" bind:value={scope}>
-    <option value="all">All</option>
+    <option value="all">すべて</option>
     <option value="flowgraph">Flowgraph</option>
     <option value="runtime_mode">Runtime Mode</option>
-    <option value="managed_app">Managed Apps</option>
+    <option value="managed_app">連携アプリ</option>
    </select>
    <button
     type="button"
@@ -90,7 +90,7 @@
     disabled={loading}
     onclick={() => void load()}
    >
-    {loading ? 'Loading...' : 'Refresh'}
+    {loading ? '読み込み中...' : '更新'}
    </button>
   </div>
  </div>
@@ -98,7 +98,7 @@
  {#if error}
   <div class="px-3 py-3 text-sm text-error-500">{error}</div>
  {:else if filtered.length === 0}
-  <div class="px-3 py-6 text-center text-sm opacity-60">No event history yet.</div>
+  <div class="px-3 py-6 text-center text-sm opacity-60">まだイベント履歴はありません。</div>
  {:else}
   <ol class="max-h-72 overflow-y-auto">
    {#each filtered.toReversed() as item (`${item.at}:${item.event.kind}:${summarize(item.event)}`)}

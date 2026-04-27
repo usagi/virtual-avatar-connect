@@ -2,6 +2,8 @@
 
 > Status: implementation branch active. The cockpit shell, Runtime Mode surface, Flowgraph Studio operations, Resource / Settings split, Observability history surfaces, transition progress UX, and Playwright coverage are now implemented on the GUI branch. Remaining work is refinement: visual polish, deeper domain-specific debugger views, and future backend integrations that are not yet specified.
 
+> Copy policy: GUI copy と source comments は日本語を基準文体にしつつ、技術語・識別子・既存の英語 UI 慣習は自然に併用する。正本は [`../gui-copy-style-guide.md`](../gui-copy-style-guide.md)。
+
 ---
 
 ## 0. Goal

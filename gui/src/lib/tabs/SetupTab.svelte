@@ -1,7 +1,7 @@
 <script lang="ts">
  /**
-  * Legacy setup tab kept for compatibility with old routes.
-  * New navigation splits these controls across Resources and Settings.
+  * Setup タブ（γ-1 の骨組み）。既存の細々した運用パネルをここに集約し、
+  * γ-4 でプロファイル管理を統合した。
   */
  import WidgetSlot from '../WidgetSlot.svelte';
  import OAuthPanel from '../OAuthPanel.svelte';
@@ -21,9 +21,9 @@
  <div class="space-y-4">
   <RunWithEditorPanel />
   <WidgetSlot
-   title="Voice / AI / Twitch details"
-   subtitle="moved to Flowgraph Studio"
-   placeholder="Detailed processor and AI persona properties are edited by selecting nodes in Flowgraph Studio."
+   title="Voice / AI / Twitch 詳細設定"
+   subtitle="Pipeline タブへ統合済み（γ-3b）"
+   placeholder="各 processor / AI persona の詳細プロパティは Pipeline タブ上でノードを選択して編集できます。"
   />
  </div>
 </div>

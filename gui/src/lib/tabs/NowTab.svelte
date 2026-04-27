@@ -78,11 +78,11 @@
  );
  const healthTone = $derived.by(() => {
   if (error || eventsStore.connection === 'error' || eventsStore.connection === 'closed') {
-   return { label: 'Needs attention', className: 'text-error-500' };
+   return { label: '要確認', className: 'text-error-500' };
   }
-  if (diagnosticErrors > 0) return { label: 'Flowgraph errors', className: 'text-error-500' };
-  if (diagnosticWarnings > 0) return { label: 'Warnings', className: 'text-warning-500' };
-  return { label: 'Operational', className: 'text-success-500' };
+  if (diagnosticErrors > 0) return { label: 'Flowgraph エラーあり', className: 'text-error-500' };
+  if (diagnosticWarnings > 0) return { label: '警告あり', className: 'text-warning-500' };
+  return { label: '稼働中', className: 'text-success-500' };
  });
  const topDiagnostics = $derived(diagnostics?.diagnostics.slice(0, 5) ?? []);
  const topManagedApps = $derived(managedApps?.entries.slice(0, 6) ?? []);
@@ -110,7 +110,7 @@
    case 'restarting':
     return `pid ${ev.current_pid} -> ${ev.new_pid}`;
    case 'managed_app_state':
-    return `${ev.id} ${ev.running ? 'running' : 'stopped'}`;
+    return `${ev.id} ${ev.running ? '起動中' : '停止中'}`;
    case 'flowgraph_reloaded':
     return `${ev.node_count} nodes, ${ev.error_count} errors`;
    case 'restart_recommended':
@@ -159,7 +159,7 @@
     disabled={loading}
     onclick={refreshNow}
    >
-    {loading ? 'Refreshing...' : 'Refresh'}
+    {loading ? '更新中...' : '更新'}
    </button>
   </div>
  </div>
@@ -172,7 +172,7 @@
 
  <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
   <article class="rounded border border-surface-200-800 bg-surface-50-950 p-4">
-   <div class="text-xs uppercase tracking-wide opacity-60">Connection</div>
+   <div class="text-xs uppercase tracking-wide opacity-60">接続</div>
    <div class="mt-2 text-2xl font-semibold {wsTone}">{eventsStore.connection}</div>
    <div class="mt-1 text-xs opacity-60">
     {eventsStore.received_count} events / {eventsStore.dropped_count} dropped
@@ -189,7 +189,7 @@
     class="mt-1 text-xs text-primary-600-400 hover:underline"
     onclick={() => go('modes')}
    >
-    manage
+    管理
    </button>
   </article>
 
@@ -200,9 +200,9 @@
   </article>
 
   <article class="rounded border border-surface-200-800 bg-surface-50-950 p-4">
-   <div class="text-xs uppercase tracking-wide opacity-60">Managed Apps</div>
+   <div class="text-xs uppercase tracking-wide opacity-60">連携アプリ</div>
    <div class="mt-2 text-2xl font-semibold">{managedRunning} / {managedTotal}</div>
-   <div class="mt-1 text-xs opacity-60">running</div>
+   <div class="mt-1 text-xs opacity-60">起動中</div>
   </article>
 
   <article class="rounded border border-surface-200-800 bg-surface-50-950 p-4">
@@ -231,17 +231,17 @@
      {#if snapshot?.twitch}
       {snapshot.twitch.username} -> {snapshot.twitch.channel_to}
      {:else}
-      <span class="opacity-60">not configured</span>
+      <span class="opacity-60">未設定</span>
      {/if}
     </dd>
    </dl>
   </section>
 
   <section class="rounded border border-surface-200-800 bg-surface-50-950">
-   <div class="border-b border-surface-200-800 px-4 py-2 text-sm font-semibold">Managed Apps</div>
+   <div class="border-b border-surface-200-800 px-4 py-2 text-sm font-semibold">連携アプリ</div>
    <div class="max-h-72 overflow-y-auto p-2">
     {#if topManagedApps.length === 0}
-     <div class="px-2 py-4 text-sm opacity-60">No managed apps registered.</div>
+     <div class="px-2 py-4 text-sm opacity-60">Managed App は未登録です。</div>
     {:else}
      <ul class="grid gap-1">
       {#each topManagedApps as app (app.id)}
@@ -249,7 +249,7 @@
         <div class="flex items-center justify-between gap-2">
          <span class="truncate font-medium">{app.label}</span>
          <span class={app.status.running ? 'text-success-500' : 'opacity-55'}>
-          {app.status.running ? 'running' : 'stopped'}
+          {app.status.running ? '起動中' : '停止中'}
          </span>
         </div>
        </li>
@@ -263,7 +263,7 @@
  <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
   <section class="rounded border border-surface-200-800 bg-surface-50-950">
    <div class="flex items-center justify-between border-b border-surface-200-800 px-4 py-2">
-    <span class="text-sm font-semibold">Flowgraph Problems</span>
+    <span class="text-sm font-semibold">Flowgraph 問題</span>
     <button
      type="button"
      class="rounded border border-surface-300-700 px-2 py-0.5 text-xs hover:bg-surface-100-900"
@@ -274,7 +274,7 @@
    </div>
    <div class="max-h-72 overflow-y-auto p-2">
     {#if topDiagnostics.length === 0}
-     <div class="px-2 py-4 text-sm opacity-60">No Flowgraph diagnostics.</div>
+     <div class="px-2 py-4 text-sm opacity-60">Flowgraph diagnostics はありません。</div>
     {:else}
      <ul class="grid gap-1">
       {#each topDiagnostics as d, i (`${d.file ?? ''}:${d.node ?? ''}:${d.code}:${i}`)}
@@ -300,10 +300,10 @@
   </section>
 
   <section class="rounded border border-surface-200-800 bg-surface-50-950">
-   <div class="border-b border-surface-200-800 px-4 py-2 text-sm font-semibold">Recent Events</div>
+   <div class="border-b border-surface-200-800 px-4 py-2 text-sm font-semibold">最近のイベント</div>
    <div class="max-h-72 overflow-y-auto p-2">
     {#if recentEvents.length === 0}
-     <div class="px-2 py-4 text-sm opacity-60">No events yet.</div>
+     <div class="px-2 py-4 text-sm opacity-60">まだイベントはありません。</div>
     {:else}
      <ul class="grid gap-1">
       {#each recentEvents as item (item.seq)}
