@@ -21,6 +21,7 @@ pub mod events;
 pub mod flowgraph;
 pub mod ingress;
 pub mod managed_app;
+pub mod modes;
 pub mod oauth_twitch;
 pub mod ping;
 pub mod profiles;
@@ -56,6 +57,7 @@ pub fn register(cfg: &mut web::ServiceConfig) {
 			.configure(managed_app::configure)
 			.configure(oauth_twitch::configure)
 			.configure(ingress::configure)
+			.configure(modes::configure)
 			.configure(flowgraph::configure)
 			.configure(table::configure),
 	);
