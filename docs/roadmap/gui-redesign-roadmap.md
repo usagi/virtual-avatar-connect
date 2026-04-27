@@ -229,5 +229,6 @@ The remaining GUI roadmap is now mostly refinement work: visual polish, deeper d
 - [x] Keep the first implementation conservative: OS theme dark/light, controlled density, consistent panel hierarchy, and restrained state colors.
 - [x] Add minimal global visual tokens and shell chrome classes for focus, selection, scrollbar, header, side rail, main surface, and status bar.
 - [x] Add first-pass shared panel / stat-card classes and apply them to Now, Modes, Resources overview, and Observability summary.
+- [x] Apply shared panel chrome to Flowgraph Studio toolbar, command palette, workspace panes, and Problems pane.
 - [ ] Avoid decorative skin work until the default operational cockpit baseline is stable.
 - [ ] Use Playwright screenshots for future visual regression checks once the baseline starts changing CSS substantially.
