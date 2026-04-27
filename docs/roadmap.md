@@ -204,6 +204,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] R4（core 二段）: `RuntimePaths` / `RuntimePathConfig` を `crates/vac-core` へ物理分割し、root `src/runtime.rs` は `Conf` adapter に縮小
 - [x] R4（core 三段）: `DateTime` / `ParseError` を `crates/vac-core` へ物理分割し、既存 `crate::datetime::*` API は再エクスポートで維持
 - [x] R4（core 四段）: 汎用 `utility` 関数群を `crates/vac-core` へ物理分割し、既存 `crate::utility::*` API は再エクスポートで維持
+- [x] R4（core 五段）: HTTP content type 定数を `crates/vac-core` へ物理分割し、既存 `crate::resource::*` API は再エクスポートで維持
 - [x] R2/R3: `run_cli` / `run_desktop_headless` entry API と `virtual-avatar-connect-cli` / `virtual-avatar-connect-desktop` bin を追加（root package 名と同名の exe alias は作らない）
 - [x] Step 8: CLI / desktop の 2 runner（仮称どおり）
 - [x] Step 9: desktop に Tauri WebView + 同梱静的 + トレイ。Windows 実機で tray / taskbar icon / GUI 終了 cleanup を確認済み。`cargo build --release --features embed-gui` で CLI / desktop の 2 exe と GUI 内蔵配信を確認済み。
