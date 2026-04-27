@@ -1,7 +1,6 @@
 //! VOICEVOX 互換 HTTP API（`GET /speakers`、`POST /audio_query`、`POST /synthesis`）の共通実装。
 //! 《AivisSpeech Engine》《VOICEVOX ENGINE》など。CoeiroInk は別系統。
 
-use crate::ProcessorConf;
 use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -20,37 +19,6 @@ pub struct VoicevoxStyle {
 	pub id: i64,
 	#[serde(rename = "type")]
 	pub style_type: Option<String>,
-}
-
-/// `speaker_uuid` がある場合は `style_id` をローカル番号とみなし `/speakers` からグローバル ID を取得する。
-/// ない場合は `style_id` をそのまま VOICEVOX 互換のグローバル ID として使う。
-pub async fn resolve_speaker_style_id(engine_base: &str, pc: &ProcessorConf, ctx: &str) -> Result<i64> {
-	let style_id = pc.style_id.context(format!(
-  "{}: style_id が必要です。speaker_uuid 指定時はローカルスタイル番号(0〜)、未指定時は GET /speakers の styles[].id を指定してください。",
-  ctx
- ))?;
-
-	if let Some(ref uuid) = pc.speaker_uuid {
-		if style_id < 0 {
-			bail!(
-				"{}: speaker_uuid 指定時は style_id を 0 以上のローカルスタイル番号にしてください（現在: {}）",
-				ctx,
-				style_id
-			);
-		}
-		let idx = style_id as usize;
-		let global = fetch_global_style_id(engine_base, uuid, idx, ctx).await?;
-		log::debug!(
-			"{}: speaker_uuid={} ローカル style_id={} → グローバル speaker={}",
-			ctx,
-			uuid,
-			style_id,
-			global
-		);
-		return Ok(global);
-	}
-
-	Ok(style_id)
 }
 
 pub async fn fetch_global_style_id(engine_base: &str, speaker_uuid: &str, local_index: usize, ctx: &str) -> Result<i64> {

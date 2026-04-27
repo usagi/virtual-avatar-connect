@@ -22,6 +22,9 @@
 //! | `error` | [`StreamEvent::Error`] | top-level エラー（response 開始前の失敗等） |
 //!
 //! 詳細: `docs/roadmap/phase-chi-openai-responses.md` §5。
+//!
+//! 各 variant の payload は SSE パースで保持するが、VAC 側の分岐は一部フィールドのみ参照する。
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 

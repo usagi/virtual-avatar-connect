@@ -723,8 +723,9 @@ pub(crate) async fn ensure_user_access_token(es: &TwitchEventSubConfig) -> Resul
 	ensure_token_for(&OAuthIdent::for_broadcaster(es)).await
 }
 
-/// 保存済みモデレータートークンを **非対話に** 取得。起動時の init_processors から使う。
-/// DCF を伴わないので、未認可でも起動をブロックしない。
+/// 保存済みモデレータートークンを **非対話に** 取得。起動をブロックしないウォームアップ用。
+/// DCF を伴わない。現状は呼び出し元未配線（`ensure_moderator_access_token` が対話経路）。
+#[allow(dead_code)]
 pub(crate) async fn try_load_moderator_access_token(es: &TwitchEventSubConfig, mc: &TwitchModeratorConfig) -> Option<String> {
 	// まず手動指定トークン（環境変数 or conf）を試す。
 	let manual = std::env::var("VAC_TWITCH_MODERATOR_USER_ACCESS_TOKEN")

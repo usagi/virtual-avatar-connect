@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct ShutdownRequest {
 	/// 予約済み。現時点では無視する（cleanup の各段は内部で固定値を使う）。
 	#[serde(default)]
+	#[allow(dead_code)]
 	pub graceful_ms: Option<u64>,
 }
 

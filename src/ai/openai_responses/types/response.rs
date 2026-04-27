@@ -152,6 +152,7 @@ impl OutputItem {
 
 /// `OutputItem::FunctionCall` への borrowed view。
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)] // 呼び出し側が name/arguments だけ使う経路があり、id/status は将来の診断用
 pub struct FunctionCallView<'a> {
 	pub id: &'a str,
 	pub call_id: &'a str,

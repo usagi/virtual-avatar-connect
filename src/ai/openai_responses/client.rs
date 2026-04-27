@@ -7,6 +7,10 @@
 //! - エラー body の truncate を噛ませた構造化エラー
 //!
 //! ストリーミング（`create_stream`）は **χ-2** で追加予定。
+//!
+//! `with_http` / `config` / `http` / `serialize_compact` / `idempotency_prefix` 等は
+//! 拡張予定の API 面として残しており、現状 VAC ルーティングからは未参照。
+#![allow(dead_code)]
 
 use std::sync::Arc;
 use std::time::Duration;

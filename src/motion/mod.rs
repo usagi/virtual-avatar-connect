@@ -79,6 +79,7 @@ impl MotionHandles {
 		Self { tasks: Vec::new() }
 	}
 
+	#[allow(dead_code)] // 将来の診断・条件分岐用（現状は spawn 直後のみ参照）
 	pub fn is_empty(&self) -> bool {
 		self.tasks.is_empty()
 	}

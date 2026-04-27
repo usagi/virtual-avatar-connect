@@ -1,6 +1,7 @@
 //! `/gui` URL を `gui/dist` 内の相対キーへ正規化（`..` 排除）。内蔵配信・将来の検証で共有。
 
 /// `/gui` / `/gui/` / `/gui/assets/foo.js` → `index.html` または相対パス（`..` 禁止）。
+#[cfg_attr(not(feature = "embed-gui"), allow(dead_code))]
 pub fn path_under_gui(full_path: &str) -> Option<String> {
 	let rest = full_path.strip_prefix("/gui").unwrap_or("");
 	let trimmed = rest.trim_start_matches('/');
@@ -13,6 +14,7 @@ pub fn path_under_gui(full_path: &str) -> Option<String> {
 	Some(trimmed.into())
 }
 
+#[cfg_attr(not(feature = "embed-gui"), allow(dead_code))]
 fn is_safe_rel_path(p: &str) -> bool {
 	for part in p.split('/') {
 		if part == ".." {
