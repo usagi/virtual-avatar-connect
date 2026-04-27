@@ -18,13 +18,13 @@
  </div>
  <div class="space-y-4">
   <section class="rounded-lg border border-surface-200-800 bg-surface-100-900 p-4">
-   <h2 class="mb-2 text-sm font-semibold opacity-80">Connection</h2>
+   <h2 class="mb-2 text-sm font-semibold opacity-80">接続情報</h2>
    <PingStatus />
   </section>
   <WidgetSlot
-   title="Developer utilities"
-   subtitle="planned"
-   placeholder="Log download, runtime diagnostics, and rare maintenance operations will be grouped here."
+   title="開発者向けユーティリティ"
+   subtitle="γ-6 予定"
+   placeholder="ログダウンロード、ランタイム診断、ニッチな操作（broadcasters の force_remove 等）を整理します。"
   />
  </div>
 </div>

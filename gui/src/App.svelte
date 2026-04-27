@@ -1,10 +1,16 @@
 <script lang="ts">
  /**
-  * Application shell for the v2 Runtime Cockpit.
+  * Phase VI-γ-1: アプリケーションシェル。
   *
-  * The shell owns top-level navigation, global status, toasts, restart/shutdown
-  * controls, and the persistent Managed Apps drawer. Feature surfaces stay in
-  * their tab components.
+  * - 上部ヘッダ（ロゴ / 接続インジケータ / 再起動ボタン）
+  * - 左ナビゲーション（Now / Modes / Flowgraph Studio / Resources / Observability / Settings）
+  * - 下部ステータスバー（常駐）
+  * - 右下トーストレイヤ
+  * - 再起動・プロファイル切替モーダル
+  *
+  * 各タブの中身はコンテナコンポーネントに切り出し、本ファイルは薄い shell に徹する。
+  *
+  * δ-9 D.5: 旧 V1 `Pipeline` タブを廃止。Flowgraph タブに統合済み。
   */
  import ConnectionBadge from './lib/ConnectionBadge.svelte';
  import TabNav from './lib/TabNav.svelte';
@@ -26,24 +32,34 @@
  import { toastStore } from './lib/toasts.svelte';
 
  let restartDialogOpen = $state(false);
- let managedAppDrawerOpen = $state(false);
- let shutdownInFlight = $state(false);
+let managedAppDrawerOpen = $state(false);
+let shutdownInFlight = $state(false);
 
- async function handleShutdownClick(): Promise<void> {
-  if (shutdownInFlight) return;
-  const ok = window.confirm(
-   'Shutdown VAC?\n\nVAC will also try to stop Managed Apps started through run_with. Browser connections will close.',
+/**
+ * Phase ε-1: VAC プロセスそのものを穏やかに終了させる。
+ *
+ * 停止は `POST /api/v1/control/shutdown`（= `ShutdownBroker` を trigger）に 1 本化している。
+ * 成功レスポンス後はサーバが ManagedApp 停止 → actix graceful stop を順に実行するため、
+ * WS は自然に切れる。GUI 側は停止画面を出さず、toast だけ出して静かに待機する。
+ */
+async function handleShutdownClick() {
+ if (shutdownInFlight) return;
+ const ok = window.confirm(
+  'VAC を終了します。連携アプリ（run_with で起動したもの）も停止を試み、\nブラウザの接続は切断されます。続行しますか？',
+ );
+ if (!ok) return;
+ shutdownInFlight = true;
+ try {
+  const res = await api.shutdown();
+  toastStore.info(
+   'アプリ停止を要求しました',
+   `pid=${res.current_pid} / status=${res.status}`,
   );
-  if (!ok) return;
-  shutdownInFlight = true;
-  try {
-   const res = await api.shutdown();
-   toastStore.info('Shutdown requested.', `pid=${res.current_pid} / status=${res.status}`);
-  } catch (e) {
-   shutdownInFlight = false;
-   toastStore.error('Shutdown request failed.', String(e));
-  }
+ } catch (e) {
+  shutdownInFlight = false;
+  toastStore.error('アプリ停止の要求に失敗しました', String(e));
  }
+}
 </script>
 
 <div class="flex min-h-screen flex-col bg-surface-50-950 text-surface-950-50">
@@ -61,33 +77,33 @@
     <button
      type="button"
      class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-100-900"
-     title="Open Managed Apps drawer"
+     title="連携アプリ（run_with）の起動/停止を管理"
      onclick={() => (managedAppDrawerOpen = true)}
     >
-     Managed Apps...
+     連携アプリ…
     </button>
     <button
      type="button"
      class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-100-900"
-     title="Restart VAC or switch profile"
+     title="VAC を再起動 / プロファイル切替"
      onclick={() => (restartDialogOpen = true)}
     >
-     Restart...
+     再起動…
     </button>
     <button
      type="button"
      class="rounded border border-error-500/60 px-3 py-1 text-xs text-error-500 hover:bg-error-500/10 disabled:opacity-50"
-     title="Shutdown VAC and try to stop Managed Apps"
+     title="VAC アプリを終了する（連携アプリの停止も試みる）"
      disabled={shutdownInFlight}
      onclick={handleShutdownClick}
     >
-     {shutdownInFlight ? 'Shutting down...' : 'Shutdown'}
+     {shutdownInFlight ? '停止中…' : '終了'}
     </button>
    </div>
   </div>
  </header>
 
- <div class="grid min-h-0 flex-1 lg:grid-cols-[240px_minmax(0,1fr)]">
+ <div class="grid flex-1 min-h-0 lg:grid-cols-[240px_minmax(0,1fr)]">
   <aside class="border-b border-surface-200-800 bg-surface-100-900/60 lg:border-b-0 lg:border-r">
    <TabNav />
   </aside>
