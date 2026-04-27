@@ -51,6 +51,10 @@ import {
  type ReloadRequest,
  type ReloadResponse,
  type CurrentModeResponse,
+ type ModePlanRequest,
+ type ModeTransitRequest,
+ type ModeTransitResponse,
+ type ModeTransitionPlan,
  type ModesListResponse,
  type PutCurrentModeBody,
  type RestartRequest,
@@ -192,6 +196,12 @@ export const api = {
  },
  putCurrentMode(req: PutCurrentModeBody): Promise<CurrentModeResponse> {
   return request<CurrentModeResponse>('/modes/current', { method: 'PUT', body: req });
+ },
+ modePlan(req: ModePlanRequest): Promise<ModeTransitionPlan> {
+  return request<ModeTransitionPlan>('/modes/plan', { method: 'POST', body: req });
+ },
+ modeTransit(req: ModeTransitRequest): Promise<ModeTransitResponse> {
+  return request<ModeTransitResponse>('/modes/transit', { method: 'POST', body: req });
  },
 
  // --- OAuth (Twitch DCF) ---

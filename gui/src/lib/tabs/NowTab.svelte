@@ -113,6 +113,12 @@
     return `${ev.id} ${ev.running ? 'running' : 'stopped'}`;
    case 'flowgraph_reloaded':
     return `${ev.node_count} nodes, ${ev.error_count} errors`;
+   case 'restart_recommended':
+    return ev.reason;
+   case 'runtime_mode_changed':
+    return `${ev.previous_effective_id || '(none)'} -> ${ev.current_effective_id || '(none)'}`;
+   case 'runtime_mode_managed_apps':
+    return `${ev.ops.length} managed app ops`;
   }
  }
 </script>

@@ -1,7 +1,7 @@
 <script lang="ts">
  import { onMount } from 'svelte';
  import { api } from '../api';
- import { ControlApiError } from '../types';
+ import { ControlApiError, type ModeTransitionPlan, type RuntimeModeManagedAppOp } from '../types';
 
  type PlannedMode = {
   id: string;
@@ -66,6 +66,11 @@
  let loadError = $state<string | null>(null);
  let mutating = $state(false);
  let mutationError = $state<string | null>(null);
+ let planLoading = $state(false);
+ let planError = $state<string | null>(null);
+ let transitionPlan = $state<ModeTransitionPlan | null>(null);
+ let managedAppOps = $state<RuntimeModeManagedAppOp[]>([]);
+ let planRequestSeq = 0;
 
  const displayModes = $derived.by<DisplayMode[]>(() => {
   const configured = new Set(configuredModeIds);
@@ -89,10 +94,11 @@
  const selectedCanTransit = $derived(selectedMode?.configured === true);
  const isCurrentSelected = $derived(selectedMode?.id === currentModeId);
  const transitDisabled = $derived(
-  loading || mutating || loadError !== null || !selectedMode || !selectedCanTransit || isCurrentSelected,
+  loading || mutating || planLoading || loadError !== null || !selectedMode || !selectedCanTransit || isCurrentSelected,
  );
  const transitLabel = $derived.by(() => {
   if (mutating) return 'Transiting...';
+  if (planLoading) return 'Planning...';
   if (loadError) return 'Transit unavailable';
   if (!selectedMode?.configured) return 'Configure mode first';
   if (isCurrentSelected) return 'Current mode';
@@ -101,6 +107,20 @@
 
  onMount(() => {
   void refreshModes();
+ });
+
+ $effect(() => {
+  const target = selectedMode?.configured ? selectedMode.id : null;
+  const current = currentModeId;
+  if (!target || loadError) {
+   planRequestSeq += 1;
+   planLoading = false;
+   transitionPlan = null;
+   planError = null;
+   return;
+  }
+  void current;
+  void refreshTransitionPlan(target);
  });
 
  function modeCardClass(selected: boolean): string {
@@ -133,12 +153,35 @@
   mutating = true;
   mutationError = null;
   try {
-   const next = await api.putCurrentMode({ mode: selectedMode.id });
+   const next = await api.modeTransit({
+    mode: selectedMode.id,
+    dry_run: false,
+    reason: 'gui',
+   });
    currentModeId = next.mode;
+   transitionPlan = next.plan;
+   managedAppOps = next.managed_apps ?? [];
   } catch (e) {
    mutationError = formatError(e);
   } finally {
    mutating = false;
+  }
+ }
+
+ async function refreshTransitionPlan(target: string): Promise<void> {
+  const seq = ++planRequestSeq;
+  planLoading = true;
+  planError = null;
+  try {
+   const plan = await api.modePlan({ target });
+   if (seq !== planRequestSeq) return;
+   transitionPlan = plan;
+  } catch (e) {
+   if (seq !== planRequestSeq) return;
+   transitionPlan = null;
+   planError = formatError(e);
+  } finally {
+   if (seq === planRequestSeq) planLoading = false;
   }
  }
 
@@ -232,6 +275,39 @@
      </div>
     </div>
 
+    {#if selectedMode.configured}
+     <div class="rounded border border-surface-200-800 bg-surface-100-900 p-3">
+      <div class="mb-2 flex items-center justify-between gap-2">
+       <div class="text-xs font-semibold opacity-70">Dry-run plan</div>
+       <div class="text-[10px] uppercase opacity-55">{planLoading ? 'loading' : transitionPlan?.noop ? 'noop' : 'change'}</div>
+      </div>
+      {#if planError}
+       <div class="text-xs text-error-500">{planError}</div>
+      {:else if transitionPlan}
+       <dl class="grid grid-cols-[76px_minmax(0,1fr)] gap-x-2 gap-y-1 text-xs">
+        <dt class="opacity-60">From</dt>
+        <dd class="truncate font-mono">{transitionPlan.from_effective_id || '(none)'}</dd>
+        <dt class="opacity-60">To</dt>
+        <dd class="truncate font-mono">{transitionPlan.to_effective_id || '(none)'}</dd>
+        <dt class="opacity-60">Enable +</dt>
+        <dd class="truncate font-mono">
+         {transitionPlan.flowgraph_enable_added_vs_from.length > 0
+          ? transitionPlan.flowgraph_enable_added_vs_from.join(', ')
+          : '-'}
+        </dd>
+        <dt class="opacity-60">Disable +</dt>
+        <dd class="truncate font-mono">
+         {transitionPlan.flowgraph_disable_added_vs_from.length > 0
+          ? transitionPlan.flowgraph_disable_added_vs_from.join(', ')
+          : '-'}
+        </dd>
+       </dl>
+      {:else}
+       <div class="text-xs opacity-60">No dry-run plan.</div>
+      {/if}
+     </div>
+    {/if}
+
     <div>
      <div class="mb-1 text-xs font-semibold opacity-70">Managed Apps</div>
      <ul class="grid gap-1">
@@ -257,6 +333,20 @@
     >
      {transitLabel}
     </button>
+    {#if managedAppOps.length > 0}
+     <div>
+      <div class="mb-1 text-xs font-semibold opacity-70">Last Managed App ops</div>
+      <ul class="grid gap-1">
+       {#each managedAppOps as op}
+        <li class="rounded bg-surface-100-900 px-2 py-1 text-xs">
+         <span class="font-mono">{op.op}</span>
+         <span class="ml-1">{op.id}</span>
+         <span class={op.ok ? 'ml-2 text-success-500' : 'ml-2 text-error-500'}>{op.ok ? 'ok' : 'failed'}</span>
+        </li>
+       {/each}
+      </ul>
+     </div>
+    {/if}
     {:else}
      <div class="px-2 py-6 text-center text-sm opacity-60">No runtime mode candidate.</div>
     {/if}

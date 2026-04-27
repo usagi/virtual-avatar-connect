@@ -35,6 +35,9 @@ let filter: FilterMap = $state({
  managed_app_state: true,
  // Phase δ-6: Flowgraph ホットリロード通知。編集中はあったほうが便利なのでデフォルト ON。
  flowgraph_reloaded: true,
+ restart_recommended: true,
+ runtime_mode_changed: true,
+ runtime_mode_managed_apps: true,
 });
 
  let paused: boolean = $state(false);
@@ -88,6 +91,12 @@ let filter: FilterMap = $state({
    return `${ev.id} ${ev.running ? 'RUNNING' : 'STOPPED'} pids=[${ev.pids.join(',')}]`;
   case 'flowgraph_reloaded':
    return `${ev.root_dir} ok=${ev.ok} nodes=${ev.node_count} (err=${ev.error_count} warn=${ev.warning_count})`;
+  case 'restart_recommended':
+   return `${ev.reason}: ${JSON.stringify(ev.details)}`;
+  case 'runtime_mode_changed':
+   return `${ev.previous_effective_id || '(none)'} → ${ev.current_effective_id || '(none)'}${ev.reason ? ` (${ev.reason})` : ''}`;
+  case 'runtime_mode_managed_apps':
+   return `${ev.previous_effective_id} → ${ev.current_effective_id}: ${ev.ops.map((op) => `${op.op}:${op.id}:${op.ok ? 'ok' : 'fail'}`).join(', ')}`;
   default:
    return assertNever(ev);
  }
@@ -116,6 +125,12 @@ let filter: FilterMap = $state({
    return 'bg-tertiary-200-800 text-tertiary-900-100';
   case 'flowgraph_reloaded':
    return 'bg-success-200-800 text-success-900-100';
+  case 'restart_recommended':
+   return 'bg-warning-200-800 text-warning-900-100';
+  case 'runtime_mode_changed':
+   return 'bg-primary-200-800 text-primary-900-100';
+  case 'runtime_mode_managed_apps':
+   return 'bg-tertiary-200-800 text-tertiary-900-100';
   default:
    return assertNever(k);
  }
@@ -146,6 +161,9 @@ const ALL_KINDS: readonly ControlEventKind[] = [
  'oauth_status',
  'restarting',
  'managed_app_state',
+ 'runtime_mode_changed',
+ 'runtime_mode_managed_apps',
+ 'restart_recommended',
  'flowgraph_reloaded',
  'heartbeat',
  'lagged',

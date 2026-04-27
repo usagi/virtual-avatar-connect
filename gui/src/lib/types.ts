@@ -161,10 +161,59 @@ export type ModesListResponse = {
 
 export type CurrentModeResponse = {
  mode: string | null;
+ managed_apps?: RuntimeModeManagedAppOp[] | null;
 };
 
 export type PutCurrentModeBody = {
  mode: string | null;
+};
+
+export type RuntimeModeManagedAppOp = {
+ id: string;
+ op: string;
+ ok: boolean;
+ detail?: string | null;
+};
+
+export type FlowgraphGroupsModeSpec = {
+ enable: string[];
+ disable: string[];
+};
+
+export type ManagedAppsModeDirective = {
+ start: string[];
+ stop: string[];
+ minimize: string[];
+ leave: string[];
+};
+
+export type ModeTransitionPlan = {
+ from_slot: string | null;
+ to_slot: string | null;
+ from_effective_id: string;
+ to_effective_id: string;
+ noop: boolean;
+ target_flowgraph_groups: FlowgraphGroupsModeSpec;
+ target_managed_apps: ManagedAppsModeDirective;
+ flowgraph_enable_added_vs_from: string[];
+ flowgraph_disable_added_vs_from: string[];
+};
+
+export type ModePlanRequest = {
+ target?: string | null;
+};
+
+export type ModeTransitRequest = {
+ mode?: string | null;
+ dry_run?: boolean;
+ reason?: string | null;
+};
+
+export type ModeTransitResponse = {
+ dry_run: boolean;
+ mode: string | null;
+ plan: ModeTransitionPlan;
+ managed_apps?: RuntimeModeManagedAppOp[] | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -643,6 +692,25 @@ export type ControlEvent =
     error_count: number;
     warning_count: number;
     node_count: number;
+   }
+ | {
+    kind: 'restart_recommended';
+    reason: string;
+    details: unknown;
+   }
+ | {
+    kind: 'runtime_mode_changed';
+    previous_slot?: string | null;
+    current_slot?: string | null;
+    previous_effective_id: string;
+    current_effective_id: string;
+    reason?: string | null;
+   }
+ | {
+    kind: 'runtime_mode_managed_apps';
+    previous_effective_id: string;
+    current_effective_id: string;
+    ops: RuntimeModeManagedAppOp[];
    };
 
 /** ControlEvent の kind 文字列一覧（`never` チェック用ユーティリティ）。 */
