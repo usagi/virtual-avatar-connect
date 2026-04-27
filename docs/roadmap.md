@@ -187,13 +187,14 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 
 ### v2 crate / runner / GUI 同梱（再構造化メタ）
 
-ギリシャ文字フェーズに先行して **ワークスペース化〜配布形態**を追うチェックリスト。正本: [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1 / §1.2 / §3（`vac-gui-assets` 図・移行手順 Step 4 以降）。
+ギリシャ文字フェーズに先行して **ワークスペース化〜配布形態**を追うチェックリスト。正本: [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1 / §1.2 / §3（`vac-gui-assets` 図・移行手順 Step 4 以降）。実装順と担当境界は [`roadmap/crate-runner-desktop-restructure.md`](roadmap/crate-runner-desktop-restructure.md)。
 
 - [x] Step 4（一段）: [`architecture.md`](architecture.md) レイヤ境界表 + `motion` / `bridges` モジュール契約。`state→web_interface` 型依存は `twitch_oauth_sessions` / `control_events` で中立化済み
 - [x] Step 5（部分）: ワークスペース化（`vac-gui-assets` のみメンバ追加、`default-members = ["."]`）。他 crate の分割は継続
 - [x] Step 6a: Cargo feature **`embed-gui`** — `/gui/*` メモリ配信（`gui_embedded` / `gui_path`）
 - [x] Step 6b（crate）: **`vac-gui-assets`** メンバ（`include_dir` + `build.rs`）。**CI は §1.3 どおり未着手**
 - [x] Step 7（一段）: `src/app_core.rs` の `run_vac_application`（`ShutdownBroker` 以降〜 cleanup）+ `run_services` 集約。将来 `vac-app` への切り出し境界
+- [x] Step 7d: crate / runner / desktop 再編の実装順と担当境界を固定（[`roadmap/crate-runner-desktop-restructure.md`](roadmap/crate-runner-desktop-restructure.md)）
 - [ ] Step 8: CLI / desktop の 2 runner（仮称どおり）
 - [ ] Step 9: desktop に Tauri + 同梱静的 + トレイ
 

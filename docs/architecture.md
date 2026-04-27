@@ -164,7 +164,7 @@ UNVET (`usagi/un-virtual-eye-tracker`) の convention を踏襲し、Phase χ �
 
 ## 実行入口（計画・工程順）
 
-現状のエントリは `src/main.rs` → `lib::run()` の **1 プロセス構成**。将来的に **CLI 版**と **desktop 版**の 2 実行ファイルを用意し、いずれも **同一コア（ライブラリ）**から起動する薄い runner とする（通常は静的リンク。詳細・名称の正本は [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1 / §1.2。再構造化の **Step 4〜9 チェックリスト**は [`roadmap.md`](roadmap.md)「v2 crate / runner / GUI 同梱」。
+現状のエントリは `src/main.rs` → `lib::run()` の **1 プロセス構成**。将来的に **CLI 版**と **desktop 版**の 2 実行ファイルを用意し、いずれも **同一コア（ライブラリ）**から起動する薄い runner とする（通常は静的リンク。詳細・名称の正本は [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1 / §1.2。再構造化の **Step 4〜9 チェックリスト**は [`roadmap.md`](roadmap.md)「v2 crate / runner / GUI 同梱」。実装順と担当境界は [`roadmap/crate-runner-desktop-restructure.md`](roadmap/crate-runner-desktop-restructure.md)。
 
 **推奨する実装順**
 
