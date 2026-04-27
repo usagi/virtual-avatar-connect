@@ -265,7 +265,7 @@ parse 対象文字列の TZ 情報の有無を以下で判定:
 
 | # | ファイル | 行 | chrono | jiff 置換 | 備考 |
 |---|---|---:|---|---|---|
-| 1 | `src/message.rs` | 1 | `use chrono::{DateTime, Utc}` | `use jiff::Timestamp` + 型別名 | serde 出力が RFC3339 互換なこと round-trip test で確認 |
+| 1 | `src/message.rs` | 1 | `use chrono::{DateTime, Utc}` | `use jiff::Timestamp` + 型別名 | 当時の互換確認対象。後続の構造整理で未使用ファイルとして削除済み |
 | 2 | `src/state/channel_datum.rs` | 3 | `use chrono::{DateTime, Utc}` | `use jiff::Timestamp` | struct field `DateTime<Utc>` → `Timestamp` |
 | 3 | `src/web_interface/ws.rs` | 6 | `use chrono::{DateTime, Utc}` | `use jiff::Timestamp` | |
 | 4 | `src/web_interface/output.rs` | 92 | `retrieved_timestamp.parse::<chrono::DateTime<chrono::Utc>>().unwrap()` | `retrieved_timestamp.parse::<Timestamp>()?` | unwrap → ? (呼出元 Result 化必要) |
@@ -323,7 +323,7 @@ parse 対象文字列の TZ 情報の有無を以下で判定:
 
 - §5 の 22 箇所を 1 ファイルずつ置換。各ファイル置換後に `cargo check` を通す
 - **順序の原則**: leaf (呼ばれるだけのファイル) から書き換える。型定義を持つ `message.rs` / `channel_datum.rs` / `managed_app/mod.rs` は最後。理由: 型を先に変えると下流の `cargo check` が長期間赤くなる
-- **snapshot test 追加**: serde 経由で `DateTime<Utc>` を JSON に書き出していた構造体 (特に `message::Message`, `channel_datum::ChannelDatum`) について **既存 chrono 出力 / 新 jiff 出力 の JSON バイト列比較** を `insta` snapshot ですでに持っていれば再生成、無ければ本フェーズで追加
+- **snapshot test 追加**: serde 経由で `DateTime<Utc>` を JSON に書き出していた構造体 (特に `channel_datum::ChannelDatum`) について **既存 chrono 出力 / 新 jiff 出力 の JSON バイト列比較** を `insta` snapshot ですでに持っていれば再生成、無ければ本フェーズで追加
 - **ログ/ファイル名系 (`profiles/*` / `run_with/*` / `flowgraph/*` / `tts` / `screenshot.rs`) の strftime 結果**: 既存と文字列一致するかを unit test で担保
 - **TTL 比較 (`dictionary.rs::is_expired`)**: 現行の文字列 → chrono parse → chrono::Utc::now() 比較のロジックを、Timestamp 比較に書き換え。semantics が変わらないかケース test を追加
 
