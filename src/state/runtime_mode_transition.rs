@@ -325,14 +325,16 @@ pub async fn apply_runtime_mode_transition_full(
 
 	if !applied.noop {
 		if !conf.modes.is_empty() {
-			set_transition_status(
-				state,
-				status_seq,
-				RuntimeModeTransitionPhase::ApplyingManagedApps,
-				4,
-				"applying managed app desired state",
-			)
-			.await;
+			if will_mutate {
+				set_transition_status(
+					state,
+					status_seq,
+					RuntimeModeTransitionPhase::ApplyingManagedApps,
+					4,
+					"applying managed app desired state",
+				)
+				.await;
+			}
 			let def = conf
 				.modes
 				.get(applied.current_effective_id.as_str())
@@ -356,23 +358,31 @@ pub async fn apply_runtime_mode_transition_full(
 	}
 
 	if !applied.noop {
-		set_transition_status(
-			state,
-			status_seq,
-			RuntimeModeTransitionPhase::FiringFlowgraphHook,
-			5,
-			"firing runtime mode flowgraph hook",
-		)
-		.await;
+		if will_mutate {
+			set_transition_status(
+				state,
+				status_seq,
+				RuntimeModeTransitionPhase::FiringFlowgraphHook,
+				5,
+				"firing runtime mode flowgraph hook",
+			)
+			.await;
+		}
 		fire_runtime_mode_changed_flowgraph_hook(state, conf, &applied).await;
 	}
 
-	if !applied.noop {
+	// `begin_transition_status` 済みなら常に終了させる（plan と apply の noop 判定がずれた場合も active が残らないようにする）。
+	if will_mutate {
+		let msg = if applied.noop {
+			"runtime mode transition completed (no effective change after apply)"
+		} else {
+			"runtime mode transition completed"
+		};
 		finish_transition_status(
 			state,
 			status_seq,
 			RuntimeModeTransitionPhase::Completed,
-			"runtime mode transition completed",
+			msg,
 			None,
 			managed_reports.clone(),
 		)
