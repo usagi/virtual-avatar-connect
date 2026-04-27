@@ -18,6 +18,7 @@ pub mod fragment;
 pub mod loader;
 pub mod osc;
 pub mod vmc;
+pub mod vrchat;
 pub mod activation;
 pub mod node;
 pub mod nodes;

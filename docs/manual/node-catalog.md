@@ -235,6 +235,12 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.vmc.extract_root_pos`](#flowgraph-vmc-extract-root-pos) — VMC: Extract Root Pos
   - [`flowgraph.vmc.send_bone_pos`](#flowgraph-vmc-send-bone-pos) — VMC: Send Bone Pos
   - [`flowgraph.vmc.send_root_pos`](#flowgraph-vmc-send-root-pos) — VMC: Send Root Pos
+- **vrchat**
+  - [`flowgraph.vrchat.avatar_parameter_bool`](#flowgraph-vrchat-avatar-parameter-bool) — VRChat: Avatar Parameter (Bool)
+  - [`flowgraph.vrchat.avatar_parameter_float`](#flowgraph-vrchat-avatar-parameter-float) — VRChat: Avatar Parameter (Float)
+  - [`flowgraph.vrchat.avatar_parameter_int`](#flowgraph-vrchat-avatar-parameter-int) — VRChat: Avatar Parameter (Int)
+  - [`flowgraph.vrchat.chatbox_input`](#flowgraph-vrchat-chatbox-input) — VRChat: Chatbox Input
+  - [`flowgraph.vrchat.chatbox_typing`](#flowgraph-vrchat-chatbox-typing) — VRChat: Chatbox Typing
 
 ## channel
 
@@ -3038,6 +3044,103 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `port` | `int` | — |  |
 | `position` | `json` | — |  |
 | `rotation` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `bytes_sent` | `int` |  |
+| `error` | `string` |  |
+
+## vrchat
+
+### `flowgraph.vrchat.avatar_parameter_bool`
+
+**VRChat: Avatar Parameter (Bool)** — OSC `/avatar/parameters/<name>` に bool を 1 つ送信
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `host` | `string` | — |  |
+| `port` | `int` | — |  |
+| `parameter_name` | `string` | — |  |
+| `value` | `bool` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `bytes_sent` | `int` |  |
+| `error` | `string` |  |
+
+### `flowgraph.vrchat.avatar_parameter_float`
+
+**VRChat: Avatar Parameter (Float)** — OSC `/avatar/parameters/<name>` に float を 1 つ送信（VRChat OSC Avatar Parameters）
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `host` | `string` | — |  |
+| `port` | `int` | — |  |
+| `parameter_name` | `string` | — |  |
+| `value` | `float` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `bytes_sent` | `int` |  |
+| `error` | `string` |  |
+
+### `flowgraph.vrchat.avatar_parameter_int`
+
+**VRChat: Avatar Parameter (Int)** — OSC `/avatar/parameters/<name>` に int を 1 つ送信
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `host` | `string` | — |  |
+| `port` | `int` | — |  |
+| `parameter_name` | `string` | — |  |
+| `value` | `int` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `bytes_sent` | `int` |  |
+| `error` | `string` |  |
+
+### `flowgraph.vrchat.chatbox_input`
+
+**VRChat: Chatbox Input** — `/chatbox/input` に (text, send_immediately, play_notification_sfx)。テキストは最大 144 文字に切り詰め
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `host` | `string` | — |  |
+| `port` | `int` | — |  |
+| `text` | `string` | — |  |
+| `send_immediately` | `bool` | `true` |  |
+| `play_notification_sfx` | `bool` | `true` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `bytes_sent` | `int` |  |
+| `error` | `string` |  |
+
+### `flowgraph.vrchat.chatbox_typing`
+
+**VRChat: Chatbox Typing** — `/chatbox/typing` に bool を 1 つ送信
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `host` | `string` | — |  |
+| `port` | `int` | — |  |
+| `typing` | `bool` | — |  |
 
 | Output | Type | Note |
 |---|---|---|

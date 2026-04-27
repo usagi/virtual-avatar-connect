@@ -12,6 +12,7 @@
 - **`src/flowgraph/osc.rs`**（Phase ρ）: JSON 引数 → OSC エンコード・UDP 単発送出の共有実装。`flowgraph.osc.send` は本モジュール経由。
 - **`src/flowgraph/vmc.rs`** + **`flowgraph.vmc.send_bone_pos`** / **`send_root_pos`**（Effectful）: VMC Bone/Root Pos の UDP 単発送出。
 - **`flowgraph.vmc.extract_bone_pos`** / **`extract_root_pos`**（Pure）: `MotionFrame` から `/VMC/Ext/Bone/Pos` / `Root/Pos` を `{ bone, position, rotation }` JSON で取り出し（受信経路は ingress + `vmc_parse`）。
+- **`src/flowgraph/vrchat.rs`** + **`flowgraph.vrchat.*`**（Effectful）: VRChat OSC（`/avatar/parameters/<name>` に float/int/bool、`/chatbox/input`、`/chatbox/typing`）。
 - **`flowgraph.motion.vmc_parse`**（Pure）: `payload_b64` → `frame`（**`motion_frame`**）。
 - **`flowgraph.motion.filter`** / **`map`**: 入出力 **`motion_frame`**（`json` ポートへ接続可）。
 - **`flowgraph.ingress.osc_udp`** + **`bridges::osc_ingress`**: 汎用 OSC/UDP ingress（`__meta__.profile = "osc_udp"`）。VMC ingress（`vmc_udp`）とメタ分離。

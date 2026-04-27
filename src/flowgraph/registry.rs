@@ -323,6 +323,11 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_effectful(Arc::new(nodes::vmc_send::VmcSendRootPosNode));
 	r.register_pure(Arc::new(nodes::vmc_extract::VmcExtractBonePosNode));
 	r.register_pure(Arc::new(nodes::vmc_extract::VmcExtractRootPosNode));
+	r.register_effectful(Arc::new(nodes::vrchat_osc::VrchatAvatarParameterFloatNode));
+	r.register_effectful(Arc::new(nodes::vrchat_osc::VrchatAvatarParameterIntNode));
+	r.register_effectful(Arc::new(nodes::vrchat_osc::VrchatAvatarParameterBoolNode));
+	r.register_effectful(Arc::new(nodes::vrchat_osc::VrchatChatboxInputNode));
+	r.register_effectful(Arc::new(nodes::vrchat_osc::VrchatChatboxTypingNode));
 
 	// --- state (δ-3c) ---
 	r.register_stateful(Arc::new(nodes::state::BoolStateNode));
@@ -467,6 +472,11 @@ mod tests {
 			"flowgraph.vmc.send_root_pos",
 			"flowgraph.vmc.extract_bone_pos",
 			"flowgraph.vmc.extract_root_pos",
+			"flowgraph.vrchat.avatar_parameter_float",
+			"flowgraph.vrchat.avatar_parameter_int",
+			"flowgraph.vrchat.avatar_parameter_bool",
+			"flowgraph.vrchat.chatbox_input",
+			"flowgraph.vrchat.chatbox_typing",
 			"flowgraph.channel.emit",
 			"flowgraph.unit.assign",
 			"flowgraph.unit.convert",

@@ -76,6 +76,7 @@ pub mod ocr;
 pub mod osc_send;
 pub mod vmc_send;
 pub mod vmc_extract;
+pub mod vrchat_osc;
 pub mod random_noise;
 pub mod rate_limit;
 pub mod regex_ops;

@@ -61,7 +61,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 ### `src/flowgraph/`
 
 - Flowgraph Runtime 本体
-- `node.rs` (NodeSpec, NodeDescriptor)、`registry.rs`、`table.rs`、`socket.rs`、`osc.rs` / `vmc.rs`（Phase ρ: OSC/UDP 送出・VMC メッセージ組み立て）
+- `node.rs` (NodeSpec, NodeDescriptor)、`registry.rs`、`table.rs`、`socket.rs`、`osc.rs` / `vmc.rs` / `vrchat.rs`（Phase ρ: OSC/UDP・VMC・VRChat 向け送出ヘルパ）
 - `nodes/` にビルトインノード群（`dictionary/` / `table_ops/` / `twitch/` / `tts/` / `util/` ...）
 - loader / docs / state 維持系サブモジュール
 
