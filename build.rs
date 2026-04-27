@@ -10,6 +10,23 @@ use std::path::{Path, PathBuf};
 /// GitHub releases の zip 名・タグに合わせる（`VOSK_WIN64_VERSION` で上書き可）
 const VOSK_WIN64_DEFAULT_VERSION: &str = "0.3.45";
 
+const WINDOWS_APP_MANIFEST: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity version="1.0.0.0" processorArchitecture="*" name="VirtualAvatarConnect" type="win32" />
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity
+        type="win32"
+        name="Microsoft.Windows.Common-Controls"
+        version="6.0.0.0"
+        processorArchitecture="*"
+        publicKeyToken="6595b64144ccf1df"
+        language="*" />
+    </dependentAssembly>
+  </dependency>
+</assembly>
+"#;
+
 fn main() {
 	let target = env::var("TARGET").unwrap_or_default();
 	let windows_target = target.contains("windows");
@@ -18,6 +35,7 @@ fn main() {
 	if cfg!(target_os = "windows") {
 		let mut res = winres::WindowsResource::new();
 		res.set_icon("icon.ico");
+		res.set_manifest(WINDOWS_APP_MANIFEST);
 		res.compile().unwrap();
 	}
 
