@@ -82,10 +82,10 @@
 
  function modeCardClass(selected: boolean): string {
   return [
-   'rounded border p-4 text-left transition-colors',
+   'vac-panel p-4 text-left transition-colors',
    selected
     ? 'border-primary-500 bg-primary-500/10'
-   : 'border-surface-200-800 bg-surface-50-950 hover:bg-surface-100-900',
+    : 'hover:bg-surface-100-900',
   ].join(' ');
  }
 
@@ -164,7 +164,7 @@
    <h2 class="text-xl font-semibold">Modes</h2>
    <p class="text-sm opacity-65">Runtime Mode の切替と確認</p>
   </div>
-  <div class="rounded border border-surface-200-800 bg-surface-50-950 px-3 py-2 text-xs">
+  <div class="vac-panel px-3 py-2 text-xs">
    <span class="opacity-60">Backend:</span>
    <span
     class="ml-1 font-semibold"
@@ -177,7 +177,7 @@
   </div>
  </div>
 
- <div class="rounded border border-surface-200-800 bg-surface-50-950 px-4 py-3 text-sm">
+ <div class="vac-panel px-4 py-3 text-sm">
   <span class="font-semibold">現在の mode:</span>
   <code class="ml-2 rounded bg-surface-100-900 px-1.5 py-0.5">{currentModeId ?? '(default)'}</code>
   <span class="ml-3 opacity-65">設定済み modes: {configuredModeIds.length}</span>
@@ -194,7 +194,7 @@
   </div>
  {/if}
  {#if transitionStatus && transitionStatus.phase !== 'idle'}
-  <section class="rounded border border-surface-200-800 bg-surface-50-950 px-4 py-3">
+  <section class="vac-panel px-4 py-3">
    <div class="flex flex-wrap items-center justify-between gap-2">
     <div>
      <div class="text-sm font-semibold">遷移進捗</div>
@@ -245,8 +245,8 @@
    {/each}
   </div>
 
-  <aside class="rounded border border-surface-200-800 bg-surface-50-950">
-   <div class="border-b border-surface-200-800 px-4 py-2 text-sm font-semibold">
+  <aside class="vac-panel">
+   <div class="vac-panel-header px-4 py-2 text-sm font-semibold">
     遷移プレビュー
    </div>
    <div class="grid gap-4 p-4 text-sm">
@@ -276,7 +276,7 @@
     </div>
 
     {#if selectedMode.configured}
-     <div class="rounded border border-surface-200-800 bg-surface-100-900 p-3">
+     <div class="vac-panel-muted p-3">
       <div class="mb-2 flex items-center justify-between gap-2">
        <div class="text-xs font-semibold opacity-70">Dry-run plan</div>
        <div class="text-[10px] uppercase opacity-55">{planLoading ? 'loading' : transitionPlan?.noop ? 'noop' : 'change'}</div>
@@ -318,11 +318,11 @@
        {/each}
       </dl>
      {:else if transitionPlan}
-      <div class="rounded bg-surface-100-900 px-2 py-1 text-xs opacity-60">Managed App の変更はありません。</div>
+      <div class="vac-subtle-row px-2 py-1 text-xs opacity-60">Managed App の変更はありません。</div>
      {:else}
       <ul class="grid gap-1">
        {#each selectedMode.managedApps as action (action)}
-        <li class="rounded bg-surface-100-900 px-2 py-1 text-xs">{action}</li>
+        <li class="vac-subtle-row px-2 py-1 text-xs">{action}</li>
        {/each}
       </ul>
      {/if}
@@ -349,7 +349,7 @@
       <div class="mb-1 text-xs font-semibold opacity-70">Last Managed App ops</div>
       <ul class="grid gap-1">
        {#each managedAppOps as op (`${op.op}:${op.id}:${op.ok}:${op.detail ?? ''}`)}
-        <li class="rounded bg-surface-100-900 px-2 py-1 text-xs">
+        <li class="vac-subtle-row px-2 py-1 text-xs">
          <span class="font-mono">{op.op}</span>
          <span class="ml-1">{op.id}</span>
          <span class={op.ok ? 'ml-2 text-success-500' : 'ml-2 text-error-500'}>{op.ok ? 'ok' : 'failed'}</span>

@@ -70,7 +70,7 @@
  }
 </script>
 
-<section class="rounded-lg border border-surface-200-800 bg-surface-100-900 p-4" aria-label="リソース概要">
+<section class="vac-panel-muted p-4" aria-label="リソース概要">
  <header class="mb-3 flex items-start justify-between gap-3">
   <div>
    <h3 class="text-sm font-semibold opacity-80">リソース概要</h3>
@@ -117,14 +117,14 @@
   {:else}
    <div class="mt-3 space-y-2">
     {#if unknown > 0}
-     <p class="rounded border border-surface-300-700 bg-surface-50-950 p-2 text-xs opacity-75">
+     <p class="vac-panel p-2 text-xs opacity-75">
       {unknown} 件のアプリは起動できますが、process marker が未設定のため起動状態を報告できません。
      </p>
     {/if}
     {#if recentRunning.length > 0}
      <ul class="space-y-1">
       {#each recentRunning as entry (entry.id)}
-       <li class="flex items-center justify-between gap-2 rounded bg-surface-50-950 px-2 py-1.5 text-xs">
+       <li class="vac-subtle-row flex items-center justify-between gap-2 px-2 py-1.5 text-xs">
         <span class="min-w-0 truncate font-semibold">{entry.label}</span>
         <span class="shrink-0 font-mono opacity-60">pids [{entry.status.pids.join(', ')}]</span>
        </li>

@@ -131,31 +131,31 @@
     Runtime cockpit · <span class={healthTone.className}>{healthTone.label}</span>
    </p>
   </div>
-  <div class="flex flex-wrap items-center gap-2">
+  <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
    <button
     type="button"
-    class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
+    class="shrink-0 rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
     onclick={() => go('modes')}
    >
     Modes
    </button>
    <button
     type="button"
-    class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
+    class="shrink-0 rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
     onclick={() => go('flowgraph')}
    >
     Flowgraph Studio
    </button>
    <button
     type="button"
-    class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
+    class="shrink-0 rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
     onclick={() => go('resources')}
    >
     Resources
    </button>
    <button
     type="button"
-    class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900 disabled:opacity-50"
+    class="shrink-0 rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900 disabled:opacity-50"
     disabled={loading}
     onclick={refreshNow}
    >
@@ -171,17 +171,17 @@
  {/if}
 
  <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-  <article class="rounded border border-surface-200-800 bg-surface-50-950 p-4">
-   <div class="text-xs uppercase tracking-wide opacity-60">接続</div>
-   <div class="mt-2 text-2xl font-semibold {wsTone}">{eventsStore.connection}</div>
+  <article class="vac-stat-card p-4">
+   <div class="vac-stat-label">接続</div>
+   <div class="vac-stat-value mt-2 text-2xl font-semibold {wsTone}">{eventsStore.connection}</div>
    <div class="mt-1 text-xs opacity-60">
     {eventsStore.received_count} events / {eventsStore.dropped_count} dropped
    </div>
   </article>
 
-  <article class="rounded border border-surface-200-800 bg-surface-50-950 p-4">
-   <div class="text-xs uppercase tracking-wide opacity-60">Mode</div>
-   <div class="mt-2 truncate text-2xl font-semibold" title={currentMode ?? '(default)'}>
+  <article class="vac-stat-card p-4">
+   <div class="vac-stat-label">Mode</div>
+   <div class="vac-stat-value mt-2 truncate text-2xl font-semibold" title={currentMode ?? '(default)'}>
     {currentMode ?? 'default'}
    </div>
    <button
@@ -193,21 +193,21 @@
    </button>
   </article>
 
-  <article class="rounded border border-surface-200-800 bg-surface-50-950 p-4">
-   <div class="text-xs uppercase tracking-wide opacity-60">AI</div>
-   <div class="mt-2 text-2xl font-semibold">{aiTotal - aiPaused} / {aiTotal}</div>
+  <article class="vac-stat-card p-4">
+   <div class="vac-stat-label">AI</div>
+   <div class="vac-stat-value mt-2 text-2xl font-semibold">{aiTotal - aiPaused} / {aiTotal}</div>
    <div class="mt-1 text-xs opacity-60">{aiPaused} paused</div>
   </article>
 
-  <article class="rounded border border-surface-200-800 bg-surface-50-950 p-4">
-   <div class="text-xs uppercase tracking-wide opacity-60">連携アプリ</div>
-   <div class="mt-2 text-2xl font-semibold">{managedRunning} / {managedTotal}</div>
+  <article class="vac-stat-card p-4">
+   <div class="vac-stat-label">連携アプリ</div>
+   <div class="vac-stat-value mt-2 text-2xl font-semibold">{managedRunning} / {managedTotal}</div>
    <div class="mt-1 text-xs opacity-60">起動中</div>
   </article>
 
-  <article class="rounded border border-surface-200-800 bg-surface-50-950 p-4">
-   <div class="text-xs uppercase tracking-wide opacity-60">Flowgraph</div>
-   <div class="mt-2 text-2xl font-semibold">{flowgraphFiles}</div>
+  <article class="vac-stat-card p-4">
+   <div class="vac-stat-label">Flowgraph</div>
+   <div class="vac-stat-value mt-2 text-2xl font-semibold">{flowgraphFiles}</div>
    <div class="mt-1 text-xs opacity-60">
     {diagnosticErrors} errors / {diagnosticWarnings} warnings
    </div>
@@ -215,8 +215,8 @@
  </div>
 
  <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-  <section class="rounded border border-surface-200-800 bg-surface-50-950">
-   <div class="border-b border-surface-200-800 px-4 py-2 text-sm font-semibold">Runtime</div>
+  <section class="vac-panel">
+   <div class="vac-panel-header px-4 py-2 text-sm font-semibold">Runtime</div>
    <dl class="grid gap-x-4 gap-y-2 p-4 text-sm sm:grid-cols-[160px_minmax(0,1fr)]">
     <dt class="opacity-60">Version</dt>
     <dd class="font-mono">{snapshot?.app_version ?? '-'}</dd>
@@ -237,15 +237,15 @@
    </dl>
   </section>
 
-  <section class="rounded border border-surface-200-800 bg-surface-50-950">
-   <div class="border-b border-surface-200-800 px-4 py-2 text-sm font-semibold">連携アプリ</div>
+  <section class="vac-panel">
+   <div class="vac-panel-header px-4 py-2 text-sm font-semibold">連携アプリ</div>
    <div class="max-h-72 overflow-y-auto p-2">
     {#if topManagedApps.length === 0}
      <div class="px-2 py-4 text-sm opacity-60">Managed App は未登録です。</div>
     {:else}
      <ul class="grid gap-1">
       {#each topManagedApps as app (app.id)}
-       <li class="rounded bg-surface-100-900 px-2 py-1.5 text-xs">
+       <li class="vac-subtle-row px-2 py-1.5 text-xs">
         <div class="flex items-center justify-between gap-2">
          <span class="truncate font-medium">{app.label}</span>
          <span class={app.status.running ? 'text-success-500' : 'opacity-55'}>
@@ -261,8 +261,8 @@
  </div>
 
  <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-  <section class="rounded border border-surface-200-800 bg-surface-50-950">
-   <div class="flex items-center justify-between border-b border-surface-200-800 px-4 py-2">
+  <section class="vac-panel">
+   <div class="vac-panel-header flex items-center justify-between px-4 py-2">
     <span class="text-sm font-semibold">Flowgraph 問題</span>
     <button
      type="button"
@@ -278,7 +278,7 @@
     {:else}
      <ul class="grid gap-1">
       {#each topDiagnostics as d, i (`${d.file ?? ''}:${d.node ?? ''}:${d.code}:${i}`)}
-       <li class="rounded bg-surface-100-900 px-2 py-1.5 text-xs">
+       <li class="vac-subtle-row px-2 py-1.5 text-xs">
         <div class="flex items-center gap-2">
          <span
           class="rounded px-1.5 py-0.5 text-[10px] uppercase"
@@ -299,15 +299,15 @@
    </div>
   </section>
 
-  <section class="rounded border border-surface-200-800 bg-surface-50-950">
-   <div class="border-b border-surface-200-800 px-4 py-2 text-sm font-semibold">最近のイベント</div>
+  <section class="vac-panel">
+   <div class="vac-panel-header px-4 py-2 text-sm font-semibold">最近のイベント</div>
    <div class="max-h-72 overflow-y-auto p-2">
     {#if recentEvents.length === 0}
      <div class="px-2 py-4 text-sm opacity-60">まだイベントはありません。</div>
     {:else}
      <ul class="grid gap-1">
       {#each recentEvents as item (item.seq)}
-       <li class="rounded bg-surface-100-900 px-2 py-1.5 text-xs">
+       <li class="vac-subtle-row px-2 py-1.5 text-xs">
         <div class="flex items-center justify-between gap-2">
          <span class="font-mono">{item.event.kind}</span>
          <span class="opacity-55">{new Date(item.received_at).toLocaleTimeString()}</span>

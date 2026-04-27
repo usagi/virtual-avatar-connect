@@ -19,6 +19,7 @@
  import ToastBridge from './lib/ToastBridge.svelte';
  import RestartDialog from './lib/RestartDialog.svelte';
  import ManagedAppDrawer from './lib/ManagedAppDrawer.svelte';
+ import './lib/theme.svelte';
 
  import NowTab from './lib/tabs/NowTab.svelte';
  import ModesTab from './lib/tabs/ModesTab.svelte';
@@ -32,51 +33,51 @@
  import { toastStore } from './lib/toasts.svelte';
 
  let restartDialogOpen = $state(false);
-let managedAppDrawerOpen = $state(false);
-let shutdownInFlight = $state(false);
+ let managedAppDrawerOpen = $state(false);
+ let shutdownInFlight = $state(false);
 
-/**
- * Phase ε-1: VAC プロセスそのものを穏やかに終了させる。
- *
- * 停止は `POST /api/v1/control/shutdown`（= `ShutdownBroker` を trigger）に 1 本化している。
- * 成功レスポンス後はサーバが ManagedApp 停止 → actix graceful stop を順に実行するため、
- * WS は自然に切れる。GUI 側は停止画面を出さず、toast だけ出して静かに待機する。
- */
-async function handleShutdownClick() {
- if (shutdownInFlight) return;
- const ok = window.confirm(
-  'VAC を終了します。連携アプリ（run_with で起動したもの）も停止を試み、\nブラウザの接続は切断されます。続行しますか？',
- );
- if (!ok) return;
- shutdownInFlight = true;
- try {
-  const res = await api.shutdown();
-  toastStore.info(
-   'アプリ停止を要求しました',
-   `pid=${res.current_pid} / status=${res.status}`,
+ /**
+  * Phase ε-1: VAC プロセスそのものを穏やかに終了させる。
+  *
+  * 停止は `POST /api/v1/control/shutdown`（= `ShutdownBroker` を trigger）に 1 本化している。
+  * 成功レスポンス後はサーバが ManagedApp 停止 → actix graceful stop を順に実行するため、
+  * WS は自然に切れる。GUI 側は停止画面を出さず、toast だけ出して静かに待機する。
+  */
+ async function handleShutdownClick() {
+  if (shutdownInFlight) return;
+  const ok = window.confirm(
+   'VAC を終了します。連携アプリ（run_with で起動したもの）も停止を試み、\nブラウザの接続は切断されます。続行しますか？',
   );
- } catch (e) {
-  shutdownInFlight = false;
-  toastStore.error('アプリ停止の要求に失敗しました', String(e));
+  if (!ok) return;
+  shutdownInFlight = true;
+  try {
+   const res = await api.shutdown();
+   toastStore.info(
+    'アプリ停止を要求しました',
+    `pid=${res.current_pid} / status=${res.status}`,
+   );
+  } catch (e) {
+   shutdownInFlight = false;
+   toastStore.error('アプリ停止の要求に失敗しました', String(e));
+  }
  }
-}
 </script>
 
-<div class="flex min-h-screen flex-col bg-surface-50-950 text-surface-950-50">
- <header class="sticky top-0 z-20 border-b border-surface-200-800 bg-surface-50-950/95 backdrop-blur">
-  <div class="flex items-center justify-between gap-3 px-6 py-2">
-   <div class="flex items-baseline gap-3">
-    <h1 class="text-lg font-bold">
+<div class="vac-shell flex min-h-screen flex-col text-surface-950-50">
+ <header class="vac-app-header sticky top-0 z-20 border-b backdrop-blur">
+  <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 lg:flex-nowrap lg:px-6">
+   <div class="min-w-0 flex items-baseline gap-2 lg:gap-3">
+    <h1 class="text-base font-bold lg:text-lg">
      Virtual Avatar Connect
      <span class="text-primary-500">Runtime Cockpit</span>
     </h1>
-    <span class="text-xs opacity-60">v2 GUI redesign</span>
+    <span class="hidden text-xs opacity-60 sm:inline">v2 GUI redesign</span>
    </div>
-   <div class="flex items-center gap-2">
+   <div class="flex w-full min-w-0 items-center justify-start gap-2 overflow-x-auto sm:w-auto sm:flex-1 sm:justify-end lg:flex-none lg:overflow-visible">
     <ConnectionBadge />
     <button
      type="button"
-     class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-100-900"
+     class="shrink-0 rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-100-900"
      title="連携アプリ（run_with）の起動/停止を管理"
      onclick={() => (managedAppDrawerOpen = true)}
     >
@@ -84,7 +85,7 @@ async function handleShutdownClick() {
     </button>
     <button
      type="button"
-     class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-100-900"
+     class="shrink-0 rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-100-900"
      title="VAC を再起動 / プロファイル切替"
      onclick={() => (restartDialogOpen = true)}
     >
@@ -92,7 +93,7 @@ async function handleShutdownClick() {
     </button>
     <button
      type="button"
-     class="rounded border border-error-500/60 px-3 py-1 text-xs text-error-500 hover:bg-error-500/10 disabled:opacity-50"
+     class="shrink-0 rounded border border-error-500/60 px-3 py-1 text-xs text-error-500 hover:bg-error-500/10 disabled:opacity-50"
      title="VAC アプリを終了する（連携アプリの停止も試みる）"
      disabled={shutdownInFlight}
      onclick={handleShutdownClick}
@@ -104,11 +105,11 @@ async function handleShutdownClick() {
  </header>
 
  <div class="grid flex-1 min-h-0 lg:grid-cols-[240px_minmax(0,1fr)]">
-  <aside class="border-b border-surface-200-800 bg-surface-100-900/60 lg:border-b-0 lg:border-r">
+  <aside class="vac-side-rail border-b lg:border-b-0 lg:border-r">
    <TabNav />
   </aside>
 
-  <main class="min-w-0 flex-1 px-4 py-4 lg:px-6">
+  <main class="vac-main-surface min-w-0 flex-1 px-4 py-4 lg:px-6">
    {#if tabNavStore.active === 'now'}
     <NowTab />
    {:else if tabNavStore.active === 'modes'}

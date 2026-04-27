@@ -74,7 +74,7 @@
 </script>
 
 <footer
- class="sticky bottom-0 z-30 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-surface-200-800 bg-surface-50-950/95 px-6 py-1.5 text-xs backdrop-blur"
+ class="vac-status-bar sticky bottom-0 z-30 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t px-6 py-1.5 text-xs backdrop-blur"
 >
  <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
   <span class="flex items-center gap-1.5" title="WebSocket connection">

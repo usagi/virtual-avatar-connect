@@ -26,13 +26,13 @@
  import FlowgraphShareDialog from '../flowgraph/FlowgraphShareDialog.svelte';
  import { toastStore } from '../toasts.svelte';
 
-let dialogOpen = $state(false);
-let dialogMode = $state<'paste' | 'import_zip'>('paste');
-let commandPaletteOpen = $state(false);
-let commandQuery = $state('');
-let filePaneWidth = $state(260);
-let inspectorPaneWidth = $state(320);
-let problemsHeight = $state(176);
+ let dialogOpen = $state(false);
+ let dialogMode = $state<'paste' | 'import_zip'>('paste');
+ let commandPaletteOpen = $state(false);
+ let commandQuery = $state('');
+ let filePaneWidth = $state(260);
+ let inspectorPaneWidth = $state(320);
+ let problemsHeight = $state(176);
 
 type StudioCommand = {
  id: string;
@@ -42,7 +42,7 @@ type StudioCommand = {
  run: () => void | Promise<void>;
 };
 
-onMount(() => {
+ onMount(() => {
   void flowgraphStore.refreshAll();
   flowgraphStore.attachWsSubscriber();
   // γ-4a: Ctrl+S / Cmd+S で現在ファイルを保存。フォーカスが input 系でも有効にするため window に付ける。
@@ -274,50 +274,50 @@ onMount(() => {
   await flowgraphStore.saveCurrent();
  }
 
-async function onOpenExternal() {
- if (flowgraphStore.currentFq) await flowgraphStore.openExternal(flowgraphStore.currentFq);
-}
+ async function onOpenExternal() {
+  if (flowgraphStore.currentFq) await flowgraphStore.openExternal(flowgraphStore.currentFq);
+ }
 
-async function onCopy() {
- // 選択中ノードがあればそれを、なければ現在ファイル全体を fragment 化。
- if (flowgraphStore.selectedNodeId) await flowgraphStore.fragmentCopySelectedNode();
- else await flowgraphStore.fragmentCopyCurrentFile();
-}
+ async function onCopy() {
+  // 選択中ノードがあればそれを、なければ現在ファイル全体を fragment 化。
+  if (flowgraphStore.selectedNodeId) await flowgraphStore.fragmentCopySelectedNode();
+  else await flowgraphStore.fragmentCopyCurrentFile();
+ }
 
-function onPaste() {
- dialogMode = 'paste';
- dialogOpen = true;
-}
+ function onPaste() {
+  dialogMode = 'paste';
+  dialogOpen = true;
+ }
 
-async function onExportZip() {
- if (!flowgraphStore.currentFq) return;
- const blob = await flowgraphStore.exportZip({
-  scope: 'file',
-  targets: [{ kind: 'file', fq: flowgraphStore.currentFq }],
-  origin: flowgraphStore.currentFq,
- });
- if (!blob) return;
- const url = URL.createObjectURL(blob);
- const a = document.createElement('a');
- a.href = url;
- const safeName = flowgraphStore.currentFq.replace(/[\\/]/g, '_');
- a.download = `${safeName}.zip`;
- document.body.appendChild(a);
- a.click();
- a.remove();
- URL.revokeObjectURL(url);
-}
+ async function onExportZip() {
+  if (!flowgraphStore.currentFq) return;
+  const blob = await flowgraphStore.exportZip({
+   scope: 'file',
+   targets: [{ kind: 'file', fq: flowgraphStore.currentFq }],
+   origin: flowgraphStore.currentFq,
+  });
+  if (!blob) return;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const safeName = flowgraphStore.currentFq.replace(/[\\/]/g, '_');
+  a.download = `${safeName}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+ }
 
-function onImportZip() {
- dialogMode = 'import_zip';
- dialogOpen = true;
-}
+ function onImportZip() {
+  dialogMode = 'import_zip';
+  dialogOpen = true;
+ }
 
-async function runStudioCommand(command: StudioCommand) {
- if (command.disabled) return;
- commandPaletteOpen = false;
- await command.run();
-}
+ async function runStudioCommand(command: StudioCommand) {
+  if (command.disabled) return;
+  commandPaletteOpen = false;
+  await command.run();
+ }
 </script>
 
 <div class="flex h-[calc(100vh-9rem)] min-h-[42rem] flex-col gap-3">
@@ -326,7 +326,7 @@ async function runStudioCommand(command: StudioCommand) {
    <h2 class="text-xl font-semibold">Flowgraph Studio</h2>
    <p class="text-sm opacity-65">Author, inspect, and repair runtime dataflow files.</p>
   </div>
-  <div class="grid grid-cols-3 overflow-hidden rounded border border-surface-200-800 bg-surface-50-950 text-center text-xs">
+  <div class="vac-panel grid grid-cols-3 overflow-hidden text-center text-xs">
    <div class="border-r border-surface-200-800 px-3 py-2">
     <div class="font-semibold">{fileCount}</div>
     <div class="opacity-60">Files</div>
@@ -343,7 +343,7 @@ async function runStudioCommand(command: StudioCommand) {
  </div>
 
  <!-- Toolbar -->
- <div class="flex flex-wrap items-center gap-2 rounded border border-surface-200-800 bg-surface-100-900 px-3 py-2">
+ <div class="vac-panel-muted flex flex-wrap items-center gap-2 px-3 py-2">
   <div class="flex items-baseline gap-2">
    <span class="font-semibold">Flowgraph</span>
    <span class="text-xs opacity-60">
@@ -400,54 +400,54 @@ async function runStudioCommand(command: StudioCommand) {
   >
    Open external
   </button>
- <button
-  type="button"
-  class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800 disabled:opacity-40"
-  disabled={!flowgraphStore.currentFq}
-  title="選択ノード、なければ現在ファイル全体を fragment TOML としてコピー"
-  onclick={onCopy}
- >
-  Copy
- </button>
- <button
-  type="button"
-  class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800"
-  title="fragment TOML を paste"
-  onclick={onPaste}
- >
-  Paste…
- </button>
- <button
-  type="button"
-  class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800 disabled:opacity-40"
-  disabled={!flowgraphStore.currentFq}
-  title="現在ファイルを ZIP でエクスポート"
-  onclick={onExportZip}
- >
-  Export ZIP
- </button>
- <button
-  type="button"
-  class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800"
-  title="ZIP を import（dry_run preview → 本番）"
-  onclick={onImportZip}
- >
-  Import ZIP…
- </button>
- <button
-  type="button"
-  class="rounded px-3 py-1 text-xs font-semibold text-white disabled:opacity-40"
-  class:bg-primary-500={!isDirty}
-  class:hover:bg-primary-600={!isDirty}
-  class:bg-warning-500={isDirty}
-  class:hover:bg-warning-600={isDirty}
-  disabled={!flowgraphStore.currentFq || flowgraphStore.mutating}
-  title={isDirty ? '未保存の変更があります（Ctrl+S）' : '現在のファイルを保存（Ctrl+S）'}
-  onclick={onSave}
- >
-  {saveLabel}
- </button>
-</div>
+  <button
+   type="button"
+   class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800 disabled:opacity-40"
+   disabled={!flowgraphStore.currentFq}
+   title="選択ノード、なければ現在ファイル全体を fragment TOML としてコピー"
+   onclick={onCopy}
+  >
+   Copy
+  </button>
+  <button
+   type="button"
+   class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800"
+   title="fragment TOML を paste"
+   onclick={onPaste}
+  >
+   Paste…
+  </button>
+  <button
+   type="button"
+   class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800 disabled:opacity-40"
+   disabled={!flowgraphStore.currentFq}
+   title="現在ファイルを ZIP でエクスポート"
+   onclick={onExportZip}
+  >
+   Export ZIP
+  </button>
+  <button
+   type="button"
+   class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800"
+   title="ZIP を import（dry_run preview → 本番）"
+   onclick={onImportZip}
+  >
+   Import ZIP…
+  </button>
+  <button
+   type="button"
+   class="rounded px-3 py-1 text-xs font-semibold text-white disabled:opacity-40"
+   class:bg-primary-500={!isDirty}
+   class:hover:bg-primary-600={!isDirty}
+   class:bg-warning-500={isDirty}
+   class:hover:bg-warning-600={isDirty}
+   disabled={!flowgraphStore.currentFq || flowgraphStore.mutating}
+   title={isDirty ? '未保存の変更があります（Ctrl+S）' : '現在のファイルを保存（Ctrl+S）'}
+   onclick={onSave}
+  >
+   {saveLabel}
+  </button>
+ </div>
 
 <FlowgraphShareDialog bind:open={dialogOpen} bind:mode={dialogMode} />
 
@@ -458,7 +458,7 @@ async function runStudioCommand(command: StudioCommand) {
   onclick={() => (commandPaletteOpen = false)}
  >
   <div
-   class="w-full max-w-xl overflow-hidden rounded border border-surface-300-700 bg-surface-50-950 shadow-xl"
+   class="vac-panel w-full max-w-xl overflow-hidden shadow-xl"
    role="dialog"
    aria-modal="true"
    aria-labelledby="flowgraph-command-palette-title"
@@ -468,7 +468,7 @@ async function runStudioCommand(command: StudioCommand) {
    }}
    onclick={(ev) => ev.stopPropagation()}
   >
-   <div class="flex items-center justify-between border-b border-surface-200-800 px-4 py-3">
+   <div class="vac-panel-header flex items-center justify-between px-4 py-3">
     <div>
      <h3 id="flowgraph-command-palette-title" class="text-sm font-semibold">Command Palette</h3>
      <p class="text-xs opacity-60">Flowgraph Studio operations</p>
@@ -481,7 +481,7 @@ async function runStudioCommand(command: StudioCommand) {
      Close
     </button>
    </div>
-   <div class="border-b border-surface-200-800 px-3 py-2">
+   <div class="vac-panel-header px-3 py-2">
     <input
      class="w-full rounded border border-surface-300-700 bg-surface-50-950 px-3 py-2 text-sm"
      placeholder="Search commands or node catalog"
@@ -492,7 +492,7 @@ async function runStudioCommand(command: StudioCommand) {
     {#each filteredStudioCommands as command (command.id)}
      <button
       type="button"
-      class="rounded px-3 py-2 text-left hover:bg-surface-100-900 disabled:opacity-40 disabled:hover:bg-transparent"
+       class="rounded px-3 py-2 text-left hover:bg-surface-100-900 disabled:opacity-40 disabled:hover:bg-transparent"
       disabled={command.disabled}
       onclick={() => void runStudioCommand(command)}
      >
@@ -509,8 +509,8 @@ async function runStudioCommand(command: StudioCommand) {
 
  <!-- Studio workspace -->
  <div class="grid min-h-0 flex-1 gap-2 xl:grid-cols-[260px_minmax(34rem,1fr)_320px]" style={workspaceGridStyle}>
-  <section class="flex min-h-[16rem] flex-col overflow-hidden rounded border border-surface-200-800 bg-surface-50-950">
-   <div class="border-b border-surface-200-800 px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
+  <section class="vac-panel flex min-h-[16rem] flex-col overflow-hidden">
+   <div class="vac-panel-header px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
     Files
    </div>
    <div class="min-h-0 flex-1 overflow-y-auto">
@@ -518,8 +518,8 @@ async function runStudioCommand(command: StudioCommand) {
    </div>
   </section>
 
-  <section class="flex min-h-[28rem] flex-col overflow-hidden rounded border border-surface-200-800 bg-surface-50-950">
-   <div class="flex items-center justify-between gap-2 border-b border-surface-200-800 px-3 py-2">
+  <section class="vac-panel flex min-h-[28rem] flex-col overflow-hidden">
+   <div class="vac-panel-header flex items-center justify-between gap-2 px-3 py-2">
     <span class="text-xs font-semibold uppercase tracking-wider opacity-60">Canvas</span>
     <span class="truncate text-xs opacity-60">{flowgraphStore.currentFq ?? 'No file selected'}</span>
    </div>
@@ -529,16 +529,16 @@ async function runStudioCommand(command: StudioCommand) {
   </section>
 
   <div class="grid min-h-[28rem] grid-rows-[minmax(12rem,1fr)_minmax(12rem,1fr)] gap-2">
-   <section class="flex min-h-0 flex-col overflow-hidden rounded border border-surface-200-800 bg-surface-50-950">
-    <div class="border-b border-surface-200-800 px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
+   <section class="vac-panel flex min-h-0 flex-col overflow-hidden">
+    <div class="vac-panel-header px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
      Node Palette
     </div>
     <div class="min-h-0 flex-1 overflow-hidden">
      <FlowgraphPalette />
     </div>
    </section>
-   <section class="flex min-h-0 flex-col overflow-hidden rounded border border-surface-200-800 bg-surface-50-950">
-    <div class="border-b border-surface-200-800 px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
+   <section class="vac-panel flex min-h-0 flex-col overflow-hidden">
+    <div class="vac-panel-header px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
      Inspector
     </div>
     <div class="min-h-0 flex-1 overflow-y-auto">
@@ -549,8 +549,8 @@ async function runStudioCommand(command: StudioCommand) {
  </div>
 
  <!-- Problems -->
- <section class="overflow-y-auto rounded border border-surface-200-800 bg-surface-50-950" style={problemsStyle}>
-  <div class="border-b border-surface-200-800 px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
+ <section class="vac-panel overflow-y-auto" style={problemsStyle}>
+  <div class="vac-panel-header px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
    Problems
   </div>
   <FlowgraphDiagnostics />
