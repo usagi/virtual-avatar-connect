@@ -16,6 +16,7 @@ pub mod engine;
 pub mod fixture_runner;
 pub mod fragment;
 pub mod loader;
+pub mod osc;
 pub mod activation;
 pub mod node;
 pub mod nodes;

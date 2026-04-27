@@ -229,7 +229,7 @@ VAC GUI を「機能別の設定パネル」から「常駐ランタイムの管
 Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・VRChat・その他 OSC 対応ソフト（VTube Studio の一部 / LiveLinkFace 等）を制御する基盤。VAC を「独自 avatar renderer を持つ前に、既存アバターアプリを Flowgraph から総合制御するハブ」に格上げする phase。
 
 - [x] `rosc` crate 追加（`Cargo.toml`）— デコードは `src/motion/vmc_osc.rs`、単発送信は `flowgraph.osc.send`
-- [ ] `src/flowgraph/osc.rs` 共有基盤（UDP sender / receiver の ingress 型）— 現状は motion + ノード直実装
+- [x] `src/flowgraph/osc.rs` 共有基盤（JSON args → OSC エンコード・UDP 単発送出）。受信 ingress 型は従来どおり `bridges` / `motion` 側
 - [x] `flowgraph.osc.send`（host / port / path / args JSON、`on_success` / `on_error`）
 - [x] `flowgraph.ingress.osc_udp`（`bind` + `fixed_channel`、メタ `profile: "osc_udp"`。アドレス前置フィルタは graph 側 `motion.filter` 等で）
 - [ ] VMC Protocol pose send（アバター姿勢データを VMC プロトコル準拠 OSC で送出）
