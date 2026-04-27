@@ -109,6 +109,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 - `datetime.rs`: `DateTime` / `ParseError`（`jiff::Timestamp` ベースの絶対時刻 boundary 型）。root 側 `src/datetime/mod.rs` は互換用の再エクスポート。
 - `utility.rs`: 日本語空白正規化、言語コード変換、serde default helper 等の小さな汎用関数。root 側 `src/utility.rs` は互換用の再エクスポート。
 - `resource.rs`: HTTP content type 定数。root 側 `src/resource.rs` は互換用の再エクスポート。
+- `twitch_oauth_sessions.rs`: Twitch Device Code Flow のセッション表と GUI 向け snapshot 型。root 側 `src/twitch_oauth_sessions.rs` は互換用の再エクスポート。
 
 ### `src/migrate/`
 

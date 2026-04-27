@@ -6,4 +6,5 @@ pub mod datetime;
 pub mod resource;
 pub mod runtime;
 pub mod shutdown;
+pub mod twitch_oauth_sessions;
 pub mod utility;
