@@ -92,7 +92,7 @@ fn ensure_vosk_win64_in_vendors() -> Result<PathBuf, String> {
 
 fn download_file(url: &str, dest: &Path) -> Result<(), String> {
 	let resp = ureq::get(url)
-		.set(
+		.header(
 			"User-Agent",
 			"virtual-avatar-connect/build.rs (Vosk vendor; https://github.com/alphacep/vosk-api)",
 		)
@@ -103,7 +103,7 @@ fn download_file(url: &str, dest: &Path) -> Result<(), String> {
 		return Err(format!("GET {} が HTTP {} を返しました", url, resp.status()));
 	}
 
-	let mut reader = resp.into_reader();
+	let mut reader = resp.into_parts().1.into_reader();
 	let mut f = fs::File::create(dest).map_err(|e| e.to_string())?;
 	std::io::copy(&mut reader, &mut f).map_err(|e| format!("保存: {}", e))?;
 	Ok(())
