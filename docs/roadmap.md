@@ -197,6 +197,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] Step 7d: crate / runner / desktop 再編の実装順と担当境界を固定（[`roadmap/crate-runner-desktop-restructure.md`](roadmap/crate-runner-desktop-restructure.md)）
 - [x] R1: `AppCore::boot` / `serve` / `cleanup` 分離。CLI / desktop runner が共有する起動境界をコード上に固定
 - [x] R4（一段）: `crates/vac-motion` 追加。`MotionFrame` / OSC decode / UDP forwarding helper を root crate から物理分割
+- [x] R4（二段）: `crates/vac-flowgraph` 追加。pure な Quantity system を root crate から物理分割し、既存 `crate::flowgraph::quantity::*` API は再エクスポートで維持
 - [x] R2/R3: `run_cli` / `run_desktop_headless` entry API と `virtual-avatar-connect-cli` / `virtual-avatar-connect-desktop` bin を追加（root package 名と同名の exe alias は作らない）
 - [x] Step 8: CLI / desktop の 2 runner（仮称どおり）
 - [x] Step 9: desktop に Tauri WebView + 同梱静的 + トレイ。Windows 実機で tray / taskbar icon / GUI 終了 cleanup を確認済み。`cargo build --release --features embed-gui` で CLI / desktop の 2 exe と GUI 内蔵配信を確認済み。

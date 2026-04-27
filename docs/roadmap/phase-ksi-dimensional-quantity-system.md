@@ -51,7 +51,7 @@ VAC は現時点では avatar / stream / twitch / dictionary が主なユース�
 
 ### 2.1 含むもの
 
-- `Dimension` / `Unit` / `Quantity` 型の engine 実装（`src/flowgraph/quantity/` 新設）
+- `Dimension` / `Unit` / `Quantity` 型の engine 実装（現状は `crates/vac-flowgraph/src/quantity/`）
 - SI 7 基本次元 + Angle 疑似次元の 8 次元体系
 - SI 接頭辞 20 種（Y, Z, E, P, T, G, M, k, h, da, d, c, m, μ, n, p, f, a, z, y）の compositional 扱い
 - SI 基本単位（m, kg, s, A, K, mol, cd）+ 主要誘導単位（Hz, N, Pa, J, W, C, V, Ω, F, T, H, lx, Bq, Gy, Sv, kat）+ Angle 単位（rad, deg）+ 温度絶対 K / 温度差 ΔK(=ΔC)
@@ -418,7 +418,7 @@ impl Quantity {
 | sub | 内容 | 触るもの |
 |---|---|---|
 | ξ-0 | docs: 本 phase doc + roadmap.md への Phase ξ 追加 + Phase ο doc の依存注記（ο 側は別 commit で実施済み）| `docs/roadmap/phase-ksi-dimensional-quantity-system.md` (new) / `docs/roadmap.md` |
-| ξ-1 | feat(flowgraph/quantity): `Dimension` / `Unit` / `Quantity` + SI base/derived 定義 + prefix enum + parser + unit test | `src/flowgraph/quantity/mod.rs` (new) / `dimension.rs` (new) / `unit.rs` (new) / `quantity.rs` (new) / `parser.rs` (new) / `Cargo.toml` は変更なし（外部依存ゼロで自作） |
+| ξ-1 | feat(flowgraph/quantity): `Dimension` / `Unit` / `Quantity` + SI base/derived 定義 + prefix enum + parser + unit test | 現状は `crates/vac-flowgraph/src/quantity/`。root 側は `src/flowgraph/quantity.rs` で再エクスポート |
 | ξ-2 | feat(flowgraph/nodes/unit): §4.1 単位操作ノード 6-7 種 + unit test | `src/flowgraph/nodes/unit.rs` (new) / `src/flowgraph/registry.rs` |
 | ξ-3 | refactor(flowgraph): `SocketValue::Float` → `Quantity` migration + 既存ノード dimensionless fallback + 演算 trait に `Quantity + Quantity` 実装 + 既存 math/json/state テスト回帰 | `src/flowgraph/socket.rs` / `src/flowgraph/node.rs` / `src/flowgraph/nodes/math.rs` / `src/flowgraph/nodes/json_ops.rs` / `src/flowgraph/nodes/state.rs` / その他多数 |
 | ξ-4 | feat(flowgraph/util): log / format の unit-aware 化 + channel stringify ルール確定 | `src/flowgraph/nodes/log.rs` / `format.rs` / `channel.rs` |
@@ -433,10 +433,10 @@ impl Quantity {
 
 ### 7.1 ξ-1 チェックリスト
 
-- [ ] `src/flowgraph/quantity/dimension.rs`: `Dimension` struct + `add_dim` / `sub_dim` / `mul_scalar` / `invert`
-- [ ] `src/flowgraph/quantity/unit.rs`: `Unit` struct + `BaseUnitId` enum + `SIPrefix` enum + SI base/derived 定義テーブル
-- [ ] `src/flowgraph/quantity/quantity.rs`: `Quantity` struct + `dimensionless` / `of` / `convert_to` / `as_si_base` / 演算 trait (`Add / Sub / Mul / Div`)
-- [ ] `src/flowgraph/quantity/parser.rs`: 文字列 `"m/s^2"` / `"kg·m/s^2"` / `"μs"` 等のパーサ
+- [x] `crates/vac-flowgraph/src/quantity/dimension.rs`: `Dimension` struct + `add_dim` / `sub_dim` / `mul_scalar` / `invert`
+- [x] `crates/vac-flowgraph/src/quantity/unit.rs`: `Unit` struct + `BaseUnitId` enum + `SIPrefix` enum + SI base/derived 定義テーブル
+- [x] `crates/vac-flowgraph/src/quantity/quantity.rs`: `Quantity` struct + `dimensionless` / `of` / `convert_to` / `as_si_base` / 演算 trait (`Add / Sub / Mul / Div`)
+- [x] `crates/vac-flowgraph/src/quantity/parser.rs`: 文字列 `"m/s^2"` / `"kg·m/s^2"` / `"μs"` 等のパーサ
 - [ ] Temperature delta の型分離（`K` vs `ΔK` で `Kelvin` / `KelvinDelta` の別 `BaseUnitId`）
 - [ ] unit test（少なくとも 30 本）: dimension 代数 / prefix 正規化 / SI base/derived round-trip / parser / convert_to 同次元・異次元 error / K + ΔK 演算
 - [ ] `cargo build --release` が通る、`cargo test --lib flowgraph::quantity` 全緑

@@ -1,0 +1,7 @@
+[package]
+name = "vac-flowgraph"
+version = "0.10.0"
+edition = "2021"
+
+[dependencies]
+thiserror = "2.0.18"

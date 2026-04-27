@@ -388,7 +388,7 @@ impl Div for Quantity {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::flowgraph::quantity::prefix::SIPrefix;
+	use crate::quantity::prefix::SIPrefix;
 
 	// ---- dimensionless --------------------------------------------------
 

@@ -12,7 +12,7 @@
 //!
 //! # 設計判断
 //!
-//! Phase ξ の全体設計は [`docs/roadmap/phase-ksi-dimensional-quantity-system.md`](../../../docs/roadmap/phase-ksi-dimensional-quantity-system.md) に集約されている。
+//! Phase ξ の全体設計は `docs/roadmap/phase-ksi-dimensional-quantity-system.md` に集約されている。
 //! ξ-1 ではコア型のみを提供し、`SocketValue::Float` の置換や `flowgraph.unit.*` ノード
 //! は ξ-2 以降で追加する。
 
