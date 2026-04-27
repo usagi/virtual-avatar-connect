@@ -1,6 +1,6 @@
 # VAC GUI Redesign Roadmap
 
-> Status: implementation branch kickoff. This document defines the GUI redesign direction for v2: VAC GUI moves from a feature-tab control panel to a resident runtime cockpit plus Flowgraph Studio.
+> Status: implementation branch active. The first cockpit shell, Runtime Mode surface, Flowgraph Studio framing, Resource / Settings split, Observability surface, and Playwright coverage are now implemented on the GUI branch. Remaining work is mainly deeper editor operations and backend-backed history surfaces.
 
 ---
 
@@ -137,79 +137,81 @@ Existing `ToolsTab` can remain here until split further.
 
 ## 3. Implementation Plan
 
-### GR-1 Shell IA
+### GR-1 Shell IA - implemented
 
-- Replace top-level tab list with `Now / Modes / Flowgraph Studio / Resources / Observability / Settings`.
-- Use a responsive navigation shell: horizontal on narrow screens, left rail on desktop.
-- Keep old hash redirects:
+- [x] Replace top-level tab list with `Now / Modes / Flowgraph Studio / Resources / Observability / Settings`.
+- [x] Use a responsive navigation shell: horizontal on narrow screens, left rail on desktop.
+- [x] Keep old hash redirects:
   - `#live` -> `#now`
   - `#setup` -> `#resources`
   - `#logs` -> `#observability`
   - `#tools` -> `#settings`
   - `#pipeline` -> `#flowgraph`
-- Add `NowTab`.
-- Add `ModesTab` placeholder that is explicit about unavailable backend state without inventing fake control.
+- [x] Add `NowTab`.
+- [x] Add `ModesTab`.
 
-### GR-2 Now Dashboard
+### GR-2 Now Dashboard - implemented first slice
 
-- Aggregate existing endpoints only:
+- [x] Aggregate existing endpoints only:
   - `/snapshot`
   - `/modes/current`
   - `/managed_apps`
   - `/flowgraph/tree`
   - `/flowgraph/diagnostics`
   - Control WS event buffer
-- Do not add backend API in this PR.
+- [x] Do not add backend API in this PR.
 
-### GR-3 Resource Re-home
+### GR-3 Resource Re-home - implemented first slice
 
-- Move OAuth, reload, pause, profile, and run_with panels into the new IA.
-- Split operational resources from restart / destructive settings.
-- Initial split:
+- [x] Move OAuth, reload, pause, profile, and run_with panels into the new IA.
+- [x] Split operational resources from restart / destructive settings.
+- [x] Initial split:
   - `Resources`: run_with / Managed App registry, Pause / Resume, OAuth, future OBS / avatar / TTS connectors.
   - `Settings`: profile management, reload, Control API connection info, developer utilities.
 
-### GR-4 Flowgraph Studio Layout
+### GR-4 Flowgraph Studio Layout - implemented first and second slices
 
-- Replace fixed 3-pane layout with a resizable editor shell.
-- Rename property editor role to Inspector.
-- Move diagnostics into a Problems panel.
-- Add command palette and node search as primary node insertion path.
-- First slice: add a Studio heading, file / node / edge summary, named workspace regions, Inspector label, and Problems panel while keeping the existing editor behavior intact.
-- Second slice: add a command palette entry point that groups existing Flowgraph operations before deeper editor command modeling lands.
+- [x] Add a Studio heading, file / node / edge summary, named workspace regions, Inspector label, and Problems panel while keeping the existing editor behavior intact.
+- [x] Add a command palette entry point that groups existing Flowgraph operations before deeper editor command modeling lands.
+- [ ] Replace the current framed editor shell with true resizable panes.
+- [ ] Add searchable node insert backed by command modeling.
 
 ### GR-5 Editor Operations
 
-- Undo / redo stack.
-- Multi-select as a real data model.
-- Group / align / duplicate / delete commands.
-- E2E coverage for keyboard and mouse editing.
+- [ ] Undo / redo stack.
+- [ ] Multi-select as a real data model.
+- [ ] Group / align / duplicate / delete commands.
+- [ ] E2E coverage for keyboard and mouse editing.
 
-### GR-6 Runtime Modes UI
+### GR-6 Runtime Modes UI - implemented backend wiring
 
-- Wire to Runtime Mode backend.
-- Add dry-run transition plan preview.
-- Display Flowgraph activation and Managed App desired-state changes.
-- Before backend support, keep the Modes surface read-only: planned mode cards, static transition preview, and disabled transition action only.
-- After v2 Runtime Mode backend landed, connect Modes to `/modes` and `/modes/current`; keep planned mode previews visible, but enable transition only for modes present in `conf [modes]`.
+- [x] Wire to Runtime Mode backend.
+- [x] Add dry-run transition plan preview via `/modes/plan`.
+- [x] Request transitions via `/modes/transit`.
+- [x] Display Flowgraph activation and Managed App desired-state changes from the backend plan.
+- [x] Keep planned mode previews visible, but enable transition only for modes present in `conf [modes]`.
+- [ ] Add richer transition-progress UX if the backend later exposes long-running progress states.
 
-### GR-7 Observability
+### GR-7 Observability - implemented first slice
 
-- Event timeline with filters.
-- Flowgraph execution history.
-- Runtime mode transition history.
-- Managed App event history.
-- First slice: expose Observability as an explicit evidence surface around the existing runtime snapshot and event stream before adding new backend history APIs.
+- [x] Expose Observability as an explicit evidence surface around the existing runtime snapshot and event stream.
+- [x] Event timeline with filters for current ControlEvent kinds, including Runtime Mode events.
+- [ ] Flowgraph execution history.
+- [ ] Runtime mode transition history.
+- [ ] Managed App event history.
 
 ---
 
-## 4. First Branch Scope
+## 4. Current Branch Scope
 
-The first GUI branch implements only GR-1 and the first slice of GR-2:
+The current GUI branch now includes these completed slices:
 
-- new top-level navigation ids and labels
-- `NowTab` based on existing APIs
-- `ModesTab` placeholder
-- smoke test update
+- GR-1 shell IA and legacy hash fallback
+- GR-2 Now dashboard using existing Control API endpoints
+- GR-3 Resources / Settings split for operational vs durable controls
+- GR-4 Flowgraph Studio framing plus command palette entry point
+- GR-6 Runtime Mode backend wiring, dry-run preview, transit action, and desired-state display
+- GR-7 Observability first slice over snapshot + event stream
+- Playwright regression coverage for shell navigation, Now, Modes, Flowgraph Studio, and Observability
 
-No Flowgraph editor internals are changed in this slice.
+The next substantial GUI work should start with GR-5 editor operations or with backend-backed history APIs for GR-7. Both are larger than the shell/cockpit work and should be split into separate implementation branches if possible.
