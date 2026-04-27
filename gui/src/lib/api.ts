@@ -50,6 +50,15 @@ import {
  type ProfilesResponse,
  type ReloadRequest,
  type ReloadResponse,
+ type CurrentModeResponse,
+ type ControlEventHistoryResponse,
+ type ModePlanRequest,
+ type ModeTransitRequest,
+ type ModeTransitResponse,
+ type ModeTransitionPlan,
+ type ModesListResponse,
+ type PutCurrentModeBody,
+ type RuntimeModeTransitionStatus,
  type RestartRequest,
  type RestartResponse,
  type ShutdownRequest,
@@ -154,6 +163,11 @@ export const api = {
  snapshot(): Promise<StateSnapshot> {
   return request<StateSnapshot>('/snapshot');
  },
+ eventHistory(limit = 100, kind?: string): Promise<ControlEventHistoryResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (kind) params.set('kind', kind);
+  return request<ControlEventHistoryResponse>(`/events/history?${params.toString()}`);
+ },
 
  // --- Pause / Resume ---
  pause(target: PauseTarget): Promise<PauseOutcome> {
@@ -178,6 +192,26 @@ export const api = {
    method: 'POST',
    body: { target: 'modify_files', id } satisfies ReloadRequest,
   });
+ },
+
+ // --- Runtime Modes ---
+ modesList(): Promise<ModesListResponse> {
+  return request<ModesListResponse>('/modes');
+ },
+ currentMode(): Promise<CurrentModeResponse> {
+  return request<CurrentModeResponse>('/modes/current');
+ },
+ putCurrentMode(req: PutCurrentModeBody): Promise<CurrentModeResponse> {
+  return request<CurrentModeResponse>('/modes/current', { method: 'PUT', body: req });
+ },
+ modePlan(req: ModePlanRequest): Promise<ModeTransitionPlan> {
+  return request<ModeTransitionPlan>('/modes/plan', { method: 'POST', body: req });
+ },
+ modeTransit(req: ModeTransitRequest): Promise<ModeTransitResponse> {
+  return request<ModeTransitResponse>('/modes/transit', { method: 'POST', body: req });
+ },
+ modeTransition(): Promise<RuntimeModeTransitionStatus> {
+  return request<RuntimeModeTransitionStatus>('/modes/transition');
  },
 
  // --- OAuth (Twitch DCF) ---

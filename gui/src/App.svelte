@@ -3,7 +3,7 @@
   * Phase VI-γ-1: アプリケーションシェル。
   *
   * - 上部ヘッダ（ロゴ / 接続インジケータ / 再起動ボタン）
-  * - タブナビゲーション（Live / Setup / Flowgraph / Logs / Tools）
+  * - 左ナビゲーション（Now / Modes / Flowgraph Studio / Resources / Observability / Settings）
   * - 下部ステータスバー（常駐）
   * - 右下トーストレイヤ
   * - 再起動・プロファイル切替モーダル
@@ -20,11 +20,12 @@
  import RestartDialog from './lib/RestartDialog.svelte';
  import ManagedAppDrawer from './lib/ManagedAppDrawer.svelte';
 
- import LiveTab from './lib/tabs/LiveTab.svelte';
- import SetupTab from './lib/tabs/SetupTab.svelte';
+ import NowTab from './lib/tabs/NowTab.svelte';
+ import ModesTab from './lib/tabs/ModesTab.svelte';
+ import ResourcesTab from './lib/tabs/ResourcesTab.svelte';
+ import SettingsTab from './lib/tabs/SettingsTab.svelte';
  import FlowgraphTab from './lib/tabs/FlowgraphTab.svelte';
  import LogsTab from './lib/tabs/LogsTab.svelte';
- import ToolsTab from './lib/tabs/ToolsTab.svelte';
 
  import { tabNavStore } from './lib/tabs.svelte';
  import { api } from './lib/api';
@@ -62,16 +63,14 @@ async function handleShutdownClick() {
 </script>
 
 <div class="flex min-h-screen flex-col bg-surface-50-950 text-surface-950-50">
- <header
-  class="sticky top-0 z-20 border-b border-surface-200-800 bg-surface-50-950/95 backdrop-blur"
- >
+ <header class="sticky top-0 z-20 border-b border-surface-200-800 bg-surface-50-950/95 backdrop-blur">
   <div class="flex items-center justify-between gap-3 px-6 py-2">
    <div class="flex items-baseline gap-3">
     <h1 class="text-lg font-bold">
      Virtual Avatar Connect
-     <span class="text-primary-500">Control Panel</span>
+     <span class="text-primary-500">Runtime Cockpit</span>
     </h1>
-    <span class="text-xs opacity-60">Phase VI-γ-1</span>
+    <span class="text-xs opacity-60">v2 GUI redesign</span>
    </div>
    <div class="flex items-center gap-2">
     <ConnectionBadge />
@@ -102,22 +101,29 @@ async function handleShutdownClick() {
     </button>
    </div>
   </div>
-  <TabNav />
  </header>
 
- <main class="flex-1 px-6 py-4">
-  {#if tabNavStore.active === 'live'}
-   <LiveTab />
-  {:else if tabNavStore.active === 'setup'}
-   <SetupTab />
-  {:else if tabNavStore.active === 'flowgraph'}
-   <FlowgraphTab />
-  {:else if tabNavStore.active === 'logs'}
-   <LogsTab />
-  {:else if tabNavStore.active === 'tools'}
-   <ToolsTab />
-  {/if}
- </main>
+ <div class="grid flex-1 min-h-0 lg:grid-cols-[240px_minmax(0,1fr)]">
+  <aside class="border-b border-surface-200-800 bg-surface-100-900/60 lg:border-b-0 lg:border-r">
+   <TabNav />
+  </aside>
+
+  <main class="min-w-0 flex-1 px-4 py-4 lg:px-6">
+   {#if tabNavStore.active === 'now'}
+    <NowTab />
+   {:else if tabNavStore.active === 'modes'}
+    <ModesTab />
+   {:else if tabNavStore.active === 'flowgraph'}
+    <FlowgraphTab />
+   {:else if tabNavStore.active === 'resources'}
+    <ResourcesTab />
+   {:else if tabNavStore.active === 'observability'}
+    <LogsTab />
+   {:else if tabNavStore.active === 'settings'}
+    <SettingsTab />
+   {/if}
+  </main>
+ </div>
 
  <StatusBar />
 </div>

@@ -68,6 +68,10 @@ class FlowgraphStore {
 
  /** いま選択しているキャンバス上のノード ID。プロパティエディタが参照する。 */
  selectedNodeId: string | null = $state(null);
+ /** 複数選択中のノード ID。先頭は Inspector が扱う primary selection。 */
+ selectedNodeIds: string[] = $state([]);
+ undoStack: FlowgraphHistoryEntry[] = $state([]);
+ redoStack: FlowgraphHistoryEntry[] = $state([]);
 
  /** 保存中 / 削除中 / 新規作成中のスピナー用。同時に複数走らない前提。 */
  mutating: boolean = $state(false);
@@ -124,6 +128,7 @@ class FlowgraphStore {
   this.currentState = 'loading';
   this.currentError = null;
   this.selectedNodeId = null;
+  this.selectedNodeIds = [];
   try {
    const resp = await api.flowgraphFile(fq);
    this.currentFile = resp;
@@ -137,6 +142,8 @@ class FlowgraphStore {
       }))
     : null;
    this.draftEdges = resp.parsed ? resp.parsed.edges.map((e) => ({ from: e.from, to: e.to })) : null;
+   this.undoStack = [];
+   this.redoStack = [];
    this.currentState = 'ok';
   } catch (e) {
    this.currentState = 'error';
@@ -152,6 +159,9 @@ class FlowgraphStore {
   this.draftNodes = null;
   this.draftEdges = null;
   this.selectedNodeId = null;
+  this.selectedNodeIds = [];
+  this.undoStack = [];
+  this.redoStack = [];
   this.currentState = 'idle';
   this.currentError = null;
  }
@@ -159,18 +169,21 @@ class FlowgraphStore {
  /** draft 層のノード位置を更新する。Svelte Flow から呼ぶ。 */
  updateNodePosition(id: string, x: number, y: number): void {
   if (!this.draftNodes) return;
+  this.#pushHistory('Move node');
   const next = this.draftNodes.map((n) => (n.id === id ? { ...n, position: [x, y] as [number, number] } : n));
   this.draftNodes = next;
  }
 
  updateNodeProperty(id: string, key: string, value: unknown): void {
   if (!this.draftNodes) return;
+  this.#pushHistory('Edit property');
   const next = this.draftNodes.map((n) => (n.id === id ? { ...n, properties: { ...n.properties, [key]: value } } : n));
   this.draftNodes = next;
  }
 
  removeNodeProperty(id: string, key: string): void {
   if (!this.draftNodes) return;
+  this.#pushHistory('Remove property');
   const next = this.draftNodes.map((n) => {
    if (n.id !== id) return n;
    const props = { ...n.properties };
@@ -182,6 +195,7 @@ class FlowgraphStore {
 
  addNode(node: FlowgraphDraftNode): void {
   if (!this.draftNodes) this.draftNodes = [];
+  this.#pushHistory('Add node');
   this.draftNodes = [...this.draftNodes, node];
  }
 
@@ -206,24 +220,98 @@ class FlowgraphStore {
   };
   this.addNode(node);
   this.selectedNodeId = node.id;
+  this.selectedNodeIds = [node.id];
   return true;
  }
 
  /** Phase ο-6: 選択中ノードを (+24,+24) オフセットで複製（エッジはコピーしない）。 */
  duplicateSelectedNode(): boolean {
-  if (!this.selectedNodeId || !this.draftNodes) return false;
-  const src = this.draftNodes.find((n) => n.id === this.selectedNodeId);
-  if (!src) return false;
-  const id = this.#makeUniqueNodeId(src.feature, this.draftNodes);
-  const basePos = src.position ?? [100, 100];
-  const dup: FlowgraphDraftNode = {
-   id,
-   feature: src.feature,
-   position: [Math.round(basePos[0] + 24), Math.round(basePos[1] + 24)],
-   properties: { ...src.properties },
-  };
-  this.addNode(dup);
-  this.selectedNodeId = dup.id;
+  const ids = this.selectedNodeIds.length > 0 ? this.selectedNodeIds : this.selectedNodeId ? [this.selectedNodeId] : [];
+  return this.duplicateNodes(ids);
+ }
+
+ duplicateNodes(ids: string[]): boolean {
+  if (!this.draftNodes || ids.length === 0) return false;
+  const sourceIds = new Set(ids);
+  const sources = this.draftNodes.filter((n) => sourceIds.has(n.id));
+  if (sources.length === 0) return false;
+  this.#pushHistory(sources.length > 1 ? 'Duplicate nodes' : 'Duplicate node');
+  let nextNodes = [...this.draftNodes];
+  const duplicatedIds: string[] = [];
+  for (const src of sources) {
+   const id = this.#makeUniqueNodeId(src.feature, nextNodes);
+   const basePos = src.position ?? [100, 100];
+   const dup: FlowgraphDraftNode = {
+    id,
+    feature: src.feature,
+    position: [Math.round(basePos[0] + 24), Math.round(basePos[1] + 24)],
+    properties: { ...src.properties },
+   };
+   nextNodes = [...nextNodes, dup];
+   duplicatedIds.push(id);
+  }
+  this.draftNodes = nextNodes;
+  this.selectedNodeIds = duplicatedIds;
+  this.selectedNodeId = duplicatedIds[0] ?? null;
+  return true;
+ }
+
+ alignSelectedNodes(axis: 'x' | 'y'): boolean {
+  if (!this.draftNodes || this.selectedNodeIds.length < 2) return false;
+  const selected = new Set(this.selectedNodeIds);
+  const anchor = this.draftNodes.find((n) => selected.has(n.id))?.position ?? [100, 100];
+  this.#pushHistory(axis === 'x' ? 'Align vertical' : 'Align horizontal');
+  this.draftNodes = this.draftNodes.map((n) => {
+   if (!selected.has(n.id)) return n;
+   const pos = n.position ?? [100, 100];
+   return { ...n, position: axis === 'x' ? [anchor[0], pos[1]] : [pos[0], anchor[1]] };
+  });
+  return true;
+ }
+
+ distributeSelectedNodes(axis: 'x' | 'y'): boolean {
+  if (!this.draftNodes || this.selectedNodeIds.length < 3) return false;
+  const selected = new Set(this.selectedNodeIds);
+  const rows = this.draftNodes
+   .filter((n) => selected.has(n.id))
+   .map((n) => ({ id: n.id, position: n.position ?? ([100, 100] as [number, number]) }))
+   .sort((a, b) => (axis === 'x' ? a.position[0] - b.position[0] : a.position[1] - b.position[1]));
+  if (rows.length < 3) return false;
+  this.#pushHistory(axis === 'x' ? 'Distribute horizontal' : 'Distribute vertical');
+  const first = rows[0].position;
+  const last = rows[rows.length - 1].position;
+  const step = (axis === 'x' ? last[0] - first[0] : last[1] - first[1]) / (rows.length - 1);
+  const positions = new Map<string, [number, number]>();
+  rows.forEach((row, i) => {
+   positions.set(
+    row.id,
+    axis === 'x'
+     ? [Math.round(first[0] + step * i), row.position[1]]
+     : [row.position[0], Math.round(first[1] + step * i)],
+   );
+  });
+  this.draftNodes = this.draftNodes.map((n) => {
+   const pos = positions.get(n.id);
+   return pos ? { ...n, position: pos } : n;
+  });
+  return true;
+ }
+
+ groupSelectedNodes(): boolean {
+  if (!this.draftNodes || this.selectedNodeIds.length < 2) return false;
+  const selected = new Set(this.selectedNodeIds);
+  this.#pushHistory('Group nodes');
+  const rows = this.draftNodes.filter((n) => selected.has(n.id));
+  const positions = rows.map((n) => n.position ?? ([100, 100] as [number, number]));
+  const minX = Math.min(...positions.map((p) => p[0]));
+  const minY = Math.min(...positions.map((p) => p[1]));
+  this.draftNodes = this.draftNodes.map((n) => {
+   if (!selected.has(n.id)) return n;
+   const rowIndex = rows.findIndex((r) => r.id === n.id);
+   const col = rowIndex % 2;
+   const row = Math.floor(rowIndex / 2);
+   return { ...n, position: [Math.round(minX + col * 220), Math.round(minY + row * 150)] };
+  });
   return true;
  }
 
@@ -266,11 +354,13 @@ class FlowgraphStore {
 
  removeNode(id: string): void {
   if (!this.draftNodes) return;
+  this.#pushHistory('Remove node');
   this.draftNodes = this.draftNodes.filter((n) => n.id !== id);
   if (this.draftEdges) {
    this.draftEdges = this.draftEdges.filter((e) => !edgeMentionsNode(e, id));
   }
   if (this.selectedNodeId === id) this.selectedNodeId = null;
+  this.selectedNodeIds = this.selectedNodeIds.filter((selected) => selected !== id);
  }
 
  /**
@@ -293,6 +383,7 @@ class FlowgraphStore {
   if (removedNodes.length === 0 && removedEdges.length === 0) {
    return { removedNodes: 0, removedEdges: 0 };
   }
+  this.#pushHistory('Delete selection');
 
   this.#lastDeletion = {
    nodes: removedNodes.map((n) => ({
@@ -309,6 +400,7 @@ class FlowgraphStore {
    (e) => !edgeKeys.has(`${e.from}||${e.to}`) && !edgeMentionsAny(e, nodeSet),
   );
   if (this.selectedNodeId && nodeSet.has(this.selectedNodeId)) this.selectedNodeId = null;
+  this.selectedNodeIds = this.selectedNodeIds.filter((id) => !nodeSet.has(id));
 
   return { removedNodes: removedNodes.length, removedEdges: removedEdges.length };
  }
@@ -331,6 +423,34 @@ class FlowgraphStore {
  /** γ-4a.0: 直前の削除があるか（UI の undo ボタン表示判定に使う）。 */
  hasPendingUndo(): boolean {
   return this.#lastDeletion !== null;
+ }
+
+ canUndo(): boolean {
+  return this.undoStack.length > 0;
+ }
+
+ canRedo(): boolean {
+  return this.redoStack.length > 0;
+ }
+
+ undo(): boolean {
+  if (this.undoStack.length === 0) return false;
+  const current = this.#snapshot('Redo point');
+  const entry = this.undoStack[this.undoStack.length - 1];
+  this.undoStack = this.undoStack.slice(0, -1);
+  this.redoStack = [...this.redoStack, current].slice(-50);
+  this.#restoreSnapshot(entry);
+  return true;
+ }
+
+ redo(): boolean {
+  if (this.redoStack.length === 0) return false;
+  const current = this.#snapshot('Undo point');
+  const entry = this.redoStack[this.redoStack.length - 1];
+  this.redoStack = this.redoStack.slice(0, -1);
+  this.undoStack = [...this.undoStack, current].slice(-50);
+  this.#restoreSnapshot(entry);
+  return true;
  }
 
  /**
@@ -363,14 +483,40 @@ class FlowgraphStore {
   edges: FlowgraphDraftEdge[];
  } | null = null;
 
+ #pushHistory(label: string): void {
+  if (!this.draftNodes || !this.draftEdges) return;
+  this.undoStack = [...this.undoStack, this.#snapshot(label)].slice(-50);
+  this.redoStack = [];
+ }
+
+ #snapshot(label: string): FlowgraphHistoryEntry {
+  return {
+   label,
+   nodes: cloneNodes(this.draftNodes ?? []),
+   edges: cloneEdges(this.draftEdges ?? []),
+   selectedNodeIds: [...this.selectedNodeIds],
+   selectedNodeId: this.selectedNodeId,
+  };
+ }
+
+ #restoreSnapshot(entry: FlowgraphHistoryEntry): void {
+  this.draftNodes = cloneNodes(entry.nodes);
+  this.draftEdges = cloneEdges(entry.edges);
+  this.selectedNodeIds = [...entry.selectedNodeIds];
+  this.selectedNodeId = entry.selectedNodeId;
+  this.#lastDeletion = null;
+ }
+
  addEdge(from: string, to: string): void {
   if (!this.draftEdges) this.draftEdges = [];
   if (this.draftEdges.some((e) => e.from === from && e.to === to)) return;
+  this.#pushHistory('Connect edge');
   this.draftEdges = [...this.draftEdges, { from, to }];
  }
 
  removeEdge(from: string, to: string): void {
   if (!this.draftEdges) return;
+  this.#pushHistory('Remove edge');
   this.draftEdges = this.draftEdges.filter((e) => !(e.from === from && e.to === to));
  }
 
@@ -716,6 +862,27 @@ export type FlowgraphDraftEdge = {
  from: string;
  to: string;
 };
+
+type FlowgraphHistoryEntry = {
+ label: string;
+ nodes: FlowgraphDraftNode[];
+ edges: FlowgraphDraftEdge[];
+ selectedNodeIds: string[];
+ selectedNodeId: string | null;
+};
+
+function cloneNodes(nodes: FlowgraphDraftNode[]): FlowgraphDraftNode[] {
+ return nodes.map((n) => ({
+  id: n.id,
+  feature: n.feature,
+  position: n.position ? [n.position[0], n.position[1]] : null,
+  properties: { ...n.properties },
+ }));
+}
+
+function cloneEdges(edges: FlowgraphDraftEdge[]): FlowgraphDraftEdge[] {
+ return edges.map((e) => ({ from: e.from, to: e.to }));
+}
 
 function edgeMentionsNode(edge: FlowgraphDraftEdge, nodeId: string): boolean {
  return parsePortRef(edge.from).nodeId === nodeId || parsePortRef(edge.to).nodeId === nodeId;

@@ -1,7 +1,7 @@
 /**
  * Phase VI-γ-1: トップレベルのタブ構成。
  *
- * - 5 タブ固定: Live / Setup / Flowgraph / Logs / Tools
+ * - v2 GUI: Now / Modes / Flowgraph Studio / Resources / Observability / Settings
  * - URL hash (`#live` 等) で永続化。ブラウザ戻る/進むと同期。
  * - シングルトンストアで全コンポーネントに共有。
  *
@@ -9,14 +9,16 @@
  * 既存パネル群は Tools タブに仮配置し、表示経路を壊さないようにする。
  *
  * δ-9 D.5: V1 `Pipeline` タブは廃止。旧 `#pipeline` URL は `flowgraph` に fallback する。
+ * GUI redesign: 旧 `#live` / `#setup` / `#logs` / `#tools` は新 IA の対応タブへ fallback する。
  */
 
 export const TABS = [
- { id: 'live', label: 'Live', icon: 'L' },
- { id: 'setup', label: 'Setup', icon: 'S' },
- { id: 'flowgraph', label: 'Flowgraph', icon: 'F' },
- { id: 'logs', label: 'Logs', icon: 'G' },
- { id: 'tools', label: 'Tools', icon: 'T' },
+ { id: 'now', label: 'Now', icon: 'N' },
+ { id: 'modes', label: 'Modes', icon: 'M' },
+ { id: 'flowgraph', label: 'Flowgraph Studio', icon: 'F' },
+ { id: 'resources', label: 'Resources', icon: 'R' },
+ { id: 'observability', label: 'Observability', icon: 'O' },
+ { id: 'settings', label: 'Settings', icon: 'S' },
 ] as const;
 
 export type TabId = (typeof TABS)[number]['id'];
@@ -24,11 +26,14 @@ export type TabId = (typeof TABS)[number]['id'];
 const VALID_IDS: readonly TabId[] = TABS.map((t) => t.id);
 
 function fromHash(): TabId {
- if (typeof window === 'undefined') return 'live';
+ if (typeof window === 'undefined') return 'now';
  const h = window.location.hash.replace(/^#/, '').trim().toLowerCase();
- // δ-9 D.5: 旧 `#pipeline` をブックマークしていた既存ユーザー向けの fallback。
+ if (h === 'live') return 'now';
+ if (h === 'setup') return 'resources';
+ if (h === 'logs') return 'observability';
+ if (h === 'tools') return 'settings';
  if (h === 'pipeline') return 'flowgraph';
- return (VALID_IDS as readonly string[]).includes(h) ? (h as TabId) : 'live';
+ return (VALID_IDS as readonly string[]).includes(h) ? (h as TabId) : 'now';
 }
 
 class TabNavStore {

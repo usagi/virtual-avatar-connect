@@ -54,6 +54,16 @@ pub struct TransitResponse {
 	pub managed_apps: Option<Vec<RuntimeModeManagedAppOp>>,
 }
 
+#[get("/modes/transition")]
+pub async fn get_modes_transition(state: Data<SharedState>) -> impl Responder {
+	let progress = {
+		let s = state.read().await;
+		s.runtime_mode_transition_status.clone()
+	};
+	let status = progress.read().await.clone();
+	HttpResponse::Ok().json(status)
+}
+
 fn http_response_for_apply_runtime_mode_error(e: ApplyRuntimeModeError) -> HttpResponse {
 	match e {
 		ApplyRuntimeModeError::PlanFailed(msg) => HttpResponse::BadRequest().json(serde_json::json!({
@@ -295,6 +305,7 @@ pub async fn post_modes_transit(state: Data<SharedState>, body: Json<TransitBody
 pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
 	cfg.service(get_modes_list)
 		.service(get_current_mode)
+		.service(get_modes_transition)
 		.service(put_current_mode)
 		.service(post_modes_plan)
 		.service(post_modes_transit);

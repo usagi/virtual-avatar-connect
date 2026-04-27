@@ -20,6 +20,14 @@ gui/tests/e2e/
 - `live-quick-add-learn-undo.spec.ts`
 - `channels-ws-live-update.spec.ts`
 
+GUI redesign specs are added incrementally and should stay narrow:
+
+- `now-dashboard.spec.ts`
+- `main-navigation.spec.ts`
+- `modes-planning.spec.ts`
+- `flowgraph-studio-layout.spec.ts`
+- `observability-layout.spec.ts`
+
 ## Running locally
 
 From the repository root:
@@ -41,6 +49,10 @@ The fixture ships a fixed Bearer token (`e2e-fixture-token`) — specs
 attach it via `?token=...` which the GUI's `auth.ts` persists to
 localStorage. There is intentionally **no .env support**: E2E must be
 reproducible across machines.
+
+The fixture also defines side-effect-free Runtime Modes (`daily`,
+`streaming`) so GUI mode switching can exercise the Control API without
+starting external applications.
 
 ## Selector policy
 

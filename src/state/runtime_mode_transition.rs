@@ -3,7 +3,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use crate::conf::Conf;
+use crate::conf::{Conf, ModeTransitionPlan};
 use crate::control_events::ControlEvent;
 use crate::flowgraph::activation::TriggerGate;
 use crate::flowgraph::node::{PortDirection, TriggerEvent};
@@ -35,6 +35,124 @@ pub async fn try_begin_runtime_mode_transition(state: &SharedState) -> Option<Tr
 }
 
 /// `apply_runtime_mode_change` に続く follow-up（Managed App 適用結果）をまとめた戻り値。
+#[derive(Debug, Clone, Copy, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RuntimeModeTransitionPhase {
+	Idle,
+	Planning,
+	SuppressingFlowgraph,
+	ApplyingMode,
+	ApplyingManagedApps,
+	FiringFlowgraphHook,
+	Completed,
+	Failed,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct RuntimeModeTransitionStatus {
+	pub seq: u64,
+	pub active: bool,
+	pub phase: RuntimeModeTransitionPhase,
+	pub step_index: usize,
+	pub step_count: usize,
+	pub message: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub started_at: Option<String>,
+	pub updated_at: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub finished_at: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub error: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub plan: Option<ModeTransitionPlan>,
+	#[serde(default)]
+	pub managed_apps: Vec<crate::control_events::RuntimeModeManagedAppOp>,
+}
+
+impl RuntimeModeTransitionStatus {
+	pub fn idle() -> Self {
+		let now = crate::datetime::DateTime::now().to_rfc3339();
+		Self {
+			seq: 0,
+			active: false,
+			phase: RuntimeModeTransitionPhase::Idle,
+			step_index: 0,
+			step_count: 0,
+			message: "idle".into(),
+			started_at: None,
+			updated_at: now,
+			finished_at: None,
+			error: None,
+			plan: None,
+			managed_apps: Vec::new(),
+		}
+	}
+}
+
+async fn begin_transition_status(state: &SharedState, plan: ModeTransitionPlan) -> u64 {
+	let progress = state.read().await.runtime_mode_transition_status.clone();
+	let now = crate::datetime::DateTime::now().to_rfc3339();
+	let mut status = progress.write().await;
+	let seq = status.seq.saturating_add(1);
+	*status = RuntimeModeTransitionStatus {
+		seq,
+		active: true,
+		phase: RuntimeModeTransitionPhase::Planning,
+		step_index: 1,
+		step_count: 5,
+		message: "transition accepted".into(),
+		started_at: Some(now.clone()),
+		updated_at: now,
+		finished_at: None,
+		error: None,
+		plan: Some(plan),
+		managed_apps: Vec::new(),
+	};
+	seq
+}
+
+async fn set_transition_status(
+	state: &SharedState,
+	seq: u64,
+	phase: RuntimeModeTransitionPhase,
+	step_index: usize,
+	message: impl Into<String>,
+) {
+	let progress = state.read().await.runtime_mode_transition_status.clone();
+	let mut status = progress.write().await;
+	if status.seq != seq {
+		return;
+	}
+	status.phase = phase;
+	status.step_index = step_index;
+	status.message = message.into();
+	status.updated_at = crate::datetime::DateTime::now().to_rfc3339();
+}
+
+async fn finish_transition_status(
+	state: &SharedState,
+	seq: u64,
+	phase: RuntimeModeTransitionPhase,
+	message: impl Into<String>,
+	error: Option<String>,
+	managed_apps: Vec<crate::control_events::RuntimeModeManagedAppOp>,
+) {
+	let progress = state.read().await.runtime_mode_transition_status.clone();
+	let now = crate::datetime::DateTime::now().to_rfc3339();
+	let mut status = progress.write().await;
+	if status.seq != seq {
+		return;
+	}
+	status.active = false;
+	status.phase = phase;
+	status.step_index = status.step_count;
+	status.message = message.into();
+	status.updated_at = now.clone();
+	status.finished_at = Some(now);
+	status.error = error;
+	status.managed_apps = managed_apps;
+}
+
 #[derive(Debug, Clone)]
 pub struct RuntimeModeTransitionOutcome {
 	pub applied: AppliedRuntimeMode,
@@ -139,8 +257,16 @@ pub async fn apply_runtime_mode_transition_full(
 		let s = state.read().await;
 		s.runtime_mode_id.read().ok().and_then(|g| g.clone())
 	};
-	let will_mutate = match crate::conf::build_mode_transition_plan(conf, current_slot.as_deref(), normalized.as_deref()) {
-		Ok(p) => !p.noop,
+	let (will_mutate, status_seq) = match crate::conf::build_mode_transition_plan(conf, current_slot.as_deref(), normalized.as_deref()) {
+		Ok(p) => {
+			let will_mutate = !p.noop;
+			let status_seq = if will_mutate {
+				begin_transition_status(state, p).await
+			} else {
+				0
+			};
+			(will_mutate, status_seq)
+		}
 		Err(msg) => return Err(ApplyRuntimeModeError::PlanFailed(msg)),
 	};
 
@@ -151,6 +277,14 @@ pub async fn apply_runtime_mode_transition_full(
 	};
 
 	let _global_suppress = if will_mutate {
+		set_transition_status(
+			state,
+			status_seq,
+			RuntimeModeTransitionPhase::SuppressingFlowgraph,
+			2,
+			"suppressing flowgraph exec triggers",
+		)
+		.await;
 		gate_for_guard.map(|g| {
 			g.set_global_exec_suppress(true);
 			log::debug!("《RuntimeMode》 TriggerGate global_exec_suppress=ON（遷移開始）");
@@ -160,11 +294,45 @@ pub async fn apply_runtime_mode_transition_full(
 		None
 	};
 
-	let applied = apply_runtime_mode_change(state, conf, normalized, reason).await?;
+	if will_mutate {
+		set_transition_status(
+			state,
+			status_seq,
+			RuntimeModeTransitionPhase::ApplyingMode,
+			3,
+			"applying runtime mode slot",
+		)
+		.await;
+	}
+	let applied = match apply_runtime_mode_change(state, conf, normalized, reason).await {
+		Ok(applied) => applied,
+		Err(e) => {
+			if will_mutate {
+				finish_transition_status(
+					state,
+					status_seq,
+					RuntimeModeTransitionPhase::Failed,
+					"runtime mode transition failed",
+					Some(e.to_string()),
+					Vec::new(),
+				)
+				.await;
+			}
+			return Err(e);
+		}
+	};
 	let mut managed_reports = Vec::new();
 
 	if !applied.noop {
 		if !conf.modes.is_empty() {
+			set_transition_status(
+				state,
+				status_seq,
+				RuntimeModeTransitionPhase::ApplyingManagedApps,
+				4,
+				"applying managed app desired state",
+			)
+			.await;
 			let def = conf
 				.modes
 				.get(applied.current_effective_id.as_str())
@@ -188,7 +356,27 @@ pub async fn apply_runtime_mode_transition_full(
 	}
 
 	if !applied.noop {
+		set_transition_status(
+			state,
+			status_seq,
+			RuntimeModeTransitionPhase::FiringFlowgraphHook,
+			5,
+			"firing runtime mode flowgraph hook",
+		)
+		.await;
 		fire_runtime_mode_changed_flowgraph_hook(state, conf, &applied).await;
+	}
+
+	if !applied.noop {
+		finish_transition_status(
+			state,
+			status_seq,
+			RuntimeModeTransitionPhase::Completed,
+			"runtime mode transition completed",
+			None,
+			managed_reports.clone(),
+		)
+		.await;
 	}
 
 	Ok(RuntimeModeTransitionOutcome {
