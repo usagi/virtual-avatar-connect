@@ -117,6 +117,7 @@ Tauri の前に、desktop runner の責務を固定する。
 - GUI を既定ブラウザで開ける。
 - 終了時は `ShutdownBroker` を使う。
 - 将来 tray から呼ぶ操作を Rust API として用意する。
+- tray default icon は `resources/icons/vac-tray-default.png` を使う。正本は `assets/brand/vac/design-master/`、派生素材は `assets/brand/vac/derived/`。
 
 tray menu の初期項目は次だけでよい。
 
