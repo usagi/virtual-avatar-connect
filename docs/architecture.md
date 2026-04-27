@@ -7,7 +7,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 
 ## Scope
 
-- **Windows / Linux / macOS 単独アプリ**（現状は `cargo run -- <conf>.toml` の **単一バイナリ**）。**Cargo ワークスペース**（`crates/vac-gui-assets` / `crates/vac-motion` / `crates/vac-flowgraph` メンバ、`default-members` はルート crate のみ）
+- **Windows / Linux / macOS 単独アプリ**（現状は `cargo run -- <conf>.toml` の **単一バイナリ**）。**Cargo ワークスペース**（`crates/vac-gui-assets` / `crates/vac-motion` / `crates/vac-flowgraph` / `crates/vac-core` メンバ、`default-members` はルート crate のみ）
 - **Flowgraph-only アーキテクチャ**（v0.10.0〜）: ingress〜変換〜出口は `flowgraph_dir` 配下の `.flowgraph.toml` と Flowgraph Runtime で表現
 - **内蔵 HTTP サーバ**: `actix-web` で GUI 配信 + Control API + WebSocket
 - **GUI**: Svelte 5 + Vite、`gui/` 配下の独立プロジェクト（build 成果物は `gui/dist/`）。**リリース**では `gui/dist` をビルド時にバイナリへ取り込み、`npm run dev` なしで設定 GUI を扱う。Cargo feature **`embed-gui`** で有効化（`cargo build --release --features embed-gui` の前に `cd gui && npm ci && npm run build`）。
@@ -102,9 +102,9 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 
 - LibreTranslate HTTP クライアント + Managed App 連携
 
-### `src/shutdown.rs`
+### `crates/vac-core/src/shutdown.rs`
 
-- `ShutdownBroker`（Ctrl+C / Control API / Desktop / Fatal の経路を単一 broker に集約）
+- `ShutdownBroker`（Ctrl+C / Control API / Desktop / Fatal の経路を単一 broker に集約）。root 側 `src/shutdown.rs` は互換用の再エクスポート。
 
 ### `src/migrate/`
 

@@ -34,7 +34,7 @@
 virtual-avatar-connect/
   Cargo.toml
   crates/
-    vac-core/          # conf, runtime paths, shutdown, shared state primitives
+    vac-core/          # conf, runtime paths, shutdown, shared state primitives（一段目は shutdown broker）
     vac-flowgraph/     # Flowgraph language/runtime/nodes（一段目は pure Quantity system + instance config）
     vac-motion/        # VMC/OSC UDP motion transport and protocol helpers（一段目は frame / decode / forwarding / OSC / VMC / VRChat）
     vac-bridges/       # ingress/egress bridge tasks

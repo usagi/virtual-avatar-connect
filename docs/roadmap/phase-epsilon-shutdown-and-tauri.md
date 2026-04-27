@@ -56,7 +56,7 @@ flowchart LR
 
 ### 2.2 実装ポイント
 
-- 新モジュール [src/shutdown.rs](../../src/shutdown.rs) に `ShutdownBroker { notify, triggered, reason }` を定義。`Arc<ShutdownBroker>` を `State.shutdown` に持たせる。
+- `crates/vac-core/src/shutdown.rs` に `ShutdownBroker { notify, triggered, reason }` を定義。root 側 [src/shutdown.rs](../../src/shutdown.rs) は再エクスポート。`Arc<ShutdownBroker>` を `State.shutdown` に持たせる。
 - `trigger(reason)` は冪等（最初の呼び出しだけ reason を記録し waiters を起こす）。
 - `wait()` は `Notify::notified()` の permit を先に取って `is_triggered()` を後追い確認する race-free パターン。
 - [src/lib.rs](../../src/lib.rs) の起動冒頭で broker を生成し、`spawn_ctrl_c_listener(broker)` で Ctrl+C を 1 本化。旧 `tokio::signal::ctrl_c()` 直叩きは削除。

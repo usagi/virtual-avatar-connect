@@ -7,7 +7,7 @@ autobins = false
 default-run = "virtual-avatar-connect-desktop"
 
 [workspace]
-members = [".", "crates/vac-gui-assets", "crates/vac-motion", "crates/vac-flowgraph"]
+members = [".", "crates/vac-gui-assets", "crates/vac-motion", "crates/vac-flowgraph", "crates/vac-core"]
 default-members = ["."]
 resolver = "2"
 
@@ -117,6 +117,7 @@ bytes = "1"
 jiff = { version = "0.2.24", features = ["serde"] }
 vac-motion = { path = "crates/vac-motion" }
 vac-flowgraph = { path = "crates/vac-flowgraph" }
+vac-core = { path = "crates/vac-core" }
 vac-gui-assets = { path = "crates/vac-gui-assets", optional = true }
 
 [dependencies.vosk]
