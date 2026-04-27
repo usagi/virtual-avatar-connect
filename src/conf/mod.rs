@@ -1,7 +1,12 @@
 mod motion;
 mod processor_conf;
+mod runtime_mode;
 
 pub use anyhow::{bail, Result};
+pub use runtime_mode::{
+	AiModeOverlay, FlowgraphGroupsModeSpec, ManagedAppsModeDirective, NotificationsModeOverlay,
+	RuntimeModeDefinition,
+};
 pub use motion::{MotionConf, VmcPassthroughSpec};
 pub use processor_conf::*;
 
@@ -568,6 +573,14 @@ pub struct Conf {
 	#[serde(default)]
 	pub run_with: Vec<RunWith>,
 
+	/// RM-1: Runtime Mode 宣言（`[modes.<id>]`）。空なら mode 定義なし（後続の Mode Manager まで実質 no-op）。
+	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+	pub modes: BTreeMap<String, RuntimeModeDefinition>,
+
+	/// 起動直後の既定 Runtime Mode ID（`modes` のキーと一致）。未指定なら loader は従来どおり。
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub default_runtime_mode: Option<String>,
+
 	pub log_level: Option<String>,
 
 	/// `ChannelDatum::attachments` の `Inline` 添付が許容される最大バイト数。これを超えるバイナリは
@@ -693,6 +706,7 @@ impl Conf {
 		// Phase VI-γ-1: 自分の出自を覚えておく。CLI 解決後の絶対パス寄りに正規化しておくと、
 		// カレントディレクトリ違いでの再起動でも取り違えない（失敗しても入力パスをそのまま採用）。
 		conf.source_path = Some(std::fs::canonicalize(&path).unwrap_or(path));
+		runtime_mode::validate_runtime_modes(&conf)?;
 		Ok(conf)
 	}
 
