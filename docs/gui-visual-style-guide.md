@@ -136,12 +136,14 @@ Flowgraph Studio は compact IDE として扱う。
 
 初期実装は1つの堅実な visual baseline に集中する。将来 skin を持つ場合は、次の方向を想定する。
 
-- `cool engineering`: 既定。知的、硬質、低ノイズ。
-- `stream neon`: 配信画面に置いて映える高コントラスト寄り。
-- `soft cute`: かわいい方向。角丸・色味は増やすが、操作性と情報密度は維持する。
-- `minimal`: 開発・常駐用途で最も静かな表示。
+- `dr-usagi-default`: 既定。Dr.USAGI 通常仕様をイメージした intelligence & engineering。知的、硬質、低ノイズ。
+- `dark-crimson`: 赤 / 黒 / 金を主軸にした cool & dark。配信画面に置いて映えるが、警告色との衝突に注意する。
+- `light-silver`: 白 / 青 / 銀を主軸にした cool & light。明るい作業環境でも読みやすく、清潔で工学的な印象を保つ。
+- `soft-cute`: かわいい custom 路線。角丸・色味・柔らかさは増やすが、操作性と情報密度は維持する。
 
 skin は見た目の差し替えであり、情報設計や操作語彙を変えない。
+
+初期テーマエンジンで用意するのは上記4系統までで十分。テーマ数を増やすより、token 設計、状態色の意味、dark/light の視認性、Flowgraph Studio の可読性を優先する。
 
 ---
 
