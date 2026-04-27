@@ -261,7 +261,7 @@ flowgraph.motion.map
 （ワークスペース root の Cargo.toml + メンバ）
   virtual-avatar-connect  … 現行アプリ crate
   crates/vac-gui-assets/  … Svelte のビルド済み dist のみ（Step 6b で追加済み）
-  crates/vac-motion/      … MotionFrame / OSC decode / UDP forwarding helper（一段目）
+  crates/vac-motion/      … MotionFrame / OSC decode / UDP forwarding helper / OSC / VMC / VRChat encoding helper（一段目）
   crates/vac-flowgraph/   … Flowgraph pure primitives（一段目は Quantity system）
 
 （未分割・論理名）
@@ -362,7 +362,7 @@ flowgraph.motion.map
 #### Step 5（一部完了）
 
 * Cargo **ワークスペース**化する（上記 crate 図へ向けた土台）。**現状**: root `Cargo.toml` に `[workspace]`（`members = [".", "crates/vac-gui-assets", "crates/vac-motion", "crates/vac-flowgraph"]`、`default-members = ["."]`）を追加済み。`cargo build` / `cargo test` 既定は **ルート crate のみ**（`vac-gui-assets` は `embed-gui` または `-p vac-gui-assets` でビルド）。
-* **残り**: 他クレートの `members` 追加。`vac-motion` は第一段として `MotionFrame` / OSC decode / UDP forwarding helper、`vac-flowgraph` は第一段として Quantity system を分割済み。
+* **残り**: 他クレートの `members` 追加。`vac-motion` は第一段として `MotionFrame` / OSC decode / UDP forwarding helper / OSC / VMC / VRChat encoding helper、`vac-flowgraph` は第一段として Quantity system を分割済み。
 
 #### Step 6 — `vac-gui-assets` と埋め込み配信
 

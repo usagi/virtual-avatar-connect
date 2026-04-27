@@ -11,7 +11,9 @@
 mod osc;
 mod vmc_raw;
 
-pub use vac_motion::{parse_vmc_payload, MotionFrame, OscMessageWire};
+pub use vac_motion::{parse_vmc_payload, MotionFrame};
+#[cfg(test)]
+pub use vac_motion::OscMessageWire;
 
 use crate::conf::Conf;
 use crate::conf::VmcPassthroughSpec;

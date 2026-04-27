@@ -36,7 +36,7 @@ virtual-avatar-connect/
   crates/
     vac-core/          # conf, runtime paths, shutdown, shared state primitives
     vac-flowgraph/     # Flowgraph language/runtime/nodes（一段目は pure Quantity system）
-    vac-motion/        # VMC/OSC UDP motion transport and frame helpers（一段目は frame / decode / forwarding helper）
+    vac-motion/        # VMC/OSC UDP motion transport and protocol helpers（一段目は frame / decode / forwarding / OSC / VMC / VRChat）
     vac-bridges/       # ingress/egress bridge tasks
     vac-control-api/   # actix Control API + GUI static serving
     vac-app/           # AppCore boot/serve/cleanup orchestration
@@ -102,7 +102,7 @@ Windows release の desktop 側だけ `windows_subsystem = "windows"` を使う�
 
 最初に切るのは依存が軽いものに限定する。
 
-1. `vac-motion` の第一段（`MotionFrame` / OSC decode / UDP forwarding helper）は完了。`vmc_raw` の runner 統合は root crate に残す。
+1. `vac-motion` の第一段（`MotionFrame` / OSC decode / UDP forwarding helper / OSC / VMC / VRChat encoding helper）は完了。`vmc_raw` の runner 統合は root crate に残す。
 2. `vac-gui-assets` の `crates/` 配下移動（完了）
 3. `vac-flowgraph` の pure 部分（第一段として Quantity system は完了）
 
