@@ -50,6 +50,10 @@ attach it via `?token=...` which the GUI's `auth.ts` persists to
 localStorage. There is intentionally **no .env support**: E2E must be
 reproducible across machines.
 
+The fixture also defines side-effect-free Runtime Modes (`daily`,
+`streaming`) so GUI mode switching can exercise the Control API without
+starting external applications.
+
 ## Selector policy
 
 Prefer `getByRole` / `getByLabel` / `getByText`. Only reach for

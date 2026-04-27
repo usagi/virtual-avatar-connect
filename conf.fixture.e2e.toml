@@ -41,6 +41,20 @@ runtime_dir = "target/e2e-runtime"
 # so Cargo never walks it as part of `cargo test`.
 flowgraph_dir = "gui/tests/e2e/fixtures/flowgraph"
 
+# Runtime Mode fixture. Keep this side-effect free: no managed app
+# desired-state directives, no external integrations.
+default_runtime_mode = "daily"
+
+[modes.daily]
+display_name = "Daily"
+flowgraph_groups.enable = ["assistant", "alerts"]
+notifications.level = "normal"
+
+[modes.streaming]
+display_name = "Streaming"
+flowgraph_groups.enable = ["assistant", "streaming"]
+notifications.level = "stream_safe"
+
 # -------------------------------------------------------------------------
 # Control API — fixed Bearer token so specs can authenticate
 # deterministically without probing control-token.txt.
