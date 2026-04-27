@@ -20,8 +20,8 @@
   <OAuthPanel />
   <WidgetSlot
    title="Avatar / OBS / TTS connectors"
-   subtitle="future resources"
-   placeholder="OBS、Warudo、TTS、avatar bridge などは Runtime Mode と連動する外部リソースとしてここに集約します。"
+   subtitle="planned resources"
+   placeholder="OBS, Warudo, TTS, and avatar bridges will live here as external resources coordinated by Runtime Mode."
   />
  </div>
 </div>
