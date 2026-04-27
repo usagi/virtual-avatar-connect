@@ -2,67 +2,16 @@
  import { onMount } from 'svelte';
  import { api } from '../api';
  import {
-  ControlApiError,
+  buildDisplayModes,
+  formatControlApiError,
+  joinList,
+  managedDirectiveRows,
+ } from '../control/runtimeModes';
+ import {
   type ModeTransitionPlan,
   type RuntimeModeManagedAppOp,
   type RuntimeModeTransitionStatus,
  } from '../types';
-
- type PlannedMode = {
-  id: string;
-  label: string;
-  description: string;
-  flowgraphGroups: string[];
-  managedApps: string[];
-  notifications: string;
- };
-
- type DisplayMode = PlannedMode & {
-  configured: boolean;
- };
-
- const plannedModes: PlannedMode[] = [
-  {
-   id: 'daily',
-   label: 'Daily',
-   description: 'Assistant, alerts, and lightweight personal automations.',
-   flowgraphGroups: ['assistant', 'alerts', 'rss'],
-   managedApps: ['stop obs', 'stop warudo', 'stop tts'],
-   notifications: 'normal',
-  },
-  {
-   id: 'streaming',
-   label: 'Streaming',
-   description: 'Streaming stack, avatar tools, OBS control, and stream-safe alerts.',
-   flowgraphGroups: ['assistant', 'streaming', 'avatar', 'obs'],
-   managedApps: ['start obs', 'start warudo', 'start tts'],
-   notifications: 'stream_safe',
-  },
-  {
-   id: 'work',
-   label: 'Work',
-   description: 'Reduced interruptions while keeping critical alerts and assistant access.',
-   flowgraphGroups: ['assistant', 'alerts'],
-   managedApps: ['stop obs', 'stop warudo', 'stop tts'],
-   notifications: 'important_only',
-  },
-  {
-   id: 'sleep',
-   label: 'Sleep',
-   description: 'Only critical monitoring and emergency notification flows.',
-   flowgraphGroups: ['emergency_alerts'],
-   managedApps: ['stop obs', 'stop warudo', 'stop tts'],
-   notifications: 'critical_only',
-  },
-  {
-   id: 'rta',
-   label: 'RTA',
-   description: 'Game/run-specific timers, splits, alerts, and reduced background noise.',
-   flowgraphGroups: ['game', 'timer', 'alerts'],
-   managedApps: ['leave game tools', 'stop streaming extras'],
-   notifications: 'run_safe',
-  },
- ] as const;
 
  let configuredModeIds = $state<string[]>([]);
  let currentModeId = $state<string | null>(null);
@@ -78,23 +27,7 @@
  let managedAppOps = $state<RuntimeModeManagedAppOp[]>([]);
  let planRequestSeq = 0;
 
- const displayModes = $derived.by<DisplayMode[]>(() => {
-  const configured = new Set(configuredModeIds);
-  const known = new Set(plannedModes.map((m) => m.id));
-  const plannedRows = plannedModes.map((m) => ({ ...m, configured: configured.has(m.id) }));
-  const customRows = configuredModeIds
-   .filter((id) => !known.has(id))
-   .map((id) => ({
-    id,
-    label: id,
-    description: 'Configured runtime mode from conf.',
-    flowgraphGroups: ['configured'],
-    managedApps: ['use configured desired state'],
-    notifications: 'configured',
-    configured: true,
-   }));
-  return [...customRows, ...plannedRows];
- });
+ const displayModes = $derived(buildDisplayModes(configuredModeIds));
 
  const selectedMode = $derived(displayModes.find((m) => m.id === selectedModeId) ?? displayModes[0]);
  const managedDesiredRows = $derived(managedDirectiveRows(transitionPlan));
@@ -166,7 +99,7 @@
    if (current.mode) selectedModeId = current.mode;
    else if (list.mode_ids.length > 0) selectedModeId = list.mode_ids[0];
   } catch (e) {
-   loadError = formatError(e);
+   loadError = formatControlApiError(e);
   } finally {
    loading = false;
   }
@@ -187,7 +120,7 @@
    managedAppOps = next.managed_apps ?? [];
    await refreshTransitionStatus();
   } catch (e) {
-   mutationError = formatError(e);
+   mutationError = formatControlApiError(e);
   } finally {
    mutating = false;
   }
@@ -217,31 +150,12 @@
   } catch (e) {
    if (seq !== planRequestSeq) return;
    transitionPlan = null;
-   planError = formatError(e);
+   planError = formatControlApiError(e);
   } finally {
    if (seq === planRequestSeq) planLoading = false;
   }
  }
 
- function formatError(e: unknown): string {
-  if (e instanceof ControlApiError) return `${e.status} ${e.statusText}`;
-  if (e instanceof Error) return e.message;
-  return String(e);
- }
-
- function joinList(values: string[]): string {
-  return values.length > 0 ? values.join(', ') : '-';
- }
-
- function managedDirectiveRows(plan: ModeTransitionPlan | null): Array<{ label: string; values: string[] }> {
-  if (!plan) return [];
-  return [
-   { label: 'Start', values: plan.target_managed_apps.start },
-   { label: 'Stop', values: plan.target_managed_apps.stop },
-   { label: 'Minimize', values: plan.target_managed_apps.minimize },
-   { label: 'Leave', values: plan.target_managed_apps.leave },
-  ].filter((row) => row.values.length > 0);
- }
 </script>
 
 <section class="grid gap-4">

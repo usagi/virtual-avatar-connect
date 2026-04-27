@@ -212,6 +212,26 @@ pub enum ControlEvent {
 	},
 }
 
+impl ControlEvent {
+	pub fn kind(&self) -> &'static str {
+		match self {
+			ControlEvent::ChannelDatum { .. } => "channel_datum",
+			ControlEvent::Lagged { .. } => "lagged",
+			ControlEvent::Heartbeat { .. } => "heartbeat",
+			ControlEvent::PauseState { .. } => "pause_state",
+			ControlEvent::Reloaded { .. } => "reloaded",
+			ControlEvent::ProcessorInvoked { .. } => "processor_invoked",
+			ControlEvent::Restarting { .. } => "restarting",
+			ControlEvent::FlowgraphReloaded { .. } => "flowgraph_reloaded",
+			ControlEvent::ManagedAppState { .. } => "managed_app_state",
+			ControlEvent::RestartRecommended { .. } => "restart_recommended",
+			ControlEvent::RuntimeModeChanged { .. } => "runtime_mode_changed",
+			ControlEvent::RuntimeModeManagedApps { .. } => "runtime_mode_managed_apps",
+			ControlEvent::OAuthStatus { .. } => "oauth_status",
+		}
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
