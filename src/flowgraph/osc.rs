@@ -51,12 +51,11 @@ pub fn encode_osc_message_from_json_args(address: &str, args: &[JsonValue]) -> R
 	encode_osc_message_packet(address, &osc_args)
 }
 
-/// `host` / `port` へ単発 OSC を UDP 送信し、送信バイト数を返す。
-pub async fn send_osc_udp_json_args(host: &str, port: i64, address: &str, args: &[JsonValue]) -> Result<usize, String> {
+/// 既にエンコード済みの UDP ペイロードを `host` / `port` へ送信する（VMC 生バンドル等でも利用可）。
+pub async fn send_udp_bytes(host: &str, port: i64, payload: &[u8]) -> Result<usize, String> {
 	if port <= 0 || port > u16::MAX as i64 {
 		return Err(format!("port が不正です: {port}"));
 	}
-	let bytes = encode_osc_message_from_json_args(address, args)?;
 	let sock = tokio::net::UdpSocket::bind("0.0.0.0:0")
 		.await
 		.map_err(|e| format!("UDP bind: {e}"))?;
@@ -68,9 +67,15 @@ pub async fn send_osc_udp_json_args(host: &str, port: i64, address: &str, args: 
 		.next()
 		.ok_or_else(|| format!("ホスト解決結果が空です: {host}"))?;
 	sock
-		.send_to(&bytes, addr)
+		.send_to(payload, addr)
 		.await
 		.map_err(|e| format!("UDP send_to: {e}"))
+}
+
+/// `host` / `port` へ単発 OSC を UDP 送信し、送信バイト数を返す。
+pub async fn send_osc_udp_json_args(host: &str, port: i64, address: &str, args: &[JsonValue]) -> Result<usize, String> {
+	let bytes = encode_osc_message_from_json_args(address, args)?;
+	send_udp_bytes(host, port, &bytes).await
 }
 
 #[cfg(test)]

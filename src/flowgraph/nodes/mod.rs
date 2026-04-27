@@ -74,6 +74,7 @@ pub mod mode;
 pub mod motion_vmc;
 pub mod ocr;
 pub mod osc_send;
+pub mod vmc_send;
 pub mod random_noise;
 pub mod rate_limit;
 pub mod regex_ops;

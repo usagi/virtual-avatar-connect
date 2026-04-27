@@ -319,6 +319,8 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::motion_vmc::MotionFilterNode));
 	r.register_pure(Arc::new(nodes::motion_vmc::MotionMapNode));
 	r.register_effectful(Arc::new(nodes::osc_send::OscSendNode));
+	r.register_effectful(Arc::new(nodes::vmc_send::VmcSendBonePosNode));
+	r.register_effectful(Arc::new(nodes::vmc_send::VmcSendRootPosNode));
 
 	// --- state (δ-3c) ---
 	r.register_stateful(Arc::new(nodes::state::BoolStateNode));
@@ -459,6 +461,8 @@ mod tests {
 			"flowgraph.motion.filter",
 			"flowgraph.motion.map",
 			"flowgraph.osc.send",
+			"flowgraph.vmc.send_bone_pos",
+			"flowgraph.vmc.send_root_pos",
 			"flowgraph.channel.emit",
 			"flowgraph.unit.assign",
 			"flowgraph.unit.convert",

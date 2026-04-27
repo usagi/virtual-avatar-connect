@@ -230,6 +230,9 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.vec3.scale`](#flowgraph-vec3-scale) — Vec3 scale
   - [`flowgraph.vec3.sub`](#flowgraph-vec3-sub) — Vec3 sub
   - [`flowgraph.vec3.unpack`](#flowgraph-vec3-unpack) — Vec3 unpack
+- **vmc**
+  - [`flowgraph.vmc.send_bone_pos`](#flowgraph-vmc-send-bone-pos) — VMC: Send Bone Pos
+  - [`flowgraph.vmc.send_root_pos`](#flowgraph-vmc-send-root-pos) — VMC: Send Root Pos
 
 ## channel
 
@@ -2974,4 +2977,45 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `x` | `float` |  |
 | `y` | `float` |  |
 | `z` | `float` |  |
+
+## vmc
+
+### `flowgraph.vmc.send_bone_pos`
+
+**VMC: Send Bone Pos** — VMC `/VMC/Ext/Bone/Pos` を 1 回 UDP 送信。`position` は [x,y,z]、`rotation` は [qx,qy,qz,qw] の JSON 配列
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `host` | `string` | — |  |
+| `port` | `int` | — |  |
+| `bone_name` | `string` | — |  |
+| `position` | `json` | — |  |
+| `rotation` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `bytes_sent` | `int` |  |
+| `error` | `string` |  |
+
+### `flowgraph.vmc.send_root_pos`
+
+**VMC: Send Root Pos** — VMC `/VMC/Ext/Root/Pos` を 1 回 UDP 送信（骨名は常に `root`）。`position` / `rotation` は JSON 配列
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `host` | `string` | — |  |
+| `port` | `int` | — |  |
+| `position` | `json` | — |  |
+| `rotation` | `json` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `bytes_sent` | `int` |  |
+| `error` | `string` |  |
 
