@@ -19,6 +19,7 @@
  import ToastBridge from './lib/ToastBridge.svelte';
  import RestartDialog from './lib/RestartDialog.svelte';
  import ManagedAppDrawer from './lib/ManagedAppDrawer.svelte';
+ import './lib/theme.svelte';
 
  import NowTab from './lib/tabs/NowTab.svelte';
  import ModesTab from './lib/tabs/ModesTab.svelte';

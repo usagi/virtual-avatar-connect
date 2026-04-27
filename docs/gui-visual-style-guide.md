@@ -1,6 +1,6 @@
 # VAC GUI Visual Style Guide
 
-> Status: visual baseline draft. VAC GUI は「常駐ランタイムの管制卓」として、わかりやすく、使いやすく、さり気なくかっこいい見た目を目指す。派手なスキンやブランド演出へ進む前に、まず情報密度・色・余白・状態表現の基準を揃える。
+> Status: visual baseline + initial theme engine draft. VAC GUI は「常駐ランタイムの管制卓」として、わかりやすく、使いやすく、さり気なくかっこいい見た目を目指す。派手なスキンやブランド演出へ進む前に、まず情報密度・色・余白・状態表現の基準を揃える。
 
 ---
 
@@ -70,7 +70,7 @@ Dr.USAGI の印象としては、知的でクールな工学系ドクターの�
 
 ### 3.1 ベース
 
-現時点では OS theme に従う dark / light を基準にする。独自 theme は後続で扱う。
+既定 theme は OS theme に従う dark / light を基準にする。独自 theme は `data-vac-theme` と localStorage による軽い theme engine で切り替える。
 
 - dark: 長時間表示しても疲れにくい低輝度。真っ黒ではなく、surface の階層で分ける。
 - light: 開発・設定作業で読みやすい白背景。境界線と状態色を強めすぎない。
@@ -141,7 +141,7 @@ Flowgraph Studio は compact IDE として扱う。
 - `light-silver`: 白 / 青 / 銀を主軸にした cool & light。明るい作業環境でも読みやすく、清潔で工学的な印象を保つ。
 - `soft-cute`: かわいい custom 路線。角丸・色味・柔らかさは増やすが、操作性と情報密度は維持する。
 
-skin は見た目の差し替えであり、情報設計や操作語彙を変えない。
+skin は見た目の差し替えであり、情報設計や操作語彙を変えない。初期 theme engine は CSS token の差し替えに留め、画面構造や文言は theme ごとに分岐しない。
 
 初期テーマエンジンで用意するのは上記4系統までで十分。テーマ数を増やすより、token 設計、状態色の意味、dark/light の視認性、Flowgraph Studio の可読性を優先する。
 
@@ -153,7 +153,7 @@ skin は見た目の差し替えであり、情報設計や操作語彙を変え
 2. 現行CSSの token / utility 方針を整理する。
 3. Now / Modes / Resources / Observability / Settings の panel density と見出し階層を揃える。
 4. Flowgraph Studio の toolbar / inspector / problems の密度と状態表現を揃える。
-5. 必要なら theme token を追加する。
-6. skin / theme 分岐は、既定 baseline が安定してから扱う。
+5. Theme token と `data-vac-theme` による初期 theme engine を追加する。
+6. Theme ごとの細部調整は、既定 baseline と Playwright screenshot 確認を前提に段階投入する。
 
 最初のPRでは、文書化とごく小さいCSS補助に留める。見た目の大改修は、Playwright screenshot と実機確認を前提に段階投入する。
