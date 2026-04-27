@@ -260,7 +260,7 @@ flowgraph.motion.map
 ```text
 （ワークスペース root の Cargo.toml + メンバ）
   virtual-avatar-connect  … 現行アプリ crate
-  vac-gui-assets/         … Svelte のビルド済み dist のみ（Step 6b で追加済み。将来 `crates/` 配下へ移してもよい）
+  crates/vac-gui-assets/  … Svelte のビルド済み dist のみ（Step 6b で追加済み）
 
 （未分割・論理名）
   vac-core
@@ -359,13 +359,13 @@ flowgraph.motion.map
 
 #### Step 5（一部完了）
 
-* Cargo **ワークスペース**化する（上記 crate 図へ向けた土台）。**現状**: root `Cargo.toml` に `[workspace]`（`members = [".", "vac-gui-assets"]`、`default-members = ["."]`）を追加済み。`cargo build` / `cargo test` 既定は **ルート crate のみ**（`vac-gui-assets` は `embed-gui` または `-p vac-gui-assets` でビルド）。
-* **残り**: 他クレートの `members` 追加・`crates/` ディレクトリ整理など。
+* Cargo **ワークスペース**化する（上記 crate 図へ向けた土台）。**現状**: root `Cargo.toml` に `[workspace]`（`members = [".", "crates/vac-gui-assets"]`、`default-members = ["."]`）を追加済み。`cargo build` / `cargo test` 既定は **ルート crate のみ**（`vac-gui-assets` は `embed-gui` または `-p vac-gui-assets` でビルド）。
+* **残り**: 他クレートの `members` 追加。
 
 #### Step 6 — `vac-gui-assets` と埋め込み配信
 
 * **6a（実装済み）**: Cargo feature **`embed-gui`**。`web_interface::gui_embedded` で `/gui/*` をメモリ配信。既定ビルドでは `gui_disk`（ファイル）経路。
-* **6b（crate 切り出し済み・CI は未）**: ワークスペースメンバ **`vac-gui-assets`**（[`vac-gui-assets/`](../../vac-gui-assets/)）が `include_dir` と `build.rs` で `gui/dist` を取り込み、メイン crate は `embed-gui` 時のみ依存。**GitHub Actions 等は §1.3 のとおり Step 5 確定後にまとめて設計**する。
+* **6b（crate 切り出し済み・CI は未）**: ワークスペースメンバ **`vac-gui-assets`**（[`crates/vac-gui-assets/`](../../crates/vac-gui-assets/)）が `include_dir` と `build.rs` で `gui/dist` を取り込み、メイン crate は `embed-gui` 時のみ依存。**GitHub Actions 等は §1.3 のとおり Step 5 確定後にまとめて設計**する。
 * **開発時**: `embed-gui` 無効時は既存の `gui_dist_path` や Vite をそのまま利用（§1.2）。
 
 #### Step 7 — `AppCore` 抽出（Phase ε-2a）

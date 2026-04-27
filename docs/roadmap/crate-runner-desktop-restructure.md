@@ -42,7 +42,7 @@ virtual-avatar-connect/
     vac-app/           # AppCore boot/serve/cleanup orchestration
     vac-cli/           # console runner
     vac-desktop/       # desktop/tray/Tauri runner
-  vac-gui-assets/      # 既存。将来 crates/ 配下へ移動してよい
+    vac-gui-assets/    # 既存。Svelte のビルド済み dist のみ
   gui/                 # Svelte source
 ```
 
@@ -103,7 +103,7 @@ Windows release の desktop 側だけ `windows_subsystem = "windows"` を使う�
 最初に切るのは依存が軽いものに限定する。
 
 1. `vac-motion`
-2. `vac-gui-assets` の `crates/` 配下移動（必要なら）
+2. `vac-gui-assets` の `crates/` 配下移動（完了）
 3. `vac-flowgraph` の pure 部分
 
 `state`、`web_interface`、`bridges` は相互依存が濃いので後回し。先に動かすと実装速度が落ちる。

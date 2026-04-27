@@ -5,7 +5,7 @@ use std::path::Path;
 
 fn main() {
 	let manifest = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR");
-	let dist = Path::new(&manifest).join("../gui/dist");
+	let dist = Path::new(&manifest).join("../../gui/dist");
 	let index = dist.join("index.html");
 	if !index.is_file() {
 		panic!(
