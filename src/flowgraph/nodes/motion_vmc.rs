@@ -3,8 +3,8 @@
 //! `flowgraph.ingress.vmc_udp` の `__content__`（Base64）をそのまま `payload_b64` に渡す想定。
 
 use crate::flowgraph::node::{
-	get_optional_string, get_required_json, get_required_string, ExecFireSet, InputMap, NodeDescriptor, NodeExecError,
-	NodeOutput, NodeSpec, PortSpec, PureNode,
+	get_optional_float, get_optional_string, get_required_json, get_required_string, ExecFireSet, InputMap, NodeDescriptor,
+	NodeExecError, NodeOutput, NodeSpec, PortSpec, PureNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use crate::motion::parse_vmc_payload;
@@ -119,6 +119,88 @@ impl PureNode for MotionFilterNode {
 	}
 }
 
+// ---------------------------------------------------------------------
+// flowgraph.motion.map
+// ---------------------------------------------------------------------
+
+/// `osc_messages[].args` 内の **JSON 数値**を再帰的に `float_scale` 倍する（ブレンドシェイプゲイン等）。
+pub struct MotionMapNode;
+
+impl NodeDescriptor for MotionMapNode {
+	fn describe(&self) -> NodeSpec {
+		NodeSpec {
+			feature: "flowgraph.motion.map".into(),
+			title: "Motion: Map Numeric Args".into(),
+			category: "motion".into(),
+			description: Some(
+				"`vmc_parse` の frame の各 `osc_messages[].args` に含まれる数値を再帰的に `float_scale` 倍する（配列ネスト可）".into(),
+			),
+			inputs: vec![
+				PortSpec::input("frame", "Frame (JSON)", SocketType::Json),
+				PortSpec::input("float_scale", "Scale", SocketType::Float).with_default(SocketValue::Float(1.0)),
+			],
+			outputs: vec![PortSpec::output("frame_out", "Mapped frame (JSON)", SocketType::Json)],
+			properties: vec![],
+		}
+	}
+}
+
+fn scale_json_numbers(v: &JsonValue, scale: f64) -> JsonValue {
+	match v {
+		JsonValue::Number(n) => {
+			let f = n.as_f64().unwrap_or(0.0) * scale;
+			JsonValue::from(f)
+		}
+		JsonValue::Array(a) => JsonValue::Array(a.iter().map(|x| scale_json_numbers(x, scale)).collect()),
+		JsonValue::Object(map) => JsonValue::Object(
+			map.iter()
+				.map(|(k, val)| (k.clone(), scale_json_numbers(val, scale)))
+				.collect(),
+		),
+		_ => v.clone(),
+	}
+}
+
+fn map_motion_frame_numeric_args(frame: &JsonValue, scale: f64) -> Result<JsonValue, NodeExecError> {
+	if !scale.is_finite() {
+		return Err(NodeExecError::Generic(anyhow::anyhow!("float_scale は有限の数である必要があります")));
+	}
+	let mut out = frame.clone();
+	let obj = out
+		.as_object_mut()
+		.ok_or_else(|| NodeExecError::Generic(anyhow::anyhow!("frame は JSON オブジェクトである必要があります")))?;
+	let messages = obj
+		.get_mut("osc_messages")
+		.and_then(|v| v.as_array_mut())
+		.ok_or_else(|| NodeExecError::Generic(anyhow::anyhow!("frame に osc_messages 配列が必要です")))?;
+	for msg in messages.iter_mut() {
+		let Some(msg_obj) = msg.as_object_mut() else {
+			continue;
+		};
+		if let Some(args) = msg_obj.get_mut("args").and_then(|a| a.as_array()) {
+			let scaled: Vec<JsonValue> = args.iter().map(|a| scale_json_numbers(a, scale)).collect();
+			msg_obj.insert("args".into(), JsonValue::Array(scaled));
+		}
+	}
+	Ok(out)
+}
+
+#[async_trait]
+impl PureNode for MotionMapNode {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_props: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
+		let frame = get_required_json(inputs, "frame")?;
+		let scale = get_optional_float(inputs, "float_scale", 1.0)?;
+		let out = map_motion_frame_numeric_args(frame, scale)?;
+		Ok(NodeOutput::new().set_data("frame_out", SocketValue::Json(out)))
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -180,5 +262,36 @@ mod tests {
 			.unwrap();
 		let v = out.data.get("frame_out").unwrap().as_json().unwrap();
 		assert_eq!(v["osc_messages"].as_array().unwrap().len(), 1);
+	}
+
+	#[test]
+	fn map_scales_args() {
+		let frame = json!({
+			"byte_len": 2,
+			"osc_messages": [
+				{"address": "/x", "args": [2.0, [0.5, 1]]},
+			]
+		});
+		let out = map_motion_frame_numeric_args(&frame, 2.0).unwrap();
+		let args = &out["osc_messages"][0]["args"];
+		assert_eq!(args[0], 4.0);
+		assert_eq!(args[1][0], 1.0);
+		assert_eq!(args[1][1], 2.0);
+	}
+
+	#[tokio::test]
+	async fn map_node_wire() {
+		let frame = json!({
+			"osc_messages": [{"address": "/v", "args": [10]}]
+		});
+		let mut inputs = InputMap::new();
+		inputs.insert("frame".into(), SocketValue::Json(frame));
+		inputs.insert("float_scale".into(), SocketValue::Float(0.1));
+		let out = MotionMapNode
+			.compute(&PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.await
+			.unwrap();
+		let v = out.data.get("frame_out").unwrap().as_json().unwrap();
+		assert_eq!(v["osc_messages"][0]["args"][0], 1.0);
 	}
 }

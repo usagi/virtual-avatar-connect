@@ -144,6 +144,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.mode.transit`](#flowgraph-mode-transit) — Mode Transit
 - **motion**
   - [`flowgraph.motion.filter`](#flowgraph-motion-filter) — Motion: Filter OSC Messages
+  - [`flowgraph.motion.map`](#flowgraph-motion-map) — Motion: Map Numeric Args
   - [`flowgraph.motion.vmc_parse`](#flowgraph-motion-vmc-parse) — Motion: VMC OSC Parse
 - **noise**
   - [`flowgraph.noise.perlin_1d`](#flowgraph-noise-perlin-1d) — Perlin 1D
@@ -1875,6 +1876,19 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `frame` | `json` | — |  |
 | `address_prefix` | `string` | `""` |  |
 | `address_substring` | `string` | `""` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `frame_out` | `json` |  |
+
+### `flowgraph.motion.map`
+
+**Motion: Map Numeric Args** — `vmc_parse` の frame の各 `osc_messages[].args` に含まれる数値を再帰的に `float_scale` 倍する（配列ネスト可）
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `frame` | `json` | — |  |
+| `float_scale` | `float` | `1.0` |  |
 
 | Output | Type | Note |
 |---|---|---|

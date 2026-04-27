@@ -182,7 +182,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] M-2 feat(motion): パススルー・ハブ運用の conf / ログ整備（複数受信ソケットの運用例）
 - [ ] M-3 feat(web_interface,gui): Control API `POST /api/v1/vmc/*` + トレイ/Web UI の転送先管理
 - [x] M-4a feat(flowgraph,motion,deps): `flowgraph.motion.vmc_parse`（Base64→OSC→JSON）+ Phase ρ 先取り `flowgraph.osc.send`（UDP）+ `rosc` + `flowgraph::fixture_runner` 最小 + `src/app_core.rs`（Step 7 一段）
-- [ ] M-4 feat(flowgraph): `MotionFrame` 第一級型 + `flowgraph.motion.map`（**filter**: `flowgraph.motion.filter` 実装済み）
+- [ ] M-4 feat(flowgraph): `MotionFrame` 第一級型（**map**: `flowgraph.motion.map` 実装済み、**filter**: `flowgraph.motion.filter` 実装済み）
 - [ ] M-5 docs+flowgraph: 表情・ジェスチャ等の用途拡張（`v2-vmc` §5 参照）
 
 ### v2 crate / runner / GUI 同梱（再構造化メタ）
