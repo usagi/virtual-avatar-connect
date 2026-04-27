@@ -223,9 +223,10 @@ The current GUI branch now includes these completed slices:
 
 The remaining GUI roadmap is now mostly refinement work: visual polish, deeper domain-specific debugger views, and future backend integrations that are not yet specified.
 
-### GR-8 Visual Baseline - planned
+### GR-8 Visual Baseline - first slice implemented
 
-- [ ] Establish a visual style guide for the default VAC GUI look and feel.
-- [ ] Keep the first implementation conservative: OS theme dark/light, controlled density, consistent panel hierarchy, and restrained state colors.
+- [x] Establish a visual style guide for the default VAC GUI look and feel.
+- [x] Keep the first implementation conservative: OS theme dark/light, controlled density, consistent panel hierarchy, and restrained state colors.
+- [x] Add minimal global visual tokens and shell chrome classes for focus, selection, scrollbar, header, side rail, main surface, and status bar.
 - [ ] Avoid decorative skin work until the default operational cockpit baseline is stable.
 - [ ] Use Playwright screenshots for future visual regression checks once the baseline starts changing CSS substantially.
