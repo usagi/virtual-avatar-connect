@@ -17,9 +17,9 @@
 | 領域 | 主担当 | 備考 |
 | --- | --- | --- |
 | crate 境界設計、workspace 整理、runner 境界 | Codex | GUI / desktop 配布形態を前提に切る。 |
-| `AppCore` の `boot` / `serve` / `cleanup` 分離 | Codex | Tauri `.setup()` と CLI `main` の両方から呼べる形にする。 |
+| `AppCore` の `boot` / `serve` / `cleanup` 分離 | Codex | desktop の Tauri `.setup()` と CLI `main` の両方から呼べる形にする。 |
 | CLI / desktop 2 runner | Codex | CLI は console、desktop は tray / windowed 前提。 |
-| Tauri / system tray / GUI 起動 UX | Codex | `ShutdownBroker` と Control API を既存経路のまま使う。 |
+| Tauri / system tray / GUI 起動 UX | Codex | Tauri GUI shell は desktop に載せる。CLI は API / ログ / 開発 runner として維持する。 |
 | Flowgraph engine / node / fixture runner | v2 メイン担当 | crate 移動中も意味論変更は避ける。 |
 | VMC / OSC / VRChat / motion | v2 メイン担当 | `motion` / `flowgraph` の境界契約内で進める。 |
 | Runtime Mode backend | v2 メイン担当 | GUI は Control API 経由で追従する。 |
@@ -85,7 +85,7 @@ pub async fn run_cli() -> Result<()>;
 pub async fn run_desktop_headless() -> Result<()>;
 ```
 
-`run_desktop_headless` は Tauri 導入前の橋渡しで、console policy 以外は CLI と同じ動きをする。これで desktop runner の binary 名、ログ、終了コードの扱いを先に固定できる。
+`run_desktop_headless` は非 Windows fallback として残す。Windows の desktop runner は system tray と Tauri WebView を持つ。
 
 ### R3: CLI / desktop 2 binary（実装済み）
 
@@ -110,10 +110,10 @@ Windows release の desktop 側だけ `windows_subsystem = "windows"` を使う�
 
 ### R5: desktop tray 最小実装（Windows first slice 実装済み・手動確認待ち）
 
-Tauri の前に、desktop runner の責務を固定する。
+desktop runner の tray 常駐責務を固定する。
 
 - [x] 起動時に VAC runtime を立ち上げる。
-- [x] GUI を既定ブラウザで開ける。
+- [x] tray の `GUI を開く` と左ダブルクリックから Tauri WebView GUI を開ける。
 - [x] 終了時は `ShutdownBroker` を使う。
 - [x] 将来 tray から呼ぶ操作を Rust API として用意する。
 - [x] tray default icon は `resources/icons/vac-tray-default.png` を使う。正本は `assets/brand/vac/design-master/`、派生素材は `assets/brand/vac/derived/`。
@@ -123,16 +123,18 @@ tray menu の初期項目は次だけでよい。
 
 | 項目 | 動作 |
 | --- | --- |
-| GUI を開く | ループバックの `/gui/` を開く。 |
+| GUI を開く | Tauri WebView window を show / focus する。 |
 | 終了 | `ShutdownBroker` 経由で graceful shutdown。 |
 
 Restart / profile switch は GUI 側の既存 Control API があるため、tray 初期実装に入れない。
 
-### R6: Tauri shell
+### R6: desktop Tauri GUI shell
 
-Tauri は desktop runner にだけ載せる。
+Tauri GUI shell は desktop runner に載せる。CLI は従来型の開発者向け runner として残す。
 
-- WebView は既存 Svelte GUI を表示する。
+- CLI はターミナル主体。ログと自動化を維持し、Control API と GUI 配信を起動する。GUI 開発は `gui` の `npm run dev` と組み合わせる。
+- desktop はシステムトレイ常駐主体。tray の `GUI を開く` / 左ダブルクリックで Tauri WebView を show / focus する。
+- WebView は既存 Svelte GUI を表示する。window close は hide して tray 常駐を維持し、終了は tray の `終了` または GUI の終了導線を使う。
 - GUI は引き続き HTTP/WS Control API を叩く。
 - `invoke` は原則使わない。bootstrap 情報が必要な場合だけ薄く追加する。
 - tray close / window close / GUI 終了ボタンは `ShutdownBroker` へ合流させる。

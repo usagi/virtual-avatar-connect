@@ -16,104 +16,112 @@ pub fn run() -> crate::Result<()> {
 mod windows_tray {
 	use crate::shutdown::ShutdownReason;
 	use crate::Result;
-	use tao::event::{Event, StartCause};
-	use tao::event_loop::{ControlFlow, EventLoopBuilder};
-	use tray_icon::menu::{Menu, MenuEvent, MenuId, MenuItem};
-	use tray_icon::{Icon, TrayIcon, TrayIconBuilder};
-
-	enum DesktopEvent {
-		Menu(MenuEvent),
-		RuntimeStopped,
-	}
+	use std::sync::Arc;
+	use tauri::image::Image;
+	use tauri::menu::{Menu, MenuItem};
+	use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
+	use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 	pub fn run() -> Result<()> {
-		let mut event_loop_builder = EventLoopBuilder::<DesktopEvent>::with_user_event();
-		let event_loop = event_loop_builder.build();
-		let event_proxy = event_loop.create_proxy();
-
-		MenuEvent::set_event_handler(Some({
-			let proxy = event_proxy.clone();
-			move |event| {
-				let _ = proxy.send_event(DesktopEvent::Menu(event));
-			}
-		}));
-
-		let runtime = tokio::runtime::Builder::new_multi_thread()
+		let runtime = Arc::new(tokio::runtime::Builder::new_multi_thread()
 			.enable_all()
 			.build()
-			.map_err(anyhow::Error::from)?;
+			.map_err(anyhow::Error::from)?);
 
 		let core = runtime.block_on(crate::boot_with_standard_bootstrap())?;
 		let gui_url = core.gui_url();
 		let shutdown = core.shutdown_broker();
-
-		let serve_proxy = event_proxy.clone();
-		runtime.spawn(async move {
+		let runtime_for_setup = runtime.clone();
+		let runtime_for_after_run = runtime.clone();
+		let shutdown_for_setup = shutdown.clone();
+		let shutdown_for_serve = shutdown.clone();
+		let serve_handle = runtime.spawn(async move {
 			let serve_result = core.serve().await;
 			let cleanup_result = core.cleanup().await;
 			if let Err(e) = serve_result {
 				log::error!("《Desktop》 VAC runtime serve がエラー終了しました: {e}");
+				shutdown_for_serve.trigger(ShutdownReason::Fatal);
 			}
 			if let Err(e) = cleanup_result {
 				log::error!("《Desktop》 VAC runtime cleanup がエラー終了しました: {e}");
 			}
-			let _ = serve_proxy.send_event(DesktopEvent::RuntimeStopped);
 		});
 
-		let open_id = MenuId::new("vac-open-gui");
-		let quit_id = MenuId::new("vac-quit");
-		let mut tray: Option<TrayIcon> = None;
+		let app_shutdown = shutdown.clone();
+		tauri::Builder::default()
+			.setup(move |app| {
+				let app_handle = app.handle().clone();
+				let open_gui = MenuItem::with_id(app, "vac-open-gui", "GUI を開く", true, None::<&str>)?;
+				let quit = MenuItem::with_id(app, "vac-quit", "終了", true, None::<&str>)?;
+				let menu = Menu::with_items(app, &[&open_gui, &quit])?;
+				let icon = Image::from_bytes(include_bytes!("../resources/icons/vac-tray-default-32.png"))?;
+				let shutdown_for_menu = shutdown_for_setup.clone();
 
-		event_loop.run(move |event, _, control_flow| {
-			*control_flow = ControlFlow::Wait;
-			let _runtime_guard = &runtime;
+				TrayIconBuilder::with_id("vac-tray")
+					.tooltip("Virtual Avatar Connect")
+					.icon(icon)
+					.menu(&menu)
+					.show_menu_on_left_click(false)
+					.on_menu_event(move |app, event| match event.id().as_ref() {
+						"vac-open-gui" => show_gui(app),
+						"vac-quit" => shutdown_for_menu.trigger(ShutdownReason::Desktop),
+						_ => {}
+					})
+					.on_tray_icon_event(|tray, event| {
+						if let TrayIconEvent::DoubleClick {
+							button: MouseButton::Left,
+							..
+						} = event
+						{
+							show_gui(tray.app_handle());
+						}
+					})
+					.build(app)?;
 
-			match event {
-				Event::NewEvents(StartCause::Init) if tray.is_none() => match build_tray_icon(open_id.clone(), quit_id.clone()) {
-					Ok(icon) => {
-						tray = Some(icon);
-						log::info!("《Desktop》 system tray を初期化しました。");
+				let gui_url = gui_url.parse()?;
+				let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(gui_url))
+					.title("Virtual Avatar Connect")
+					.inner_size(1280.0, 820.0)
+					.resizable(true)
+					.visible(false)
+					.build()?;
+
+				window.on_window_event(move |event| {
+					if let WindowEvent::CloseRequested { api, .. } = event {
+						api.prevent_close();
+						if let Some(window) = app_handle.get_webview_window("main") {
+							let _ = window.hide();
+						}
 					}
-					Err(e) => {
-						log::error!("《Desktop》 system tray の初期化に失敗しました: {e}");
-						shutdown.trigger(ShutdownReason::Fatal);
-					}
-				},
-				Event::UserEvent(DesktopEvent::Menu(event)) if event.id == open_id => {
-					if let Err(e) = webbrowser::open(&gui_url) {
-						log::error!("《Desktop》 GUI を開けませんでした url={gui_url}: {e}");
-					}
-				}
-				Event::UserEvent(DesktopEvent::Menu(event)) if event.id == quit_id => {
-					shutdown.trigger(ShutdownReason::ControlApi);
-				}
-				Event::UserEvent(DesktopEvent::RuntimeStopped) => {
-					*control_flow = ControlFlow::Exit;
-				}
-				_ => {}
+				});
+
+				let app_handle_for_shutdown = app.handle().clone();
+				runtime_for_setup.spawn(async move {
+					app_shutdown.wait().await;
+					app_handle_for_shutdown.exit(0);
+				});
+
+				log::info!("《Desktop》 Tauri system tray と WebView を初期化しました。");
+				Ok(())
+			})
+			.run(tauri::generate_context!("./tauri.conf.json"))
+			.map_err(anyhow::Error::from)?;
+
+		shutdown.trigger(ShutdownReason::Desktop);
+		let _ = runtime_for_after_run.block_on(tokio::time::timeout(std::time::Duration::from_secs(10), serve_handle));
+		Ok(())
+	}
+
+	fn show_gui(app: &tauri::AppHandle) {
+		if let Some(window) = app.get_webview_window("main") {
+			if let Err(e) = window.show() {
+				log::error!("《Desktop》 GUI window を表示できませんでした: {e}");
 			}
-		});
-	}
-
-	fn build_tray_icon(open_id: MenuId, quit_id: MenuId) -> anyhow::Result<TrayIcon> {
-		let menu = Menu::new();
-		let open_gui = MenuItem::with_id(open_id, "GUI を開く", true, None);
-		let quit = MenuItem::with_id(quit_id, "終了", true, None);
-		menu.append_items(&[&open_gui, &quit])?;
-
-		let icon = load_icon()?;
-		let tray = TrayIconBuilder::new()
-			.with_tooltip("Virtual Avatar Connect")
-			.with_icon(icon)
-			.with_menu(Box::new(menu))
-			.build()?;
-		Ok(tray)
-	}
-
-	fn load_icon() -> anyhow::Result<Icon> {
-		let bytes = include_bytes!("../resources/icons/vac-tray-default-32.png");
-		let image = image::load_from_memory(bytes)?.into_rgba8();
-		let (width, height) = image.dimensions();
-		Ok(Icon::from_rgba(image.into_raw(), width, height)?)
+			if let Err(e) = window.set_focus() {
+				log::warn!("《Desktop》 GUI window に focus できませんでした: {e}");
+			}
+		} else {
+			log::error!("《Desktop》 GUI window が見つかりません。");
+		}
 	}
 }

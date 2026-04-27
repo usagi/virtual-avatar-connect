@@ -1,6 +1,6 @@
 # Phase ε — Shutdown 統合と Tauri 移行段取り
 
-**Status**: ε-1（ShutdownBroker）実装済み。ε-2（Tauri 化 / CLI 可視性ポリシー）は未着手でドキュメントのみ。
+**Status**: ε-1（ShutdownBroker）実装済み。ε-2（Tauri 化 / CLI 可視性ポリシー）は Windows desktop の tray + WebView first slice を実装中。
 
 **Scope**: VAC の「終了処理／実行形態／CLI 可視性」にまつわる長年の小さな引っかかりを解消し、最終的に Tauri ネイティブウィンドウ動作までの地盤を作る。Phase δ（Flowgraph）と直交するメタな作業。
 
@@ -88,9 +88,9 @@ flowchart LR
 
 ---
 
-## 3. ε-2: Tauri 移行の段取り（未着手）
+## 3. ε-2: Tauri 移行の段取り（実装中）
 
-**工程順（2026 方針）**: crate **再構造化** → **CLI / desktop の 2 runner**（単体起動・コアは lib）の詳細設計・実装 → **Tauri を desktop 版にのみ組み込む**。一般ユーザー向け入口・コンソール非表示・トレイ UX は desktop 側に寄せ、CLI は玄人・自動化向けとする。正本: [`v2-vmc-and-restructure.md`](v2-vmc-and-restructure.md) §1.1、概要: [`architecture.md`](../architecture.md)「実行入口（計画・工程順）」。
+**工程順（2026 方針）**: crate **再構造化** → **CLI / desktop の 2 runner**（単体起動・コアは lib）の詳細設計・実装 → **Tauri GUI shell を desktop runner に組み込む**。一般ユーザー向け入口・コンソール非表示・トレイ UX は desktop 側に寄せ、CLI はターミナル実行・ログ確認・本体機能開発向けに残す。正本: [`v2-vmc-and-restructure.md`](v2-vmc-and-restructure.md) §1.1、概要: [`architecture.md`](../architecture.md)「実行入口（計画・工程順）」。
 
 ### 3.1 目的
 
@@ -186,12 +186,12 @@ Windows では `#[actix_web::main]` がコンソールサブシステムで走�
 
 1. **現状維持 + `--silent` 引数** — log level を WARN 以上に落として「事実上見せない」だけ。コンソールウィンドウは残る。
 2. **`#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]`** — リリースビルドだけウィンドウサブシステムに切り替え。dev は console が出る。ただしリリースビルドでターミナルから起動しても stdout がどこにも繋がらない欠点あり。
-3. **2 バイナリ分岐** — `virtual-avatar-connect.exe`（console 付き CLI）と `virtual-avatar-connect-gui.exe`（windowed, Tauri 同梱）の 2 系統を cargo features で出し分ける。配布時は GUI 版がメイン、CLI 版は power user 向け。
+3. **2 バイナリ分岐** — `virtual-avatar-connect-cli.exe`（console 付き CLI）と `virtual-avatar-connect-desktop.exe`（windowed, tray 常駐, Tauri 同梱）の 2 系統。配布時は desktop 版がメイン、CLI 版は power user / developer 向け。
 4. **動的 `AttachConsole(ATTACH_PARENT_PROCESS)`** — windowed サブシステムで起動しつつ、親がターミナルなら stdout を繋ぎ直す。実装が Windows specific かつ fragile。
 
 ### 4.3 推奨
 
-**Tauri 導入と同時に (3) を採用**（2 バイナリ: CLI = コンソール付き、desktop = windowed + Tauri shell）。再構造化後の **desktop / CLI runner** 方針（[`v2-vmc-and-restructure.md`](v2-vmc-and-restructure.md) §1.1）とまとめて進めるのがよい。それまでは (1) の `--silent` だけ先行実装してもよい（`cargo features` を切らずに動ける）。動的 console 切替 (4) は、よほど運用上困ったら検討する、くらい。
+**Tauri 導入と同時に (3) を採用**（2 バイナリ: CLI = コンソール付き、desktop = windowed + tray 常駐 + Tauri WebView）。CLI は従来型の API / ログ / 開発 runner として残し、desktop は tray 常駐を本体にする。再構造化後の **desktop / CLI runner** 方針（[`v2-vmc-and-restructure.md`](v2-vmc-and-restructure.md) §1.1）とまとめて進めるのがよい。それまでは (1) の `--silent` だけ先行実装してもよい（`cargo features` を切らずに動ける）。動的 console 切替 (4) は、よほど運用上困ったら検討する、くらい。
 
 ---
 

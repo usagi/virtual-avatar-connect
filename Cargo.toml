@@ -142,8 +142,7 @@ features = ["log_backend"]
 # Windows Only
 [target.'cfg(windows)'.dependencies]
 win-screenshot = "4.0.14"
-tao = "0.35"
-tray-icon = "0.22"
+tauri = { version = "2.10.3", default-features = true, features = ["tray-icon", "image-png"] }
 windows = { version = "0.62", features = [
  "Media_Ocr",
  "Win32_Foundation",

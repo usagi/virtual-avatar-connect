@@ -34,6 +34,8 @@ pub enum ShutdownReason {
 	CtrlC,
 	/// `POST /api/v1/control/shutdown`（GUI の「アプリ終了」ボタン含む）。
 	ControlApi,
+	/// desktop runner の tray / window close からの停止要求。
+	Desktop,
 	/// 将来的な致命的エラー経路（現状は未使用だが、今後 `run()` 内で `?` を直叩きする前に
 	/// 明示的に `trigger(Fatal)` を呼べるように取っておく）。
 	Fatal,
@@ -44,6 +46,7 @@ impl ShutdownReason {
 		match self {
 			Self::CtrlC => "ctrl_c",
 			Self::ControlApi => "control_api",
+			Self::Desktop => "desktop",
 			Self::Fatal => "fatal",
 		}
 	}

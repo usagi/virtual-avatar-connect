@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 /// conf ロード済み・`run_with` 済みの状態から起動する VAC 常駐ランタイム本体。
 ///
-/// CLI / desktop / Tauri runner は、最終的にこの `boot` / `serve` / `cleanup`
+/// CLI / desktop runner は、最終的にこの `boot` / `serve` / `cleanup`
 /// 境界を共有する。現時点では `run_vac_application` が従来通り直列に呼ぶ。
 pub struct AppCore {
 	conf: Conf,

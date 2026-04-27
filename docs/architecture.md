@@ -104,7 +104,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 
 ### `src/shutdown.rs`
 
-- `ShutdownBroker`（Ctrl+C / Control API / Fatal / Tauri の 4 経路を単一 broker に集約）
+- `ShutdownBroker`（Ctrl+C / Control API / Desktop / Fatal の経路を単一 broker に集約）
 
 ### `src/migrate/`
 
@@ -164,13 +164,13 @@ UNVET (`usagi/un-virtual-eye-tracker`) の convention を踏襲し、Phase χ �
 
 ## 実行入口（計画・工程順）
 
-現状のエントリは互換 `src/main.rs` → `lib::run()` に加え、`virtual-avatar-connect-cli` → `run_cli()`、`virtual-avatar-connect-desktop` → `run_desktop_headless()` の **2 runner 構成**を持つ。いずれも同一コア（`AppCore`）から起動する薄い runner で、desktop は Tauri / tray 導入前の headless runner として先に binary 名と Windows release subsystem policy を固定する。詳細・名称の正本は [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1 / §1.2。再構造化の **Step 4〜9 チェックリスト**は [`roadmap.md`](roadmap.md)「v2 crate / runner / GUI 同梱」。実装順と担当境界は [`roadmap/crate-runner-desktop-restructure.md`](roadmap/crate-runner-desktop-restructure.md)。
+現状のエントリは `virtual-avatar-connect-cli` → `run_cli()`、`virtual-avatar-connect-desktop` → `run_desktop()` の **2 runner 構成**を持つ。いずれも同一コア（`AppCore`）から起動する薄い runner。CLI はターミナル実行・ログ確認・本体機能開発向けで、従来通り Control API と GUI 配信を起動する。GUI 開発は `gui` 側の `npm run dev` と組み合わせる。desktop は一般配布向けで、システムトレイ常駐を本体とし、tray の `GUI を開く` または左ダブルクリックから Tauri WebView GUI を表示する。root package 名と同名の `virtual-avatar-connect.exe` alias は配布物を紛らわしくするため作らない。詳細・名称の正本は [`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1 / §1.2。再構造化の **Step 4〜9 チェックリスト**は [`roadmap.md`](roadmap.md)「v2 crate / runner / GUI 同梱」。実装順と担当境界は [`roadmap/crate-runner-desktop-restructure.md`](roadmap/crate-runner-desktop-restructure.md)。
 
 **推奨する実装順**
 
 1. **crate 再構造化**（`vac-core` 等、`v2` 計画書 §3）— 境界が固まってから runner を増やす。
 2. **CLI runner と desktop runner** の詳細設計・実装 — どちらも単体起動可能（CLI はコンソール付き玄人向け、desktop はコンソール非表示・一般ユーザー向け入口）。
-3. **Tauri（Phase ε-2）** を **desktop 版に組み込む** — ネイティブウィンドウ／トレイ統合はコンソールを出さない側に寄せる。
+3. **Tauri（Phase ε-2）** を **desktop 版へ組み込む** — desktop 版では tray 常駐を主動線にし、tray から window を show / focus する。CLI は API / ログ / 開発用 runner として残す。
 
 **GUI 静的ファイル**: Svelte の **ビルド済み** `gui/dist` を専用 crate またはモジュールに同梱し、CLI／desktop の両方から **内蔵配信**できるようにする（詳細は v2 計画書 §1.2）。**GitHub Actions 等の CI は** v2 計画書 **§1.3**（部分 CI を今は入れない）に従い、ワークスペース確定後にまとめて設計する。
 

@@ -99,17 +99,16 @@ pub async fn run_cli() -> Result<()> {
 	run_with_standard_bootstrap().await
 }
 
-/// Tauri / tray 導入前の desktop runner 入口。
+/// Tauri / tray を使わない desktop runner 入口。
 ///
-/// 現時点では CLI と同じ runtime を起動する。binary 名と subsystem policy を先に分け、
-/// 後続で system tray / Tauri shell をこの入口へ載せる。
+/// 非 Windows fallback として CLI と同じ runtime を起動する。
 pub async fn run_desktop_headless() -> Result<()> {
 	run_with_standard_bootstrap().await
 }
 
 /// system tray 付きの desktop runner。
 ///
-/// Windows では tray menu から GUI を開き、`ShutdownBroker` 経由で VAC を終了する。
+/// Windows では tray menu から Tauri WebView GUI を開き、`ShutdownBroker` 経由で VAC を終了する。
 /// それ以外の OS は Tauri shell 導入まで headless desktop runner と同じ起動にする。
 pub fn run_desktop() -> Result<()> {
 	desktop::run()

@@ -21,8 +21,8 @@ v2 GUI を常駐ランタイムの管制卓と Flowgraph Studio へ再設計す�
 
 ### Phase ε — Shutdown 統合と Tauri 移行段取り
 
-- [x] ε-1 ShutdownBroker（Ctrl+C / POST /shutdown / Fatal / Tauri の 4 経路集約）
-- [ ] ε-2 Tauri ネイティブウィンドウ化 / CLI 可視性ポリシー（**保留**、GUI 安定後に再開）。**着手順の方針**: crate 再構造化 → `virtual-avatar-connect-cli` / `virtual-avatar-connect-desktop`（仮称）の 2 runner → **Tauri は desktop にのみ**組み込む（[`architecture.md`](architecture.md)「実行入口」、[`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1）。
+- [x] ε-1 ShutdownBroker（Ctrl+C / POST /shutdown / Desktop / Fatal の経路集約）
+- [ ] ε-2 Tauri ネイティブウィンドウ化 / CLI 可視性ポリシー（**実装中**）。**着手順の方針**: crate 再構造化 → `virtual-avatar-connect-cli` / `virtual-avatar-connect-desktop` の 2 runner → **Tauri は desktop runner に組み込む**。desktop は tray 常駐を主動線にし、CLI は従来型の API / ログ / 開発 runner として残す（[`architecture.md`](architecture.md)「実行入口」、[`roadmap/v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1）。
 - 仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
 
 ### Phase ζ — v2 → main merge 準備
@@ -195,10 +195,10 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] Step 6b（crate）: **`vac-gui-assets`** メンバ（`include_dir` + `build.rs`）。**CI は §1.3 どおり未着手**
 - [x] Step 7（一段）: `src/app_core.rs` の `run_vac_application`（`ShutdownBroker` 以降〜 cleanup）+ `run_services` 集約。将来 `vac-app` への切り出し境界
 - [x] Step 7d: crate / runner / desktop 再編の実装順と担当境界を固定（[`roadmap/crate-runner-desktop-restructure.md`](roadmap/crate-runner-desktop-restructure.md)）
-- [x] R1: `AppCore::boot` / `serve` / `cleanup` 分離。CLI / desktop / Tauri runner が共有する起動境界をコード上に固定
-- [x] R2/R3: `run_cli` / `run_desktop_headless` entry API と `virtual-avatar-connect-cli` / `virtual-avatar-connect-desktop` bin を追加（互換 `virtual-avatar-connect` は CLI alias）
+- [x] R1: `AppCore::boot` / `serve` / `cleanup` 分離。CLI / desktop runner が共有する起動境界をコード上に固定
+- [x] R2/R3: `run_cli` / `run_desktop_headless` entry API と `virtual-avatar-connect-cli` / `virtual-avatar-connect-desktop` bin を追加（root package 名と同名の exe alias は作らない）
 - [x] Step 8: CLI / desktop の 2 runner（仮称どおり）
-- [ ] Step 9: desktop に Tauri + 同梱静的 + トレイ
+- [ ] Step 9: desktop に Tauri WebView + 同梱静的 + トレイ（Windows tray first slice は実装済み。desktop は tray から Tauri WebView を開く。CLI は API / ログ / 開発用として維持）
 
 ---
 
@@ -304,7 +304,7 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 
 ### ε-2 Tauri ネイティブウィンドウ化
 
-ψ-α / ν / ν-β / Phase ο 以降の Flowgraph 拡張と並行、または一段落した後に検討（ユーザー意向として "GUI の Tauri 化" を積んでいる）。**実装順**: 再構造化 → CLI + desktop の 2 実行ファイル → desktop へ Tauri を載せる（§3 先頭、[`v2-vmc-and-restructure.md`](roadmap/v2-vmc-and-restructure.md) §1.1）。仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
+ψ-α / ν / ν-β / Phase ο 以降の Flowgraph 拡張と並行、または一段落した後に検討（ユーザー意向として "GUI の Tauri 化" を積んでいる）。**実装順**: 再構造化 → CLI + desktop の 2 実行ファイル → desktop runner に Tauri WebView と tray 常駐 UX を載せる。CLI は従来型の API / ログ / 開発 runner として維持する。仕様書: [`roadmap/phase-epsilon-shutdown-and-tauri.md`](roadmap/phase-epsilon-shutdown-and-tauri.md)
 
 ### 長期 backlog（phase 立て前の候補リスト）
 

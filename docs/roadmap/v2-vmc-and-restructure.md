@@ -53,12 +53,13 @@ VAC
 
 1. **crate 再構造化**（本書 §3）— `vac-core` 等へ責務を分け、コア API を安定させる。
 2. **2 実行ファイルの runner** — 詳細設計のあと実装する。いずれも **単体起動可能**で、コアは **同一ライブラリ**を呼ぶ薄い `main`（配布形態として「玄人用」と「一般用」を分ける）。
-3. **Tauri（Phase ε-2）** — **desktop runner に組み込む**。CLI 側に Tauri を載せない。
+3. **Tauri（Phase ε-2）** — **desktop runner に組み込む**。CLI は API / ログ / 本体機能開発を優先する従来型 runner として残す。
 
 **CLI 版（仮称 `virtual-avatar-connect-cli` 等）**
 
 - **コンソールが付く**。ログやデバッグをそのまま見られることが価値。
 - 対象: 開発者、スクリプト・CI、詳細ログが欲しい玄人。**一般ユーザーに「ターミナルを最小化してブラウザだけ使う」ことは期待しない**（黒いウィンドウの存在だけで不安になる人もいる）。
+- GUI 配信と Control API は内蔵する。GUI 開発は `gui` 側の `npm run dev` と組み合わせ、CLI 自体は Tauri shell を持たない。
 
 **desktop 版（仮称 `virtual-avatar-connect-desktop` 等）**
 
@@ -68,7 +69,7 @@ VAC
 
 **Tauri の位置づけ**
 
-- ブラウザで LAN 越しに操作する経路は維持しつつ、**ネイティブウィンドウ＋トレイ**は desktop プロセスの shell として載せる（[`phase-epsilon-shutdown-and-tauri.md`](phase-epsilon-shutdown-and-tauri.md) §3 の方針と一致）。
+- ブラウザで LAN 越しに操作する経路は維持しつつ、**Tauri GUI shell** は desktop プロセスの shell として載せる。desktop では tray 常駐と window show / focus を統合する（[`phase-epsilon-shutdown-and-tauri.md`](phase-epsilon-shutdown-and-tauri.md) §3 の方針と一致）。
 
 ### 1.2 GUI 静的成果物の内蔵（`npm run dev` なしで設定 GUI）
 
@@ -375,9 +376,11 @@ flowgraph.motion.map
 
 * **`virtual-avatar-connect-cli`** / **`virtual-avatar-connect-desktop`**（仮称）の `[[bin]]` 2 本。いずれも `vac-core` + `AppCore` 経路を共有（§1.1）。
 
-#### Step 9 — desktop に Tauri + 同梱静的
+#### Step 9 — desktop Tauri GUI shell + 同梱静的 + tray
 
-* WebView の入口を **同梱 GUI**（§1.2、[`phase-epsilon-shutdown-and-tauri.md`](phase-epsilon-shutdown-and-tauri.md) §3.6）に切り替え可能にする。Control API はループバック HTTP のまま。トレイ・`ShutdownBroker` 連携。
+* WebView の入口を **同梱 GUI**（§1.2、[`phase-epsilon-shutdown-and-tauri.md`](phase-epsilon-shutdown-and-tauri.md) §3.6）に切り替え可能にする。Control API はループバック HTTP のまま。
+* Tauri GUI shell は desktop runner に組み込む。desktop では tray の `GUI を開く` / 左ダブルクリックから window show / focus する。
+* tray / window / Control API の停止導線は `ShutdownBroker` に合流させる。
 
 ---
 
