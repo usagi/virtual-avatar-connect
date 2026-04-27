@@ -137,6 +137,9 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.math.sqrt`](#flowgraph-math-sqrt) — Float sqrt
   - [`flowgraph.math.tan`](#flowgraph-math-tan) — Float tan
   - [`flowgraph.math.tanh`](#flowgraph-math-tanh) — Float tanh
+- **mode**
+  - [`flowgraph.mode.equals`](#flowgraph-mode-equals) — Mode Equals
+  - [`flowgraph.mode.get`](#flowgraph-mode-get) — Mode Get
 - **noise**
   - [`flowgraph.noise.perlin_1d`](#flowgraph-noise-perlin-1d) — Perlin 1D
   - [`flowgraph.noise.perlin_2d`](#flowgraph-noise-perlin-2d) — Perlin 2D
@@ -1785,6 +1788,28 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `result` | `quantity` |  |
+
+## mode
+
+### `flowgraph.mode.equals`
+
+**Mode Equals** — 実効 Runtime Mode が expected と一致するか（前後空白は無視）。未上書き時は default_runtime_mode 相当と比較。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `expected` | `string` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `equals` | `bool` |  |
+
+### `flowgraph.mode.get`
+
+**Mode Get** — 現在の実効 Runtime Mode ID。Control API で上書きした値。未上書き時は conf.default_runtime_mode に従う（空のことあり）。
+
+| Output | Type | Note |
+|---|---|---|
+| `mode` | `string` |  |
 
 ## noise
 

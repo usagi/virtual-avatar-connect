@@ -41,6 +41,19 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 
 仕様の正本: [`../roadmap/phase-mu-vmc-motion-m0.md`](../roadmap/phase-mu-vmc-motion-m0.md)（Phase M2 は同 doc §9）。例: リポジトリ直下の [`conf.example-motion.toml`](../../conf.example-motion.toml)。
 
+## 3.2 `[modes.*]` — Runtime Mode 宣言 (RM-1)
+
+| キー | 型 | 既定値 | 説明 |
+|---|---|---|---|
+| `[modes.<id>]` | テーブル | なし | `<id>` はモード識別子（例 `daily`, `streaming`）。省略時は `modes` なしとして扱われる |
+| `default_runtime_mode` | string | なし | 起動直後に選ぶ mode ID。指定時は `[modes.<同一 id>]` が必須 |
+| `display_name` | string | なし | GUI 表示用の人間向けラベル |
+| `flowgraph_groups.enable` | string 配列 | `[]` | 有効化したい Flowgraph グループ名 |
+| `flowgraph_groups.disable` | string 配列 | `[]` | 無効化したいグループ名（同一モード内で enable と重複不可） |
+| `managed_apps.start` / `stop` / `minimize` / `leave` | string 配列 | `[]` | `run_with` から解決される Managed App ID（明示 `id` または `run-with-<n>`） |
+
+ロード時に `managed_apps.*` の各 ID が `run_with` と整合するか検証される。意味論・将来の Mode Manager との関係は [`../roadmap/runtime-mode-roadmap.md`](../roadmap/runtime-mode-roadmap.md) を参照。
+
 ## 4. 永続化 / 添付
 
 | キー | 型 | 既定値 | 説明 |
@@ -61,6 +74,12 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 | `require_token_for_non_loopback` | bool | `true` | LAN / 外部接続に Bearer 必須 |
 
 ※ 環境変数 `VAC_CONTROL_API_BEARER_TOKEN` でもトークンを渡せる（`conf.toml` より優先）。
+
+#### Runtime Mode API（RM-3）
+
+- `GET /api/v1/control/modes` — 応答 `mode_ids: string[]`（`[modes.*]` のキー一覧）。
+- `GET /api/v1/control/modes/current` — 応答 `mode: string | null`（`null` は `default_runtime_mode` に従うことを意味する）。
+- `PUT /api/v1/control/modes/current` — 本文 JSON `{"mode": "..."}` または `{"mode": null}`。既知の mode 以外は 400。成功時に Flowgraph exec ゲートを再計算。
 
 ### 5.1 `[[control_api.tables]]` — 辞書 / 汎用 Table の GUI 編集許可リスト (Phase φ)
 

@@ -21,6 +21,32 @@ variants = ["a", "b", "c"]
 - 同一ファイル内で `id` は一意である必要があります。
 - GUI のパレットに **`user_defined`** カテゴリが現れ、各 variant を **`flowgraph.literal.string` のプリセット**として追加できます（保存時に `[[enums]]` は元ファイルから引き継がれます）。
 
+## `[meta].mode_groups` / `default_enabled`（RM-3）
+
+Runtime Mode と Flowgraph の対応付け用メタデータ（[`../roadmap/runtime-mode-roadmap.md`](../roadmap/runtime-mode-roadmap.md) §5）。
+
+```toml
+[meta]
+mode_groups = ["rss", "alerts"]
+default_enabled = true
+```
+
+- **`mode_groups`**: `conf.toml` の `[modes.*].flowgraph_groups` が参照するグループ名のリスト。空なら「mode による有効化制御の対象外」。
+- **`default_enabled`**: 省略時は **`true`**（既存ファイルは従来どおり常時有効扱い）。`false` にすると、mode 未適用環境では既定で inactive 寄りに扱う想定（Mode Manager 実装で解釈）。
+- **`mode_groups` に空文字列を含めるとロードエラー**（診断コード `invalid-mode-metadata`）。
+
+ロード結果は `GET /api/v1/control/flowgraph/diagnostics` の JSON に **`file_activation`**（ファイル fq → 上記 2 フィールド）として載る。
+
+### ランタイム（exec 抑止）
+
+`conf.toml` に `[modes.*]` があり、かつ **`default_runtime_mode`** が有効な mode を指しているとき、各ファイルの `mode_groups` と当該 mode の `flowgraph_groups.enable` / `disable` から **そのファイルに属するノードの exec 経路**（初期ソース・外部 trigger・exec 連鎖）が抑止されます。**Pure/Stateful の pull 評価**は止めません（他ファイルからのデータ参照を維持）。
+
+診断 API では **`inactive_exec_nodes`** に抑止中のノード fq ID が列挙されます。`[modes.*]` が空、または `default_runtime_mode` 未設定のときは従来どおり全 exec 許可です。
+
+`[meta].mode_groups` の各名前は、**いずれかの** `[modes.*].flowgraph_groups`（enable または disable）に一度も出てこない場合、ロード時に診断 **`orphan-mode-group`**（警告）が付きます（typo 検出用）。
+
+`PUT/GET` の modes 系 API は、**毎回** `conf.source_path` から `Conf` を再読し、`[modes.*]` の定義と照合する。in-memory なのは **現在選択 mode ID**（`default_runtime_mode` より優先）だけ。
+
 ## ライブラリ境界ノード（v0）
 
 | feature | 説明 |

@@ -5,6 +5,34 @@
 
 ## [Unreleased]
 
+### RM-1 — `conf.toml` に `[modes.*]`（Runtime Mode 宣言）を追加
+
+- **`src/conf/runtime_mode.rs`**: `modes` / `default_runtime_mode` の serde 用型とロード時検証（Managed App ID と `run_with` の整合、enable/disable の重複禁止）。
+- **`Conf::load`**: 上記検証をパース直後に実行（`new_noop_probe` 経由の事前確認にも効く）。
+- **`docs/manual/conf-reference.md`**: §3.2 を追加。
+
+### RM-3（一部）— Flowgraph `[meta]` の mode 用メタとローダ出力
+
+- **`FileMeta`**: `mode_groups` / `default_enabled`（省略時 `true`）。空のグループ名はロードエラー（`DiagnosticCode::InvalidModeMetadata`）。
+- **`LoadReport` / `FlowgraphRuntime`**: ファイル fq → `FlowgraphFileActivationMeta` の `file_activation`。
+- **`GET .../flowgraph/diagnostics`**: レスポンスに `file_activation` を追加。
+- **`docs/manual/flowgraph-enum-and-library.md`**: RM-3 節を追加。
+
+### RM-3（続き）— exec 経路の活性と trigger 抑止
+
+- **`src/flowgraph/activation.rs`**: `conf` + `file_activation` + ノードメタから exec 活性を解決する `TriggerGate`（`default_runtime_mode` と `[modes.*].flowgraph_groups` を使用）。
+- **`FlowgraphProgram::fire_node`**: ゲートで非活性のノードは exec 処理をスキップ（pull 由来の Pure/Stateful 評価は従来どおり）。
+- **`run_forever_with_bus`**: 任意の `TriggerGate` を `ExecCtx` に渡せるよう拡張。
+- **`FlowgraphRuntime::load_and_spawn`**: `conf: Option<&Conf>` を受け取りワーカーにゲートを渡す。`State::new` は `Some(conf)`、reload は `conf_source_path` から再読込。
+- **診断 JSON**: `inactive_exec_nodes` を追加。
+
+### RM-2 / RM-3（続き）— Runtime Mode の整合・Control API・Pure での観測
+
+- **`orphan-mode-group`**: `[meta].mode_groups` の名前がいずれの `[modes].*.flowgraph_groups` にも出ない場合に warning 診断（`OrphanModeGroup`）。
+- **`State.runtime_mode_id`**: 現在の mode 上書き（`None`＝`default_runtime_mode` 相当）。`PUT /api/v1/control/modes/current` で更新し **`TriggerGate::recompute`** で exec 抑止を即時再計算。
+- **Control API**: `GET/PUT /api/v1/control/modes`、`GET .../modes/current`（`conf_source_path` 必須）。
+- **`PureEvalHost`**: `PureNode::compute` に engine から渡す隻参照（`runtime_mode` 共有スロット + `default_runtime_mode`）。`flowgraph.mode.get` / `flowgraph.mode.equals`（観測ノード、RM-2 節 `runtime-mode-roadmap.md` 対応）。
+
 ### 内部リファクタ — Control API `actions` / `dto` / `ping` / `shutdown` / `ingress` モジュール分割
 
 - **`src/web_interface/control/actions/`**: 旧 `actions.rs` を `mod.rs`（snapshot・`PauseTarget`・ルート）と `pause.rs`（pause/resume 適用・`resolve_ai_index`・単体テスト）に分割。
