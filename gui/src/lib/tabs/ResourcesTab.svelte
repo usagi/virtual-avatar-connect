@@ -7,7 +7,7 @@
   */
  import OAuthPanel from '../OAuthPanel.svelte';
  import PausePanel from '../PausePanel.svelte';
- import WidgetSlot from '../WidgetSlot.svelte';
+ import ResourceOverviewPanel from '../resources/ResourceOverviewPanel.svelte';
  import RunWithEditorPanel from './RunWithEditorPanel.svelte';
 </script>
 
@@ -17,12 +17,8 @@
   <PausePanel />
  </div>
  <div class="space-y-4">
+  <ResourceOverviewPanel />
   <OAuthPanel />
-  <WidgetSlot
-   title="Avatar / OBS / TTS connectors"
-   subtitle="planned resources"
-   placeholder="OBS, Warudo, TTS, and avatar bridges will live here as external resources coordinated by Runtime Mode."
-  />
  </div>
 </div>
 
