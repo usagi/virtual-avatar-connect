@@ -58,7 +58,7 @@ virtual-avatar-connect/
 - [`architecture.md`](../architecture.md) と [`roadmap.md`](../roadmap.md) から本書へリンクする。
 - `v2-vmc-and-restructure.md` の Step 7〜9 と矛盾しないようにする。
 
-### R1: `AppCore` API を runner 前提に分ける
+### R1: `AppCore` API を runner 前提に分ける（実装済み）
 
 現状の `src/app_core.rs` は `run_vac_application(conf, audio_sink)` の中で boot、serve、cleanup を直列に実行している。これを次の形へ寄せる。
 

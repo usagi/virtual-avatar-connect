@@ -46,7 +46,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 
 ### `src/app_core.rs`
 
-- 再構造化 Step 7 の一段: `ShutdownBroker` / `State::new` / bridges・motion・Control API・HTTP サーバ・shutdown cleanup を集約。将来 `vac-app` runner に移す境界の目印。
+- 再構造化 Step 7 / R1: `AppCore::boot` / `serve` / `cleanup` に分離。`ShutdownBroker` / `State::new` / bridges・motion・Control API・HTTP サーバ・shutdown cleanup を集約し、将来 `vac-app` runner に移す境界の目印。
 
 ### `src/conf/`
 

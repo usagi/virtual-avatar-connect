@@ -195,6 +195,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] Step 6b（crate）: **`vac-gui-assets`** メンバ（`include_dir` + `build.rs`）。**CI は §1.3 どおり未着手**
 - [x] Step 7（一段）: `src/app_core.rs` の `run_vac_application`（`ShutdownBroker` 以降〜 cleanup）+ `run_services` 集約。将来 `vac-app` への切り出し境界
 - [x] Step 7d: crate / runner / desktop 再編の実装順と担当境界を固定（[`roadmap/crate-runner-desktop-restructure.md`](roadmap/crate-runner-desktop-restructure.md)）
+- [x] R1: `AppCore::boot` / `serve` / `cleanup` 分離。CLI / desktop / Tauri runner が共有する起動境界をコード上に固定
 - [ ] Step 8: CLI / desktop の 2 runner（仮称どおり）
 - [ ] Step 9: desktop に Tauri + 同梱静的 + トレイ
 

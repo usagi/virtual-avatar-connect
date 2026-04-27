@@ -6,11 +6,11 @@
 //! `flowgraph.ingress.vmc_udp` の `__content__`（Base64）をそのまま `payload_b64` に渡す想定。
 
 use crate::flowgraph::node::{
-	get_optional_float, get_optional_string, get_required_motion_frame, get_required_string, ExecFireSet, InputMap,
-	NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec, PureNode,
+	get_optional_float, get_optional_string, get_required_motion_frame, get_required_string, ExecFireSet, InputMap, NodeDescriptor,
+	NodeExecError, NodeOutput, NodeSpec, PortSpec, PureNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
-use crate::motion::{parse_vmc_payload, MotionFrame};
+use crate::motion::parse_vmc_payload;
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 
@@ -23,7 +23,8 @@ impl NodeDescriptor for VmcParseNode {
 			title: "Motion: VMC OSC Parse".into(),
 			category: "motion".into(),
 			description: Some(
-				"Base64 された UDP ペイロードを OSC として解釈し、[`MotionFrame`]（`motion_frame`）を出力。`json` へ接続時は自動変換".into(),
+				"Base64 された UDP ペイロードを OSC として解釈し、[`MotionFrame`]（`motion_frame`）を出力。`json` へ接続時は自動変換"
+					.into(),
 			),
 			inputs: vec![PortSpec::input("payload_b64", "Payload (Base64)", SocketType::String)],
 			outputs: vec![PortSpec::output("frame", "Frame", SocketType::MotionFrame)],
@@ -108,7 +109,8 @@ impl NodeDescriptor for MotionMapNode {
 			title: "Motion: Map Numeric Args".into(),
 			category: "motion".into(),
 			description: Some(
-				"各 `osc_messages[].args` の JSON 数値を再帰的に `float_scale` 倍する。入出力は `motion_frame`（`json` へ coerce 可）".into(),
+				"各 `osc_messages[].args` の JSON 数値を再帰的に `float_scale` 倍する。入出力は `motion_frame`（`json` へ coerce 可）"
+					.into(),
 			),
 			inputs: vec![
 				PortSpec::input("frame", "Frame", SocketType::MotionFrame),
@@ -142,6 +144,7 @@ impl PureNode for MotionMapNode {
 mod tests {
 	use super::*;
 	use crate::flowgraph::node::PureEvalHost;
+	use crate::motion::MotionFrame;
 	use serde_json::json;
 
 	fn frame_from_json(v: serde_json::Value) -> MotionFrame {
