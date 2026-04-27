@@ -1061,7 +1061,7 @@ mod integration_tests {
 			}
 		});
 		let shutdown = tokio::time::sleep(Duration::from_millis(300));
-		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown)
+		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown, None)
 			.await
 			.expect("run_forever_with_bus");
 		sender.await.unwrap();
@@ -1112,7 +1112,7 @@ mod integration_tests {
 			);
 		});
 		let shutdown = tokio::time::sleep(Duration::from_millis(500));
-		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown)
+		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown, None)
 			.await
 			.expect("run_forever_with_bus");
 		sender.await.unwrap();

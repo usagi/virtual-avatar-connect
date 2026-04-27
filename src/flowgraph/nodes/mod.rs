@@ -70,6 +70,7 @@ pub mod literal;
 pub mod log;
 pub mod logic;
 pub mod math;
+pub mod mode;
 pub mod ocr;
 pub mod random_noise;
 pub mod rate_limit;

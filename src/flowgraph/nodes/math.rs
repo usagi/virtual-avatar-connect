@@ -59,7 +59,7 @@ macro_rules! int_binop_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let a = get_required_int(inputs, "a")?;
 				let b = get_required_int(inputs, "b")?;
 				let op: fn(i64, i64) -> Result<i64, anyhow::Error> = $fn;
@@ -112,7 +112,7 @@ macro_rules! int_unary_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let x = get_required_int(inputs, "x")?;
 				let op: fn(i64) -> i64 = $fn;
 				Ok(NodeOutput::new().set_data("result", SocketValue::Int(op(x))))
@@ -162,7 +162,7 @@ impl NodeDescriptor for IntClampNode {
 
 #[async_trait]
 impl PureNode for IntClampNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let v = get_required_int(inputs, "value")?;
 		let lo = get_required_int(inputs, "lo")?;
 		let hi = get_required_int(inputs, "hi")?;
@@ -203,7 +203,7 @@ macro_rules! float_binop_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let a = get_required_quantity(inputs, "a")?;
 				let b = get_required_quantity(inputs, "b")?;
 				let op: fn(
@@ -273,7 +273,7 @@ macro_rules! float_unary_pass_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let q = get_required_quantity(inputs, "x")?;
 				let op: fn(f64) -> f64 = $fn;
 				let r = Quantity::of(op(q.value), q.unit.clone());
@@ -364,7 +364,7 @@ macro_rules! float_unary_dimless_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let q = get_required_quantity(inputs, "x")?;
 				let v = require_dimensionless(q, $feature, "x")?;
 				let op: fn(f64) -> f64 = $fn;
@@ -482,7 +482,7 @@ impl NodeDescriptor for FloatSqrtNode {
 
 #[async_trait]
 impl PureNode for FloatSqrtNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "x")?;
 		let r = q.try_sqrt().map_err(|e| NodeExecError::Generic(anyhow::anyhow!(e)))?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Quantity(r)))
@@ -527,7 +527,7 @@ macro_rules! float_same_dim_binop_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let a = get_required_quantity(inputs, "a")?;
 				let b = get_required_quantity(inputs, "b")?;
 				let (av, bv) = resolve_same_dim_pair(a, b, $feature)?;
@@ -582,7 +582,7 @@ impl NodeDescriptor for FloatClampNode {
 
 #[async_trait]
 impl PureNode for FloatClampNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let value = get_required_quantity(inputs, "value")?;
 		let lo = get_required_quantity(inputs, "lo")?;
 		let hi = get_required_quantity(inputs, "hi")?;
@@ -648,7 +648,7 @@ macro_rules! float_trig_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let q = get_required_quantity(inputs, "x")?;
 				let rad = quantity_to_radians(q, $feature, "x")?;
 				let op: fn(f64) -> f64 = $fn;
@@ -703,7 +703,7 @@ macro_rules! float_arctrig_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let q = get_required_quantity(inputs, "x")?;
 				let v = require_dimensionless(q, $feature, "x")?;
 				let op: fn(f64) -> f64 = $fn;
@@ -763,7 +763,7 @@ impl NodeDescriptor for FloatAtan2Node {
 
 #[async_trait]
 impl PureNode for FloatAtan2Node {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let y = get_required_quantity(inputs, "y")?;
 		let x = get_required_quantity(inputs, "x")?;
 		let (yv, xv) = resolve_same_dim_pair(y, x, "flowgraph.math.atan2")?;
@@ -799,7 +799,7 @@ impl NodeDescriptor for FloatPowNode {
 
 #[async_trait]
 impl PureNode for FloatPowNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let base = get_required_quantity(inputs, "base")?;
 		let exp = get_required_quantity(inputs, "exp")?;
 		let b = require_dimensionless(base, "flowgraph.math.pow", "base")?;
@@ -836,7 +836,7 @@ impl NodeDescriptor for FloatLerpNode {
 
 #[async_trait]
 impl PureNode for FloatLerpNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let a = get_required_quantity(inputs, "a")?;
 		let b = get_required_quantity(inputs, "b")?;
 		let t = get_required_quantity(inputs, "t")?;
@@ -871,7 +871,7 @@ impl NodeDescriptor for FloatInverseLerpNode {
 
 #[async_trait]
 impl PureNode for FloatInverseLerpNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let a = get_required_quantity(inputs, "a")?;
 		let b = get_required_quantity(inputs, "b")?;
 		let v = get_required_quantity(inputs, "v")?;
@@ -916,7 +916,7 @@ impl NodeDescriptor for FloatRemapNode {
 
 #[async_trait]
 impl PureNode for FloatRemapNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let value = get_required_quantity(inputs, "value")?;
 		let in_lo = get_required_quantity(inputs, "in_lo")?;
 		let in_hi = get_required_quantity(inputs, "in_hi")?;
@@ -983,7 +983,7 @@ impl NodeDescriptor for FloatSmoothstepNode {
 
 #[async_trait]
 impl PureNode for FloatSmoothstepNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let edge0 = get_required_quantity(inputs, "edge0")?;
 		let edge1 = get_required_quantity(inputs, "edge1")?;
 		let x = get_required_quantity(inputs, "x")?;
@@ -1037,7 +1037,7 @@ impl NodeDescriptor for FloatDegToRadNode {
 
 #[async_trait]
 impl PureNode for FloatDegToRadNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "x")?;
 		let out = if q.is_dimensionless() {
 			Quantity::of(q.value * std::f64::consts::PI / 180.0, Unit::radian())
@@ -1074,7 +1074,7 @@ impl NodeDescriptor for FloatRadToDegNode {
 
 #[async_trait]
 impl PureNode for FloatRadToDegNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "x")?;
 		let out = if q.is_dimensionless() {
 			Quantity::of(q.value * 180.0 / std::f64::consts::PI, Unit::degree())
@@ -1131,7 +1131,7 @@ macro_rules! normalize_angle_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let q = get_required_quantity(inputs, "x")?;
 				let make_unit: fn() -> Unit = $unit_fn;
 				let (v, was_dimless) = angle_to_unit(q, make_unit(), $feature)?;
@@ -1210,27 +1210,27 @@ mod tests {
 	#[tokio::test]
 	async fn int_arithmetic_existing() {
 		let out = IntAddNode
-			.compute(&InputMap::new(), &int_in(3, 4), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &int_in(3, 4), &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Int(7)));
 		let out = IntSubNode
-			.compute(&InputMap::new(), &int_in(10, 3), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &int_in(10, 3), &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Int(7)));
 		let out = IntMulNode
-			.compute(&InputMap::new(), &int_in(6, 7), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &int_in(6, 7), &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Int(42)));
 		let out = IntDivNode
-			.compute(&InputMap::new(), &int_in(20, 4), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &int_in(20, 4), &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Int(5)));
 		let out = IntModNode
-			.compute(&InputMap::new(), &int_in(17, 5), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &int_in(17, 5), &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Int(2)));
@@ -1239,7 +1239,7 @@ mod tests {
 	#[tokio::test]
 	async fn int_div_by_zero_errors() {
 		let e = IntDivNode
-			.compute(&InputMap::new(), &int_in(1, 0), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &int_in(1, 0), &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(e, NodeExecError::Generic(_)));
@@ -1248,12 +1248,12 @@ mod tests {
 	#[tokio::test]
 	async fn int_min_max() {
 		let out = IntMinNode
-			.compute(&InputMap::new(), &int_in(3, 7), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &int_in(3, 7), &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Int(3)));
 		let out = IntMaxNode
-			.compute(&InputMap::new(), &int_in(3, 7), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &int_in(3, 7), &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Int(7)));
@@ -1262,9 +1262,9 @@ mod tests {
 	#[tokio::test]
 	async fn int_abs_and_sign() {
 		let inputs: InputMap = [("x".into(), SocketValue::Int(-5))].into_iter().collect();
-		let out = IntAbsNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = IntAbsNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Int(5)));
-		let out = IntSignNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = IntSignNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Int(-1)));
 	}
 
@@ -1277,7 +1277,7 @@ mod tests {
 		]
 		.into_iter()
 		.collect();
-		let out = IntClampNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = IntClampNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Int(15)));
 	}
 
@@ -1286,7 +1286,7 @@ mod tests {
 		let inputs: InputMap = [q_in("a", Quantity::dimensionless(1.5)), q_in("b", Quantity::dimensionless(2.5))]
 			.into_iter()
 			.collect();
-		let out = FloatAddNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatAddNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 4.0).abs() < 1e-12);
 		assert!(unwrap_q(&out).is_dimensionless());
 	}
@@ -1297,7 +1297,7 @@ mod tests {
 		let s = Quantity::of(2.0, parse_unit("s").unwrap());
 		let inputs: InputMap = [q_in("a", m), q_in("b", s)].into_iter().collect();
 		let e = FloatAddNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(e, NodeExecError::Generic(_)));
@@ -1308,7 +1308,7 @@ mod tests {
 		let m = Quantity::of(3.0, parse_unit("m").unwrap());
 		let s = Quantity::of(4.0, parse_unit("s").unwrap());
 		let inputs: InputMap = [q_in("a", m), q_in("b", s)].into_iter().collect();
-		let out = FloatMulNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatMulNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 12.0).abs() < 1e-12);
 		assert_eq!(unwrap_q(&out).unit.canonical(), "m\u{00B7}s");
 	}
@@ -1319,7 +1319,7 @@ mod tests {
 			.into_iter()
 			.collect();
 		let e = FloatDivNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(e, NodeExecError::Generic(_)));
@@ -1329,7 +1329,7 @@ mod tests {
 	async fn float_abs_preserves_unit() {
 		let m = Quantity::of(-5.0, parse_unit("m").unwrap());
 		let inputs: InputMap = [("x".into(), SocketValue::Quantity(m))].into_iter().collect();
-		let out = FloatAbsNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatAbsNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(unwrap_q(&out).value, 5.0);
 		assert_eq!(unwrap_q(&out).unit.canonical(), "m");
 	}
@@ -1340,10 +1340,10 @@ mod tests {
 		let a = Quantity::of(3.0, parse_unit("m").unwrap());
 		let b = Quantity::of(200.0, parse_unit("cm").unwrap());
 		let inputs: InputMap = [q_in("a", a.clone()), q_in("b", b.clone())].into_iter().collect();
-		let out = FloatMinNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatMinNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 2.0).abs() < 1e-9);
 		assert_eq!(unwrap_q(&out).unit.canonical(), "m");
-		let out = FloatMaxNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatMaxNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 3.0).abs() < 1e-9);
 	}
 
@@ -1353,7 +1353,7 @@ mod tests {
 		let s = Quantity::of(1.0, parse_unit("s").unwrap());
 		let inputs: InputMap = [q_in("a", m), q_in("b", s)].into_iter().collect();
 		let e = FloatMinNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(e, NodeExecError::Generic(_)));
@@ -1370,7 +1370,7 @@ mod tests {
 		.into_iter()
 		.collect();
 		let out = FloatClampNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		// value is kept in its source unit (cm internally = 0.01*m); numeric value is 150 (cm).
@@ -1382,7 +1382,7 @@ mod tests {
 	async fn float_sqrt_dimensionless() {
 		let d = Quantity::dimensionless(9.0);
 		let inputs: InputMap = [("x".into(), SocketValue::Quantity(d))].into_iter().collect();
-		let out = FloatSqrtNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatSqrtNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 3.0).abs() < 1e-12);
 		assert!(unwrap_q(&out).is_dimensionless());
 	}
@@ -1391,7 +1391,7 @@ mod tests {
 	async fn float_sqrt_m_squared_yields_length() {
 		let q = Quantity::of(9.0, parse_unit("m^2").unwrap());
 		let inputs: InputMap = [("x".into(), SocketValue::Quantity(q))].into_iter().collect();
-		let out = FloatSqrtNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatSqrtNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 3.0).abs() < 1e-12);
 		assert_eq!(unwrap_q(&out).dimension(), Dimension::LENGTH);
 	}
@@ -1401,7 +1401,7 @@ mod tests {
 		// sqrt(m^2/s^2) = m/s
 		let q = Quantity::of(25.0, parse_unit("m^2/s^2").unwrap());
 		let inputs: InputMap = [("x".into(), SocketValue::Quantity(q))].into_iter().collect();
-		let out = FloatSqrtNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatSqrtNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 5.0).abs() < 1e-12);
 		assert_eq!(unwrap_q(&out).dimension(), Dimension::VELOCITY);
 	}
@@ -1412,7 +1412,7 @@ mod tests {
 		let q = Quantity::of(4.0, parse_unit("m").unwrap());
 		let inputs: InputMap = [("x".into(), SocketValue::Quantity(q))].into_iter().collect();
 		let e = FloatSqrtNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(e, NodeExecError::Generic(_)));
@@ -1422,11 +1422,11 @@ mod tests {
 	async fn float_sinh_cosh_tanh_dimensionless() {
 		let d = Quantity::dimensionless(1.0);
 		let inputs: InputMap = [("x".into(), SocketValue::Quantity(d))].into_iter().collect();
-		let out = FloatSinhNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatSinhNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 1.0f64.sinh()).abs() < 1e-12);
-		let out = FloatCoshNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatCoshNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 1.0f64.cosh()).abs() < 1e-12);
-		let out = FloatTanhNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatTanhNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 1.0f64.tanh()).abs() < 1e-12);
 	}
 
@@ -1434,7 +1434,7 @@ mod tests {
 	async fn float_trig_accepts_deg() {
 		let ninety_deg = Quantity::of(90.0, parse_unit("deg").unwrap());
 		let inputs: InputMap = [("x".into(), SocketValue::Quantity(ninety_deg))].into_iter().collect();
-		let out = FloatSinNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatSinNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 1.0).abs() < 1e-12);
 		assert!(unwrap_q(&out).is_dimensionless());
 	}
@@ -1444,7 +1444,7 @@ mod tests {
 		let m = Quantity::of(1.0, parse_unit("m").unwrap());
 		let inputs: InputMap = [("x".into(), SocketValue::Quantity(m))].into_iter().collect();
 		let e = FloatSinNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(e, NodeExecError::Generic(_)));
@@ -1454,7 +1454,7 @@ mod tests {
 	async fn float_arctrig_returns_rad() {
 		let d = Quantity::dimensionless(1.0);
 		let inputs: InputMap = [("x".into(), SocketValue::Quantity(d))].into_iter().collect();
-		let out = FloatAtanNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatAtanNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - std::f64::consts::FRAC_PI_4).abs() < 1e-12);
 		assert_eq!(unwrap_q(&out).unit.canonical(), "rad");
 	}
@@ -1465,7 +1465,7 @@ mod tests {
 		let x = Quantity::of(1.0, parse_unit("m").unwrap());
 		let inputs: InputMap = [q_in("y", y), q_in("x", x)].into_iter().collect();
 		let out = FloatAtan2Node
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert!((unwrap_q(&out).value - std::f64::consts::FRAC_PI_4).abs() < 1e-12);
@@ -1480,7 +1480,7 @@ mod tests {
 		]
 		.into_iter()
 		.collect();
-		let out = FloatPowNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatPowNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((unwrap_q(&out).value - 1024.0).abs() < 1e-9);
 	}
 
@@ -1493,7 +1493,7 @@ mod tests {
 		]
 		.into_iter()
 		.collect();
-		let out = FloatLerpNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatLerpNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		// 0m + (1m - 0m) * 0.5 = 0.5 m
 		assert!((unwrap_q(&out).value - 0.5).abs() < 1e-9);
 		assert_eq!(unwrap_q(&out).unit.canonical(), "m");
@@ -1509,7 +1509,7 @@ mod tests {
 		.into_iter()
 		.collect();
 		let out = FloatInverseLerpNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert!((unwrap_q(&out).value - 0.5).abs() < 1e-9);
@@ -1529,7 +1529,7 @@ mod tests {
 		.into_iter()
 		.collect();
 		let out = FloatRemapNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert!((unwrap_q(&out).value - 50.0).abs() < 1e-9);
@@ -1546,7 +1546,7 @@ mod tests {
 		.into_iter()
 		.collect();
 		let out = FloatSmoothstepNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert!((unwrap_q(&out).value - 0.5).abs() < 1e-9);
@@ -1558,7 +1558,7 @@ mod tests {
 			.into_iter()
 			.collect();
 		let out = FloatDegToRadNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert!((unwrap_q(&out).value - std::f64::consts::PI).abs() < 1e-12);
@@ -1571,7 +1571,7 @@ mod tests {
 			.into_iter()
 			.collect();
 		let out = FloatDegToRadNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert!((unwrap_q(&out).value - std::f64::consts::PI).abs() < 1e-12);
@@ -1583,7 +1583,7 @@ mod tests {
 			.into_iter()
 			.collect();
 		let out = FloatNormalizeAngleDeg0To360Node
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert!((unwrap_q(&out).value - 277.33).abs() < 1e-9);
@@ -1596,7 +1596,7 @@ mod tests {
 			.into_iter()
 			.collect();
 		let out = FloatNormalizeAngleDegSignedNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert!((unwrap_q(&out).value - (-82.67)).abs() < 1e-9);
@@ -1612,7 +1612,7 @@ mod tests {
 		.into_iter()
 		.collect();
 		let out = FloatNormalizeAngleRadSignedNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert!((unwrap_q(&out).value - (-std::f64::consts::FRAC_PI_2)).abs() < 1e-12);
@@ -1628,7 +1628,7 @@ mod tests {
 		.into_iter()
 		.collect();
 		let out = FloatNormalizeAngleRad0To2piNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert!((unwrap_q(&out).value - std::f64::consts::PI).abs() < 1e-12);

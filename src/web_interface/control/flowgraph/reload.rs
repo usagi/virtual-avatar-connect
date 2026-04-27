@@ -48,7 +48,23 @@ pub(crate) async fn reload_runtime(state: &SharedState, root: &Path) -> (bool, V
 	}
 
 	// 3. 新 runtime を worker 付きで立ち上げる。
-	let rt = FlowgraphRuntime::load_and_spawn(root, state_weak, audio_sink);
+	let (conf_opt, mode_for_gate, mode_arc) = {
+		let s = state.read().await;
+		let c = s
+			.conf_source_path
+			.as_ref()
+			.and_then(|p| crate::conf::Conf::new_noop_probe(p).ok());
+		let m = s.runtime_mode_id.read().ok().and_then(|g| g.clone());
+		(c, m, s.runtime_mode_id.clone())
+	};
+	let rt = FlowgraphRuntime::load_and_spawn(
+		root,
+		state_weak,
+		audio_sink,
+		conf_opt.as_ref(),
+		mode_for_gate.as_deref(),
+		Some(mode_arc),
+	);
 	let (ok, diags) = (rt.ok, rt.diagnostics.clone());
 	let error_count = diags.iter().filter(|d| d.severity == Severity::Error).count();
 	let warning_count = diags.iter().filter(|d| d.severity == Severity::Warning).count();

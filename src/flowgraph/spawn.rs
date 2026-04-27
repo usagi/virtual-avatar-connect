@@ -9,14 +9,15 @@
 //! （HTTP / Voice / Twitch ingress）から `TriggerEvent` を投げ込み、
 //! アプリ終了時に `shutdown_tx.send(())` でワーカーを停止させる。
 
+use crate::flowgraph::activation::TriggerGate;
 use crate::flowgraph::engine::{create_trigger_bus, FlowgraphProgram};
 use crate::flowgraph::loader::{Diagnostic, LoadedNodeMeta, Severity};
-use crate::flowgraph::node::{ExecCtx, TriggerHandle};
+use crate::flowgraph::node::{ExecCtx, PureEvalHost, TriggerHandle};
 use crate::state::State;
 use crate::SharedAudioSink;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Weak;
+use std::sync::{Arc, Weak};
 use tokio::sync::{broadcast, RwLock};
 use tokio::task::JoinHandle;
 
@@ -68,7 +69,10 @@ pub fn spawn_program(
 	mut program: FlowgraphProgram,
 	state: Weak<RwLock<State>>,
 	audio_sink: Option<SharedAudioSink>,
+	trigger_gate: Option<Arc<TriggerGate>>,
+	pure_host: PureEvalHost,
 ) -> (TriggerHandle, broadcast::Sender<()>, JoinHandle<()>) {
+	program.pure_host = pure_host;
 	let (trigger, rx) = create_trigger_bus();
 	let (shutdown_tx, mut shutdown_rx) = broadcast::channel::<()>(1);
 	let trigger_for_ctx = trigger.clone();
@@ -76,6 +80,7 @@ pub fn spawn_program(
 		let mut ctx = ExecCtx {
 			trace: Vec::new(),
 			trigger: Some(trigger_for_ctx.clone()),
+			trigger_gate: None,
 			node_id: String::new(),
 			audio_sink,
 			state_handle: Some(state),
@@ -83,7 +88,10 @@ pub fn spawn_program(
 		let shutdown = async move {
 			let _ = shutdown_rx.recv().await;
 		};
-		match program.run_forever_with_bus(&mut ctx, trigger_for_ctx, rx, shutdown).await {
+		match program
+			.run_forever_with_bus(&mut ctx, trigger_for_ctx, rx, shutdown, trigger_gate)
+			.await
+		{
 			Ok(run) => log::info!(
 				"《Flowgraph》 ランタイムワーカー終了 (generation={}, exec_nodes={})",
 				run.generation,

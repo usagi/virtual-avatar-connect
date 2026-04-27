@@ -11,7 +11,8 @@
 //!   cache key に state version を含めて staleness を防ぐ。
 
 use crate::flowgraph::node::{
-	ExecCtx, ExecFireSet, InputMap, NodeExecError, NodeImpl, PortDirection, PortSpec, StatefulCtx, TriggerEvent, TriggerHandle,
+	ExecCtx, ExecFireSet, InputMap, NodeExecError, NodeImpl, PortDirection, PortSpec, PureEvalHost, StatefulCtx, TriggerEvent,
+	TriggerHandle,
 };
 use crate::flowgraph::socket::{coerce_to_type, SocketType, SocketValue};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -132,6 +133,8 @@ impl FlowgraphBuilder {
 // ---------------------------------------------------------------------
 
 pub struct FlowgraphProgram {
+	/// ランタイム観測（Runtime Mode 等）。未設定時はデフォルトの空ホスト。
+	pub pure_host: PureEvalHost,
 	nodes: HashMap<NodeId, NodeInstance>,
 	/// データ入力ポート → 上流出力ポート（single-source）
 	data_sources: HashMap<PortRef, PortRef>,
@@ -180,7 +183,7 @@ impl FlowgraphProgram {
 		F: Future<Output = ()>,
 	{
 		let (handle, rx) = create_trigger_bus();
-		self.run_forever_with_bus(ctx, handle, rx, shutdown).await
+		self.run_forever_with_bus(ctx, handle, rx, shutdown, None).await
 	}
 
 	/// 外部生成した trigger bus を渡す版。Ingress ノードを外部（HTTP ハンドラ等）から
@@ -192,11 +195,13 @@ impl FlowgraphProgram {
 		handle: TriggerHandle,
 		mut rx: mpsc::UnboundedReceiver<TriggerEvent>,
 		shutdown: F,
+		trigger_gate: Option<std::sync::Arc<crate::flowgraph::activation::TriggerGate>>,
 	) -> Result<ProgramRun, NodeExecError>
 	where
 		F: Future<Output = ()>,
 	{
 		ctx.trigger = Some(handle);
+		ctx.trigger_gate = trigger_gate;
 
 		// 初期化パス
 		let mut run = self.execute(ctx).await?;
@@ -219,6 +224,7 @@ impl FlowgraphProgram {
 		}
 
 		ctx.trigger = None;
+		ctx.trigger_gate = None;
 		Ok(run)
 	}
 
@@ -261,6 +267,13 @@ impl FlowgraphProgram {
 		run: &mut ProgramRun,
 		queue: &mut VecDeque<(NodeId, ExecFireSet, InputMap)>,
 	) -> Result<(), NodeExecError> {
+		if let Some(g) = ctx.trigger_gate.as_ref() {
+			if !g.is_exec_active(node_id) {
+				log::debug!("《Flowgraph》 exec 抑止 (RM-3 inactive): node={node_id}");
+				return Ok(());
+			}
+		}
+
 		let spec = self.nodes[node_id].impl_.describe();
 
 		// data 入力を準備: overrides 優先、なければ pull
@@ -299,7 +312,7 @@ impl FlowgraphProgram {
 		let node = self.nodes.get_mut(node_id).expect("node exists");
 		let props = node.properties.clone();
 		let result = match &mut node.impl_ {
-			NodeImpl::Pure(pn) => pn.compute(&props, &inputs, &fired_exec).await?,
+			NodeImpl::Pure(pn) => pn.compute(&self.pure_host, &props, &inputs, &fired_exec).await?,
 			NodeImpl::Stateful { node: sn, state } => {
 				let sctx = StatefulCtx {
 					node_id,
@@ -458,7 +471,7 @@ impl FlowgraphProgram {
 		// pull context では exec 発火 set は空（exec 発火は別経路）
 		let empty_fired = ExecFireSet::new();
 		let result = match &mut node.impl_ {
-			NodeImpl::Pure(pn) => pn.compute(&props, &inputs, &empty_fired).await?,
+			NodeImpl::Pure(pn) => pn.compute(&self.pure_host, &props, &inputs, &empty_fired).await?,
 			NodeImpl::Stateful { node: sn, state } => {
 				let sctx = StatefulCtx {
 					node_id,
@@ -638,6 +651,7 @@ fn build_program(raw_nodes: Vec<NodeInstance>, raw_edges: Vec<Edge>) -> Result<F
 	sources.sort();
 
 	Ok(FlowgraphProgram {
+		pure_host: PureEvalHost::default(),
 		nodes,
 		data_sources,
 		data_sources_multi,
@@ -946,7 +960,7 @@ mod tests {
 	}
 	#[async_trait]
 	impl PureNode for CountingString {
-		async fn compute(&self, _p: &InputMap, _i: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+		async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, _i: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 			self.0.fetch_add(1, Ordering::SeqCst);
 			Ok(NodeOutput::new().set_data("value", SocketValue::String(self.1.clone())))
 		}

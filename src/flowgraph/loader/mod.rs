@@ -28,7 +28,12 @@ pub mod dir;
 pub mod file;
 pub mod reference;
 
-pub use diagnostic::{Diagnostic, DiagnosticCode, LoadError, LoadReport, LoadedNodeMeta, Severity};
+pub use diagnostic::{
+	Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, LoadError, LoadReport, LoadedNodeMeta, Severity,
+};
 pub use dir::{fq_path_of_file, is_flowgraph_file, load_flowgraph_dir, walk_flowgraph_dir};
-pub use file::{load_file, normalized_library_id, parse_flowgraph_file, EdgeEntry, FileMeta, FlowgraphEnumDef, FlowgraphFile, NodeEntry};
+pub use file::{
+	file_activation_meta, load_file, normalized_library_id, parse_flowgraph_file, EdgeEntry, FileMeta, FlowgraphEnumDef,
+	FlowgraphFile, NodeEntry,
+};
 pub use reference::{parse_port_ref, resolve_fq_ref, PortRefStr, ResolveContext};

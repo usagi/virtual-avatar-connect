@@ -148,7 +148,7 @@ macro_rules! vec_make_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let arr: [f64; $n] = [ $( get_required_float(inputs, $comp)?, )+ ];
 				let v = encode_vec::<$n>(arr)?;
 				Ok(NodeOutput::new().set_data("v", SocketValue::Json(v)))
@@ -175,7 +175,7 @@ macro_rules! vec_unpack_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let v = get_required_json(inputs, "v")?;
 				let arr = decode_vec::<$n>(v, "v")?;
 				let mut out = NodeOutput::new();
@@ -212,7 +212,7 @@ macro_rules! vec_binop_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let a = decode_vec::<$n>(get_required_json(inputs, "a")?, "a")?;
 				let b = decode_vec::<$n>(get_required_json(inputs, "b")?, "b")?;
 				let r = $op::<$n>(a, b);
@@ -243,7 +243,7 @@ macro_rules! vec_scalar_out_binop_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let a = decode_vec::<$n>(get_required_json(inputs, "a")?, "a")?;
 				let b = decode_vec::<$n>(get_required_json(inputs, "b")?, "b")?;
 				Ok(NodeOutput::new().set_data("result", SocketValue::Float($op::<$n>(a, b))))
@@ -273,7 +273,7 @@ macro_rules! vec_scale_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let a = decode_vec::<$n>(get_required_json(inputs, "a")?, "a")?;
 				let k = get_required_float(inputs, "k")?;
 				Ok(NodeOutput::new().set_data("result", SocketValue::Json(encode_vec::<$n>(scale_n::<$n>(a, k))?)))
@@ -300,7 +300,7 @@ macro_rules! vec_unary_pure_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let v = decode_vec::<$n>(get_required_json(inputs, "v")?, "v")?;
 				let r = $op::<$n>(v);
 				Ok(NodeOutput::new().set_data("result", ($wrap)(r)?))
@@ -338,7 +338,7 @@ macro_rules! vec_lerp_node {
 		}
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 				let a = decode_vec::<$n>(get_required_json(inputs, "a")?, "a")?;
 				let b = decode_vec::<$n>(get_required_json(inputs, "b")?, "b")?;
 				let t = get_required_float(inputs, "t")?;
@@ -497,7 +497,7 @@ mod tests {
 	}
 
 	async fn run_pure<N: PureNode>(n: &N, props: InputMap, inputs: InputMap) -> Result<NodeOutput, NodeExecError> {
-		n.compute(&props, &inputs, &ExecFireSet::new()).await
+		n.compute(&crate::flowgraph::node::PureEvalHost::default(), &props, &inputs, &ExecFireSet::new()).await
 	}
 
 	fn as_json(out: &NodeOutput, key: &str) -> JsonValue {

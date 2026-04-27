@@ -34,7 +34,7 @@ impl NodeDescriptor for StringConcatNode {
 }
 #[async_trait]
 impl PureNode for StringConcatNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let a = get_required_string(inputs, "a")?;
 		let b = get_required_string(inputs, "b")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::String(format!("{a}{b}"))))
@@ -59,7 +59,7 @@ impl NodeDescriptor for StringLenNode {
 }
 #[async_trait]
 impl PureNode for StringLenNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let s = get_required_string(inputs, "s")?;
 		Ok(NodeOutput::new().set_data("len", SocketValue::Int(s.chars().count() as i64)))
 	}
@@ -86,7 +86,7 @@ impl NodeDescriptor for StringContainsNode {
 }
 #[async_trait]
 impl PureNode for StringContainsNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let h = get_required_string(inputs, "haystack")?;
 		let n = get_required_string(inputs, "needle")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Bool(h.contains(&n))))
@@ -115,7 +115,7 @@ impl NodeDescriptor for StringReplaceNode {
 }
 #[async_trait]
 impl PureNode for StringReplaceNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let s = get_required_string(inputs, "s")?;
 		let p = get_required_string(inputs, "pattern")?;
 		let r = get_required_string(inputs, "replacement")?;
@@ -144,7 +144,7 @@ impl NodeDescriptor for StringSplitNode {
 }
 #[async_trait]
 impl PureNode for StringSplitNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let s = get_required_string(inputs, "s")?;
 		let sep = get_required_string(inputs, "sep")?;
 		let parts: Vec<SocketValue> = if sep.is_empty() {
@@ -177,7 +177,7 @@ impl NodeDescriptor for StringJoinNode {
 }
 #[async_trait]
 impl PureNode for StringJoinNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let parts = get_required_list(inputs, "parts")?;
 		let sep = get_required_string(inputs, "sep")?;
 		let mut strs = Vec::with_capacity(parts.len());
@@ -209,7 +209,7 @@ mod tests {
 	async fn concat_basic() {
 		let inputs: InputMap = [ss("a", "Hello, "), ss("b", "World!")].into_iter().collect();
 		let out = StringConcatNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::String("Hello, World!".into())));
@@ -218,7 +218,7 @@ mod tests {
 	#[tokio::test]
 	async fn len_counts_chars() {
 		let inputs: InputMap = [ss("s", "あいう")].into_iter().collect();
-		let out = StringLenNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = StringLenNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("len"), Some(&SocketValue::Int(3)));
 	}
 
@@ -226,14 +226,14 @@ mod tests {
 	async fn contains_hits_and_misses() {
 		let inputs: InputMap = [ss("haystack", "Hello, World!"), ss("needle", "World")].into_iter().collect();
 		let out = StringContainsNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
 
 		let inputs: InputMap = [ss("haystack", "abc"), ss("needle", "xyz")].into_iter().collect();
 		let out = StringContainsNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(false)));
@@ -243,7 +243,7 @@ mod tests {
 	async fn replace_all_occurrences() {
 		let inputs: InputMap = [ss("s", "aaa"), ss("pattern", "a"), ss("replacement", "b")].into_iter().collect();
 		let out = StringReplaceNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::String("bbb".into())));
@@ -253,7 +253,7 @@ mod tests {
 	async fn split_and_join_roundtrip() {
 		let inputs: InputMap = [ss("s", "a,b,c"), ss("sep", ",")].into_iter().collect();
 		let out = StringSplitNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		let parts = out.data.get("parts").cloned().unwrap();
@@ -270,7 +270,7 @@ mod tests {
 			.into_iter()
 			.collect();
 		let out = StringJoinNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::String("a-b-c".into())));
@@ -283,7 +283,7 @@ mod tests {
 			.into_iter()
 			.collect();
 		let e = StringJoinNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(e, NodeExecError::TypeMismatch { .. }));

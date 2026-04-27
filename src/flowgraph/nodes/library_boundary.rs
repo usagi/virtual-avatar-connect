@@ -32,7 +32,7 @@ impl NodeDescriptor for LibraryInputNode {
 
 #[async_trait]
 impl PureNode for LibraryInputNode {
-	async fn compute(&self, properties: &InputMap, _inputs: &InputMap, _fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, properties: &InputMap, _inputs: &InputMap, _fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let v = properties
 			.get("value")
 			.cloned()
@@ -60,7 +60,7 @@ impl NodeDescriptor for LibraryOutputNode {
 
 #[async_trait]
 impl PureNode for LibraryOutputNode {
-	async fn compute(&self, _properties: &InputMap, inputs: &InputMap, _fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _properties: &InputMap, inputs: &InputMap, _fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let _ = inputs.get("value");
 		Ok(NodeOutput::new())
 	}

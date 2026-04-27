@@ -53,6 +53,10 @@ pub enum DiagnosticCode {
 	UnknownLibraryRef,
 	/// Phase λ: `library_uses` の依存グラフに閉路がある。
 	LibraryDependencyCycle,
+	/// RM-3: `[meta].mode_groups` など activation メタが不正（空のグループ名など）。
+	InvalidModeMetadata,
+	/// RM-3: `[meta].mode_groups` の名前が、いかなる `[modes].flowgraph_groups` でも使われていない。
+	OrphanModeGroup,
 }
 
 /// 単一診断メッセージ。
@@ -144,18 +148,39 @@ impl LoadError {
 	}
 }
 
+/// RM-3: ファイル fq（例 `tts/main`）→ Mode Manager 向け activation メタ。
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FlowgraphFileActivationMeta {
+	#[serde(default)]
+	pub mode_groups: Vec<String>,
+	#[serde(default = "crate::utility::bool_true")]
+	pub default_enabled: bool,
+}
+
+impl Default for FlowgraphFileActivationMeta {
+	fn default() -> Self {
+		Self {
+			mode_groups: Vec::new(),
+			default_enabled: true,
+		}
+	}
+}
+
 /// 成功ロード結果。warning が付帯しうる。
 pub struct LoadReport {
 	pub program: crate::flowgraph::FlowgraphProgram,
 	pub diagnostics: Vec<Diagnostic>,
 	/// 解決済みノード（`fq_name` → 定義元ファイル / feature）。GUI / debug 用メタ情報。
 	pub node_meta: std::collections::HashMap<String, LoadedNodeMeta>,
+	/// RM-3: 各 `.flowgraph.toml` の fq → `[meta]` の mode 系メタ（省略時は既定）。
+	pub file_activation: std::collections::HashMap<String, FlowgraphFileActivationMeta>,
 }
 
 impl std::fmt::Debug for LoadReport {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.debug_struct("LoadReport")
 			.field("nodes", &self.node_meta.keys().collect::<Vec<_>>())
+			.field("file_activation", &self.file_activation.keys().collect::<Vec<_>>())
 			.field("diagnostics", &self.diagnostics)
 			.finish()
 	}

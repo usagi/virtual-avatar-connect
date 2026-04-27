@@ -13,7 +13,9 @@
 //! - 外部ブリッジ（HTTP / Voice / Twitch ingress）は `trigger()` の戻りを clone して `TriggerEvent` を投げ込む。
 //! - アプリ終了時は `shutdown()` でワーカーを停止。
 
-use crate::flowgraph::loader::{Diagnostic, LoadedNodeMeta, Severity};
+use crate::flowgraph::activation::{mode_group_orphan_diagnostics, TriggerGate};
+use crate::flowgraph::node::PureEvalHost;
+use crate::flowgraph::loader::{Diagnostic, FlowgraphFileActivationMeta, LoadedNodeMeta, Severity};
 use crate::flowgraph::node::TriggerHandle;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -50,6 +52,10 @@ pub struct FlowgraphRuntime {
 	pub ok: bool,
 	pub diagnostics: Vec<Diagnostic>,
 	pub node_meta: HashMap<String, LoadedNodeMeta>,
+	/// RM-3: 各 flowgraph ファイル fq → mode 用メタ（`GET /flowgraph/diagnostics` 等で参照）。
+	pub file_activation: HashMap<String, FlowgraphFileActivationMeta>,
+	/// RM-3: exec 抑止ゲート（ワーカーと共有）。未 spawn 時は `None`。
+	pub trigger_gate: Option<Arc<TriggerGate>>,
 	/// δ-9 Part A: ワーカーが生きていれば `Some`。ロード失敗 / 空 / spawn 未実行なら `None`。
 	/// `Arc` で包むのは `FlowgraphRuntime` を `State` 経由で clone 参照されても 1 ワーカーに集約するため。
 	pub handle: Option<Arc<RuntimeHandle>>,
@@ -62,6 +68,8 @@ impl Clone for FlowgraphRuntime {
 			ok: self.ok,
 			diagnostics: self.diagnostics.clone(),
 			node_meta: self.node_meta.clone(),
+			file_activation: self.file_activation.clone(),
+			trigger_gate: self.trigger_gate.clone(),
 			handle: self.handle.clone(),
 		}
 	}
@@ -99,6 +107,8 @@ impl FlowgraphRuntime {
 						format!("flowgraph_dir '{}' はディレクトリではありません", root_dir.display()),
 					)],
 					node_meta: HashMap::new(),
+					file_activation: HashMap::new(),
+					trigger_gate: None,
 					handle: None,
 				},
 				None,
@@ -110,6 +120,7 @@ impl FlowgraphRuntime {
 					program,
 					diagnostics,
 					node_meta,
+					file_activation,
 				} = report;
 				let has_nodes = !node_meta.is_empty();
 				let rt = Self {
@@ -117,6 +128,8 @@ impl FlowgraphRuntime {
 					ok: true,
 					diagnostics,
 					node_meta,
+					file_activation,
+					trigger_gate: None,
 					handle: None,
 				};
 				(rt, if has_nodes { Some(program) } else { None })
@@ -127,6 +140,8 @@ impl FlowgraphRuntime {
 					ok: false,
 					diagnostics,
 					node_meta: HashMap::new(),
+					file_activation: HashMap::new(),
+					trigger_gate: None,
 					handle: None,
 				},
 				None,
@@ -138,14 +153,43 @@ impl FlowgraphRuntime {
 	///
 	/// `state_weak` は `ExecCtx.state_handle` に入って `channel.emit` などから
 	/// `State::push_channel_datum` を呼ぶ経路。`audio_sink` は TTS 系ノード用。
+	///
+	/// `conf`: RM-3 の exec 抑止に使う。`None` のときは全ノード exec 許可（互換）。
+	///
+	/// `runtime_mode`: 実行中の現在 mode ID。`None` は `conf.default_runtime_mode` に従う（conf も無ければ従来ロジック）。
+	/// `runtime_mode_id`: `State` と共有する mode 上書きスロット。Pure ノード `flowgraph.mode.*` が参照する。
 	pub fn load_and_spawn(
 		root_dir: &std::path::Path,
 		state_weak: std::sync::Weak<RwLock<crate::state::State>>,
 		audio_sink: Option<crate::SharedAudioSink>,
+		conf: Option<&crate::conf::Conf>,
+		runtime_mode: Option<&str>,
+		runtime_mode_id: Option<std::sync::Arc<std::sync::RwLock<Option<String>>>>,
 	) -> Self {
 		let (mut rt, program) = Self::load_program(root_dir);
+		if let Some(c) = conf {
+			if !rt.has_errors() {
+				rt.diagnostics.extend(mode_group_orphan_diagnostics(c, &rt.file_activation));
+			}
+		}
 		if let Some(program) = program {
-			let (trigger, shutdown_tx, join) = crate::flowgraph::spawn::spawn_program(program, state_weak, audio_sink);
+			let gate = Some(if let Some(c) = conf {
+				TriggerGate::new(c, &rt.node_meta, &rt.file_activation, runtime_mode)
+			} else {
+				TriggerGate::all_exec_active()
+			});
+			let pure_host = PureEvalHost {
+				runtime_mode: runtime_mode_id,
+				default_runtime_mode: conf.and_then(|c| c.default_runtime_mode.clone()),
+			};
+			let (trigger, shutdown_tx, join) = crate::flowgraph::spawn::spawn_program(
+				program,
+				state_weak,
+				audio_sink,
+				gate.clone(),
+				pure_host,
+			);
+			rt.trigger_gate = gate;
 			rt.handle = Some(Arc::new(RuntimeHandle {
 				trigger,
 				shutdown_tx,
@@ -161,6 +205,8 @@ impl FlowgraphRuntime {
 			ok: true,
 			diagnostics: Vec::new(),
 			node_meta: HashMap::new(),
+			file_activation: HashMap::new(),
+			trigger_gate: None,
 			handle: None,
 		}
 	}
@@ -177,6 +223,15 @@ impl FlowgraphRuntime {
 	/// 外部ブリッジ（HTTP / Voice / Twitch ingress）が `TriggerEvent` を送る経路。
 	pub fn trigger(&self) -> Option<TriggerHandle> {
 		self.handle.as_ref().map(|h| h.trigger.clone())
+	}
+
+	/// RM-3: `runtime_mode` を反映して exec ゲートを再計算。ワーカーがいなければ何もしない。
+	pub fn recompute_trigger_gate(&self, conf: &crate::conf::Conf, runtime_mode: Option<&str>) -> bool {
+		if let Some(g) = self.trigger_gate.as_ref() {
+			g.recompute(conf, runtime_mode, &self.node_meta, &self.file_activation);
+			return true;
+		}
+		false
 	}
 }
 

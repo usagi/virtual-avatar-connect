@@ -60,7 +60,7 @@ impl NodeDescriptor for UtilFormatNode {
 
 #[async_trait]
 impl PureNode for UtilFormatNode {
-	async fn compute(&self, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "value")?;
 		let include_unit = properties.get("include_unit").and_then(|v| v.as_bool().ok()).unwrap_or(true);
 		let precision: i64 = properties.get("precision").and_then(|v| v.as_i64().ok()).unwrap_or(-1);
@@ -126,7 +126,7 @@ mod tests {
 	async fn default_format_with_unit() {
 		let q = Quantity::of(42.5, parse_unit("m/s^2").unwrap());
 		let out = UtilFormatNode
-			.compute(&props(true, -1, ""), &input_quantity(q), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &props(true, -1, ""), &input_quantity(q), &ExecFireSet::new())
 			.await
 			.unwrap();
 		let s = out.data.get("result").and_then(|v| v.as_str().ok()).unwrap().to_string();
@@ -138,7 +138,7 @@ mod tests {
 	async fn include_unit_false_strips_unit() {
 		let q = Quantity::of(3.14, parse_unit("m").unwrap());
 		let out = UtilFormatNode
-			.compute(&props(false, -1, ""), &input_quantity(q), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &props(false, -1, ""), &input_quantity(q), &ExecFireSet::new())
 			.await
 			.unwrap();
 		let s = out.data.get("result").and_then(|v| v.as_str().ok()).unwrap().to_string();
@@ -149,7 +149,7 @@ mod tests {
 	async fn precision_applies() {
 		let q = Quantity::of(1.0_f64 / 3.0, parse_unit("m").unwrap());
 		let out = UtilFormatNode
-			.compute(&props(true, 3, ""), &input_quantity(q), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &props(true, 3, ""), &input_quantity(q), &ExecFireSet::new())
 			.await
 			.unwrap();
 		let s = out.data.get("result").and_then(|v| v.as_str().ok()).unwrap().to_string();
@@ -161,7 +161,7 @@ mod tests {
 		// 180 deg -> pi rad
 		let q = Quantity::of(180.0, parse_unit("deg").unwrap());
 		let out = UtilFormatNode
-			.compute(&props(true, 4, "rad"), &input_quantity(q), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &props(true, 4, "rad"), &input_quantity(q), &ExecFireSet::new())
 			.await
 			.unwrap();
 		let s = out.data.get("result").and_then(|v| v.as_str().ok()).unwrap().to_string();
@@ -172,7 +172,7 @@ mod tests {
 	async fn unit_override_dim_mismatch_errors() {
 		let q = Quantity::of(1.0, parse_unit("m").unwrap());
 		let e = UtilFormatNode
-			.compute(&props(true, -1, "s"), &input_quantity(q), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &props(true, -1, "s"), &input_quantity(q), &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(e, NodeExecError::Generic(_)), "got {e:?}");
@@ -182,7 +182,7 @@ mod tests {
 	async fn dimensionless_never_appends_unit() {
 		let q = Quantity::dimensionless(7.0);
 		let out = UtilFormatNode
-			.compute(&props(true, 2, ""), &input_quantity(q), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &props(true, 2, ""), &input_quantity(q), &ExecFireSet::new())
 			.await
 			.unwrap();
 		let s = out.data.get("result").and_then(|v| v.as_str().ok()).unwrap().to_string();

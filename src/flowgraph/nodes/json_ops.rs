@@ -29,7 +29,7 @@ impl NodeDescriptor for JsonParseNode {
 }
 #[async_trait]
 impl PureNode for JsonParseNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let t = get_required_string(inputs, "text")?;
 		let v: serde_json::Value =
 			serde_json::from_str(&t).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("JSON parse error: {e}")))?;
@@ -58,7 +58,7 @@ impl NodeDescriptor for JsonStringifyNode {
 }
 #[async_trait]
 impl PureNode for JsonStringifyNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let v = get_required_json(inputs, "value")?;
 		let pretty = get_optional_bool(inputs, "pretty", false)?;
 		let s = if pretty {
@@ -91,7 +91,7 @@ impl NodeDescriptor for JsonGetNode {
 }
 #[async_trait]
 impl PureNode for JsonGetNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let v = get_required_json(inputs, "value")?;
 		let path = get_required_string(inputs, "path")?;
 		let resolved = walk_dot_path(v, &path);
@@ -153,13 +153,13 @@ mod tests {
 	#[tokio::test]
 	async fn parse_and_stringify_roundtrip() {
 		let inputs: InputMap = [("text".into(), SocketValue::String(r#"{"x": 1}"#.into()))].into_iter().collect();
-		let out = JsonParseNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = JsonParseNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		let v = out.data.get("value").cloned().unwrap();
 		assert_eq!(v, SocketValue::Json(serde_json::json!({"x": 1})));
 
 		let inputs: InputMap = [("value".into(), v)].into_iter().collect();
 		let out = JsonStringifyNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("text"), Some(&SocketValue::String(r#"{"x":1}"#.into())));
@@ -174,19 +174,19 @@ mod tests {
 		]
 		.into_iter()
 		.collect();
-		let out = JsonGetNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = JsonGetNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Json(serde_json::json!(20))));
 
 		let inputs: InputMap = [("value".into(), value.clone()), ("path".into(), SocketValue::String("a.c".into()))]
 			.into_iter()
 			.collect();
-		let out = JsonGetNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = JsonGetNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Json(serde_json::json!("hi"))));
 
 		let inputs: InputMap = [("value".into(), value), ("path".into(), SocketValue::String("a.missing".into()))]
 			.into_iter()
 			.collect();
-		let out = JsonGetNode.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = JsonGetNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Json(serde_json::Value::Null)));
 	}
 
@@ -194,7 +194,7 @@ mod tests {
 	async fn parse_invalid_errors() {
 		let inputs: InputMap = [("text".into(), SocketValue::String("not json".into()))].into_iter().collect();
 		let e = JsonParseNode
-			.compute(&InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(e, NodeExecError::Generic(_)));

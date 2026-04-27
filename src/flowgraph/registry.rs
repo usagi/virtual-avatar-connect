@@ -136,6 +136,9 @@ pub fn default_registry() -> NodeRegistry {
 	// --- flow ---
 	r.register_pure(Arc::new(nodes::flow::BranchNode));
 	r.register_pure(Arc::new(nodes::flow::GateNode));
+	// --- mode (RM-2) ---
+	r.register_pure(Arc::new(nodes::mode::ModeGetNode));
+	r.register_pure(Arc::new(nodes::mode::ModeEqualsNode));
 	// SequenceNode: 動的 schema のため登録しない（上記 doc 参照）。
 
 	// --- logic ---
@@ -385,6 +388,8 @@ mod tests {
 			"flowgraph.literal.json",
 			"flowgraph.flow.branch",
 			"flowgraph.flow.gate",
+			"flowgraph.mode.get",
+			"flowgraph.mode.equals",
 			"flowgraph.logic.and",
 			"flowgraph.logic.or",
 			"flowgraph.logic.xor",

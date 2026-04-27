@@ -240,7 +240,7 @@ impl NodeDescriptor for EasingApplyNode {
 
 #[async_trait]
 impl PureNode for EasingApplyNode {
-	async fn compute(&self, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let mut t = get_required_float(inputs, "t")?;
 		let curve_name = properties
 			.get("curve")
@@ -289,7 +289,7 @@ mod tests {
 
 	async fn run(curve: &str, t: f64, clamp: bool) -> f64 {
 		let out = EasingApplyNode
-			.compute(&props(curve, clamp), &input_t(t), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &props(curve, clamp), &input_t(t), &ExecFireSet::new())
 			.await
 			.unwrap();
 		out.data.get("value").and_then(|v| v.as_f64().ok()).unwrap()
@@ -385,7 +385,7 @@ mod tests {
 	#[tokio::test]
 	async fn unknown_curve_errors() {
 		let out = EasingApplyNode
-			.compute(&props("my_fancy_ease", true), &input_t(0.5), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &props("my_fancy_ease", true), &input_t(0.5), &ExecFireSet::new())
 			.await
 			.unwrap_err();
 		assert!(matches!(out, NodeExecError::Generic(_)));
@@ -395,7 +395,7 @@ mod tests {
 	async fn default_curve_is_linear() {
 		// Omit curve property \u{2192} should fall back to "linear".
 		let props: InputMap = [("clamp_t".into(), SocketValue::Bool(true))].into_iter().collect();
-		let out = EasingApplyNode.compute(&props, &input_t(0.42), &ExecFireSet::new()).await.unwrap();
+		let out = EasingApplyNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &props, &input_t(0.42), &ExecFireSet::new()).await.unwrap();
 		let y = out.data.get("value").and_then(|v| v.as_f64().ok()).unwrap();
 		assert!((y - 0.42).abs() < 1e-12);
 	}

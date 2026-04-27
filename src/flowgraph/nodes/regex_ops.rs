@@ -46,7 +46,7 @@ impl NodeDescriptor for RegexReplaceNode {
 
 #[async_trait]
 impl PureNode for RegexReplaceNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, _fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let mut content = get_required_string(inputs, "content")?;
 		let rules = get_required_list(inputs, "rules")?;
 		let mut errors: Vec<SocketValue> = Vec::new();
@@ -106,7 +106,7 @@ mod tests {
 		]
 		.into_iter()
 		.collect();
-		let out = node.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::String("foo at bar baz at qux".into())));
 		assert_eq!(out.data.get("errors"), Some(&SocketValue::List(vec![])));
 	}
@@ -121,7 +121,7 @@ mod tests {
 		]
 		.into_iter()
 		.collect();
-		let out = node.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::String("aN bN cN".into())));
 		match out.data.get("errors").unwrap() {
 			SocketValue::List(xs) => assert_eq!(xs.len(), 1),
@@ -138,7 +138,7 @@ mod tests {
 		]
 		.into_iter()
 		.collect();
-		let out = node.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::String("unchanged".into())));
 	}
 }

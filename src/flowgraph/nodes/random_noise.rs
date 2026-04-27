@@ -47,7 +47,7 @@ impl NodeDescriptor for RandomUniformIntNode {
 
 #[async_trait]
 impl PureNode for RandomUniformIntNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let mut lo = get_required_int(inputs, "lo")?;
 		let mut hi = get_required_int(inputs, "hi")?;
 		if lo > hi {
@@ -83,7 +83,7 @@ impl NodeDescriptor for RandomUniformFloatNode {
 
 #[async_trait]
 impl PureNode for RandomUniformFloatNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let mut lo = get_required_float(inputs, "lo")?;
 		let mut hi = get_required_float(inputs, "hi")?;
 		if !lo.is_finite() || !hi.is_finite() {
@@ -142,7 +142,7 @@ fn box_muller_pair() -> (f64, f64) {
 
 #[async_trait]
 impl PureNode for RandomNormalNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let mean = get_required_float(inputs, "mean")?;
 		let stddev = get_required_float(inputs, "stddev")?;
 		if !mean.is_finite() {
@@ -186,7 +186,7 @@ impl NodeDescriptor for NoisePerlin1dNode {
 
 #[async_trait]
 impl PureNode for NoisePerlin1dNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let t = get_required_float(inputs, "t")?;
 		let seed = get_required_int(inputs, "seed")?;
 		if !t.is_finite() {
@@ -224,7 +224,7 @@ impl NodeDescriptor for NoisePerlin2dNode {
 
 #[async_trait]
 impl PureNode for NoisePerlin2dNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let x = get_required_float(inputs, "x")?;
 		let y = get_required_float(inputs, "y")?;
 		let seed = get_required_int(inputs, "seed")?;
@@ -247,7 +247,7 @@ mod tests {
 		let inputs: InputMap = [("lo".into(), SocketValue::Int(10)), ("hi".into(), SocketValue::Int(10))]
 			.into_iter()
 			.collect();
-		let out = n.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = n.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("value").unwrap().as_i64().unwrap(), 10);
 	}
 
@@ -257,7 +257,7 @@ mod tests {
 		let inputs: InputMap = [("lo".into(), SocketValue::Float(0.0)), ("hi".into(), SocketValue::Float(1.0))]
 			.into_iter()
 			.collect();
-		let out = n.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = n.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		let v = out.data.get("value").unwrap().as_f64().unwrap();
 		assert!((0.0..1.0).contains(&v), "v={v}");
 	}
@@ -268,7 +268,7 @@ mod tests {
 		let inputs: InputMap = [("mean".into(), SocketValue::Float(3.5)), ("stddev".into(), SocketValue::Float(0.0))]
 			.into_iter()
 			.collect();
-		let out = n.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = n.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert!((out.data.get("value").unwrap().as_f64().unwrap() - 3.5).abs() < 1e-12);
 	}
 
@@ -278,8 +278,8 @@ mod tests {
 		let inputs: InputMap = [("t".into(), SocketValue::Float(0.25)), ("seed".into(), SocketValue::Int(42))]
 			.into_iter()
 			.collect();
-		let a = n.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
-		let b = n.compute(&InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let a = n.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let b = n.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
 		assert_eq!(a.data.get("value"), b.data.get("value"));
 		let v = a.data.get("value").unwrap().as_f64().unwrap();
 		assert!(v.is_finite() && v.abs() <= 2.0, "perlin sample: {v}");

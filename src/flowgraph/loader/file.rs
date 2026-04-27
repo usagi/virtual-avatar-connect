@@ -6,7 +6,9 @@
 //!
 //! 「1 ファイル限定」のショートカット。多ファイル統合は [`super::dir::load_flowgraph_dir`]。
 
-use crate::flowgraph::loader::diagnostic::{Diagnostic, DiagnosticCode, LoadError, LoadReport, LoadedNodeMeta, Severity};
+use crate::flowgraph::loader::diagnostic::{
+	Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, LoadError, LoadReport, LoadedNodeMeta, Severity,
+};
 use crate::flowgraph::loader::reference::parse_port_ref;
 use crate::flowgraph::node::{InputMap, NodeSpec};
 use crate::flowgraph::registry::{registry, NodeRegistry};
@@ -44,7 +46,7 @@ pub struct FlowgraphEnumDef {
 	pub variants: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileMeta {
 	#[serde(default)]
 	pub title: Option<String>,
@@ -65,6 +67,63 @@ pub struct FileMeta {
 	/// Phase λ: 依存先フローの fq（`sub/pkg/graph` 形式、拡張子なし）。
 	#[serde(default)]
 	pub library_uses: Option<Vec<String>>,
+	/// RM-3: `conf` の `modes.*.flowgraph_groups` が参照するグループ名。
+	#[serde(default)]
+	pub mode_groups: Vec<String>,
+	/// RM-3: mode 未適用時の既定。省略時は roadmap どおり `true`（既存ファイル互換）。
+	#[serde(default = "crate::utility::bool_true")]
+	pub default_enabled: bool,
+}
+
+impl Default for FileMeta {
+	fn default() -> Self {
+		Self {
+			title: None,
+			description: None,
+			tags: None,
+			author: None,
+			name: None,
+			version: None,
+			license: None,
+			repos: None,
+			library_uses: None,
+			mode_groups: Vec::new(),
+			default_enabled: true,
+		}
+	}
+}
+
+impl FileMeta {
+	/// RM-3: Mode Manager が参照するサマリ（`[meta]` 省略時は [`FlowgraphFileActivationMeta::default`] と同値）。
+	pub fn activation_meta(&self) -> FlowgraphFileActivationMeta {
+		FlowgraphFileActivationMeta {
+			mode_groups: self.mode_groups.clone(),
+			default_enabled: self.default_enabled,
+		}
+	}
+}
+
+/// `[meta]` 省略時を含め、ファイル単位の activation メタを返す。
+pub fn file_activation_meta(file: &FlowgraphFile) -> FlowgraphFileActivationMeta {
+	file.meta.as_ref().map(FileMeta::activation_meta).unwrap_or_default()
+}
+
+fn validate_file_activation_meta(file: &FlowgraphFile, file_path: &Path, diagnostics: &mut Vec<Diagnostic>) {
+	let Some(meta) = file.meta.as_ref() else {
+		return;
+	};
+	for (i, g) in meta.mode_groups.iter().enumerate() {
+		if g.trim().is_empty() {
+			diagnostics.push(
+				Diagnostic::error(
+					DiagnosticCode::InvalidModeMetadata,
+					format!("[meta].mode_groups[{i}] が空です"),
+				)
+				.with_file(file_path.to_path_buf())
+				.with_hint("mode_groups"),
+			);
+		}
+	}
 }
 
 /// Phase λ: `author` / `name` / `version` がすべて非空のときの表示用安定 ID。
@@ -218,6 +277,15 @@ impl BuildContext {
 		for (_, file_path, file) in &self.files {
 			validate_enum_definitions(file, file_path, &mut diagnostics);
 		}
+		for (_, file_path, file) in &self.files {
+			validate_file_activation_meta(file, file_path, &mut diagnostics);
+		}
+		let file_activation: HashMap<String, FlowgraphFileActivationMeta> = self
+			.files
+			.iter()
+			.map(|(fq, _, f)| (fq.clone(), file_activation_meta(f)))
+			.collect();
+
 		let mut builder = FlowgraphBuilder::new();
 		let mut node_meta: HashMap<String, LoadedNodeMeta> = HashMap::new();
 
@@ -466,6 +534,7 @@ impl BuildContext {
 			program,
 			diagnostics,
 			node_meta,
+			file_activation,
 		})
 	}
 }
@@ -863,6 +932,52 @@ mod tests {
 			..Default::default()
 		};
 		assert_eq!(normalized_library_id(&m).unwrap(), "alice::core_lib::1_0_0");
+	}
+
+	#[test]
+	fn load_report_includes_file_activation_meta() {
+		let path = write_tmp(
+			"demo.flowgraph.toml",
+			r#"
+				[meta]
+				title = "Demo"
+				mode_groups = ["assistant", "rss"]
+				default_enabled = false
+
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "x"
+			"#,
+		);
+		let report = load_file(&path, Some("demo")).expect("load");
+		let act = report
+			.file_activation
+			.get("demo")
+			.expect("fq key")
+			.clone();
+		assert_eq!(act.mode_groups, vec!["assistant".to_string(), "rss".to_string()]);
+		assert!(!act.default_enabled);
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
+	fn load_rejects_empty_mode_group_name() {
+		let path = write_tmp(
+			"bad-meta.flowgraph.toml",
+			r#"
+				[meta]
+				mode_groups = ["ok", ""]
+
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "x"
+			"#,
+		);
+		let err = load_file(&path, None).expect_err("empty mode group");
+		assert!(err.errors().any(|d| d.code == DiagnosticCode::InvalidModeMetadata));
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
 	#[test]

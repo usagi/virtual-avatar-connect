@@ -30,6 +30,7 @@ macro_rules! literal_node {
 		impl PureNode for $name {
 			async fn compute(
 				&self,
+				_host: &crate::flowgraph::node::PureEvalHost,
 				properties: &InputMap,
 				_inputs: &InputMap,
 				_fired_exec: &ExecFireSet,
@@ -85,14 +86,14 @@ mod tests {
 	async fn string_literal_emits_value() {
 		let node = StringLiteralNode;
 		let props: InputMap = [("value".to_string(), SocketValue::String("hi".into()))].into_iter().collect();
-		let out = node.compute(&props, &InputMap::new(), &ExecFireSet::new()).await.unwrap();
+		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &props, &InputMap::new(), &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("value"), Some(&SocketValue::String("hi".into())));
 	}
 
 	#[tokio::test]
 	async fn int_literal_defaults_to_zero_on_missing_prop() {
 		let node = IntLiteralNode;
-		let out = node.compute(&InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
+		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
 		assert_eq!(out.data.get("value"), Some(&SocketValue::Int(0)));
 	}
 }

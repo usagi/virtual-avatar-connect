@@ -15,6 +15,7 @@ pub mod docs;
 pub mod engine;
 pub mod fragment;
 pub mod loader;
+pub mod activation;
 pub mod node;
 pub mod nodes;
 pub mod quantity;
@@ -27,10 +28,16 @@ pub mod tts;
 
 pub use config::{parse_offset_str, ConfigError as FlowgraphConfigError, FlowgraphInstanceConfig};
 pub use engine::{BuildError, Edge, FlowgraphBuilder, FlowgraphProgram, NodeId, NodeInstance, PortName, PortRef, ProgramRun};
-pub use loader::{load_file, load_flowgraph_dir, Diagnostic, DiagnosticCode, LoadError, LoadReport, LoadedNodeMeta, Severity};
+pub use activation::{
+	build_node_exec_active_map, file_effective_exec_active, file_fq_for_node_id, mode_group_orphan_diagnostics, TriggerGate,
+};
+pub use loader::{
+	file_activation_meta, load_file, load_flowgraph_dir, Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, LoadError,
+	LoadReport, LoadedNodeMeta, Severity,
+};
 pub use node::{
 	EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeImpl, NodeOutput, NodeSpec, OutputMap, PortDirection,
-	PortSpec, PropertySpec, PureNode, SocketValueRepr, StatefulNode,
+	PortSpec, PropertySpec, PureEvalHost, PureNode, SocketValueRepr, StatefulNode,
 };
 pub use registry::{default_registry, registry, NodeRegistry};
 pub use runtime::{shared_flowgraph_new, FlowgraphRuntime, RuntimeHandle, SharedFlowgraph};

@@ -2,8 +2,9 @@
 //!
 //! ## ハイブリッドモデル（spec §5）
 //!
-//! - **PureNode**: 副作用なし、状態なし、決定論的。I/O 不可（ExecCtx なし）。
-//!   `compute(&self, props, inputs, fired) -> NodeOutput`。pull 型 lazy で評価、メモ化対象。
+//! - **PureNode**: 副作用なし、状態なし、決定論的。副作用 I/O には直接触れない（`ExecCtx` なし）。
+//!   `compute(&self, &PureEvalHost, props, inputs, fired) -> NodeOutput`。
+//!   ランタイム観測は `PureEvalHost` 経由。pull 型 lazy、メモ化対象。
 //! - **StatefulNode**: engine が World として保持する state slot を `&mut dyn Any` で借りる。
 //!   I/O はしない。Delay / BoolState / Counter などが該当。
 //! - **EffectfulNode**: I/O 可（`&mut ExecCtx` 受け取り）。必ず exec 発火経由でのみ評価される。
@@ -11,7 +12,8 @@
 //!
 //! ## 型による純粋性保証
 //!
-//! - `PureNode::compute` は `ExecCtx` を受け取らないため Player / HTTP / ファイル I/O に触れない（コンパイル時拒否）。
+//! - `PureNode::compute` は `ExecCtx` を受け取らない（HTTP / ファイル等の副作用 I/O には触れない）。
+//!   ランタイム観測は `PureEvalHost` 経由に限定する。
 //! - `EffectfulNode` のみ `ExecCtx` を通じて副作用を起こせる。
 //! - `StatefulNode` は `&mut Any` で内部状態に書けるが、engine の I/O 資源には触れない。
 
@@ -21,7 +23,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::any::Any;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use thiserror::Error;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -534,6 +536,8 @@ impl NodeOutput {
 pub struct ExecCtx {
 	pub trace: Vec<String>,
 	pub trigger: Option<TriggerHandle>,
+	/// RM-3: 指定時、exec 経路（trigger / ソース / exec 連鎖）で非活性ノードは `fire_node` が即 return。
+	pub trigger_gate: Option<std::sync::Arc<crate::flowgraph::activation::TriggerGate>>,
 	pub node_id: String,
 	pub audio_sink: Option<crate::SharedAudioSink>,
 	pub state_handle: Option<std::sync::Weak<tokio::sync::RwLock<crate::state::State>>>,
@@ -640,15 +644,44 @@ pub trait NodeDescriptor: Send + Sync {
 // 3 種ノード trait（spec §3.4）
 // ---------------------------------------------------------------------
 
+/// Pure 評価に engine が供する、VAC プロセス上の**隻参照**（副作用 I/O ではない）。
+#[derive(Debug, Default, Clone)]
+pub struct PureEvalHost {
+	/// `State.runtime_mode_id` と共有。未接続のテスト等では `None`。
+	pub runtime_mode: Option<Arc<RwLock<Option<String>>>>,
+	/// スロットが `None`（未上書き）のときの実効 mode id（`conf.default_runtime_mode`）。未設定なら空。
+	pub default_runtime_mode: Option<String>,
+}
+
+impl PureEvalHost {
+	/// 現在の Runtime Mode 文字列。未設定は `default_runtime_mode` または空。
+	pub fn effective_runtime_mode_id(&self) -> String {
+		let from_slot = self
+			.runtime_mode
+			.as_ref()
+			.and_then(|a| a.read().ok().and_then(|g| g.clone()));
+		if let Some(s) = from_slot {
+			return s;
+		}
+		self.default_runtime_mode.clone().unwrap_or_default()
+	}
+}
+
 /// 純粋関数ノード。副作用なし・状態なし・決定論的。
 ///
 /// - data 入出力のみ扱う（exec も発火可能、ただし副作用起因ではなく純粋決定）。
-/// - `ExecCtx` を受け取らないため I/O に触れない（コンパイル時保証）。
+/// - `ExecCtx` を受け取らないため HTTP / ファイル等の I/O には直接触れない。ランタイム観測は `host` のみ。
 /// - 出力は engine がメモ化し、同一 generation 内で複数回 pull されても 1 度しか評価されない。
 /// - 例: Literal / StringConcat / JsonGet / Branch（条件で exec 出力を選ぶだけ）/ Sequence
 #[async_trait]
 pub trait PureNode: NodeDescriptor {
-	async fn compute(&self, props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError>;
+	async fn compute(
+		&self,
+		host: &PureEvalHost,
+		props: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError>;
 }
 
 /// 状態付きノード。engine が `Box<dyn Any + Send>` として保持する state slot を `&mut` で借りる。

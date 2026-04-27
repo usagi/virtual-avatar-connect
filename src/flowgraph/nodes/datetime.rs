@@ -133,7 +133,7 @@ impl NodeDescriptor for DateTimeNowNode {
 
 #[async_trait]
 impl PureNode for DateTimeNowNode {
-	async fn compute(&self, _p: &InputMap, _inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, _inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		Ok(NodeOutput::new().set_data("datetime", SocketValue::DateTime(DateTime::now())))
 	}
 }
@@ -188,7 +188,7 @@ impl NodeDescriptor for DateTimeParseNode {
 
 #[async_trait]
 impl PureNode for DateTimeParseNode {
-	async fn compute(&self, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let s = get_required_string(inputs, "s")?;
 		let require_tz = properties.get("require_timezone").and_then(|v| v.as_bool().ok()).unwrap_or(false);
 		let default_tz_str = properties
@@ -279,7 +279,7 @@ impl NodeDescriptor for DateTimeFormatNode {
 
 #[async_trait]
 impl PureNode for DateTimeFormatNode {
-	async fn compute(&self, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let dt = get_required_datetime(inputs, "datetime")?;
 		let format = properties
 			.get("format")
@@ -397,7 +397,7 @@ impl NodeDescriptor for DateTimeAddDurationNode {
 
 #[async_trait]
 impl PureNode for DateTimeAddDurationNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let dt = get_required_datetime(inputs, "datetime")?;
 		let q = get_required_quantity(inputs, "duration")?;
 		let d = quantity_to_signed_duration(q, "datetime.add_duration")?;
@@ -438,7 +438,7 @@ impl NodeDescriptor for DateTimeSubDurationNode {
 
 #[async_trait]
 impl PureNode for DateTimeSubDurationNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let dt = get_required_datetime(inputs, "datetime")?;
 		let q = get_required_quantity(inputs, "duration")?;
 		let d = quantity_to_signed_duration(q, "datetime.sub_duration")?;
@@ -479,7 +479,7 @@ impl NodeDescriptor for DateTimeDiffNode {
 
 #[async_trait]
 impl PureNode for DateTimeDiffNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let lhs = get_required_datetime(inputs, "lhs")?;
 		let rhs = get_required_datetime(inputs, "rhs")?;
 		let d: SignedDuration = lhs.timestamp().duration_since(rhs.timestamp());
@@ -517,7 +517,7 @@ impl NodeDescriptor for DateTimeEpochMsNode {
 
 #[async_trait]
 impl PureNode for DateTimeEpochMsNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let dt = get_required_datetime(inputs, "datetime")?;
 		let ms = dt.timestamp().as_millisecond();
 		let q = Quantity::of(ms as f64, millisecond_unit());
@@ -552,7 +552,7 @@ impl NodeDescriptor for DateTimeFromEpochMsNode {
 
 #[async_trait]
 impl PureNode for DateTimeFromEpochMsNode {
-	async fn compute(&self, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "millis")?;
 		let ms = quantity_to_epoch_ms(q, "datetime.from_epoch_ms")?;
 		let ts = Timestamp::from_millisecond(ms).map_err(|e| {
@@ -593,7 +593,7 @@ mod tests {
 	#[tokio::test]
 	async fn now_returns_datetime_close_to_system_clock() {
 		let out = DateTimeNowNode
-			.compute(&InputMap::new(), &InputMap::new(), &ExecFireSet::new())
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &InputMap::new(), &ExecFireSet::new())
 			.await
 			.unwrap();
 		let dt = out.data.get("datetime").unwrap().as_datetime().unwrap().clone();
@@ -608,6 +608,7 @@ mod tests {
 	async fn parse_rfc3339_utc() {
 		let out = DateTimeParseNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[
 					("require_timezone", SocketValue::Bool(false)),
 					("default_timezone", SocketValue::String(String::new())),
@@ -625,6 +626,7 @@ mod tests {
 	async fn parse_rfc3339_offset_normalizes_to_utc() {
 		let out = DateTimeParseNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[]),
 				&[s_input("s", "2026-04-24T21:34:56+09:00")].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -639,6 +641,7 @@ mod tests {
 	async fn parse_naive_with_jst_default() {
 		let out = DateTimeParseNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[("default_timezone", SocketValue::String("+09:00".into()))]),
 				&[s_input("s", "2026-04-24T12:34:56")].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -654,6 +657,7 @@ mod tests {
 	async fn parse_require_timezone_rejects_naive() {
 		let r = DateTimeParseNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[("require_timezone", SocketValue::Bool(true))]),
 				&[s_input("s", "2026-04-24T12:34:56")].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -669,6 +673,7 @@ mod tests {
 	async fn parse_iana_timezone_rejected_as_default() {
 		let r = DateTimeParseNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[("default_timezone", SocketValue::String("Asia/Tokyo".into()))]),
 				&[s_input("s", "2026-04-24T12:34:56")].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -683,6 +688,7 @@ mod tests {
 	async fn format_rfc3339_default_utc() {
 		let out = DateTimeFormatNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[("format", SocketValue::String("rfc3339".into()))]),
 				&[dt_input("datetime", "2026-04-24T12:34:56Z")].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -696,6 +702,7 @@ mod tests {
 	async fn format_rfc3339_jst_offset() {
 		let out = DateTimeFormatNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[
 					("format", SocketValue::String("rfc3339".into())),
 					("timezone", SocketValue::String("+09:00".into())),
@@ -712,6 +719,7 @@ mod tests {
 	async fn format_iso8601_compact_utc() {
 		let out = DateTimeFormatNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[("format", SocketValue::String("iso8601_compact".into()))]),
 				&[dt_input("datetime", "2026-04-24T12:34:56Z")].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -725,6 +733,7 @@ mod tests {
 	async fn format_unix_seconds() {
 		let out = DateTimeFormatNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[("format", SocketValue::String("unix_seconds".into()))]),
 				&[dt_input("datetime", "1970-01-01T00:00:10Z")].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -738,6 +747,7 @@ mod tests {
 	async fn format_unix_millis() {
 		let out = DateTimeFormatNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[("format", SocketValue::String("unix_millis".into()))]),
 				&[dt_input("datetime", "1970-01-01T00:00:01.234Z")].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -751,6 +761,7 @@ mod tests {
 	async fn format_custom_strftime() {
 		let out = DateTimeFormatNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[
 					("format", SocketValue::String("custom".into())),
 					("custom_format", SocketValue::String("%Y/%m/%d %H:%M:%S".into())),
@@ -768,6 +779,7 @@ mod tests {
 	async fn format_custom_requires_pattern() {
 		let r = DateTimeFormatNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[("format", SocketValue::String("custom".into()))]),
 				&[dt_input("datetime", "2026-04-24T12:34:56Z")].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -783,6 +795,7 @@ mod tests {
 	async fn format_unknown_errs() {
 		let r = DateTimeFormatNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&props(&[("format", SocketValue::String("nonsense".into()))]),
 				&[dt_input("datetime", "2026-04-24T12:34:56Z")].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -797,6 +810,7 @@ mod tests {
 	async fn add_duration_seconds() {
 		let out = DateTimeAddDurationNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[
 					dt_input("datetime", "2026-04-24T12:34:56Z"),
@@ -816,6 +830,7 @@ mod tests {
 	async fn add_duration_milliseconds_via_unit() {
 		let out = DateTimeAddDurationNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[
 					dt_input("datetime", "2026-04-24T12:34:56Z"),
@@ -835,6 +850,7 @@ mod tests {
 	async fn add_duration_dimensionless_treated_as_seconds() {
 		let out = DateTimeAddDurationNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[
 					dt_input("datetime", "2026-04-24T12:34:56Z"),
@@ -854,6 +870,7 @@ mod tests {
 	async fn add_duration_rejects_length_dim() {
 		let r = DateTimeAddDurationNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[
 					dt_input("datetime", "2026-04-24T12:34:56Z"),
@@ -873,6 +890,7 @@ mod tests {
 	async fn sub_duration_seconds() {
 		let out = DateTimeSubDurationNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[
 					dt_input("datetime", "2026-04-24T12:34:56Z"),
@@ -892,6 +910,7 @@ mod tests {
 	async fn sub_duration_rejects_mass_dim() {
 		let r = DateTimeSubDurationNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[
 					dt_input("datetime", "2026-04-24T12:34:56Z"),
@@ -911,6 +930,7 @@ mod tests {
 	async fn diff_positive_seconds() {
 		let out = DateTimeDiffNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[dt_input("lhs", "2026-04-24T12:35:56Z"), dt_input("rhs", "2026-04-24T12:34:56Z")]
 					.into_iter()
@@ -928,6 +948,7 @@ mod tests {
 	async fn diff_negative_when_lhs_before_rhs() {
 		let out = DateTimeDiffNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[dt_input("lhs", "2026-04-24T12:34:00Z"), dt_input("rhs", "2026-04-24T12:34:30Z")]
 					.into_iter()
@@ -944,6 +965,7 @@ mod tests {
 	async fn diff_preserves_nanosecond_precision() {
 		let out = DateTimeDiffNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[
 					dt_input("lhs", "2026-04-24T12:34:56.500000000Z"),
@@ -965,6 +987,7 @@ mod tests {
 	async fn epoch_ms_unix_epoch_is_zero() {
 		let out = DateTimeEpochMsNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[dt_input("datetime", "1970-01-01T00:00:00Z")].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -980,6 +1003,7 @@ mod tests {
 	async fn epoch_ms_positive_value() {
 		let out = DateTimeEpochMsNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[dt_input("datetime", "1970-01-01T00:00:01.234Z")].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -996,6 +1020,7 @@ mod tests {
 	async fn from_epoch_ms_with_ms_unit() {
 		let out = DateTimeFromEpochMsNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[q_input("millis", 1234.0, millisecond_unit())].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -1010,6 +1035,7 @@ mod tests {
 	async fn from_epoch_ms_with_seconds_unit_normalizes() {
 		let out = DateTimeFromEpochMsNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[q_input("millis", 10.0, Unit::second())].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -1025,6 +1051,7 @@ mod tests {
 	async fn from_epoch_ms_dimensionless_treated_as_ms() {
 		let out = DateTimeFromEpochMsNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[q_input("millis", 5000.0, Unit::dimensionless())].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -1039,6 +1066,7 @@ mod tests {
 	async fn from_epoch_ms_rejects_length() {
 		let r = DateTimeFromEpochMsNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[q_input("millis", 1.0, Unit::metre())].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -1052,6 +1080,7 @@ mod tests {
 		// from_epoch_ms \u{2192} epoch_ms \u{3067} ms \u{7cbe}\u{5ea6}\u{3092}\u{5b88}\u{308b}\u{3002}
 		let out1 = DateTimeFromEpochMsNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[q_input("millis", 1_714__000_000_123.0, millisecond_unit())].into_iter().collect(),
 				&ExecFireSet::new(),
@@ -1061,6 +1090,7 @@ mod tests {
 		let dt = out1.data.get("datetime").unwrap().clone();
 		let out2 = DateTimeEpochMsNode
 			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
 				&InputMap::new(),
 				&[("datetime".to_string(), dt)].into_iter().collect(),
 				&ExecFireSet::new(),

@@ -582,7 +582,7 @@ impl NodeDescriptor for DictionaryLearnNode {
 
 #[async_trait]
 impl PureNode for DictionaryLearnNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let base_table = get_required_table(inputs, "dictionary")?.clone();
 		let source = get_required_string(inputs, "source")?;
 		let replacement = get_required_string(inputs, "replacement")?;
@@ -730,7 +730,7 @@ impl NodeDescriptor for DictionaryForgetNode {
 
 #[async_trait]
 impl PureNode for DictionaryForgetNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let base_table = get_required_table(inputs, "dictionary")?.clone();
 		let source = get_required_string(inputs, "source")?;
 		let replacement = get_optional_string(inputs, "replacement", "")?;
@@ -1064,7 +1064,7 @@ mod tests {
 		inputs.insert("dictionary".into(), SocketValue::Table(Table::new(dictionary_schema(), Vec::new())));
 		inputs.insert("source".into(), SocketValue::String("foo".into()));
 		inputs.insert("replacement".into(), SocketValue::String("bar".into()));
-		let out = node.compute(&InputMap::new(), &inputs, &fire("exec_in")).await.unwrap();
+		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fire("exec_in")).await.unwrap();
 		assert!(out.fired_exec.contains("on_learned"));
 		let SocketValue::Table(t) = out.data.get("updated_dictionary").unwrap() else {
 			panic!()
@@ -1081,7 +1081,7 @@ mod tests {
 		inputs.insert("dictionary".into(), SocketValue::Table(t));
 		inputs.insert("source".into(), SocketValue::String("foo".into()));
 		inputs.insert("replacement".into(), SocketValue::String("bar".into()));
-		let out = node.compute(&InputMap::new(), &inputs, &fire("exec_in")).await.unwrap();
+		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fire("exec_in")).await.unwrap();
 		assert!(out.fired_exec.contains("on_duplicate"));
 		assert!(!out.fired_exec.contains("on_learned"));
 	}
@@ -1098,7 +1098,7 @@ mod tests {
 		learn_in.insert("dictionary".into(), SocketValue::Table(t0.clone()));
 		learn_in.insert("source".into(), SocketValue::String("foo".into()));
 		learn_in.insert("replacement".into(), SocketValue::String("new".into()));
-		let learned = learn.compute(&InputMap::new(), &learn_in, &fire("exec_in")).await.unwrap();
+		let learned = learn.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &learn_in, &fire("exec_in")).await.unwrap();
 		let SocketValue::Table(t1) = learned.data.get("updated_dictionary").unwrap().clone() else {
 			panic!()
 		};
@@ -1109,7 +1109,7 @@ mod tests {
 		forget_in.insert("dictionary".into(), SocketValue::Table(t1.clone()));
 		forget_in.insert("source".into(), SocketValue::String("foo".into()));
 		forget_in.insert("mode".into(), SocketValue::String("latest".into()));
-		let forgotten = forget.compute(&InputMap::new(), &forget_in, &fire("exec_in")).await.unwrap();
+		let forgotten = forget.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &forget_in, &fire("exec_in")).await.unwrap();
 		let SocketValue::Table(t2) = forgotten.data.get("updated_dictionary").unwrap().clone() else {
 			panic!()
 		};
@@ -1132,7 +1132,7 @@ mod tests {
 		inp.insert("dictionary".into(), SocketValue::Table(t));
 		inp.insert("source".into(), SocketValue::String("foo".into()));
 		inp.insert("mode".into(), SocketValue::String("all".into()));
-		let out = forget.compute(&InputMap::new(), &inp, &fire("exec_in")).await.unwrap();
+		let out = forget.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inp, &fire("exec_in")).await.unwrap();
 		assert_eq!(out.data.get("removed_count"), Some(&SocketValue::Int(2)));
 		let SocketValue::Table(t2) = out.data.get("updated_dictionary").unwrap() else {
 			panic!()
@@ -1149,7 +1149,7 @@ mod tests {
 		inp.insert("dictionary".into(), SocketValue::Table(t));
 		inp.insert("source".into(), SocketValue::String("locked".into()));
 		inp.insert("mode".into(), SocketValue::String("all".into()));
-		let out = forget.compute(&InputMap::new(), &inp, &fire("exec_in")).await.unwrap();
+		let out = forget.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inp, &fire("exec_in")).await.unwrap();
 		assert!(out.fired_exec.contains("on_locked"));
 		assert!(out.fired_exec.contains("on_nothing"));
 		assert_eq!(out.data.get("removed_count"), Some(&SocketValue::Int(0)));

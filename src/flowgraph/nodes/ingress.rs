@@ -112,7 +112,7 @@ impl NodeDescriptor for WebInputIngressNode {
 
 #[async_trait]
 impl PureNode for WebInputIngressNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		ingress_compute(inputs, fired_exec).await
 	}
 }
@@ -164,7 +164,7 @@ impl NodeDescriptor for VoiceIngressNode {
 
 #[async_trait]
 impl PureNode for VoiceIngressNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		ingress_compute(inputs, fired_exec).await
 	}
 }
@@ -228,7 +228,7 @@ impl NodeDescriptor for TwitchIngressNode {
 
 #[async_trait]
 impl PureNode for TwitchIngressNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		ingress_compute(inputs, fired_exec).await
 	}
 }
@@ -357,7 +357,7 @@ async fn twitch_eventsub_compute(inputs: &InputMap, fired_exec: &ExecFireSet) ->
 
 #[async_trait]
 impl PureNode for TwitchEventsubIngressNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		twitch_eventsub_compute(inputs, fired_exec).await
 	}
 }
@@ -482,7 +482,7 @@ async fn channel_subscribe_compute(inputs: &InputMap, fired_exec: &ExecFireSet) 
 
 #[async_trait]
 impl PureNode for ChannelSubscribeIngressNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		channel_subscribe_compute(inputs, fired_exec).await
 	}
 }
@@ -523,7 +523,7 @@ impl NodeDescriptor for VmcUdpIngressNode {
 
 #[async_trait]
 impl PureNode for VmcUdpIngressNode {
-	async fn compute(&self, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		ingress_compute(inputs, fired_exec).await
 	}
 }
@@ -567,7 +567,7 @@ mod tests {
 			);
 		});
 		let shutdown = tokio::time::sleep(Duration::from_millis(150));
-		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown)
+		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown, None)
 			.await
 			.expect("run_forever_with_bus");
 		sender.await.unwrap();
@@ -600,7 +600,7 @@ mod tests {
 			}
 		});
 		let shutdown = tokio::time::sleep(Duration::from_millis(150));
-		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown)
+		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown, None)
 			.await
 			.expect("run_forever_with_bus");
 		sender.await.unwrap();
@@ -614,7 +614,7 @@ mod tests {
 	#[tokio::test]
 	async fn ingress_without_trigger_is_noop() {
 		let node = VoiceIngressNode;
-		let out = node.compute(&InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
+		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
 		assert!(out.fired_exec.is_empty());
 		assert!(out.data.is_empty());
 	}
@@ -644,7 +644,7 @@ mod tests {
 			);
 		});
 		let shutdown = tokio::time::sleep(Duration::from_millis(150));
-		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown)
+		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown, None)
 			.await
 			.expect("run_forever_with_bus");
 		sender.await.unwrap();
@@ -656,7 +656,7 @@ mod tests {
 	#[tokio::test]
 	async fn channel_subscribe_without_trigger_is_noop() {
 		let node = ChannelSubscribeIngressNode;
-		let out = node.compute(&InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
+		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
 		assert!(out.fired_exec.is_empty());
 		assert!(out.data.is_empty());
 	}
@@ -685,7 +685,7 @@ mod tests {
 			);
 		});
 		let shutdown = tokio::time::sleep(Duration::from_millis(150));
-		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown)
+		prog.run_forever_with_bus(&mut ctx, handle, rx, shutdown, None)
 			.await
 			.expect("run_forever_with_bus");
 		sender.await.unwrap();
