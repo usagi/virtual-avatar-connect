@@ -126,6 +126,8 @@ pub struct State {
 	/// Phase VI-α-5: Control API からの Twitch Device Code Flow セッション管理。
 	/// broadcaster / moderator 各 1 本まで並行保持する（同一アカウントへの重複 start は既存セッションを冪等に返す）。
 	pub twitch_oauth: Arc<OAuthSessions>,
+	/// RM-3: 現在の Runtime Mode ID（Control API で更新可）。`None` のときは `conf.default_runtime_mode` を意味する。
+	pub runtime_mode_id: std::sync::Arc<std::sync::RwLock<Option<String>>>,
 	/// Phase VI-γ-1: この State を組み立てた conf の読み込み元パス（絶対パス寄りに正規化済み）。
 	///
 	/// `/api/v1/control/restart` が「現在の conf」を識別する、`/api/v1/control/profiles` が
@@ -220,6 +222,9 @@ impl State {
 
 		let voicepeak_fallback_exe = crate::conf::resolve_voicepeak_fallback_executable(conf);
 
+		let runtime_mode_id = std::sync::Arc::new(std::sync::RwLock::new(conf.default_runtime_mode.clone()));
+		let runtime_mode_id_for_flowgraph = runtime_mode_id.clone();
+
 		// δ-6: Flowgraph ランタイム共有ハンドル。opt-in なので `flowgraph_dir` が None / 非存在なら `None` 保持。
 		// δ-9 Part A: ロード + 実行ワーカー spawn は `State` 生成後に遅延実行する（`Weak<RwLock<State>>` が必要なため）。
 		let flowgraph = shared_flowgraph_new();
@@ -240,6 +245,7 @@ impl State {
 			channel_datum_tx,
 			twitch: twitch_snapshot,
 			twitch_oauth: OAuthSessions::new(),
+			runtime_mode_id,
 			conf_source_path: conf.source_path.clone(),
 			browser_source_document_root: conf.browser_source.as_ref().and_then(|b| b.document_root.clone()),
 			managed_apps: std::sync::Arc::new(tokio::sync::RwLock::new(crate::managed_app::ManagedAppRegistry::from_conf(conf))),
@@ -265,12 +271,20 @@ impl State {
 		// δ-9 Part A: Flowgraph ロード + ワーカー spawn。`State` 全体への `Weak` を ExecCtx に渡して
 		// `channel.emit` 等が `State::push_channel_datum` を呼べるようにする。
 		if let Some(root) = conf.flowgraph_dir.as_deref() {
-			let (audio_sink_clone, flowgraph_arc) = {
+			let (audio_sink_clone, flowgraph_arc, mode_for_gate) = {
 				let s = state.read().await;
-				(s.audio_sink.clone(), s.flowgraph.clone())
+				let m = s.runtime_mode_id.read().ok().and_then(|g| g.clone());
+				(s.audio_sink.clone(), s.flowgraph.clone(), m)
 			};
 			let state_weak = Arc::downgrade(&state);
-			let rt = crate::flowgraph::FlowgraphRuntime::load_and_spawn(root, state_weak, Some(audio_sink_clone));
+			let rt = crate::flowgraph::FlowgraphRuntime::load_and_spawn(
+				root,
+				state_weak,
+				Some(audio_sink_clone),
+				Some(conf),
+				mode_for_gate.as_deref(),
+				Some(runtime_mode_id_for_flowgraph),
+			);
 			crate::flowgraph::runtime::log_load_outcome(&rt);
 			*flowgraph_arc.write().await = Some(rt);
 		}
