@@ -1,0 +1,12 @@
+[package]
+name = "vac-motion"
+version = "0.10.0"
+edition = "2021"
+
+[dependencies]
+base64 = "0.22.1"
+log = "0.4.29"
+rosc = "0.11.4"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+tokio = { version = "1.52", features = ["net"] }

@@ -2,7 +2,7 @@
 //!
 //! パースのみ。転送は [`super::router`] / `bridges::vmc_ingress` の責務。
 
-use crate::motion::frame::{MotionFrame, OscMessageWire};
+use crate::frame::{MotionFrame, OscMessageWire};
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use rosc::{decoder, OscPacket, OscType};
 use serde_json::{json, Value as JsonValue};

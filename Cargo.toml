@@ -7,7 +7,7 @@ autobins = false
 default-run = "virtual-avatar-connect-desktop"
 
 [workspace]
-members = [".", "crates/vac-gui-assets"]
+members = [".", "crates/vac-gui-assets", "crates/vac-motion"]
 default-members = ["."]
 resolver = "2"
 
@@ -115,6 +115,7 @@ eventsource-stream = "0.2"
 # reqwest / eventsource-stream が推移的に依存しているので追加コストは実質ゼロ。
 bytes = "1"
 jiff = { version = "0.2.24", features = ["serde"] }
+vac-motion = { path = "crates/vac-motion" }
 vac-gui-assets = { path = "crates/vac-gui-assets", optional = true }
 
 [dependencies.vosk]

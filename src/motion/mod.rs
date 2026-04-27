@@ -5,18 +5,13 @@
 //!
 //! ## Crate 分割時の依存契約（Step 4）
 //!
-//! このモジュールツリーは **`crate::conf`** と **`crate::shutdown`**（および自サブモジュール）のみを参照する。
+//! root crate 側は **`crate::conf`** と **`crate::shutdown`**（および `vac-motion`）のみを参照する。
 //! **`flowgraph` / `bridges` / `state` / `web_interface` へは依存しない**（VMC の Flowgraph 入口は `bridges::vmc_ingress`）。
 
-mod frame;
-
-pub use frame::{MotionFrame, OscMessageWire};
 mod osc;
-mod router;
 mod vmc_raw;
-mod vmc_osc;
 
-pub use vmc_osc::parse_vmc_payload;
+pub use vac_motion::{parse_vmc_payload, MotionFrame, OscMessageWire};
 
 use crate::conf::Conf;
 use crate::conf::VmcPassthroughSpec;

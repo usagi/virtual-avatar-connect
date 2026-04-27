@@ -1,6 +1,6 @@
 //! Phase M4: VMC / OSC を正規化したワイヤ表現（**第一級 [`MotionFrame`]**）。
 //!
-//! Flowgraph では [`crate::flowgraph::socket::SocketType::MotionFrame`] として渡し、
+//! Flowgraph では `SocketType::MotionFrame` として渡し、
 //! `json` ポートとはエッジ上で暗黙変換（`byte_len` / `osc_messages` の JSON オブジェクト）可能。
 
 use serde::{Deserialize, Serialize};
@@ -77,11 +77,7 @@ fn scale_json_numbers(v: &JsonValue, scale: f64) -> JsonValue {
 			JsonValue::from(f)
 		}
 		JsonValue::Array(a) => JsonValue::Array(a.iter().map(|x| scale_json_numbers(x, scale)).collect()),
-		JsonValue::Object(map) => JsonValue::Object(
-			map.iter()
-				.map(|(k, val)| (k.clone(), scale_json_numbers(val, scale)))
-				.collect(),
-		),
+		JsonValue::Object(map) => JsonValue::Object(map.iter().map(|(k, val)| (k.clone(), scale_json_numbers(val, scale))).collect()),
 		_ => v.clone(),
 	}
 }

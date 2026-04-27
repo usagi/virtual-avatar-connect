@@ -1,12 +1,12 @@
 //! VMC 互換の **生 UDP** 受信とパススルー転送。
 
 use crate::conf::VmcPassthroughSpec;
-use crate::motion::router::{self, SendFailLogThrottle};
 use crate::shutdown::ShutdownBroker;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::task::JoinHandle;
+use vac_motion::router::{self, SendFailLogThrottle};
 
 /// ログ行に載せる短い文脈（`label` が空なら `bind`）。
 pub(crate) fn passthrough_log_ctx(spec: &VmcPassthroughSpec, bind: SocketAddr) -> String {
