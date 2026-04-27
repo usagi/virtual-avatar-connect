@@ -35,7 +35,7 @@ virtual-avatar-connect/
   Cargo.toml
   crates/
     vac-core/          # conf, runtime paths, shutdown, shared state primitives
-    vac-flowgraph/     # Flowgraph language/runtime/nodes（一段目は pure Quantity system）
+    vac-flowgraph/     # Flowgraph language/runtime/nodes（一段目は pure Quantity system + instance config）
     vac-motion/        # VMC/OSC UDP motion transport and protocol helpers（一段目は frame / decode / forwarding / OSC / VMC / VRChat）
     vac-bridges/       # ingress/egress bridge tasks
     vac-control-api/   # actix Control API + GUI static serving
@@ -104,7 +104,7 @@ Windows release の desktop 側だけ `windows_subsystem = "windows"` を使う�
 
 1. `vac-motion` の第一段（`MotionFrame` / OSC decode / UDP forwarding helper / OSC / VMC / VRChat encoding helper）は完了。`vmc_raw` の runner 統合は root crate に残す。
 2. `vac-gui-assets` の `crates/` 配下移動（完了）
-3. `vac-flowgraph` の pure 部分（第一段として Quantity system は完了）
+3. `vac-flowgraph` の pure 部分（第一段として Quantity system / instance config は完了）
 
 `state`、`web_interface`、`bridges` は相互依存が濃いので後回し。先に動かすと実装速度が落ちる。
 

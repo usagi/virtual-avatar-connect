@@ -149,7 +149,7 @@ pub enum SocketValue {
 ### 3.5 Config default timezone
 
 ```rust
-// src/flowgraph/config.rs
+// crates/vac-flowgraph/src/config.rs
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct FlowgraphInstanceConfig {
@@ -342,7 +342,7 @@ parse 対象文字列の TZ 情報の有無を以下で判定:
   - `SocketValue::DateTime(DateTime)` variant 追加
   - `SocketType::compatible_with` に String ↔ DateTime ルール追加
   - `coerce_to_type` に String ↔ DateTime 実装 (§3.6 naive policy 込み)
-- `src/flowgraph/config.rs` (or 相当):
+- `crates/vac-flowgraph/src/config.rs`（root 側は `src/flowgraph/config.rs` で再エクスポート）:
   - `FlowgraphInstanceConfig.default_timezone: Option<String>` 追加 + load-time 検証
   - `InstanceContext` から engine の coerce 関数へ TZ 情報を渡す配管
 - **test**:
