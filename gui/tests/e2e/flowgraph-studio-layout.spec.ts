@@ -30,8 +30,12 @@ test.describe('GUI redesign: Flowgraph Studio layout', () => {
   const dialog = page.getByRole('dialog', { name: 'Command Palette' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', { name: /Reload from disk/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Undo/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Duplicate selection/ })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /Save current file/ })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /Import ZIP/ })).toBeVisible();
+  await dialog.getByPlaceholder('Search commands or node catalog').fill('literal');
+  await expect(dialog.getByRole('button', { name: /Insert/ }).first()).toBeVisible();
   await dialog.getByRole('button', { name: 'Close' }).click();
   await expect(dialog).toBeHidden();
  });

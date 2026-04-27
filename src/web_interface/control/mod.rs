@@ -47,6 +47,7 @@ pub fn register(cfg: &mut web::ServiceConfig) {
 			.service(ping::ping)
 			.service(ping::whoami)
 			.service(ws::events_ws)
+			.service(events::history)
 			.configure(actions::configure)
 			.configure(reload::configure)
 			.configure(restart::configure)

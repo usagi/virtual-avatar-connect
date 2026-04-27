@@ -17,5 +17,7 @@ test.describe('GUI redesign: Observability layout', () => {
   await expect(main.getByText('Filters', { exact: true })).toBeVisible();
   await expect(main.getByRole('button', { name: 'channel_datum' })).toBeVisible();
   await expect(main.getByRole('button', { name: 'flowgraph_reloaded' })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Event History' })).toBeVisible();
+  await expect(main.getByText('Server-side ring buffer for operational evidence.')).toBeVisible();
  });
 });

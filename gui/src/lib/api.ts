@@ -51,6 +51,7 @@ import {
  type ReloadRequest,
  type ReloadResponse,
  type CurrentModeResponse,
+ type ControlEventHistoryResponse,
  type ModePlanRequest,
  type ModeTransitRequest,
  type ModeTransitResponse,
@@ -160,6 +161,11 @@ export const api = {
  // --- Snapshot ---
  snapshot(): Promise<StateSnapshot> {
   return request<StateSnapshot>('/snapshot');
+ },
+ eventHistory(limit = 100, kind?: string): Promise<ControlEventHistoryResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (kind) params.set('kind', kind);
+  return request<ControlEventHistoryResponse>(`/events/history?${params.toString()}`);
  },
 
  // --- Pause / Resume ---

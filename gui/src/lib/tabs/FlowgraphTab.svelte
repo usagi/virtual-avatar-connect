@@ -29,6 +29,10 @@
 let dialogOpen = $state(false);
 let dialogMode = $state<'paste' | 'import_zip'>('paste');
 let commandPaletteOpen = $state(false);
+let commandQuery = $state('');
+let filePaneWidth = $state(260);
+let inspectorPaneWidth = $state(320);
+let problemsHeight = $state(176);
 
 type StudioCommand = {
  id: string;
@@ -51,6 +55,21 @@ onMount(() => {
     if (!flowgraphStore.currentFq || flowgraphStore.mutating) return;
     ev.preventDefault();
     void flowgraphStore.saveCurrent();
+    return;
+   }
+
+   const isUndo = (ev.ctrlKey || ev.metaKey) && !ev.altKey && ev.key.toLowerCase() === 'z';
+   if (isUndo) {
+    ev.preventDefault();
+    if (ev.shiftKey) onRedo();
+    else onUndo();
+    return;
+   }
+
+   const isRedo = (ev.ctrlKey || ev.metaKey) && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === 'y';
+   if (isRedo) {
+    ev.preventDefault();
+    onRedo();
     return;
    }
 
@@ -100,7 +119,67 @@ onMount(() => {
  const fileCount = $derived(flowgraphStore.tree?.files.length ?? 0);
  const nodeCount = $derived(flowgraphStore.draftNodes?.length ?? 0);
  const edgeCount = $derived(flowgraphStore.draftEdges?.length ?? 0);
+ const workspaceGridStyle = $derived(
+  `grid-template-columns: ${filePaneWidth}px minmax(34rem, 1fr) ${inspectorPaneWidth}px;`,
+ );
+ const problemsStyle = $derived(`max-height: ${problemsHeight}px;`);
  const studioCommands: StudioCommand[] = $derived([
+  {
+   id: 'undo',
+   label: 'Undo',
+   description: 'Revert the last canvas edit.',
+   disabled: !flowgraphStore.canUndo(),
+   run: onUndo,
+  },
+  {
+   id: 'redo',
+   label: 'Redo',
+   description: 'Reapply the last reverted canvas edit.',
+   disabled: !flowgraphStore.canRedo(),
+   run: onRedo,
+  },
+  {
+   id: 'duplicate',
+   label: 'Duplicate selection',
+   description: 'Duplicate the selected node or node set.',
+   disabled: !flowgraphStore.currentFq || flowgraphStore.selectedNodeIds.length === 0,
+   run: onDuplicateSelection,
+  },
+  {
+   id: 'align_horizontal',
+   label: 'Align horizontal',
+   description: 'Align selected nodes to the same y position.',
+   disabled: flowgraphStore.selectedNodeIds.length < 2,
+   run: () => flowgraphStore.alignSelectedNodes('y'),
+  },
+  {
+   id: 'align_vertical',
+   label: 'Align vertical',
+   description: 'Align selected nodes to the same x position.',
+   disabled: flowgraphStore.selectedNodeIds.length < 2,
+   run: () => flowgraphStore.alignSelectedNodes('x'),
+  },
+  {
+   id: 'distribute_horizontal',
+   label: 'Distribute horizontal',
+   description: 'Evenly space selected nodes along the x axis.',
+   disabled: flowgraphStore.selectedNodeIds.length < 3,
+   run: () => flowgraphStore.distributeSelectedNodes('x'),
+  },
+  {
+   id: 'distribute_vertical',
+   label: 'Distribute vertical',
+   description: 'Evenly space selected nodes along the y axis.',
+   disabled: flowgraphStore.selectedNodeIds.length < 3,
+   run: () => flowgraphStore.distributeSelectedNodes('y'),
+  },
+  {
+   id: 'group_layout',
+   label: 'Group layout',
+   description: 'Pack selected nodes into a compact visual group without adding source metadata.',
+   disabled: flowgraphStore.selectedNodeIds.length < 2,
+   run: () => flowgraphStore.groupSelectedNodes(),
+  },
   {
    id: 'reload',
    label: 'Reload from disk',
@@ -150,7 +229,42 @@ onMount(() => {
    disabled: false,
    run: onImportZip,
   },
+  ...nodeInsertCommands(),
  ]);
+
+ const filteredStudioCommands = $derived.by(() => {
+  const q = commandQuery.trim().toLowerCase();
+  if (!q) return studioCommands;
+  return studioCommands.filter((command) =>
+   `${command.label} ${command.description}`.toLowerCase().includes(q),
+  );
+ });
+
+ function nodeInsertCommands(): StudioCommand[] {
+  const specs = flowgraphStore.catalog?.specs ?? [];
+  return specs.slice(0, 250).map((spec) => ({
+   id: `insert:${spec.feature}`,
+   label: `Insert ${spec.title}`,
+   description: `${spec.category} · ${spec.feature}`,
+   disabled: !flowgraphStore.currentFq,
+   run: () => {
+    flowgraphStore.addCatalogNodeAt(spec, null);
+   },
+  }));
+ }
+
+ function onUndo() {
+  if (flowgraphStore.undo()) toastStore.info('Undo', flowgraphStore.undoStack.at(-1)?.label ?? '');
+ }
+
+ function onRedo() {
+  if (flowgraphStore.redo()) toastStore.info('Redo', flowgraphStore.redoStack.at(-1)?.label ?? '');
+ }
+
+ function onDuplicateSelection() {
+  const ok = flowgraphStore.duplicateSelectedNode();
+  if (ok) toastStore.success('Duplicated', `${flowgraphStore.selectedNodeIds.length} node(s)`);
+ }
 
  async function onReload() {
   await flowgraphStore.reloadFromDisk();
@@ -257,6 +371,18 @@ async function runStudioCommand(command: StudioCommand) {
   >
    {summary.error}E / {summary.warning}W / {summary.info}I
   </span>
+  <label class="flex items-center gap-1 text-[10px] opacity-70" title="Resize file pane">
+   Files
+   <input class="w-20" type="range" min="200" max="420" step="10" bind:value={filePaneWidth} />
+  </label>
+  <label class="flex items-center gap-1 text-[10px] opacity-70" title="Resize inspector pane">
+   Side pane
+   <input class="w-20" type="range" min="260" max="520" step="10" bind:value={inspectorPaneWidth} />
+  </label>
+  <label class="flex items-center gap-1 text-[10px] opacity-70" title="Resize problems panel">
+   Bottom pane
+   <input class="w-20" type="range" min="120" max="360" step="8" bind:value={problemsHeight} />
+  </label>
   <button
    type="button"
    class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800"
@@ -355,8 +481,15 @@ async function runStudioCommand(command: StudioCommand) {
      Close
     </button>
    </div>
+   <div class="border-b border-surface-200-800 px-3 py-2">
+    <input
+     class="w-full rounded border border-surface-300-700 bg-surface-50-950 px-3 py-2 text-sm"
+     placeholder="Search commands or node catalog"
+     bind:value={commandQuery}
+    />
+   </div>
    <div class="grid gap-1 p-2">
-    {#each studioCommands as command (command.id)}
+    {#each filteredStudioCommands as command (command.id)}
      <button
       type="button"
       class="rounded px-3 py-2 text-left hover:bg-surface-100-900 disabled:opacity-40 disabled:hover:bg-transparent"
@@ -366,14 +499,16 @@ async function runStudioCommand(command: StudioCommand) {
       <div class="text-sm font-semibold">{command.label}</div>
       <div class="mt-0.5 text-xs opacity-60">{command.description}</div>
      </button>
-   {/each}
+    {:else}
+     <div class="px-3 py-8 text-center text-sm opacity-60">No matching command.</div>
+    {/each}
    </div>
   </div>
  </div>
 {/if}
 
  <!-- Studio workspace -->
- <div class="grid min-h-0 flex-1 gap-2 xl:grid-cols-[260px_minmax(34rem,1fr)_320px]">
+ <div class="grid min-h-0 flex-1 gap-2 xl:grid-cols-[260px_minmax(34rem,1fr)_320px]" style={workspaceGridStyle}>
   <section class="flex min-h-[16rem] flex-col overflow-hidden rounded border border-surface-200-800 bg-surface-50-950">
    <div class="border-b border-surface-200-800 px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
     Files
@@ -414,7 +549,7 @@ async function runStudioCommand(command: StudioCommand) {
  </div>
 
  <!-- Problems -->
- <section class="max-h-44 overflow-y-auto rounded border border-surface-200-800 bg-surface-50-950">
+ <section class="overflow-y-auto rounded border border-surface-200-800 bg-surface-50-950" style={problemsStyle}>
   <div class="border-b border-surface-200-800 px-3 py-2 text-xs font-semibold uppercase tracking-wider opacity-60">
    Problems
   </div>

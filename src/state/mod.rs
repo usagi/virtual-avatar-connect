@@ -54,9 +54,49 @@ const AI_OBSERVATION_CHANNEL_CAPACITY: usize = 1024;
 /// Control API WebSocket (`/api/v1/control/events`) 用のイベント配信キャパシティ。
 /// 接続されている GUI が遅い場合に `Lagged` 通知で補足するため、こちらも余裕をもって取る。
 const CONTROL_EVENT_CHANNEL_CAPACITY: usize = 2048;
+const CONTROL_EVENT_HISTORY_CAPACITY: usize = 512;
 /// δ-9 Part E: Flowgraph の `channel.subscribe` ingress が購読する `ChannelDatum` ブロードキャストの容量。
 /// 複数 bridge が独立して受信するため、遅い購読者がいても後続を取りこぼさないよう広めに取る。
 const CHANNEL_DATUM_BROADCAST_CAPACITY: usize = 2048;
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct TimestampedControlEvent {
+	pub at: String,
+	pub event: ControlEvent,
+}
+
+fn spawn_control_event_history_recorder(
+	mut rx: broadcast::Receiver<ControlEvent>,
+	history: Arc<RwLock<VecDeque<TimestampedControlEvent>>>,
+) {
+	tokio::spawn(async move {
+		loop {
+			match rx.recv().await {
+				Ok(event) => {
+					let mut h = history.write().await;
+					if h.len() >= CONTROL_EVENT_HISTORY_CAPACITY {
+						h.pop_front();
+					}
+					h.push_back(TimestampedControlEvent {
+						at: crate::datetime::DateTime::now().to_rfc3339(),
+						event,
+					});
+				}
+				Err(broadcast::error::RecvError::Lagged(dropped)) => {
+					let mut h = history.write().await;
+					if h.len() >= CONTROL_EVENT_HISTORY_CAPACITY {
+						h.pop_front();
+					}
+					h.push_back(TimestampedControlEvent {
+						at: crate::datetime::DateTime::now().to_rfc3339(),
+						event: ControlEvent::Lagged { dropped },
+					});
+				}
+				Err(broadcast::error::RecvError::Closed) => break,
+			}
+		}
+	});
+}
 
 /// `respect_speech_floor` が設定されているとき、対応する speech floor が空くまで非同期待機する（スキップしない）。
 pub async fn wait_respect_speech_floor_key(state: &SharedState, key: Option<&str>) {
@@ -119,6 +159,7 @@ pub struct State {
 	/// Control API WebSocket の配信チャネル（Phase VI-α-3）。
 	/// 各 WS 接続が `subscribe()` で受信側を作り、切断で drop する使い方。受信者 0 でも `send()` は失敗しない設計にする。
 	pub control_event_tx: broadcast::Sender<ControlEvent>,
+	pub control_event_history: Arc<RwLock<VecDeque<TimestampedControlEvent>>>,
 	/// δ-9 Part E: `push_channel_datum` / `push_channel_datum_quiet` / `finalize_channel_datum_and_dispatch`
 	/// で `ChannelDatum` を配信するブロードキャスト送信側。
 	///
@@ -204,6 +245,7 @@ impl State {
 
 		let (ai_observation_tx, _rx) = broadcast::channel::<Observation>(AI_OBSERVATION_CHANNEL_CAPACITY);
 		let (control_event_tx, _rx) = broadcast::channel::<ControlEvent>(CONTROL_EVENT_CHANNEL_CAPACITY);
+		let control_event_history = Arc::new(RwLock::new(VecDeque::with_capacity(CONTROL_EVENT_HISTORY_CAPACITY)));
 		let (channel_datum_tx, _rx) = broadcast::channel::<ChannelDatum>(CHANNEL_DATUM_BROADCAST_CAPACITY);
 
 		let twitch_snapshot = conf.twitch.as_ref().map(|t| Arc::new(t.clone()));
@@ -250,7 +292,8 @@ impl State {
 			libretranslate: crate::libretranslate::runtime_new(),
 			runtime_paths,
 			ai_observation_tx,
-			control_event_tx,
+			control_event_tx: control_event_tx.clone(),
+			control_event_history: control_event_history.clone(),
 			channel_datum_tx,
 			twitch: twitch_snapshot,
 			twitch_oauth: OAuthSessions::new(),
@@ -265,6 +308,7 @@ impl State {
 			shutdown,
 			runtime_mode_transition_busy: Arc::new(AtomicBool::new(false)),
 		}));
+		spawn_control_event_history_recorder(control_event_tx.subscribe(), control_event_history);
 		log::trace!("State の生成が完了しました。");
 
 		// Phase δ-9 D.2/D.3 (v1.0): V1 `[[processors]]` は全廃。`conf.processors` が残っていても warning を出すだけ。

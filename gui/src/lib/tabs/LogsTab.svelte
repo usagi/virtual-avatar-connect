@@ -5,6 +5,7 @@
   * 既存の EventStream + SnapshotView をそのまま並べ、γ-5 で高度フィルタ・ダウンロード・全文検索へ拡張する。
   */
  import EventStream from '../EventStream.svelte';
+ import EventHistoryPanel from '../EventHistoryPanel.svelte';
  import SnapshotView from '../SnapshotView.svelte';
 </script>
 
@@ -34,8 +35,11 @@
   <div class="min-w-0">
    <SnapshotView />
   </div>
-  <div class="min-w-0">
-   <EventStream />
+ <div class="min-w-0">
+   <div class="grid gap-4">
+    <EventStream />
+    <EventHistoryPanel />
+   </div>
   </div>
  </div>
 </section>

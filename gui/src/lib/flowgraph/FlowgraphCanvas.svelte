@@ -77,7 +77,7 @@
      feature: n.feature,
      spec,
     },
-    selected: flowgraphStore.selectedNodeId === n.id,
+    selected: flowgraphStore.selectedNodeIds.includes(n.id) || flowgraphStore.selectedNodeId === n.id,
    };
   });
  }
@@ -192,7 +192,8 @@
  }
 
  function onSelectionChange(params: { nodes: Node[]; edges: Edge[] }) {
-  const firstNode = params.nodes[0];
+ const firstNode = params.nodes[0];
+  flowgraphStore.selectedNodeIds = params.nodes.map((n) => n.id);
   flowgraphStore.selectedNodeId = firstNode ? firstNode.id : null;
  }
 

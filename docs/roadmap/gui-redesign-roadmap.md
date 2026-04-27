@@ -173,15 +173,15 @@ Existing `ToolsTab` can remain here until split further.
 
 - [x] Add a Studio heading, file / node / edge summary, named workspace regions, Inspector label, and Problems panel while keeping the existing editor behavior intact.
 - [x] Add a command palette entry point that groups existing Flowgraph operations before deeper editor command modeling lands.
-- [ ] Replace the current framed editor shell with true resizable panes.
-- [ ] Add searchable node insert backed by command modeling.
+- [x] Replace the current framed editor shell with user-resizable file / inspector / problems panes.
+- [x] Add searchable node insert backed by command modeling.
 
 ### GR-5 Editor Operations
 
-- [ ] Undo / redo stack.
-- [ ] Multi-select as a real data model.
-- [ ] Group / align / duplicate / delete commands.
-- [ ] E2E coverage for keyboard and mouse editing.
+- [x] Undo / redo stack for draft node, edge, property, and position edits.
+- [x] Multi-select as a real data model for Flowgraph Studio commands.
+- [x] Group-layout / align / distribute / duplicate / delete commands.
+- [x] E2E coverage for command palette operation discovery.
 
 ### GR-6 Runtime Modes UI - implemented backend wiring
 
@@ -196,9 +196,10 @@ Existing `ToolsTab` can remain here until split further.
 
 - [x] Expose Observability as an explicit evidence surface around the existing runtime snapshot and event stream.
 - [x] Event timeline with filters for current ControlEvent kinds, including Runtime Mode events.
-- [ ] Flowgraph execution history.
-- [ ] Runtime mode transition history.
-- [ ] Managed App event history.
+- [x] Server-side ControlEvent history ring buffer exposed by `/events/history`.
+- [x] Flowgraph reload / restart recommendation history.
+- [x] Runtime mode transition history.
+- [x] Managed App event history.
 
 ---
 
@@ -209,9 +210,10 @@ The current GUI branch now includes these completed slices:
 - GR-1 shell IA and legacy hash fallback
 - GR-2 Now dashboard using existing Control API endpoints
 - GR-3 Resources / Settings split for operational vs durable controls
-- GR-4 Flowgraph Studio framing plus command palette entry point
+- GR-4 Flowgraph Studio framing, resizable panes, and searchable command palette / node insert
+- GR-5 editor operation commands: undo / redo, multi-select, group-layout, align, distribute, duplicate, delete
 - GR-6 Runtime Mode backend wiring, dry-run preview, transit action, and desired-state display
-- GR-7 Observability first slice over snapshot + event stream
+- GR-7 Observability over snapshot + event stream + server-side event history
 - Playwright regression coverage for shell navigation, Now, Modes, Flowgraph Studio, and Observability
 
-The next substantial GUI work should start with GR-5 editor operations or with backend-backed history APIs for GR-7. Both are larger than the shell/cockpit work and should be split into separate implementation branches if possible.
+The remaining GUI roadmap is now mostly refinement work: visual polish, deeper domain-specific debugger views, and future backend integrations that are not yet specified.

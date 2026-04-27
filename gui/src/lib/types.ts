@@ -716,6 +716,16 @@ export type ControlEvent =
 /** ControlEvent の kind 文字列一覧（`never` チェック用ユーティリティ）。 */
 export type ControlEventKind = ControlEvent['kind'];
 
+export type ControlEventHistoryItem = {
+ at: string;
+ event: ControlEvent;
+};
+
+export type ControlEventHistoryResponse = {
+ events: ControlEventHistoryItem[];
+ limit: number;
+};
+
 /**
  * 使用例:
  * ```ts
