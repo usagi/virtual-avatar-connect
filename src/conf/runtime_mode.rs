@@ -346,4 +346,40 @@ flowgraph_groups.disable = ["c"]
 		validate_runtime_modes(&conf).unwrap();
 		assert!(build_mode_transition_plan(&conf, None, Some("ghost")).is_err());
 	}
+
+	#[test]
+	fn transition_plan_noop_when_same_effective_mode() {
+		let raw = r#"
+default_runtime_mode = "daily"
+[modes.daily]
+flowgraph_groups.enable = ["x"]
+"#;
+		let conf: Conf = toml::from_str(raw).unwrap();
+		validate_runtime_modes(&conf).unwrap();
+		let p = build_mode_transition_plan(&conf, None, None).unwrap();
+		assert!(p.noop);
+		assert_eq!(p.from_effective_id, "daily");
+		assert_eq!(p.to_effective_id, "daily");
+		assert!(p.flowgraph_enable_added_vs_from.is_empty());
+		assert!(p.flowgraph_disable_added_vs_from.is_empty());
+	}
+
+	#[test]
+	fn transition_plan_carries_target_managed_apps_directive() {
+		let raw = r#"
+run_with = [{ command = "noop.exe", id = "app1" }, { command = "noop2.exe", id = "app2" }]
+default_runtime_mode = "a"
+[modes.a]
+managed_apps.start = ["app1"]
+
+[modes.b]
+managed_apps.stop = ["app2"]
+"#;
+		let conf: Conf = toml::from_str(raw).unwrap();
+		validate_runtime_modes(&conf).unwrap();
+		let p = build_mode_transition_plan(&conf, None, Some("b")).unwrap();
+		assert_eq!(p.to_effective_id, "b");
+		assert!(p.target_managed_apps.start.is_empty());
+		assert_eq!(p.target_managed_apps.stop, vec!["app2".to_string()]);
+	}
 }
