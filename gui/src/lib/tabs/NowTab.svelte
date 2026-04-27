@@ -7,11 +7,12 @@
   ControlEvent,
   FlowgraphDiagnosticsResponse,
   FlowgraphTreeResponse,
-  ManagedAppsResponse,
-  StateSnapshot,
+ ManagedAppsResponse,
+ StateSnapshot,
  } from '../types';
 
  let snapshot = $state<StateSnapshot | null>(null);
+ let currentMode = $state<string | null>(null);
  let managedApps = $state<ManagedAppsResponse | null>(null);
  let flowgraphTree = $state<FlowgraphTreeResponse | null>(null);
  let diagnostics = $state<FlowgraphDiagnosticsResponse | null>(null);
@@ -22,13 +23,15 @@
   loading = true;
   error = null;
   try {
-   const [nextSnapshot, nextManagedApps, nextTree, nextDiagnostics] = await Promise.all([
+   const [nextSnapshot, nextMode, nextManagedApps, nextTree, nextDiagnostics] = await Promise.all([
     api.snapshot(),
+    api.currentMode(),
     api.managedApps(),
     api.flowgraphTree(),
     api.flowgraphDiagnostics(),
    ]);
    snapshot = nextSnapshot;
+   currentMode = nextMode.mode;
    managedApps = nextManagedApps;
    flowgraphTree = nextTree;
    diagnostics = nextDiagnostics;
@@ -161,13 +164,27 @@
   </div>
  {/if}
 
- <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+ <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
   <article class="rounded border border-surface-200-800 bg-surface-50-950 p-4">
    <div class="text-xs uppercase tracking-wide opacity-60">Connection</div>
    <div class="mt-2 text-2xl font-semibold {wsTone}">{eventsStore.connection}</div>
    <div class="mt-1 text-xs opacity-60">
     {eventsStore.received_count} events / {eventsStore.dropped_count} dropped
    </div>
+  </article>
+
+  <article class="rounded border border-surface-200-800 bg-surface-50-950 p-4">
+   <div class="text-xs uppercase tracking-wide opacity-60">Mode</div>
+   <div class="mt-2 truncate text-2xl font-semibold" title={currentMode ?? '(default)'}>
+    {currentMode ?? 'default'}
+   </div>
+   <button
+    type="button"
+    class="mt-1 text-xs text-primary-600-400 hover:underline"
+    onclick={() => go('modes')}
+   >
+    manage
+   </button>
   </article>
 
   <article class="rounded border border-surface-200-800 bg-surface-50-950 p-4">
@@ -199,6 +216,8 @@
     <dd class="font-mono">{snapshot?.app_version ?? '-'}</dd>
     <dt class="opacity-60">Session</dt>
     <dd class="truncate font-mono">{snapshot?.runtime.session_id ?? '-'}</dd>
+    <dt class="opacity-60">Mode</dt>
+    <dd class="font-mono">{currentMode ?? '(default)'}</dd>
     <dt class="opacity-60">Root</dt>
     <dd class="truncate font-mono">{snapshot?.runtime.root ?? '-'}</dd>
     <dt class="opacity-60">Twitch</dt>

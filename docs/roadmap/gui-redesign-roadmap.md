@@ -154,6 +154,7 @@ Existing `ToolsTab` can remain here until split further.
 
 - Aggregate existing endpoints only:
   - `/snapshot`
+  - `/modes/current`
   - `/managed_apps`
   - `/flowgraph/tree`
   - `/flowgraph/diagnostics`
