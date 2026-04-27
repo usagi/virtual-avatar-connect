@@ -31,11 +31,12 @@ mod windows_tray {
 		let core = runtime.block_on(crate::boot_with_standard_bootstrap())?;
 		let gui_url = core.gui_url();
 		let shutdown = core.shutdown_broker();
-		let runtime_for_setup = runtime.clone();
 		let runtime_for_after_run = runtime.clone();
 		let shutdown_for_setup = shutdown.clone();
 		let shutdown_for_serve = shutdown.clone();
+		let (app_handle_tx, app_handle_rx) = tokio::sync::oneshot::channel::<tauri::AppHandle>();
 		let serve_handle = runtime.spawn(async move {
+			let app_handle = app_handle_rx.await.ok();
 			let serve_result = core.serve().await;
 			let cleanup_result = core.cleanup().await;
 			if let Err(e) = serve_result {
@@ -45,16 +46,19 @@ mod windows_tray {
 			if let Err(e) = cleanup_result {
 				log::error!("《Desktop》 VAC runtime cleanup がエラー終了しました: {e}");
 			}
+			if let Some(app_handle) = app_handle {
+				app_handle.exit(0);
+			}
 		});
 
-		let app_shutdown = shutdown.clone();
 		tauri::Builder::default()
 			.setup(move |app| {
 				let app_handle = app.handle().clone();
+				let _ = app_handle_tx.send(app.handle().clone());
 				let open_gui = MenuItem::with_id(app, "vac-open-gui", "GUI を開く", true, None::<&str>)?;
 				let quit = MenuItem::with_id(app, "vac-quit", "終了", true, None::<&str>)?;
 				let menu = Menu::with_items(app, &[&open_gui, &quit])?;
-				let icon = Image::from_bytes(include_bytes!("../resources/icons/vac-tray-default-32.png"))?;
+				let icon = Image::from_bytes(include_bytes!("../assets/brand/vac/derived/vac-tray-default-16.png"))?;
 				let shutdown_for_menu = shutdown_for_setup.clone();
 
 				TrayIconBuilder::with_id("vac-tray")
@@ -81,6 +85,7 @@ mod windows_tray {
 				let gui_url = gui_url.parse()?;
 				let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(gui_url))
 					.title("Virtual Avatar Connect")
+					.icon(Image::from_bytes(include_bytes!("../assets/brand/vac/derived/vac-tray-default-32.png"))?)?
 					.inner_size(1280.0, 820.0)
 					.resizable(true)
 					.visible(false)
@@ -93,12 +98,6 @@ mod windows_tray {
 							let _ = window.hide();
 						}
 					}
-				});
-
-				let app_handle_for_shutdown = app.handle().clone();
-				runtime_for_setup.spawn(async move {
-					app_shutdown.wait().await;
-					app_handle_for_shutdown.exit(0);
 				});
 
 				log::info!("《Desktop》 Tauri system tray と WebView を初期化しました。");
