@@ -315,6 +315,7 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::ingress::ChannelSubscribeIngressNode));
 	r.register_pure(Arc::new(nodes::ingress::VmcUdpIngressNode));
 	r.register_pure(Arc::new(nodes::motion_vmc::VmcParseNode));
+	r.register_pure(Arc::new(nodes::motion_vmc::MotionFilterNode));
 	r.register_effectful(Arc::new(nodes::osc_send::OscSendNode));
 
 	// --- state (δ-3c) ---
@@ -452,6 +453,7 @@ mod tests {
 			"flowgraph.ingress.channel_subscribe",
 			"flowgraph.ingress.vmc_udp",
 			"flowgraph.motion.vmc_parse",
+			"flowgraph.motion.filter",
 			"flowgraph.osc.send",
 			"flowgraph.channel.emit",
 			"flowgraph.unit.assign",

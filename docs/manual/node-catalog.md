@@ -142,6 +142,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.mode.get`](#flowgraph-mode-get) — Mode Get
   - [`flowgraph.mode.transit`](#flowgraph-mode-transit) — Mode Transit
 - **motion**
+  - [`flowgraph.motion.filter`](#flowgraph-motion-filter) — Motion: Filter OSC Messages
   - [`flowgraph.motion.vmc_parse`](#flowgraph-motion-vmc-parse) — Motion: VMC OSC Parse
 - **noise**
   - [`flowgraph.noise.perlin_1d`](#flowgraph-noise-perlin-1d) — Perlin 1D
@@ -1838,6 +1839,20 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `noop_message` | `string` | `"noop"` |  | 実効 mode が変わらなかったときの `message` 文字列。 |
 
 ## motion
+
+### `flowgraph.motion.filter`
+
+**Motion: Filter OSC Messages** — `vmc_parse` の frame JSON の `osc_messages` を、`address_prefix` と `address_substring`（両方省略可）でフィルタする
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `frame` | `json` | — |  |
+| `address_prefix` | `string` | `""` |  |
+| `address_substring` | `string` | `""` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `frame_out` | `json` |  |
 
 ### `flowgraph.motion.vmc_parse`
 
