@@ -64,19 +64,19 @@
 
 <div class="vac-shell flex min-h-screen flex-col text-surface-950-50">
  <header class="vac-app-header sticky top-0 z-20 border-b backdrop-blur">
-  <div class="flex items-center justify-between gap-3 px-6 py-2">
-   <div class="flex items-baseline gap-3">
-    <h1 class="text-lg font-bold">
+  <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 lg:flex-nowrap lg:px-6">
+   <div class="min-w-0 flex items-baseline gap-2 lg:gap-3">
+    <h1 class="text-base font-bold lg:text-lg">
      Virtual Avatar Connect
      <span class="text-primary-500">Runtime Cockpit</span>
     </h1>
-    <span class="text-xs opacity-60">v2 GUI redesign</span>
+    <span class="hidden text-xs opacity-60 sm:inline">v2 GUI redesign</span>
    </div>
-   <div class="flex items-center gap-2">
+   <div class="flex w-full min-w-0 items-center justify-start gap-2 overflow-x-auto sm:w-auto sm:flex-1 sm:justify-end lg:flex-none lg:overflow-visible">
     <ConnectionBadge />
     <button
      type="button"
-     class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-100-900"
+     class="shrink-0 rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-100-900"
      title="連携アプリ（run_with）の起動/停止を管理"
      onclick={() => (managedAppDrawerOpen = true)}
     >
@@ -84,7 +84,7 @@
     </button>
     <button
      type="button"
-     class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-100-900"
+     class="shrink-0 rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-100-900"
      title="VAC を再起動 / プロファイル切替"
      onclick={() => (restartDialogOpen = true)}
     >
@@ -92,7 +92,7 @@
     </button>
     <button
      type="button"
-     class="rounded border border-error-500/60 px-3 py-1 text-xs text-error-500 hover:bg-error-500/10 disabled:opacity-50"
+     class="shrink-0 rounded border border-error-500/60 px-3 py-1 text-xs text-error-500 hover:bg-error-500/10 disabled:opacity-50"
      title="VAC アプリを終了する（連携アプリの停止も試みる）"
      disabled={shutdownInFlight}
      onclick={handleShutdownClick}

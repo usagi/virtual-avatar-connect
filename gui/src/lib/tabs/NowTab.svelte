@@ -131,31 +131,31 @@
     Runtime cockpit · <span class={healthTone.className}>{healthTone.label}</span>
    </p>
   </div>
-  <div class="flex flex-wrap items-center gap-2">
+  <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
    <button
     type="button"
-    class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
+    class="shrink-0 rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
     onclick={() => go('modes')}
    >
     Modes
    </button>
    <button
     type="button"
-    class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
+    class="shrink-0 rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
     onclick={() => go('flowgraph')}
    >
     Flowgraph Studio
    </button>
    <button
     type="button"
-    class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
+    class="shrink-0 rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900"
     onclick={() => go('resources')}
    >
     Resources
    </button>
    <button
     type="button"
-    class="rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900 disabled:opacity-50"
+    class="shrink-0 rounded border border-surface-300-700 px-3 py-1.5 text-xs hover:bg-surface-100-900 disabled:opacity-50"
     disabled={loading}
     onclick={refreshNow}
    >
