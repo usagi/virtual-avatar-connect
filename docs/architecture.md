@@ -127,7 +127,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 ## Dependency Direction
 
 - `lib.rs` / `main.rs` は全 feature モジュールに依存
-- `conf` / `state` / `shutdown` は core utility 相当、他モジュールから参照されるが自身は最小依存
+- `conf` / `state` は core utility 相当、他モジュールから参照される。`shutdown` / `runtime` / `datetime` / `control_events` 等の純度が高い境界型は `vac-core` へ物理分割済み
 - `flowgraph` は `state` / `conf` / `shutdown` に依存、ingress 系（`twitch` / `bridges`）とは broadcast 経由で疎結合
 - `motion` は `conf` / `shutdown` のみに依存（Flowgraph 非依存）。**Phase M1 済み**: UDP 受信は `bridges::vmc_ingress`、パススルーは `motion`（`[motion]`）で分離
 - `ai` は `state` / `conf` / `shutdown` に依存、`flowgraph` とは独立（Flowgraph ノードとしての embedding は将来拡張）
@@ -148,7 +148,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 | `bridges` | `flowgraph`（loader / node / socket）, `state`（共有型）, `shutdown`（例: VMC ingress）, `processor`（voice） | ingress → Flowgraph の **一方向**。`motion` へは触れない。 |
 | `flowgraph` | `conf`, `state`, `shutdown`, 自ツリー | `bridges` / `web_interface` へ **依存しない**（ノード doc 内のブリッジ名は説明用コメントのみ）。 |
 | `web_interface` | `state`, `flowgraph`, `bridges`, `ai`, … | Control API がランタイムを操作する **最上位の集約層**のまま。`control/*` のうちハンドラ群（`flowgraph` / `table` / `profiles` / `restart` / `run_with` / `auth` / `oauth_twitch` / `managed_app` / `bos` / `reload` / `ws` / `actions` / `dto` / `ping` / `shutdown` / `ingress`）はいずれもディレクトリ + 補助サブモジュールに分割済み。`events`・`mod` は単一ファイルのまま。 |
-| `state` | `conf`, `flowgraph`, `shutdown`, `ai`, `runtime`, `twitch_oauth_sessions`, `control_events` | **`web_interface` に依存しない**（Control イベント型は `control_events`）。`vac-core` 化時は本モジュール群をクレート境界に沿って再配置する整理対象。 |
+| `state` | `conf`, `flowgraph`, `ai`, `vac-core`（`shutdown` / `runtime` / `twitch_oauth_sessions` / `control_events`） | **`web_interface` に依存しない**。`State` / `ChannelDatum` 自体は依存が広いため root 側に残し、周辺境界型から `vac-core` 化済み。 |
 
 ---
 

@@ -260,7 +260,7 @@ flowgraph.motion.map
 ```text
 （ワークスペース root の Cargo.toml + メンバ）
   virtual-avatar-connect  … 現行アプリ crate
-  crates/vac-core/        … shutdown broker（一段目）
+  crates/vac-core/        … shutdown / runtime paths / DateTime / utility / resource constants / Twitch OAuth sessions / ControlEvent
   crates/vac-gui-assets/  … Svelte のビルド済み dist のみ（Step 6b で追加済み）
   crates/vac-motion/      … MotionFrame / OSC decode / UDP forwarding helper / OSC / VMC / VRChat encoding helper（一段目）
   crates/vac-flowgraph/   … Flowgraph pure primitives（一段目は Quantity system / instance config）
@@ -282,10 +282,13 @@ flowgraph.motion.map
 
 #### `vac-core`
 
-* `State` / `SharedState`
-* `ChannelDatum`
-* `Conf` / 設定モデル
-* 共通型
+* `ShutdownBroker` / `ShutdownReason`
+* `RuntimePaths` / `RuntimePathConfig`
+* `DateTime` / `ParseError`
+* `ControlEvent` / Control API event DTO
+* Twitch OAuth session table
+* 小さな utility / resource constants
+* 後続候補: `State` / `SharedState`、`ChannelDatum`、`Conf` / 設定モデル
 
 #### `vac-flowgraph`
 
