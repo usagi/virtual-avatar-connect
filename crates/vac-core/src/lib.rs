@@ -5,3 +5,4 @@
 pub mod datetime;
 pub mod runtime;
 pub mod shutdown;
+pub mod utility;

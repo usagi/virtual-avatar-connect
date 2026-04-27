@@ -107,6 +107,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 - `shutdown.rs`: `ShutdownBroker`（Ctrl+C / Control API / Desktop / Fatal の経路を単一 broker に集約）。root 側 `src/shutdown.rs` は互換用の再エクスポート。
 - `runtime.rs`: `RuntimePaths` / `RuntimePathConfig`（ランタイム一時ディレクトリ、セッション ID、inline attachment 上限）。root 側 `src/runtime.rs` は `Conf` から core 入力を作る adapter。
 - `datetime.rs`: `DateTime` / `ParseError`（`jiff::Timestamp` ベースの絶対時刻 boundary 型）。root 側 `src/datetime/mod.rs` は互換用の再エクスポート。
+- `utility.rs`: 日本語空白正規化、言語コード変換、serde default helper 等の小さな汎用関数。root 側 `src/utility.rs` は互換用の再エクスポート。
 
 ### `src/migrate/`
 

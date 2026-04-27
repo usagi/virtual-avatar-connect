@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 dirs = "6.0"
+isolang = "2.4.0"
 jiff = { version = "0.2.24", features = ["serde"] }
 log = "0.4.29"
 rand = "0.10.1"
