@@ -21,8 +21,10 @@ test.describe('GUI redesign: Modes planning surface', () => {
 
   await main.getByRole('button', { name: /Streaming/ }).click();
   await expect(main.getByText('stream_safe')).toBeVisible();
-  await expect(main.getByText('start obs').last()).toBeVisible();
   await expect(main.getByText('Dry-run plan', { exact: true })).toBeVisible();
+  await expect(main.getByText('Flowgraph desired state')).toBeVisible();
+  await expect(main.getByText('Managed App desired state')).toBeVisible();
+  await expect(main.getByText('No managed app changes.')).toBeVisible();
   await expect(main.getByText('daily').first()).toBeVisible();
   await expect(main.getByText('streaming').last()).toBeVisible();
   await expect(main.getByRole('button', { name: 'Transit' })).toBeEnabled();

@@ -91,6 +91,7 @@
  });
 
  const selectedMode = $derived(displayModes.find((m) => m.id === selectedModeId) ?? displayModes[0]);
+ const managedDesiredRows = $derived(managedDirectiveRows(transitionPlan));
  const selectedCanTransit = $derived(selectedMode?.configured === true);
  const isCurrentSelected = $derived(selectedMode?.id === currentModeId);
  const transitDisabled = $derived(
@@ -190,6 +191,20 @@
   if (e instanceof Error) return e.message;
   return String(e);
  }
+
+ function joinList(values: string[]): string {
+  return values.length > 0 ? values.join(', ') : '-';
+ }
+
+ function managedDirectiveRows(plan: ModeTransitionPlan | null): Array<{ label: string; values: string[] }> {
+  if (!plan) return [];
+  return [
+   { label: 'Start', values: plan.target_managed_apps.start },
+   { label: 'Stop', values: plan.target_managed_apps.stop },
+   { label: 'Minimize', values: plan.target_managed_apps.minimize },
+   { label: 'Leave', values: plan.target_managed_apps.leave },
+  ].filter((row) => row.values.length > 0);
+ }
 </script>
 
 <section class="grid gap-4">
@@ -267,12 +282,21 @@
     </div>
 
     <div>
-     <div class="mb-1 text-xs font-semibold opacity-70">Flowgraph groups</div>
-     <div class="flex flex-wrap gap-1">
-      {#each selectedMode.flowgraphGroups as group}
-       <code class="rounded bg-surface-100-900 px-1.5 py-0.5 text-xs">{group}</code>
-      {/each}
-     </div>
+     <div class="mb-1 text-xs font-semibold opacity-70">Flowgraph desired state</div>
+     {#if transitionPlan}
+      <dl class="grid grid-cols-[64px_minmax(0,1fr)] gap-x-2 gap-y-1 text-xs">
+       <dt class="opacity-60">Enable</dt>
+       <dd class="truncate font-mono">{joinList(transitionPlan.target_flowgraph_groups.enable)}</dd>
+       <dt class="opacity-60">Disable</dt>
+       <dd class="truncate font-mono">{joinList(transitionPlan.target_flowgraph_groups.disable)}</dd>
+      </dl>
+     {:else}
+      <div class="flex flex-wrap gap-1">
+       {#each selectedMode.flowgraphGroups as group}
+        <code class="rounded bg-surface-100-900 px-1.5 py-0.5 text-xs">{group}</code>
+       {/each}
+      </div>
+     {/if}
     </div>
 
     {#if selectedMode.configured}
@@ -309,12 +333,23 @@
     {/if}
 
     <div>
-     <div class="mb-1 text-xs font-semibold opacity-70">Managed Apps</div>
-     <ul class="grid gap-1">
-      {#each selectedMode.managedApps as action}
-       <li class="rounded bg-surface-100-900 px-2 py-1 text-xs">{action}</li>
-      {/each}
-     </ul>
+     <div class="mb-1 text-xs font-semibold opacity-70">Managed App desired state</div>
+     {#if managedDesiredRows.length > 0}
+      <dl class="grid grid-cols-[64px_minmax(0,1fr)] gap-x-2 gap-y-1 text-xs">
+       {#each managedDesiredRows as row}
+        <dt class="opacity-60">{row.label}</dt>
+        <dd class="truncate font-mono">{joinList(row.values)}</dd>
+       {/each}
+      </dl>
+     {:else if transitionPlan}
+      <div class="rounded bg-surface-100-900 px-2 py-1 text-xs opacity-60">No managed app changes.</div>
+     {:else}
+      <ul class="grid gap-1">
+       {#each selectedMode.managedApps as action}
+        <li class="rounded bg-surface-100-900 px-2 py-1 text-xs">{action}</li>
+       {/each}
+      </ul>
+     {/if}
     </div>
 
     <div>
