@@ -71,6 +71,7 @@
 - **`TriggerGate::global_exec_suppress`**: `true` の間は RM-3 の per-node マップに関わらず **すべてのノード**で exec を抑止（`engine::fire_node` 先頭の `is_exec_active` 経由）。
 - **`apply_runtime_mode_transition_full`**: 実効変化が確実なときだけ suppress を立て、スロット更新〜 Managed App 適用の後・`runtime_mode_changed` 内部フックの直前に解除（フックは常に通る）。
 - **`ApplyRuntimeModeError::PlanFailed`**: 遷移本体の plan 再検証失敗時。Control API は `plan_failed` と `unknown_mode` を区別。
+- **Tests**: `apply_runtime_mode_transition_full` / `try_begin_runtime_mode_transition` の lib 結合テスト（noop・plan 失敗・実遷移・遷移ロック）。
 
 ### 内部リファクタ — Control API `actions` / `dto` / `ping` / `shutdown` / `ingress` モジュール分割
 
