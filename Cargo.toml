@@ -18,6 +18,14 @@ path = "src/lib.rs"
 name = "virtual-avatar-connect"
 path = "src/main.rs"
 
+[[bin]]
+name = "virtual-avatar-connect-cli"
+path = "src/bin/cli.rs"
+
+[[bin]]
+name = "virtual-avatar-connect-desktop"
+path = "src/bin/desktop.rs"
+
 # η-5: V1 dictionary / regex ファイル → η 統一 11 カラム TSV 変換 CLI
 [[bin]]
 name = "virtual-avatar-connect-migrate-dict"

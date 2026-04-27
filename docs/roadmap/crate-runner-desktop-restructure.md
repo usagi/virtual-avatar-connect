@@ -76,7 +76,7 @@ impl AppCore {
 
 `crate::run()` は `Args`、特殊モード、`Conf::new`、`conf.execute_run_with()` までを担当し、その後は `AppCore` に委譲する。ここでは挙動を変えない。
 
-### R2: runner 用 entry API を追加
+### R2: runner 用 entry API を追加（実装済み）
 
 CLI と desktop の両方が同じ起動準備を使えるように、root crate に薄い entry API を作る。
 
@@ -87,7 +87,7 @@ pub async fn run_desktop_headless() -> Result<()>;
 
 `run_desktop_headless` は Tauri 導入前の橋渡しで、console policy 以外は CLI と同じ動きをする。これで desktop runner の binary 名、ログ、終了コードの扱いを先に固定できる。
 
-### R3: CLI / desktop 2 binary
+### R3: CLI / desktop 2 binary（実装済み）
 
 `Cargo.toml` に runner を追加する。
 

@@ -3,6 +3,7 @@ mod app_core;
 mod args;
 pub(crate) mod bridges;
 mod conf;
+mod control_events;
 pub(crate) mod datetime;
 mod error;
 mod libretranslate;
@@ -14,10 +15,9 @@ mod processor;
 mod resource;
 mod runtime;
 pub(crate) mod shutdown;
+mod state;
 pub(crate) mod twitch;
 mod twitch_oauth_sessions;
-mod control_events;
-mod state;
 
 pub mod flowgraph;
 pub mod utility;
@@ -58,7 +58,7 @@ impl std::fmt::Debug for AudioSink {
 	}
 }
 
-pub async fn run() -> Result<()> {
+async fn run_with_standard_bootstrap() -> Result<()> {
 	// ロガーの実装を初期化
 	logger::init();
 
@@ -78,4 +78,22 @@ pub async fn run() -> Result<()> {
 	conf.execute_run_with()?;
 
 	app_core::run_vac_application(conf, audio_sink).await
+}
+
+/// 互換入口。移行期間中は CLI runner と同じ動きをする。
+pub async fn run() -> Result<()> {
+	run_cli().await
+}
+
+/// コンソール付きの玄人・開発者向け runner。
+pub async fn run_cli() -> Result<()> {
+	run_with_standard_bootstrap().await
+}
+
+/// Tauri / tray 導入前の desktop runner 入口。
+///
+/// 現時点では CLI と同じ runtime を起動する。binary 名と subsystem policy を先に分け、
+/// 後続で system tray / Tauri shell をこの入口へ載せる。
+pub async fn run_desktop_headless() -> Result<()> {
+	run_with_standard_bootstrap().await
 }
