@@ -181,6 +181,14 @@ class FlowgraphStore {
   this.draftNodes = next;
  }
 
+ updateNodePropertyMany(ids: string[], key: string, value: unknown): void {
+  if (!this.draftNodes || ids.length === 0) return;
+  const selected = new Set(ids);
+  if (!this.draftNodes.some((n) => selected.has(n.id))) return;
+  this.#pushHistory('Edit properties');
+  this.draftNodes = this.draftNodes.map((n) => (selected.has(n.id) ? { ...n, properties: { ...n.properties, [key]: value } } : n));
+ }
+
  removeNodeProperty(id: string, key: string): void {
   if (!this.draftNodes) return;
   this.#pushHistory('Remove property');
@@ -191,6 +199,19 @@ class FlowgraphStore {
    return { ...n, properties: props };
   });
   this.draftNodes = next;
+ }
+
+ removeNodePropertyMany(ids: string[], key: string): void {
+  if (!this.draftNodes || ids.length === 0) return;
+  const selected = new Set(ids);
+  if (!this.draftNodes.some((n) => selected.has(n.id) && Object.prototype.hasOwnProperty.call(n.properties, key))) return;
+  this.#pushHistory('Remove properties');
+  this.draftNodes = this.draftNodes.map((n) => {
+   if (!selected.has(n.id)) return n;
+   const props = { ...n.properties };
+   delete props[key];
+   return { ...n, properties: props };
+  });
  }
 
  addNode(node: FlowgraphDraftNode): void {

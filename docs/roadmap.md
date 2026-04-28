@@ -272,14 +272,14 @@ OS プロセス / ウィンドウ制御ノード群。Windows を第一級 targe
 - [x] `flowgraph.window.pseudo_fullscreen` / `.pseudo_fullscreen_exit`（first slice: placement 保存 + maximize / restore。borderless + monitor-size 化は必要なら後続で強化）
 - scope: 既存 `windows` crate を再利用。macOS / Linux は明示 error + 空結果で degrade する
 
-### Phase υ — GUI 大物 (Undo/Redo + multi-select + subgraph) (TBD)
+### Phase υ — GUI 大物 (Undo/Redo + multi-select + subgraph) (進行中)
 
 Flowgraph editor の大規模 UX 改修。ν-β で送った "Svelte Flow handle drag edge の E2E" もここに合流させ、履歴モデルを第一級概念化する。
 
 - **λ との分担**: 再利用の**意味論**（閉集合、`library_uses`、境界ノード v0）は [Phase λ（完了）](roadmap/phase-lambda-flowgraph-enum-and-library.md)。υ の subgraph / グループは **エディタ上のカプセル化・Undo 等**が主で、将来の engine 側合成は λ（λ+）の境界モデルと整合させる。
 
-- [ ] 汎用 Undo/Redo スタック（現状 "削除 1 段 snapshot" を command pattern に進化、add/delete/move/connect/disconnect/property-edit 全部対象）
-- [ ] 本物のマルチ選択（`selectedNodeIds: Set<string>` + 矩形選択 + shift-click + ctrl-click、property editor multi 表示 / 差異ハイライト）
+- [x] 汎用 Undo/Redo スタック（add/delete/move/connect/disconnect/property-edit を draft snapshot stack で一括対象化。Redo stack も保持）
+- [~] 本物のマルチ選択（`selectedNodeIds` + Svelte Flow 選択 + toolbar layout command + 同一 feature 複数選択時の property editor batch edit / mixed 差異ハイライトまで完了。選択 UX の細部と E2E は継続）
 - [ ] Flowgraph subgraph / group（engine + GUI の両面で第一級概念化、入出力 port を再 export するカプセル化）
 - [ ] Svelte Flow handle drag edge の E2E 回帰（ν-β+ から昇格）
 

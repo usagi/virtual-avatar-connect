@@ -68,13 +68,31 @@ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
    ? flowgraphStore.draftNodes?.find((n) => n.id === flowgraphStore.selectedNodeId)
    : undefined,
  );
+ const selectedNodes: FlowgraphDraftNode[] = $derived.by(() => {
+  const ids = flowgraphStore.selectedNodeIds;
+  const nodes = flowgraphStore.draftNodes ?? [];
+  if (ids.length === 0) return node ? [node] : [];
+  const selected = new Set(ids);
+  return nodes.filter((n) => selected.has(n.id));
+ });
  const spec: FlowgraphNodeSpec | undefined = $derived(
   node ? flowgraphStore.findSpec(node.feature) : undefined,
  );
+ const multiSpec: FlowgraphNodeSpec | undefined = $derived.by(() => {
+  if (selectedNodes.length < 2) return undefined;
+  const feature = selectedNodes[0]?.feature;
+  if (!feature || !selectedNodes.every((n) => n.feature === feature)) return undefined;
+  return flowgraphStore.findSpec(feature);
+ });
 
  function updateProp(key: string, value: unknown) {
   if (!node) return;
   flowgraphStore.updateNodeProperty(node.id, key, value);
+ }
+
+ function updateMultiProp(key: string, value: unknown) {
+  if (selectedNodes.length < 2) return;
+  flowgraphStore.updateNodePropertyMany(selectedNodes.map((n) => n.id), key, value);
  }
 
  function removeProp(key: string) {
@@ -82,9 +100,19 @@ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
   flowgraphStore.removeNodeProperty(node.id, key);
  }
 
+ function removeMultiProp(key: string) {
+  if (selectedNodes.length < 2) return;
+  flowgraphStore.removeNodePropertyMany(selectedNodes.map((n) => n.id), key);
+ }
+
  function setPropToDefault(p: FlowgraphPropertySpec) {
   if (!node) return;
   flowgraphStore.updateNodeProperty(node.id, p.name, p.default);
+ }
+
+ function setMultiPropToDefault(p: FlowgraphPropertySpec) {
+  if (selectedNodes.length < 2) return;
+  flowgraphStore.updateNodePropertyMany(selectedNodes.map((n) => n.id), p.name, p.default);
  }
 
  function onJsonChange(key: string, text: string) {
@@ -93,6 +121,15 @@ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
    updateProp(key, parsed);
   } catch {
    // パース失敗時は update を保留する（GUI 上の文字列だけ残す）
+  }
+ }
+
+ function onMultiJsonChange(key: string, text: string) {
+  try {
+   const parsed = JSON.parse(text);
+   updateMultiProp(key, parsed);
+  } catch {
+   // パース失敗時は update を保留する。
   }
  }
 
@@ -153,13 +190,172 @@ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
  }
 
  const propsView = $derived(knownPropsAndUnknowns());
+
+ function valuesEqual(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+ }
+
+ function multiPropsView(): Array<{
+  p: FlowgraphPropertySpec;
+  presentCount: number;
+  value: unknown;
+  mixed: boolean;
+ }> {
+  if (!multiSpec || selectedNodes.length < 2) return [];
+  return multiSpec.properties.map((p) => {
+   const values = selectedNodes
+    .filter((n) => Object.prototype.hasOwnProperty.call(n.properties, p.name))
+    .map((n) => n.properties[p.name]);
+   const presentCount = values.length;
+   const first = presentCount > 0 ? values[0] : p.default;
+   const mixed = presentCount > 0 && !values.every((v) => valuesEqual(v, first));
+   return { p, presentCount, value: mixed ? p.default : first, mixed };
+  });
+ }
+
+ const multiProps = $derived(multiPropsView());
 </script>
 
 <div class="flex h-full flex-col">
  <div class="border-b border-surface-200-800 p-2 text-xs font-semibold uppercase tracking-wider opacity-60">
   Properties
  </div>
- {#if !node}
+ {#if selectedNodes.length > 1}
+  <div class="flex-1 overflow-y-auto p-2 text-xs">
+   <div class="mb-2 rounded bg-surface-100-900 p-2">
+    <div class="mb-1 flex items-baseline justify-between gap-1">
+     <span class="truncate font-semibold">{selectedNodes.length} nodes selected</span>
+     {#if multiSpec}
+      <span class="truncate text-[0.65rem] opacity-60">{multiSpec.feature}</span>
+     {/if}
+    </div>
+    <div class="space-y-0.5 font-mono text-[0.65rem] opacity-70">
+     {#each selectedNodes.slice(0, 8) as n (n.id)}
+      <div class="truncate">#{n.id} · {n.feature}</div>
+     {/each}
+     {#if selectedNodes.length > 8}
+      <div>+{selectedNodes.length - 8}</div>
+     {/if}
+    </div>
+   </div>
+
+   {#if !multiSpec}
+    <div class="rounded border border-surface-200-800 p-2 opacity-70">
+     feature が異なるため、共通プロパティ編集は無効。
+    </div>
+   {:else}
+    <div class="space-y-2">
+     {#each multiProps as item (item.p.name)}
+      {@const cat = typeCategory(item.p.ty)}
+      <div class={`rounded border p-2 ${item.mixed ? 'border-warning-500/60 bg-warning-500/5' : 'border-surface-200-800'}`}>
+       <div class="mb-1 flex items-baseline justify-between gap-1">
+        <label class="truncate font-semibold" for={`multi-prop-${item.p.name}`}>
+         {item.p.label}
+         {#if item.p.required}<span class="text-error-500">*</span>{/if}
+        </label>
+        <div class="flex items-center gap-1">
+         {#if item.mixed}
+          <span class="rounded bg-warning-500/25 px-1 text-[0.65rem] text-warning-900-100">mixed</span>
+         {:else if item.presentCount !== selectedNodes.length}
+          <span class="rounded bg-surface-300-700 px-1 text-[0.65rem]">partial</span>
+         {/if}
+         <span class="text-[0.65rem] opacity-60">{item.p.ty}</span>
+         {#if item.presentCount === 0}
+          <button
+           type="button"
+           class="rounded bg-primary-500 px-1.5 py-0.5 text-[0.65rem] text-white"
+           onclick={() => setMultiPropToDefault(item.p)}
+          >
+           Set
+          </button>
+         {:else if !item.p.required}
+          <button
+           type="button"
+           class="rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem]"
+           onclick={() => removeMultiProp(item.p.name)}
+           title="デフォルトに戻す（キー削除）"
+          >
+           Unset
+          </button>
+         {/if}
+        </div>
+       </div>
+       {#if item.p.description}
+        <div class="mb-1 text-[0.65rem] opacity-60">{item.p.description}</div>
+       {/if}
+       {#if item.presentCount > 0}
+        {#if cat === 'bool'}
+         <label class="flex items-center gap-2">
+          <input
+           id={`multi-prop-${item.p.name}`}
+           type="checkbox"
+           checked={!item.mixed && asBool(item.value)}
+           onchange={(e) => updateMultiProp(item.p.name, (e.target as HTMLInputElement).checked)}
+          />
+          <span>{item.mixed ? 'mixed' : asBool(item.value) ? 'true' : 'false'}</span>
+         </label>
+        {:else if cat === 'int'}
+         <input
+          id={`multi-prop-${item.p.name}`}
+          type="number"
+          step="1"
+          class="w-full rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1"
+          value={item.mixed ? '' : asNumber(item.value)}
+          placeholder={item.mixed ? 'mixed' : ''}
+          oninput={(e) => updateMultiProp(item.p.name, parseInt((e.target as HTMLInputElement).value || '0', 10))}
+         />
+        {:else if cat === 'float'}
+         <input
+          id={`multi-prop-${item.p.name}`}
+          type="number"
+          step="any"
+          class="w-full rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1"
+          value={item.mixed ? '' : asNumber(item.value)}
+          placeholder={item.mixed ? 'mixed' : ''}
+          oninput={(e) => updateMultiProp(item.p.name, parseFloat((e.target as HTMLInputElement).value || '0'))}
+         />
+        {:else if cat === 'string' && item.p.choices && item.p.choices.length > 0}
+         <select
+          id={`multi-prop-${item.p.name}`}
+          class="w-full rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1"
+          value={item.mixed ? '' : asString(item.value)}
+          onchange={(e) => updateMultiProp(item.p.name, (e.target as HTMLSelectElement).value)}
+         >
+          {#if item.mixed}<option value="">mixed</option>{/if}
+          {#each item.p.choices as choice (choice)}
+           <option value={choice}>{choice}</option>
+          {/each}
+         </select>
+        {:else if cat === 'string'}
+         <input
+          id={`multi-prop-${item.p.name}`}
+          type="text"
+          class="w-full rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1"
+          value={item.mixed ? '' : asString(item.value)}
+          placeholder={item.mixed ? 'mixed' : ''}
+          oninput={(e) => updateMultiProp(item.p.name, (e.target as HTMLInputElement).value)}
+         />
+        {:else}
+         <textarea
+          id={`multi-prop-${item.p.name}`}
+          class="w-full rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1 font-mono text-[0.7rem]"
+          rows={item.mixed ? 3 : asJson(item.value).split('\n').length < 3 ? 3 : Math.min(10, asJson(item.value).split('\n').length)}
+          value={item.mixed ? '' : asJson(item.value)}
+          placeholder={item.mixed ? 'mixed' : ''}
+          oninput={(e) => onMultiJsonChange(item.p.name, (e.target as HTMLTextAreaElement).value)}
+         ></textarea>
+        {/if}
+       {:else}
+        <div class="font-mono text-[0.7rem] opacity-60">
+         default = {asJson(item.p.default)}
+        </div>
+       {/if}
+      </div>
+     {/each}
+    </div>
+   {/if}
+  </div>
+ {:else if !node}
   <div class="p-3 text-xs opacity-60">ノードが選択されていません。</div>
  {:else if !spec}
   <div class="p-3 text-xs text-error-500">
