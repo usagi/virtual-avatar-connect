@@ -40,9 +40,9 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 
 ## Module Organization
 
-### `src/lib.rs` / `src/main.rs` / `src/runtime.rs`
+### `src/lib.rs` / `src/bootstrap.rs` / `src/runtime.rs`
 
-- プロセスエントリ: `main` → `lib::run()` はロガー・CLI 特殊モード・conf ロードまで。常駐本体は `src/app_core/` の `run_vac_application`（`ShutdownBroker` 以降〜 actix serve 〜 cleanup）。
+- プロセスエントリ: `virtual-avatar-connect-cli` / `virtual-avatar-connect-desktop` → `lib::run_cli()` / `lib::run_desktop()`。`lib.rs` は公開 entry と再エクスポートを持ち、`bootstrap.rs` はロガー・CLI 特殊モード・conf ロード・`run_with` までの標準起動手順を担当する。常駐本体は `src/app_core/` の `AppCore`（`ShutdownBroker` 以降〜 actix serve 〜 cleanup）。
 
 ### `src/app_core/`
 
