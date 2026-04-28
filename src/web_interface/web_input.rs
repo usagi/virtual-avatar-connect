@@ -5,6 +5,7 @@
 
 use crate::conf::Conf;
 use crate::resource::CONTENT_TYPE_APPLICATION_JSON;
+use crate::shutdown::ShutdownReason;
 use crate::{ChannelDatum, Result as VacResult, SharedState};
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
@@ -48,6 +49,11 @@ pub struct WebInputEndpoint {
 #[derive(Debug, Clone)]
 pub struct WebInputRegistry {
 	endpoints: Vec<WebInputEndpoint>,
+}
+
+enum WebInputCommandOutcome {
+	Continue,
+	Handled(HttpResponse),
 }
 
 impl WebInputRegistry {
@@ -231,7 +237,9 @@ async fn handle_input(state: &SharedState, ep: &WebInputEndpoint, payload: Input
 		}
 	};
 
-	process_command(state, &payload).await?;
+	if let WebInputCommandOutcome::Handled(response) = process_command(state, &payload).await? {
+		return Ok(response);
+	}
 
 	let cd = ChannelDatum::new(channel.clone(), payload.content.clone()).with_flag_if(ChannelDatum::FLAG_IS_FINAL, payload.is_final);
 	log::trace!("《WebInput》: ChannelDatum を生成しました: {:?}", cd);
@@ -245,14 +253,26 @@ async fn handle_input(state: &SharedState, ep: &WebInputEndpoint, payload: Input
 	Ok(HttpResponse::Ok().content_type(CONTENT_TYPE_APPLICATION_JSON).json(response))
 }
 
-async fn process_command(state: &SharedState, payload: &InputPayload) -> VacResult<()> {
+async fn process_command(state: &SharedState, payload: &InputPayload) -> VacResult<WebInputCommandOutcome> {
 	if payload.content.starts_with("/quit") {
-		log::info!("終了コマンド /quit を受け取りました。");
-		std::process::exit(0);
+		let broker = {
+			let s = state.read().await;
+			s.shutdown.clone()
+		};
+		log::info!("《WebInput》 終了コマンド /quit を受け取りました。graceful shutdown を要求します。");
+		broker.trigger(ShutdownReason::ControlApi);
+		Ok(WebInputCommandOutcome::Handled(
+			HttpResponse::Accepted()
+				.content_type(CONTENT_TYPE_APPLICATION_JSON)
+				.body(r#"{"status":"shutting_down"}"#),
+		))
 	} else if payload.content.starts_with("/save") {
 		state.read().await.save().await?;
+		Ok(WebInputCommandOutcome::Continue)
 	} else if payload.content.starts_with("/load") {
 		state.write().await.load().await?;
+		Ok(WebInputCommandOutcome::Continue)
+	} else {
+		Ok(WebInputCommandOutcome::Continue)
 	}
-	Ok(())
 }

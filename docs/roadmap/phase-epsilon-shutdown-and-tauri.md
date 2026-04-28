@@ -62,6 +62,7 @@ flowchart LR
 - [src/lib.rs](../../src/lib.rs) の起動冒頭で broker を生成し、`spawn_ctrl_c_listener(broker)` で Ctrl+C を 1 本化。旧 `tokio::signal::ctrl_c()` 直叩きは削除。
 - [src/lib.rs](../../src/lib.rs) の `run_services` は `HttpServer::...disable_signals().run()` に切り替え、返ってきた `Server` から `handle()` を取り出して broker と関連付ける。`shutdown.wait().await` した専用 task が `handle.stop(true).await` を叩く経路を唯一の停止源にする。
 - [src/web_interface/control/shutdown/mod.rs](../../src/web_interface/control/shutdown/mod.rs) に `POST /api/v1/control/shutdown` を新設し、broker を `ShutdownReason::ControlApi` で trigger するだけの薄い endpoint を置く（DTO は `shutdown/types.rs`）。
+- [src/web_interface/web_input.rs](../../src/web_interface/web_input.rs) のレガシー `/quit` コマンドも `std::process::exit(0)` 直叩きではなく broker 経由の graceful shutdown に統合する。
 
 ### 2.3 ManagedApp の一括停止
 
