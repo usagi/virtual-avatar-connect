@@ -153,8 +153,15 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.noise.perlin_1d`](#flowgraph-noise-perlin-1d) — Perlin 1D
   - [`flowgraph.noise.perlin_2d`](#flowgraph-noise-perlin-2d) — Perlin 2D
 - **obs**
+  - [`flowgraph.obs.get_current_program_scene`](#flowgraph-obs-get-current-program-scene) — OBS: Get Current Program Scene
   - [`flowgraph.obs.request`](#flowgraph-obs-request) — OBS: Request
   - [`flowgraph.obs.set_current_program_scene`](#flowgraph-obs-set-current-program-scene) — OBS: Set Current Program Scene
+  - [`flowgraph.obs.set_scene_item_enabled`](#flowgraph-obs-set-scene-item-enabled) — OBS: Set Scene Item Enabled
+  - [`flowgraph.obs.start_record`](#flowgraph-obs-start-record) — OBS: Start Record
+  - [`flowgraph.obs.start_stream`](#flowgraph-obs-start-stream) — OBS: Start Stream
+  - [`flowgraph.obs.stop_record`](#flowgraph-obs-stop-record) — OBS: Stop Record
+  - [`flowgraph.obs.stop_stream`](#flowgraph-obs-stop-stream) — OBS: Stop Stream
+  - [`flowgraph.obs.trigger_studio_mode_transition`](#flowgraph-obs-trigger-studio-mode-transition) — OBS: Trigger Studio Mode Transition
 - **ocr**
   - [`flowgraph.ocr.recognize`](#flowgraph-ocr-recognize) — OCR Recognize
 - **osc**
@@ -1999,6 +2006,27 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ## obs
 
+### `flowgraph.obs.get_current_program_scene`
+
+**OBS: Get Current Program Scene** — OBS WebSocket v5 の `GetCurrentProgramScene` を呼び、現在の番組シーン名を返す。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `url` | `string` | `"ws://127.0.0.1:4455"` |  |
+| `password` | `string` | `""` |  |
+| `timeout_ms` | `int` | `3000` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `ok` | `bool` |  |
+| `status_code` | `int` |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+| `scene_name` | `string` |  |
+
 ### `flowgraph.obs.request`
 
 **OBS: Request** — OBS WebSocket v5 に 1 request を送る汎用ノード。OBS 側で WebSocket Server を有効化しておく。
@@ -2031,6 +2059,131 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `url` | `string` | `"ws://127.0.0.1:4455"` |  |
 | `password` | `string` | `""` |  |
 | `scene_name` | `string` | — |  |
+| `timeout_ms` | `int` | `3000` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `ok` | `bool` |  |
+| `status_code` | `int` |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.obs.set_scene_item_enabled`
+
+**OBS: Set Scene Item Enabled** — OBS WebSocket v5 の `SetSceneItemEnabled` を呼び、scene item の表示/非表示を切り替える。`scene_item_id` が負なら `source_name` から ID を解決する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `url` | `string` | `"ws://127.0.0.1:4455"` |  |
+| `password` | `string` | `""` |  |
+| `timeout_ms` | `int` | `3000` |  |
+| `scene_name` | `string` | — |  |
+| `source_name` | `string` | `""` |  |
+| `scene_item_id` | `int` | `-1` |  |
+| `enabled` | `bool` | `true` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `ok` | `bool` |  |
+| `status_code` | `int` |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+| `scene_item_id` | `int` |  |
+
+### `flowgraph.obs.start_record`
+
+**OBS: Start Record** — OBS WebSocket v5 の `StartRecord` を呼び、録画を開始する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `url` | `string` | `"ws://127.0.0.1:4455"` |  |
+| `password` | `string` | `""` |  |
+| `timeout_ms` | `int` | `3000` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `ok` | `bool` |  |
+| `status_code` | `int` |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.obs.start_stream`
+
+**OBS: Start Stream** — OBS WebSocket v5 の `StartStream` を呼び、配信を開始する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `url` | `string` | `"ws://127.0.0.1:4455"` |  |
+| `password` | `string` | `""` |  |
+| `timeout_ms` | `int` | `3000` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `ok` | `bool` |  |
+| `status_code` | `int` |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.obs.stop_record`
+
+**OBS: Stop Record** — OBS WebSocket v5 の `StopRecord` を呼び、録画を停止する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `url` | `string` | `"ws://127.0.0.1:4455"` |  |
+| `password` | `string` | `""` |  |
+| `timeout_ms` | `int` | `3000` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `ok` | `bool` |  |
+| `status_code` | `int` |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.obs.stop_stream`
+
+**OBS: Stop Stream** — OBS WebSocket v5 の `StopStream` を呼び、配信を停止する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `url` | `string` | `"ws://127.0.0.1:4455"` |  |
+| `password` | `string` | `""` |  |
+| `timeout_ms` | `int` | `3000` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `ok` | `bool` |  |
+| `status_code` | `int` |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.obs.trigger_studio_mode_transition`
+
+**OBS: Trigger Studio Mode Transition** — OBS WebSocket v5 の `TriggerStudioModeTransition` を呼び、Studio Mode の transition を実行する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `url` | `string` | `"ws://127.0.0.1:4455"` |  |
+| `password` | `string` | `""` |  |
 | `timeout_ms` | `int` | `3000` |  |
 
 | Output | Type | Note |

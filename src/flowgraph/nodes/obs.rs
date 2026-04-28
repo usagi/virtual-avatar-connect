@@ -4,8 +4,8 @@
 //! `ws://127.0.0.1:4455` へ短命接続し、1 request を送って閉じる。
 
 use crate::flowgraph::node::{
-	get_optional_int, get_optional_string, get_required_json, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap,
-	NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
+	get_optional_bool, get_optional_int, get_optional_string, get_required_json, get_required_string, EffectfulNode, ExecCtx, ExecFireSet,
+	InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
@@ -89,6 +89,13 @@ impl EffectfulNode for ObsRequestNode {
 }
 
 pub struct ObsSetCurrentProgramSceneNode;
+pub struct ObsGetCurrentProgramSceneNode;
+pub struct ObsSetSceneItemEnabledNode;
+pub struct ObsStartRecordNode;
+pub struct ObsStopRecordNode;
+pub struct ObsStartStreamNode;
+pub struct ObsStopStreamNode;
+pub struct ObsTriggerStudioModeTransitionNode;
 
 impl NodeDescriptor for ObsSetCurrentProgramSceneNode {
 	fn describe(&self) -> NodeSpec {
@@ -134,6 +141,248 @@ impl EffectfulNode for ObsSetCurrentProgramSceneNode {
 	}
 }
 
+impl NodeDescriptor for ObsGetCurrentProgramSceneNode {
+	fn describe(&self) -> NodeSpec {
+		NodeSpec {
+			feature: "flowgraph.obs.get_current_program_scene".into(),
+			title: "OBS: Get Current Program Scene".into(),
+			category: "obs".into(),
+			description: Some("OBS WebSocket v5 の `GetCurrentProgramScene` を呼び、現在の番組シーン名を返す。".into()),
+			inputs: obs_connection_inputs(),
+			outputs: {
+				let mut outputs = obs_common_outputs();
+				outputs.push(PortSpec::output("scene_name", "Scene Name", SocketType::String));
+				outputs
+			},
+			properties: vec![],
+		}
+	}
+}
+
+#[async_trait]
+impl EffectfulNode for ObsGetCurrentProgramSceneNode {
+	async fn execute(
+		&self,
+		ctx: &mut ExecCtx,
+		_props: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
+		if !fired_exec.contains("exec_in") {
+			return Ok(NodeOutput::new());
+		}
+		let req = obs_request_from_inputs(inputs, "GetCurrentProgramScene", JsonValue::Object(Default::default()))?;
+		match call_obs_with_timeout(req.clone()).await {
+			Ok(resp) => {
+				let scene_name = resp
+					.response_data
+					.get("currentProgramSceneName")
+					.and_then(JsonValue::as_str)
+					.unwrap_or("")
+					.to_string();
+				ctx.log(format!("obs.get_current_program_scene: {scene_name}"));
+				Ok(common_success_output(resp).set_data("scene_name", SocketValue::String(scene_name)))
+			}
+			Err(e) => {
+				ctx.log(format!("obs.get_current_program_scene error: {e}"));
+				Ok(common_error_output(e).set_data("scene_name", SocketValue::String(String::new())))
+			}
+		}
+	}
+}
+
+impl NodeDescriptor for ObsSetSceneItemEnabledNode {
+	fn describe(&self) -> NodeSpec {
+		NodeSpec {
+			feature: "flowgraph.obs.set_scene_item_enabled".into(),
+			title: "OBS: Set Scene Item Enabled".into(),
+			category: "obs".into(),
+			description: Some(
+				"OBS WebSocket v5 の `SetSceneItemEnabled` を呼び、scene item の表示/非表示を切り替える。`scene_item_id` が負なら `source_name` から ID を解決する。".into(),
+			),
+			inputs: {
+				let mut inputs = obs_connection_inputs();
+				inputs.push(PortSpec::input("scene_name", "Scene Name", SocketType::String));
+				inputs.push(
+					PortSpec::input("source_name", "Source Name", SocketType::String)
+						.with_default(SocketValue::String(String::new())),
+				);
+				inputs.push(PortSpec::input("scene_item_id", "Scene Item ID", SocketType::Int).with_default(SocketValue::Int(-1)));
+				inputs.push(PortSpec::input("enabled", "Enabled", SocketType::Bool).with_default(SocketValue::Bool(true)));
+				inputs
+			},
+			outputs: {
+				let mut outputs = obs_common_outputs();
+				outputs.push(PortSpec::output("scene_item_id", "Scene Item ID", SocketType::Int));
+				outputs
+			},
+			properties: vec![],
+		}
+	}
+}
+
+#[async_trait]
+impl EffectfulNode for ObsSetSceneItemEnabledNode {
+	async fn execute(
+		&self,
+		ctx: &mut ExecCtx,
+		_props: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
+		if !fired_exec.contains("exec_in") {
+			return Ok(NodeOutput::new());
+		}
+		let scene_name = get_required_string(inputs, "scene_name")?;
+		let enabled = get_optional_bool(inputs, "enabled", true)?;
+		let timeout_ms = get_optional_int(inputs, "timeout_ms", 3000)?;
+		let url = get_optional_string(inputs, "url", "ws://127.0.0.1:4455")?;
+		let password = get_optional_string(inputs, "password", "")?;
+		let mut scene_item_id = get_optional_int(inputs, "scene_item_id", -1)?;
+		if scene_item_id < 0 {
+			let source_name = get_optional_string(inputs, "source_name", "")?;
+			if source_name.trim().is_empty() {
+				return Err(NodeExecError::Generic(anyhow::anyhow!(
+					"source_name is required when scene_item_id is negative"
+				)));
+			}
+			let get_id_req = ObsRequest {
+				url: url.clone(),
+				password: password.clone(),
+				request_type: "GetSceneItemId".into(),
+				request_data: json!({ "sceneName": scene_name, "sourceName": source_name }),
+				timeout_ms,
+			};
+			match call_obs_with_timeout(get_id_req).await {
+				Ok(resp) => {
+					scene_item_id = resp
+						.response_data
+						.get("sceneItemId")
+						.and_then(JsonValue::as_i64)
+						.ok_or_else(|| NodeExecError::Generic(anyhow::anyhow!("OBS response missing sceneItemId")))?;
+				}
+				Err(e) => {
+					ctx.log(format!("obs.set_scene_item_enabled resolve error: {e}"));
+					return Ok(common_error_output(e).set_data("scene_item_id", SocketValue::Int(-1)));
+				}
+			}
+		}
+		let req = ObsRequest {
+			url,
+			password,
+			request_type: "SetSceneItemEnabled".into(),
+			request_data: json!({
+				"sceneName": scene_name,
+				"sceneItemId": scene_item_id,
+				"sceneItemEnabled": enabled,
+			}),
+			timeout_ms,
+		};
+		match call_obs_with_timeout(req.clone()).await {
+			Ok(resp) => {
+				ctx.log(format!(
+					"obs.set_scene_item_enabled: scene_item_id={scene_item_id} enabled={enabled}"
+				));
+				Ok(common_success_output(resp).set_data("scene_item_id", SocketValue::Int(scene_item_id)))
+			}
+			Err(e) => {
+				ctx.log(format!("obs.set_scene_item_enabled error: {e}"));
+				Ok(common_error_output(e).set_data("scene_item_id", SocketValue::Int(scene_item_id)))
+			}
+		}
+	}
+}
+
+macro_rules! obs_simple_request_node {
+	($name:ident, $feature:literal, $title:literal, $description:literal, $request_type:literal) => {
+		impl NodeDescriptor for $name {
+			fn describe(&self) -> NodeSpec {
+				NodeSpec {
+					feature: $feature.into(),
+					title: $title.into(),
+					category: "obs".into(),
+					description: Some($description.into()),
+					inputs: obs_connection_inputs(),
+					outputs: obs_common_outputs(),
+					properties: vec![],
+				}
+			}
+		}
+
+		#[async_trait]
+		impl EffectfulNode for $name {
+			async fn execute(
+				&self,
+				ctx: &mut ExecCtx,
+				_props: &InputMap,
+				inputs: &InputMap,
+				fired_exec: &ExecFireSet,
+			) -> Result<NodeOutput, NodeExecError> {
+				if !fired_exec.contains("exec_in") {
+					return Ok(NodeOutput::new());
+				}
+				let req = obs_request_from_inputs(inputs, $request_type, JsonValue::Object(Default::default()))?;
+				execute_obs_request_node(ctx, req).await
+			}
+		}
+	};
+}
+
+obs_simple_request_node!(
+	ObsStartRecordNode,
+	"flowgraph.obs.start_record",
+	"OBS: Start Record",
+	"OBS WebSocket v5 の `StartRecord` を呼び、録画を開始する。",
+	"StartRecord"
+);
+obs_simple_request_node!(
+	ObsStopRecordNode,
+	"flowgraph.obs.stop_record",
+	"OBS: Stop Record",
+	"OBS WebSocket v5 の `StopRecord` を呼び、録画を停止する。",
+	"StopRecord"
+);
+obs_simple_request_node!(
+	ObsStartStreamNode,
+	"flowgraph.obs.start_stream",
+	"OBS: Start Stream",
+	"OBS WebSocket v5 の `StartStream` を呼び、配信を開始する。",
+	"StartStream"
+);
+obs_simple_request_node!(
+	ObsStopStreamNode,
+	"flowgraph.obs.stop_stream",
+	"OBS: Stop Stream",
+	"OBS WebSocket v5 の `StopStream` を呼び、配信を停止する。",
+	"StopStream"
+);
+obs_simple_request_node!(
+	ObsTriggerStudioModeTransitionNode,
+	"flowgraph.obs.trigger_studio_mode_transition",
+	"OBS: Trigger Studio Mode Transition",
+	"OBS WebSocket v5 の `TriggerStudioModeTransition` を呼び、Studio Mode の transition を実行する。",
+	"TriggerStudioModeTransition"
+);
+
+fn obs_connection_inputs() -> Vec<PortSpec> {
+	vec![
+		PortSpec::exec_input("exec_in", "Exec"),
+		PortSpec::input("url", "URL", SocketType::String).with_default(SocketValue::String("ws://127.0.0.1:4455".into())),
+		PortSpec::input("password", "Password", SocketType::String).with_default(SocketValue::String(String::new())),
+		PortSpec::input("timeout_ms", "Timeout ms", SocketType::Int).with_default(SocketValue::Int(3000)),
+	]
+}
+
+fn obs_request_from_inputs(inputs: &InputMap, request_type: &str, request_data: JsonValue) -> Result<ObsRequest, NodeExecError> {
+	Ok(ObsRequest {
+		url: get_optional_string(inputs, "url", "ws://127.0.0.1:4455")?,
+		password: get_optional_string(inputs, "password", "")?,
+		request_type: request_type.into(),
+		request_data,
+		timeout_ms: get_optional_int(inputs, "timeout_ms", 3000)?,
+	})
+}
+
 fn obs_common_outputs() -> Vec<PortSpec> {
 	vec![
 		PortSpec::exec_output("exec_out", "On Success"),
@@ -149,23 +398,31 @@ async fn execute_obs_request_node(ctx: &mut ExecCtx, req: ObsRequest) -> Result<
 	match call_obs_with_timeout(req.clone()).await {
 		Ok(resp) => {
 			ctx.log(format!("obs.request: {} ok status={}", req.request_type, resp.status_code));
-			Ok(NodeOutput::new()
-				.set_data("ok", SocketValue::Bool(true))
-				.set_data("status_code", SocketValue::Int(resp.status_code))
-				.set_data("response", SocketValue::Json(resp.response_data))
-				.set_data("error", SocketValue::String(String::new()))
-				.fire_exec("exec_out"))
+			Ok(common_success_output(resp))
 		}
 		Err(e) => {
 			ctx.log(format!("obs.request: {} error: {e}", req.request_type));
-			Ok(NodeOutput::new()
-				.set_data("ok", SocketValue::Bool(false))
-				.set_data("status_code", SocketValue::Int(0))
-				.set_data("response", SocketValue::Json(JsonValue::Null))
-				.set_data("error", SocketValue::String(e))
-				.fire_exec("on_error"))
+			Ok(common_error_output(e))
 		}
 	}
+}
+
+fn common_success_output(resp: ObsResponse) -> NodeOutput {
+	NodeOutput::new()
+		.set_data("ok", SocketValue::Bool(true))
+		.set_data("status_code", SocketValue::Int(resp.status_code))
+		.set_data("response", SocketValue::Json(resp.response_data))
+		.set_data("error", SocketValue::String(String::new()))
+		.fire_exec("exec_out")
+}
+
+fn common_error_output(e: impl Into<String>) -> NodeOutput {
+	NodeOutput::new()
+		.set_data("ok", SocketValue::Bool(false))
+		.set_data("status_code", SocketValue::Int(0))
+		.set_data("response", SocketValue::Json(JsonValue::Null))
+		.set_data("error", SocketValue::String(e.into()))
+		.fire_exec("on_error")
 }
 
 async fn call_obs_with_timeout(req: ObsRequest) -> Result<ObsResponse, String> {

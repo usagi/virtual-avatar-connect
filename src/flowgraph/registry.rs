@@ -329,6 +329,13 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_effectful(Arc::new(nodes::osc_send::OscSendNode));
 	r.register_effectful(Arc::new(nodes::obs::ObsRequestNode));
 	r.register_effectful(Arc::new(nodes::obs::ObsSetCurrentProgramSceneNode));
+	r.register_effectful(Arc::new(nodes::obs::ObsGetCurrentProgramSceneNode));
+	r.register_effectful(Arc::new(nodes::obs::ObsSetSceneItemEnabledNode));
+	r.register_effectful(Arc::new(nodes::obs::ObsStartRecordNode));
+	r.register_effectful(Arc::new(nodes::obs::ObsStopRecordNode));
+	r.register_effectful(Arc::new(nodes::obs::ObsStartStreamNode));
+	r.register_effectful(Arc::new(nodes::obs::ObsStopStreamNode));
+	r.register_effectful(Arc::new(nodes::obs::ObsTriggerStudioModeTransitionNode));
 	r.register_effectful(Arc::new(nodes::vmc_send::VmcSendBonePosNode));
 	r.register_effectful(Arc::new(nodes::vmc_send::VmcSendRootPosNode));
 	r.register_pure(Arc::new(nodes::vmc_extract::VmcExtractBonePosNode));
@@ -487,6 +494,13 @@ mod tests {
 			"flowgraph.osc.send",
 			"flowgraph.obs.request",
 			"flowgraph.obs.set_current_program_scene",
+			"flowgraph.obs.get_current_program_scene",
+			"flowgraph.obs.set_scene_item_enabled",
+			"flowgraph.obs.start_record",
+			"flowgraph.obs.stop_record",
+			"flowgraph.obs.start_stream",
+			"flowgraph.obs.stop_stream",
+			"flowgraph.obs.trigger_studio_mode_transition",
 			"flowgraph.vmc.send_bone_pos",
 			"flowgraph.vmc.send_root_pos",
 			"flowgraph.vmc.extract_bone_pos",
