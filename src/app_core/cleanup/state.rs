@@ -36,6 +36,9 @@ pub(super) async fn stop_libretranslate(state: &SharedState) {
 		.await
 		.is_err()
 	{
-		log::warn!("《Shutdown》 LibreTranslate.stop() が 5 秒以内に完了しませんでした。続行します。");
+		log::warn!(
+			"《Shutdown》 LibreTranslate.stop() が {} 秒以内に完了しませんでした。続行します。",
+			LIBRETRANSLATE_STOP_TIMEOUT_SECS
+		);
 	}
 }
