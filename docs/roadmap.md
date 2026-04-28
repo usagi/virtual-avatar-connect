@@ -10,6 +10,7 @@ v2 GUI を常駐ランタイムの管制卓と Flowgraph Studio へ再設計す�
 Flowgraph の乱数・分布・データ構造・アルゴリズム標準ライブラリー計画は [`roadmap/flowgraph-stdlib-roadmap.md`](roadmap/flowgraph-stdlib-roadmap.md) を参照。
 VAC 専用 Dictionary を Glossary へ改名し、Dictionary を汎用 key-value 型に譲る計画は [`roadmap/glossary-rename-roadmap.md`](roadmap/glossary-rename-roadmap.md) を参照。
 Flowgraph の言語基盤（Schema / Capability / Testing など）の計画は [`roadmap/flowgraph-language-foundation-roadmap.md`](roadmap/flowgraph-language-foundation-roadmap.md) を参照。
+将来の `.unflow` 表層言語と UN Flow の思想メモは [`roadmap/unflow-philosophy.md`](roadmap/unflow-philosophy.md) を参照。
 
 ---
 

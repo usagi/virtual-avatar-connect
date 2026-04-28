@@ -18,6 +18,7 @@ VAC はすでに、単なる配信補助ツールではなく **常駐型デー�
 
 このうち、次期基礎整備としては Schema / Contract、Capability / Effect、Testing / Debugger を優先する。
 詳細は [`flowgraph-language-foundation-roadmap.md`](flowgraph-language-foundation-roadmap.md) に集約する。
+将来 `.unflow` という表層言語を検討する場合の思想メモは [`unflow-philosophy.md`](unflow-philosophy.md) に置く。これは確定仕様ではなく、Flowgraph をどういう言語的方向へ伸ばすかの非規範文書である。
 
 ---
 
