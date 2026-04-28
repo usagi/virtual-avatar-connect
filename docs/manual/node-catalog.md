@@ -53,6 +53,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 - **flow**
   - [`flowgraph.flow.branch`](#flowgraph-flow-branch) — Branch
   - [`flowgraph.flow.gate`](#flowgraph-flow-gate) — Gate
+- **http**
+  - [`flowgraph.http.request`](#flowgraph-http-request) — HTTP Request
 - **ingress**
   - [`flowgraph.ingress.channel_subscribe`](#flowgraph-ingress-channel-subscribe) — Channel Subscribe Ingress
   - [`flowgraph.ingress.osc_udp`](#flowgraph-ingress-osc-udp) — OSC UDP Ingress
@@ -747,6 +749,33 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `exec_out` | `exec` (out) |  |
+
+## http
+
+### `flowgraph.http.request`
+
+**HTTP Request** — 汎用 HTTP request。method / headers / JSON body / timeout / retry_count を指定できる。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `method` | `string` | `"GET"` |  |
+| `url` | `string` | — |  |
+| `headers` | `json` | `{}` |  |
+| `body` | `json` | `null` |  |
+| `timeout_ms` | `int` | `5000` |  |
+| `retry_count` | `int` | `0` |  |
+| `retry_delay_ms` | `int` | `250` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `ok` | `bool` |  |
+| `status` | `int` |  |
+| `body` | `string` |  |
+| `json` | `json` |  |
+| `error` | `string` |  |
 
 ## ingress
 

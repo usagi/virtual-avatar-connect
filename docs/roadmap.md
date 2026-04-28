@@ -255,7 +255,7 @@ Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・
 
 外部 API 系の横串拡張フェーズ。既存 `[src/flowgraph/nodes/twitch.rs](../src/flowgraph/nodes/twitch.rs)` の Helix / OAuth 基盤を流用しつつ、HTTP 汎用ノード / OBS WebSocket / system metrics を同じ phase に詰める。
 
-- [ ] `flowgraph.http.request`（GET/POST/PUT/DELETE/PATCH、headers / JSON body / timeout / status / body / retry policy）
+- [x] `flowgraph.http.request`（GET/POST/PUT/DELETE/PATCH、headers / JSON body / timeout / status / body / retry_count）
 - [ ] `flowgraph.obs.*`（first slice: `obs.request` / `obs.set_current_program_scene`。残り: source visibility / record start-stop / stream start-stop / current scene / studio mode transition）
 - [ ] `flowgraph.system.*`（`sysinfo` crate、cpu_usage / mem_used / mem_total / load_avg / process_list。GPU は NVML 依存で後回し）
 - [ ] `flowgraph.twitch.*` 拡張（ユーザ要求分）: `raid_start` / `raid_cancel` / `ad_run`（1 分広告）/ `chat_settings_update`（subscribers_only / followers_only / emote_only / slow / unique）/ `prediction_create` / `prediction_end` / `poll_create` / `poll_end` / `shield_mode_update`（防御モード）/ `stream_marker_create`（説明付き対応）/ `clip_create` / `channel_info_update` / `goals_get` / `chat_clear` / チャット履歴リフレッシュ

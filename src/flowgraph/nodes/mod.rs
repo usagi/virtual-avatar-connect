@@ -63,6 +63,7 @@ pub mod delay;
 pub mod dictionary;
 pub mod easing;
 pub mod flow;
+pub mod http;
 pub mod ingress;
 pub mod json_ops;
 pub mod library_boundary;

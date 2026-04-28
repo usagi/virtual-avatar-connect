@@ -283,6 +283,7 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::json_ops::JsonParseNode));
 	r.register_pure(Arc::new(nodes::json_ops::JsonStringifyNode));
 	r.register_pure(Arc::new(nodes::json_ops::JsonGetNode));
+	r.register_effectful(Arc::new(nodes::http::HttpRequestNode));
 
 	// --- collection ---
 	r.register_pure(Arc::new(nodes::collection::ListLenNode));
@@ -427,6 +428,7 @@ mod tests {
 			"flowgraph.json.parse",
 			"flowgraph.json.stringify",
 			"flowgraph.json.get",
+			"flowgraph.http.request",
 			"flowgraph.list.len",
 			"flowgraph.list.get",
 			"flowgraph.list.is_empty",
