@@ -5,14 +5,10 @@ use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tokio::task::JoinHandle;
 
 pub fn run() -> Result<()> {
-	let runtime = Arc::new(
-		tokio::runtime::Builder::new_multi_thread()
-			.enable_all()
-			.build()
-			.map_err(anyhow::Error::from)?,
-	);
+	let runtime = build_tokio_runtime()?;
 
 	let core = runtime.block_on(crate::bootstrap::boot_app_core_with_standard_bootstrap())?;
 	let core_handle = core.runtime_handle();
@@ -20,22 +16,8 @@ pub fn run() -> Result<()> {
 	let shutdown = core_handle.shutdown;
 	let runtime_for_after_run = runtime.clone();
 	let shutdown_for_setup = shutdown.clone();
-	let shutdown_for_serve = shutdown.clone();
 	let (app_handle_tx, app_handle_rx) = tokio::sync::oneshot::channel::<tauri::AppHandle>();
-	let serve_handle = runtime.spawn(async move {
-		let app_handle = app_handle_rx.await.ok();
-		let run_result = core.run().await;
-		if let Err(e) = run_result.serve {
-			log::error!("《Desktop》 VAC runtime serve がエラー終了しました: {e}");
-			shutdown_for_serve.trigger(ShutdownReason::Fatal);
-		}
-		if let Err(e) = run_result.cleanup {
-			log::error!("《Desktop》 VAC runtime cleanup がエラー終了しました: {e}");
-		}
-		if let Some(app_handle) = app_handle {
-			app_handle.exit(0);
-		}
-	});
+	let serve_handle = spawn_vac_runtime_task(&runtime, core, shutdown.clone(), app_handle_rx);
 
 	tauri::Builder::default()
 		.setup(move |app| {
@@ -96,6 +78,37 @@ pub fn run() -> Result<()> {
 	shutdown.trigger(ShutdownReason::Desktop);
 	let _ = runtime_for_after_run.block_on(tokio::time::timeout(std::time::Duration::from_secs(10), serve_handle));
 	Ok(())
+}
+
+fn build_tokio_runtime() -> Result<Arc<tokio::runtime::Runtime>> {
+	Ok(Arc::new(
+		tokio::runtime::Builder::new_multi_thread()
+			.enable_all()
+			.build()
+			.map_err(anyhow::Error::from)?,
+	))
+}
+
+fn spawn_vac_runtime_task(
+	runtime: &Arc<tokio::runtime::Runtime>,
+	core: crate::app_core::AppCore,
+	shutdown: Arc<crate::shutdown::ShutdownBroker>,
+	app_handle_rx: tokio::sync::oneshot::Receiver<tauri::AppHandle>,
+) -> JoinHandle<()> {
+	runtime.spawn(async move {
+		let app_handle = app_handle_rx.await.ok();
+		let run_result = core.run().await;
+		if let Err(e) = run_result.serve {
+			log::error!("《Desktop》 VAC runtime serve がエラー終了しました: {e}");
+			shutdown.trigger(ShutdownReason::Fatal);
+		}
+		if let Err(e) = run_result.cleanup {
+			log::error!("《Desktop》 VAC runtime cleanup がエラー終了しました: {e}");
+		}
+		if let Some(app_handle) = app_handle {
+			app_handle.exit(0);
+		}
+	})
 }
 
 fn show_gui(app: &tauri::AppHandle) {
