@@ -76,6 +76,8 @@ impl AppCore {
 
 `crate::run()` は `Args`、特殊モード、`Conf::new`、`conf.execute_run_with()` までを担当し、その後は `AppCore` に委譲する。ここでは挙動を変えない。
 
+実装は `src/app_core/` 配下で `boot.rs` / `server.rs` / `cleanup.rs` に分け、`mod.rs` は `AppCore` 型と runner 向け API の薄い境界に寄せる。
+
 ### R2: runner 用 entry API を追加（実装済み）
 
 CLI と desktop の両方が同じ起動準備を使えるように、root crate に薄い entry API を作る。
