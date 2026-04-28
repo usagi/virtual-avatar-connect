@@ -1,5 +1,6 @@
 use super::AppCoreParts;
 use crate::conf::Conf;
+use crate::state::SharedState;
 use crate::{ai, bridges, flowgraph, managed_app, motion, processor, shutdown, web_interface, Result, SharedAudioSink};
 use std::sync::Arc;
 
@@ -9,34 +10,9 @@ pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppC
 
 	let state = crate::State::new(&conf, audio_sink, shutdown.clone()).await?;
 
-	let ai_tx = state.read().await.ai_observation_tx.clone();
-	let twitch_eventsub_for_ai = conf.twitch.as_ref().and_then(|t| t.eventsub.as_ref()).map(|e| Arc::new(e.clone()));
-	let twitch_moderator_for_ai = conf.twitch.as_ref().and_then(|t| t.moderator.as_ref()).map(|m| Arc::new(m.clone()));
-	let twitch_default_broadcaster_login = conf.twitch.as_ref().map(|t| {
-		t.eventsub
-			.as_ref()
-			.and_then(|e| e.broadcaster_login.clone())
-			.unwrap_or_else(|| t.username.clone())
-	});
-	let ai_handles = ai::spawn_all(
-		&conf.ai,
-		state.clone(),
-		ai_tx,
-		twitch_eventsub_for_ai,
-		twitch_moderator_for_ai,
-		twitch_default_broadcaster_login,
-	)
-	.await?;
+	let ai_handles = spawn_ai_services(&conf, &state).await?;
 
-	{
-		let s = state.read().await;
-		let registry = s.managed_apps.clone();
-		let event_tx = s.control_event_tx.clone();
-		let broker_for_monitor = shutdown.clone();
-		tokio::spawn(async move {
-			managed_app::run_monitor(registry, event_tx, broker_for_monitor).await;
-		});
-	}
+	spawn_managed_app_monitor(&state, shutdown.clone()).await;
 
 	let (flowgraph_bridges_catalog, flowgraph_trigger, channel_datum_tx) = {
 		let s = state.read().await;
@@ -83,6 +59,36 @@ pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppC
 		flowgraph_web_input_endpoints,
 		flowgraph_trigger,
 	})
+}
+
+async fn spawn_ai_services(conf: &Conf, state: &SharedState) -> Result<Vec<tokio::task::JoinHandle<()>>> {
+	let ai_tx = state.read().await.ai_observation_tx.clone();
+	let twitch_eventsub_for_ai = conf.twitch.as_ref().and_then(|t| t.eventsub.as_ref()).map(|e| Arc::new(e.clone()));
+	let twitch_moderator_for_ai = conf.twitch.as_ref().and_then(|t| t.moderator.as_ref()).map(|m| Arc::new(m.clone()));
+	let twitch_default_broadcaster_login = conf.twitch.as_ref().map(|t| {
+		t.eventsub
+			.as_ref()
+			.and_then(|e| e.broadcaster_login.clone())
+			.unwrap_or_else(|| t.username.clone())
+	});
+	Ok(ai::spawn_all(
+		&conf.ai,
+		state.clone(),
+		ai_tx,
+		twitch_eventsub_for_ai,
+		twitch_moderator_for_ai,
+		twitch_default_broadcaster_login,
+	)
+	.await?)
+}
+
+async fn spawn_managed_app_monitor(state: &SharedState, shutdown: Arc<shutdown::ShutdownBroker>) {
+	let s = state.read().await;
+	let registry = s.managed_apps.clone();
+	let event_tx = s.control_event_tx.clone();
+	tokio::spawn(async move {
+		managed_app::run_monitor(registry, event_tx, shutdown).await;
+	});
 }
 
 fn log_control_api_policy(control_api_runtime: &web_interface::control::ControlApiRuntime) {
