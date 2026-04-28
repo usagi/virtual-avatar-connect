@@ -118,6 +118,7 @@ desktop runner の tray 常駐責務を固定する。
 - [x] 起動時に VAC runtime を立ち上げる。
 - [x] tray の `GUI を開く` と左ダブルクリックから Tauri WebView GUI を開ける。
 - [x] 終了時は `ShutdownBroker` を使う。
+- [x] tray からの終了要求を helper 経由にし、VAC runtime task の停止待機結果をログに残す。
 - [x] 将来 tray から呼ぶ操作を Rust API として用意する。
 - [x] tray default icon は `assets/brand/vac/derived/vac-tray-default-16.png` を使う。正本は `assets/brand/vac/design-master/`、派生素材は `assets/brand/vac/derived/`。
 - [x] 開発機で実際の Windows tray 表示、右クリック menu、終了導線を手動確認する。
