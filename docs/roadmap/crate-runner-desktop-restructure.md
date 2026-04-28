@@ -141,7 +141,7 @@ Tauri GUI shell は desktop runner に載せる。CLI は従来型の開発者�
 - WebView は既存 Svelte GUI を表示する。window close は hide して tray 常駐を維持し、終了は tray の `終了` または GUI の終了導線を使う。
 - GUI は引き続き HTTP/WS Control API を叩く。
 - `invoke` は原則使わない。bootstrap 情報が必要な場合だけ薄く追加する。
-- tray close / window close / GUI 終了ボタンは `ShutdownBroker` へ合流させる。
+- tray の `終了` / GUI 終了ボタンは `ShutdownBroker` へ合流させる。window close は hide して tray 常駐を維持する。
 
 同梱 GUI release は `cargo build --release --features embed-gui` を正本にする。WebView は loopback の `/gui/` を開き、actix 側が `vac-gui-assets` に埋め込んだ `gui/dist` を返す。Tauri custom protocol は後続の最適化候補に留める。
 
