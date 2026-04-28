@@ -1,6 +1,4 @@
 <script lang="ts">
- import { flowgraphStore } from '../flowgraphStore.svelte';
-
  type Data = {
   groupId: string;
   label: string;
@@ -13,15 +11,10 @@
 
  let { data }: { data: Data } = $props();
 
- function selectGroup(ev?: Event) {
-  ev?.stopPropagation();
-  flowgraphStore.selectGroup(data.groupId);
- }
-
  function onKeydown(ev: KeyboardEvent) {
   if (ev.key !== 'Enter' && ev.key !== ' ') return;
   ev.preventDefault();
-  selectGroup(ev);
+  (ev.currentTarget as HTMLElement | null)?.click();
  }
 </script>
 
@@ -33,8 +26,6 @@
  tabindex="0"
  aria-label={`Flowgraph group ${data.groupId}`}
  data-testid={`flowgraph-group-${data.groupId}`}
- onpointerdown={(ev) => selectGroup(ev)}
- onclick={(ev) => selectGroup(ev)}
  onkeydown={onKeydown}
 >
  <div class="group-frame-label">

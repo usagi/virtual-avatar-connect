@@ -145,7 +145,7 @@
     height: g.height,
    },
    selectable: true,
-   draggable: false,
+   draggable: true,
    deletable: false,
    focusable: false,
    zIndex: -10,
@@ -214,7 +214,15 @@
 
  function onNodeDragStop(params: { targetNode: Node | null; nodes: Node[]; event: MouseEvent | TouchEvent }) {
   const n = params.targetNode;
-  if (!n || isGroupFrameNode(n.id)) return;
+  if (!n) return;
+  if (isGroupFrameNode(n.id)) {
+   const currentFrame = toGroupFrameNodes().find((frame) => frame.id === n.id);
+   if (!currentFrame) return;
+   const dx = n.position.x - currentFrame.position.x;
+   const dy = n.position.y - currentFrame.position.y;
+   flowgraphStore.moveGroupBy(groupIdFromFrameNode(n.id), dx, dy);
+   return;
+  }
   flowgraphStore.updateNodePosition(n.id, n.position.x, n.position.y);
  }
 

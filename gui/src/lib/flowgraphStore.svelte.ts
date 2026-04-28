@@ -189,6 +189,23 @@ class FlowgraphStore {
   this.draftNodes = next;
  }
 
+ moveGroupBy(groupId: string, dx: number, dy: number): boolean {
+  if (!this.draftNodes || !this.draftGroups) return false;
+  if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return false;
+  const group = this.draftGroups.find((g) => g.id === groupId);
+  if (!group) return false;
+  const memberIds = new Set(group.node_ids);
+  if (!this.draftNodes.some((n) => memberIds.has(n.id))) return false;
+  this.#pushHistory('Move group');
+  this.draftNodes = this.draftNodes.map((n, i) => {
+   if (!memberIds.has(n.id)) return n;
+   const pos = n.position ?? ([50 + (i % 6) * 220, 50 + Math.floor(i / 6) * 140] as [number, number]);
+   return { ...n, position: [Math.round(pos[0] + dx), Math.round(pos[1] + dy)] };
+  });
+  this.selectedGroupId = groupId;
+  return true;
+ }
+
  updateNodeProperty(id: string, key: string, value: unknown): void {
   if (!this.draftNodes) return;
   this.#pushHistory('Edit property');
