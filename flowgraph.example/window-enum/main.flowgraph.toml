@@ -1,0 +1,47 @@
+# Phase tau:
+# Web input をきっかけに現在のトップレベルウィンドウ数を記録する例。
+
+[meta]
+title = "window enum demo"
+description = "Web Input Ingress -> Window Enum -> Log"
+tags = ["example", "window", "process", "resident-app", "flowgraph"]
+
+[[nodes]]
+id = "window_in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 160]
+properties.path = "/input/window-enum"
+properties.method = "POST"
+properties.body_format = "plain"
+properties.fixed_channel = "window_enum_demo"
+
+[[nodes]]
+id = "windows"
+feature = "flowgraph.window.enum"
+position = [360, 160]
+
+[[nodes]]
+id = "count_to_string"
+feature = "flowgraph.convert.int_to_string"
+position = [660, 220]
+
+[[nodes]]
+id = "log_count"
+feature = "flowgraph.util.log"
+position = [920, 160]
+
+[[edges]]
+from = "window_in:exec_out"
+to = "windows:exec_in"
+
+[[edges]]
+from = "windows:exec_out"
+to = "log_count:exec_in"
+
+[[edges]]
+from = "windows:count"
+to = "count_to_string:value"
+
+[[edges]]
+from = "count_to_string:result"
+to = "log_count:value"

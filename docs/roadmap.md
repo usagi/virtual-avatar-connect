@@ -267,10 +267,10 @@ Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・
 OS プロセス / ウィンドウ制御ノード群。Windows を第一級 target、他 OS は degrade policy を phase doc で固定する。
 
 - [x] `flowgraph.process.spawn` / `.kill` / `.wait` / `.running`（PID / exe 名で条件判定、shell を介さない command + args 実行、`flowgraph.example/process-control` 追加）
-- [ ] `flowgraph.window.enum`（現在開いているウィンドウ一覧を Table で返す）
-- [ ] `flowgraph.window.move` / `.resize` / `.minimize` / `.maximize` / `.restore` / `.close` / `.foreground`
-- [ ] `flowgraph.window.pseudo_fullscreen` / `.pseudo_fullscreen_exit`（borderless + monitor-size 化 / 元サイズ復帰）
-- scope: 既存 `windows` crate を再利用。macOS / Linux は no-op + warn か、将来別 backend を追加するかを phase doc で決める
+- [x] `flowgraph.window.enum`（現在開いているウィンドウ一覧を Table で返す、`flowgraph.example/window-enum` 追加）
+- [x] `flowgraph.window.move` / `.resize` / `.minimize` / `.maximize` / `.restore` / `.close` / `.foreground`
+- [x] `flowgraph.window.pseudo_fullscreen` / `.pseudo_fullscreen_exit`（first slice: placement 保存 + maximize / restore。borderless + monitor-size 化は必要なら後続で強化）
+- scope: 既存 `windows` crate を再利用。macOS / Linux は明示 error + 空結果で degrade する
 
 ### Phase υ — GUI 大物 (Undo/Redo + multi-select + subgraph) (TBD)
 

@@ -294,6 +294,16 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_effectful(Arc::new(nodes::process::ProcessRunningNode));
 	r.register_effectful(Arc::new(nodes::process::ProcessKillNode));
 	r.register_effectful(Arc::new(nodes::process::ProcessWaitNode));
+	r.register_effectful(Arc::new(nodes::window::WindowEnumNode));
+	r.register_effectful(Arc::new(nodes::window::WindowMoveNode));
+	r.register_effectful(Arc::new(nodes::window::WindowResizeNode));
+	r.register_effectful(Arc::new(nodes::window::WindowMinimizeNode));
+	r.register_effectful(Arc::new(nodes::window::WindowMaximizeNode));
+	r.register_effectful(Arc::new(nodes::window::WindowRestoreNode));
+	r.register_effectful(Arc::new(nodes::window::WindowCloseNode));
+	r.register_effectful(Arc::new(nodes::window::WindowForegroundNode));
+	r.register_effectful(Arc::new(nodes::window::WindowPseudoFullscreenNode));
+	r.register_effectful(Arc::new(nodes::window::WindowPseudoFullscreenExitNode));
 
 	// --- collection ---
 	r.register_pure(Arc::new(nodes::collection::ListLenNode));

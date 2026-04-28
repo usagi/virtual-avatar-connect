@@ -279,6 +279,17 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.vrchat.avatar_parameter_int`](#flowgraph-vrchat-avatar-parameter-int) — VRChat: Avatar Parameter (Int)
   - [`flowgraph.vrchat.chatbox_input`](#flowgraph-vrchat-chatbox-input) — VRChat: Chatbox Input
   - [`flowgraph.vrchat.chatbox_typing`](#flowgraph-vrchat-chatbox-typing) — VRChat: Chatbox Typing
+- **window**
+  - [`flowgraph.window.close`](#flowgraph-window-close) — Window: Close
+  - [`flowgraph.window.enum`](#flowgraph-window-enum) — Window: Enum
+  - [`flowgraph.window.foreground`](#flowgraph-window-foreground) — Window: Foreground
+  - [`flowgraph.window.maximize`](#flowgraph-window-maximize) — Window: Maximize
+  - [`flowgraph.window.minimize`](#flowgraph-window-minimize) — Window: Minimize
+  - [`flowgraph.window.move`](#flowgraph-window-move) — Window: Move
+  - [`flowgraph.window.pseudo_fullscreen`](#flowgraph-window-pseudo-fullscreen) — Window: Pseudo Fullscreen
+  - [`flowgraph.window.pseudo_fullscreen_exit`](#flowgraph-window-pseudo-fullscreen-exit) — Window: Pseudo Fullscreen Exit
+  - [`flowgraph.window.resize`](#flowgraph-window-resize) — Window: Resize
+  - [`flowgraph.window.restore`](#flowgraph-window-restore) — Window: Restore
 
 ## channel
 
@@ -3906,5 +3917,210 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_success` | `exec` (out) |  |
 | `on_error` | `exec` (out) |  |
 | `bytes_sent` | `int` |  |
+| `error` | `string` |  |
+
+## window
+
+### `flowgraph.window.close`
+
+**Window: Close** — 対象ウィンドウへ WM_CLOSE を送る。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `hwnd` | `int` | `0` |  |
+| `pid` | `int` | `0` |  |
+| `title_filter` | `string` | `""` |  |
+| `exact` | `bool` | `false` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `affected_count` | `int` |  |
+| `windows` | `table` |  |
+| `error` | `string` |  |
+
+### `flowgraph.window.enum`
+
+**Window: Enum** — トップレベルウィンドウ一覧を Table として取得する。Windows first。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `pid` | `int` | `0` |  |
+| `title_filter` | `string` | `""` |  |
+| `exact` | `bool` | `false` |  |
+| `visible_only` | `bool` | `true` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `windows` | `table` |  |
+| `count` | `int` |  |
+| `error` | `string` |  |
+
+### `flowgraph.window.foreground`
+
+**Window: Foreground** — 対象ウィンドウを前面化する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `hwnd` | `int` | `0` |  |
+| `pid` | `int` | `0` |  |
+| `title_filter` | `string` | `""` |  |
+| `exact` | `bool` | `false` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `affected_count` | `int` |  |
+| `windows` | `table` |  |
+| `error` | `string` |  |
+
+### `flowgraph.window.maximize`
+
+**Window: Maximize** — 対象ウィンドウを最大化する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `hwnd` | `int` | `0` |  |
+| `pid` | `int` | `0` |  |
+| `title_filter` | `string` | `""` |  |
+| `exact` | `bool` | `false` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `affected_count` | `int` |  |
+| `windows` | `table` |  |
+| `error` | `string` |  |
+
+### `flowgraph.window.minimize`
+
+**Window: Minimize** — 対象ウィンドウを最小化する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `hwnd` | `int` | `0` |  |
+| `pid` | `int` | `0` |  |
+| `title_filter` | `string` | `""` |  |
+| `exact` | `bool` | `false` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `affected_count` | `int` |  |
+| `windows` | `table` |  |
+| `error` | `string` |  |
+
+### `flowgraph.window.move`
+
+**Window: Move** — 対象ウィンドウの左上座標を変更する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `hwnd` | `int` | `0` |  |
+| `pid` | `int` | `0` |  |
+| `title_filter` | `string` | `""` |  |
+| `exact` | `bool` | `false` |  |
+| `x` | `int` | — |  |
+| `y` | `int` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `affected_count` | `int` |  |
+| `windows` | `table` |  |
+| `error` | `string` |  |
+
+### `flowgraph.window.pseudo_fullscreen`
+
+**Window: Pseudo Fullscreen** — 対象ウィンドウの表示状態を保存して最大化する first slice。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `hwnd` | `int` | `0` |  |
+| `pid` | `int` | `0` |  |
+| `title_filter` | `string` | `""` |  |
+| `exact` | `bool` | `false` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `affected_count` | `int` |  |
+| `windows` | `table` |  |
+| `error` | `string` |  |
+
+### `flowgraph.window.pseudo_fullscreen_exit`
+
+**Window: Pseudo Fullscreen Exit** — pseudo_fullscreen 前の表示状態を復元する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `hwnd` | `int` | `0` |  |
+| `pid` | `int` | `0` |  |
+| `title_filter` | `string` | `""` |  |
+| `exact` | `bool` | `false` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `affected_count` | `int` |  |
+| `windows` | `table` |  |
+| `error` | `string` |  |
+
+### `flowgraph.window.resize`
+
+**Window: Resize** — 対象ウィンドウのサイズを変更する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `hwnd` | `int` | `0` |  |
+| `pid` | `int` | `0` |  |
+| `title_filter` | `string` | `""` |  |
+| `exact` | `bool` | `false` |  |
+| `width` | `int` | — |  |
+| `height` | `int` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `affected_count` | `int` |  |
+| `windows` | `table` |  |
+| `error` | `string` |  |
+
+### `flowgraph.window.restore`
+
+**Window: Restore** — 対象ウィンドウを通常表示へ戻す。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `hwnd` | `int` | `0` |  |
+| `pid` | `int` | `0` |  |
+| `title_filter` | `string` | `""` |  |
+| `exact` | `bool` | `false` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `affected_count` | `int` |  |
+| `windows` | `table` |  |
 | `error` | `string` |  |
 

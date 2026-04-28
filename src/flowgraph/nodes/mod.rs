@@ -80,6 +80,7 @@ pub mod process;
 pub mod vmc_send;
 pub mod vmc_extract;
 pub mod vrchat_osc;
+pub mod window;
 pub mod random_noise;
 pub mod rate_limit;
 pub mod regex_ops;
