@@ -3,6 +3,7 @@
 //! `crate::run()` はロガー・CLI 特殊モード・conf ロードまでを担当し、本モジュールが
 //! `ShutdownBroker` 以降の常駐ランタイム本体をまとめる。将来 `vac-app` crate へ移す際の境界の目印。
 
+mod address;
 mod boot;
 mod cleanup;
 mod server;
@@ -51,14 +52,6 @@ impl AppCore {
 }
 
 impl AppCoreParts {
-	fn runtime_handle(&self) -> AppCoreRuntimeHandle {
-		let address = server::normalize_loopback_address(self.conf.get_web_ui_address());
-		AppCoreRuntimeHandle {
-			gui_url: format!("http://{address}/gui/"),
-			shutdown: self.shutdown.clone(),
-		}
-	}
-
 	async fn serve(&self) -> Result<()> {
 		server::run_services(self).await
 	}

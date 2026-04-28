@@ -5,28 +5,8 @@ use crate::{bridges, flowgraph, shutdown, web_interface, Result};
 use actix_files::Files;
 use actix_web::dev::ServerHandle;
 use actix_web::web::Data;
-use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
-
-pub(super) fn normalize_loopback_address(address: &str) -> String {
-	if let Ok(socket) = address.parse::<SocketAddr>() {
-		let port = socket.port();
-		let ip = socket.ip();
-		if ip.is_unspecified() {
-			return format!("127.0.0.1:{port}");
-		}
-		if ip.is_ipv6() {
-			return format!("[{ip}]:{port}");
-		}
-		return socket.to_string();
-	}
-
-	address
-		.strip_prefix("0.0.0.0:")
-		.map(|port| format!("127.0.0.1:{port}"))
-		.unwrap_or_else(|| address.to_string())
-}
 
 pub(super) async fn run_services(parts: &AppCoreParts) -> Result<()> {
 	let runtime = ServerRuntime::from_app_core(parts);
