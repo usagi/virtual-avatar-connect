@@ -330,4 +330,59 @@ test.describe('§3.2 flowgraph-canvas-basic', () => {
 			expect(restore.status(), await restore.text()).toBe(200);
 		}
 	});
+
+	test('Create group persists [[groups]] and shows a canvas frame', async ({ page, request }) => {
+		const snapRes = await request.get(FILE_PATH, { headers: authHeader() });
+		expect(snapRes.status(), await snapRes.text()).toBe(200);
+		const originalToml = ((await snapRes.json()) as FlowgraphFileResp).raw_toml;
+		try {
+			await page.goto(`/gui/${tokenQuery()}`);
+			await page.getByRole('navigation', { name: 'Main tabs' }).getByRole('button', { name: /flowgraph/i }).click();
+			await page.getByRole('button', { name: /^sample\b/ }).click();
+
+			const canvas = page.locator('.svelte-flow');
+			await expect(canvas).toBeVisible({ timeout: 15_000 });
+			const inNode = page.getByTestId('flowgraph-node-in');
+			const logNode = page.getByTestId('flowgraph-node-log');
+			await expect(inNode).toBeVisible({ timeout: 15_000 });
+			await expect(logNode).toBeVisible({ timeout: 15_000 });
+
+			await inNode.click();
+			await logNode.click({ modifiers: ['Control'] });
+			const multiSelectionLabel = page.getByText('2 nodes selected');
+			if (!(await multiSelectionLabel.isVisible({ timeout: 1000 }).catch(() => false))) {
+				await inNode.click();
+				await logNode.click({ modifiers: ['Shift'] });
+			}
+			await expect(multiSelectionLabel).toBeVisible({ timeout: 10_000 });
+
+			await page.getByRole('button', { name: 'Commands' }).click();
+			await page.getByRole('button', { name: /Create group/ }).click();
+
+			const groupFrame = page.getByTestId('flowgraph-group-group_1');
+			await expect(groupFrame).toBeVisible({ timeout: 10_000 });
+			await expect(groupFrame.getByText('Group 1')).toBeVisible();
+			await expect(page.getByText('Groups')).toBeVisible();
+
+			const saveBtn = page.getByRole('button', { name: /^Save( \*)?$/ });
+			await expect(saveBtn).toHaveText('Save *', { timeout: 5_000 });
+			const putPromise = page.waitForResponse(
+				(res) => res.url().includes(FILE_PATH) && res.request().method() === 'PUT' && res.status() === 200,
+				{ timeout: 15_000 },
+			);
+			await saveBtn.click();
+			const putRes = await putPromise;
+			const putReqBody = putRes.request().postDataJSON() as { content: string };
+			expect(putReqBody.content).toContain('[[groups]]');
+			expect(putReqBody.content).toContain('id = "group_1"');
+			expect(putReqBody.content).toContain('label = "Group 1"');
+			expect(putReqBody.content).toContain('node_ids = ["in", "log"]');
+		} finally {
+			const restore = await request.put(FILE_PATH, {
+				headers: authHeader(),
+				data: { content: originalToml },
+			});
+			expect(restore.status(), await restore.text()).toBe(200);
+		}
+	});
 });

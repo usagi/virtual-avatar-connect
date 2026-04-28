@@ -34,6 +34,7 @@
  import { toastStore } from '../toasts.svelte';
  import type { FlowgraphNodeSpec } from '../types';
  import FlowgraphNodeCard from './FlowgraphNodeCard.svelte';
+ import FlowgraphGroupFrame from './FlowgraphGroupFrame.svelte';
  import FlowgraphAutoFit from './FlowgraphAutoFit.svelte';
  import FlowgraphPaneDropBridge from './FlowgraphPaneDropBridge.svelte';
 
@@ -59,6 +60,7 @@
 
  // Svelte Flow 用のデータ。store からの初期化 / 反映は $effect で同期する。
  let nodes = $state<Node[]>([]);
+ let visibleNodes = $state<Node[]>([]);
  let edges = $state<Edge[]>([]);
 
  /** store の draft → Svelte Flow 用 Node[] への変換。 */
@@ -81,6 +83,72 @@
     selected: flowgraphStore.selectedNodeIds.includes(n.id) || flowgraphStore.selectedNodeId === n.id,
    };
   });
+ }
+
+ type GroupFrame = {
+  id: string;
+  label: string;
+  nodeIds: string[];
+  color: string | null;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+ };
+
+ function toGroupFrameNodes(): Node[] {
+  const draftNodes = flowgraphStore.draftNodes ?? [];
+  const groups = flowgraphStore.draftGroups ?? [];
+  if (draftNodes.length === 0 || groups.length === 0) return [];
+  const posById = new Map(
+   draftNodes.map((n, i) => [
+    n.id,
+    n.position ?? ([50 + (i % 6) * 220, 50 + Math.floor(i / 6) * 140] as [number, number]),
+   ]),
+  );
+  const nodeWidth = 192;
+  const nodeHeight = 108;
+  const padding = 32;
+  const frames: GroupFrame[] = groups.flatMap((g) => {
+   const positions = g.node_ids
+    .map((id) => posById.get(id))
+    .filter((p): p is [number, number] => !!p);
+   if (positions.length === 0) return [];
+   const minX = Math.min(...positions.map((p) => p[0]));
+   const minY = Math.min(...positions.map((p) => p[1]));
+   const maxX = Math.max(...positions.map((p) => p[0] + nodeWidth));
+   const maxY = Math.max(...positions.map((p) => p[1] + nodeHeight));
+   return [
+    {
+     id: g.id,
+     label: g.label || g.id,
+     nodeIds: g.node_ids,
+     color: g.color,
+     x: Math.round(minX - padding),
+     y: Math.round(minY - padding),
+     width: Math.round(maxX - minX + padding * 2),
+     height: Math.round(maxY - minY + padding * 2),
+    },
+   ];
+  });
+  return frames.map((g) => ({
+   id: `__group:${g.id}`,
+   type: 'flowgraphGroup',
+   position: { x: g.x, y: g.y },
+   data: {
+    groupId: g.id,
+    label: g.label,
+    nodeCount: g.nodeIds.length,
+    color: g.color,
+    width: g.width,
+    height: g.height,
+   },
+   selectable: false,
+   draggable: false,
+   deletable: false,
+   focusable: false,
+   zIndex: -10,
+  }));
  }
 
  /** store の draft → Svelte Flow 用 Edge[]。 */
@@ -137,13 +205,15 @@
 
  // store -> local sync
  $effect(() => {
-  nodes = toFlowNodes();
+  const nextNodes = toFlowNodes();
+  nodes = nextNodes;
+  visibleNodes = [...toGroupFrameNodes(), ...nextNodes];
   edges = toFlowEdges();
  });
 
  function onNodeDragStop(params: { targetNode: Node | null; nodes: Node[]; event: MouseEvent | TouchEvent }) {
   const n = params.targetNode;
-  if (!n) return;
+  if (!n || isGroupFrameNode(n.id)) return;
   flowgraphStore.updateNodePosition(n.id, n.position.x, n.position.y);
  }
 
@@ -171,7 +241,7 @@
 
  function onDelete(params: { nodes: Node[]; edges: Edge[] }) {
   // γ-4a.0: まとめて削除し、直前スナップショットを store に保持して toast から undo できるようにする。
-  const nodeIds = params.nodes.map((n) => n.id);
+  const nodeIds = params.nodes.map((n) => n.id).filter((id) => !isGroupFrameNode(id));
   const edgePairs = params.edges
    .map((e) => (e.data as { original?: { from: string; to: string } } | undefined)?.original)
    .filter((x): x is { from: string; to: string } => !!x);
@@ -200,6 +270,7 @@
 
  function onNodeClick(params: { node: Node; event: MouseEvent | TouchEvent }) {
   const id = params.node.id;
+  if (isGroupFrameNode(id)) return;
   const event = params.event;
   const additive = event instanceof MouseEvent && (event.ctrlKey || event.metaKey || event.shiftKey);
   if (!additive) {
@@ -213,7 +284,11 @@
   flowgraphStore.selectedNodeId = next[0] ?? null;
  }
 
- const nodeTypes = { flowgraph: FlowgraphNodeCard };
+ function isGroupFrameNode(id: string): boolean {
+  return id.startsWith('__group:');
+ }
+
+ const nodeTypes = { flowgraph: FlowgraphNodeCard, flowgraphGroup: FlowgraphGroupFrame };
 </script>
 
 <div class="relative h-full w-full">
@@ -238,7 +313,7 @@
   </div>
  {:else}
   <SvelteFlow
-   bind:nodes
+   bind:nodes={visibleNodes}
    bind:edges
    {nodeTypes}
    fitView
