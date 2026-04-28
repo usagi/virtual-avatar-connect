@@ -316,6 +316,7 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 
 推奨実装順:
 
+- [ ] RI-0 File I/O foundation。ファイル更新監視 ingress と Binary / String / JSON / TOML / RON 読み書きを整え、以降の外部データ reader の基礎にする。
 - [ ] RI-1 `.xlsx -> Table` 読み込み。まずローカルファイルから sheet / range / header を扱い、Table パイプラインの入口を増やす。
 - [ ] RI-2 Google Sheets public URL / ID -> Table 読み込み。OAuth なしの公開共有・公開 CSV 経路から始め、RI-1 と同じ Table 仕様へ正規化する。
 - [ ] RI-3 Table draw node。Table から抽選し、配信企画・コメント抽選・ランダム選択を Flowgraph で扱えるようにする。
@@ -324,6 +325,7 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 - [ ] RI-6 OBS Browser Source template output。OBS 側は 1 ソースで取り込める完成形テンプレートを優先し、字幕・会話・チャット・RAID 演出を段階追加する。
 - [ ] RI-7 physical constants。標準ライブラリー寄りの低リスク pure node / constants provider として追加する。
 - [ ] RI-8 authenticated Google Sheets。OAuth / token storage / scope 設計が必要なため、public reader の実用確認後に着手する。
+- [ ] RI-9 MsgPack support。Binary / JSON 変換の延長として、保存・通信で必要になった時点で追加する。
 
 ### Phase ν+（TBD）: E2E 拡張
 

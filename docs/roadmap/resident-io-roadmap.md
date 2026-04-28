@@ -10,8 +10,22 @@ Flowgraph を汎用データフロー処理エンジンへ近づけるため、�
 - **常駐状態を尊重**: OS 通知と OBS 出力は、常駐アプリの現在モードに従う。睡眠モードや仕事モードで不要な通知・演出を出さない。
 - **OBS テンプレート優先**: OBS は細かい部品ノードを大量に増やす前に、Browser Source 1 つで試せる完成形テンプレート出力を優先する。
 - **小さく合成可能なノード**: 抽選、定数、変換は Flowgraph 標準ライブラリー候補として、小さく合成可能なノードにする。
+- **標準ライブラリー化を前提にする**: ファイル、変換、抽選、定数は個別便利ノードではなく、将来の Flowgraph standard library / VAC API library へ分類できる名前と責務で設計する。
 
 ## 2. 実装順序
+
+### RI-0 File I/O foundation
+
+`.xlsx` や Google Sheets より基礎側の常駐 I/O。ファイル更新監視 ingress と、主要なファイル形式の読み書きを先に整える。
+
+- Ingress node: `flowgraph.file.watch`
+- Read nodes: `flowgraph.file.read_binary`, `flowgraph.file.read_text`, `flowgraph.file.read_json`, `flowgraph.file.read_toml`, `flowgraph.file.read_ron`
+- Write nodes: `flowgraph.file.write_binary`, `flowgraph.file.write_text`, `flowgraph.file.write_json`, `flowgraph.file.write_toml`, `flowgraph.file.write_ron`
+- Convert nodes: `flowgraph.convert.json_to_toml`, `flowgraph.convert.toml_to_json`, `flowgraph.convert.toml_to_ron`, `flowgraph.convert.ron_to_toml`
+- 初期 capability: `file_read` / `file_write` / `file_watch` を分ける
+- watch は debounce と recursive flag を持つ
+- TOML は Flowgraph の source format と近いため JSON と並ぶ構造化データとして扱う
+- RON は Rust / 高度ユーザー向けの serialization format として、TOML value model へ寄せて読む
 
 ### RI-1 `.xlsx -> Table`
 
@@ -96,6 +110,14 @@ public reader の実用確認後に着手する。OAuth / token storage / scope 
 - 認可状態は GUI で見えるようにする
 - token は platform keyring か既存 secure storage 方針に合わせる
 
+### RI-9 MsgPack support
+
+必要性はあるが初期優先度は低い。Binary 型と JSON 変換が安定してから、保存・通信・外部ツール連携で必要になった時点で追加する。
+
+- Node candidates: `flowgraph.convert.json_to_msgpack`, `flowgraph.convert.msgpack_to_json`
+- `bytes` / `binary` 型の確定後に実装する
+- schema-less のまま入れると診断が弱いため、最初は JSON value と対応する範囲に限定する
+
 ## 3. Toast / Notification の整理
 
 GUI 内 Toast と OS desktop notification は別物として扱う。
@@ -111,3 +133,12 @@ GUI 内 Toast と OS desktop notification は別物として扱う。
 - node catalog / manual / GUI node picker を同時更新する
 - 外部 I/O ノードは timeout / error message / retry policy を明記する
 - 常駐 desktop runner と CLI runner の差は通知などの host capability として明示する
+
+## 5. ライブラリー分類
+
+Flowgraph の汎用言語化を進めるため、この機能波のノードは最初から分類を意識する。
+
+- **言語コア**: `bytes` / `result` / `record` / TOML value などの型、capability、effect boundary
+- **標準ライブラリー**: `flowgraph.file.*`, `flowgraph.convert.*`, `flowgraph.table.draw`, `flowgraph.constants.*`
+- **VAC API ライブラリー**: `flowgraph.notify.desktop`, `flowgraph.obs.template.*`, Twitch / OBS / Runtime Mode 連携
+- **外部サービスライブラリー**: `flowgraph.table.load_google_sheet_public`, future authenticated Google Sheets

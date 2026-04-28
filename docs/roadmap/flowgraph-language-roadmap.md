@@ -211,6 +211,7 @@ GUI で自然に扱えることを重視する。ただし source format は手�
 - `record`
 - `result`
 - `option`
+- `toml`
 - `motion_frame`
 - `osc_packet`
 - `http_response`
@@ -219,6 +220,7 @@ GUI で自然に扱えることを重視する。ただし source format は手�
 - `audio_buffer`
 
 すべてを一気に入れない。最初に `result` / `bytes` / `record` を基礎型として導入する。
+`toml` は JSON と同じ構造化データの別表現として扱い、Flowgraph source format / conf / file I/O との親和性が高い場合に第一級型へ昇格させる。
 
 ### 4.4 Error Gap
 
@@ -265,6 +267,16 @@ GUI で自然に扱えることを重視する。ただし source format は手�
 - tests
 - docs metadata
 - lockfile or resolved dependency record
+
+### 4.6.1 Library Layer Gap
+
+Flowgraph を汎用言語へ近づけるには、単にノードを増やすのではなく、機能を以下の層へ分ける必要がある。
+
+- **言語コア**: 型、exec / data 意味論、effect boundary、capability、診断、エラー規約。
+- **標準ライブラリー**: file / convert / table / list / math / constants / datetime など、VAC 固有ではない汎用ノード。
+- **VAC API ライブラリー**: Runtime Mode、desktop notification、OBS、Twitch、OSC / VMC など、VAC が常駐 hub として提供する外部連携。
+
+この分類を持たないままノードを増やすと、GUI catalog と docs が散らかり、ユーザーにとって「何を使えばよいか」が見えにくくなる。Resident I/O の file / convert / table 系は標準ライブラリー、notify / OBS template 系は VAC API ライブラリーとして扱う。
 
 ### 4.7 Debug Gap
 
