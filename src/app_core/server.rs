@@ -1,11 +1,11 @@
 use super::AppCoreParts;
-use crate::{bridges, shutdown, web_interface, Result};
-use actix_files::Files;
-use actix_web::dev::{Server, ServerHandle};
-use actix_web::web::Data;
+use crate::{shutdown, Result};
+use actix_web::dev::ServerHandle;
+use http::build_http_server;
 use runtime::ServerRuntime;
 use std::sync::Arc;
 
+mod http;
 mod runtime;
 
 pub(super) async fn run_services(parts: &AppCoreParts) -> Result<()> {
@@ -18,65 +18,6 @@ pub(super) async fn run_services(parts: &AppCoreParts) -> Result<()> {
 	server.await?;
 	log::info!("《Shutdown》 actix HTTP サーバーが停止しました。");
 	Ok(())
-}
-
-fn build_http_server(runtime: ServerRuntime) -> Result<Server> {
-	let workers = runtime.workers;
-	let web_ui_address = runtime.web_ui_address.clone();
-	let server = actix_web::HttpServer::new(move || {
-		let runtime = runtime.clone();
-		let reg = runtime.web_input_registry.clone();
-		let output_root = runtime.output_root.clone();
-		let app = actix_web::App::new()
-			.wrap(actix_web::middleware::Condition::new(
-				runtime.conf.web_ui_compress,
-				actix_web::middleware::Compress::default(),
-			))
-			.app_data(Data::new(runtime.state))
-			.app_data(Data::new(web_interface::output::OutputPaths { root: output_root.clone() }))
-			.app_data(Data::new(reg.clone()))
-			.app_data(Data::new(runtime.control_api_runtime))
-			.app_data(Data::new(runtime.flowgraph_trigger.clone()))
-			.configure({
-				let r = reg.clone();
-				move |cfg| {
-					web_interface::web_input::register_web_input_routes(cfg, &r);
-				}
-			})
-			.configure({
-				let eps = runtime.flowgraph_web_input_endpoints.clone();
-				move |cfg| {
-					bridges::web_input::register_routes(cfg, eps.as_ref());
-				}
-			})
-			.configure(web_interface::control::register)
-			.configure({
-				let gui_dist_path = runtime.conf.gui_dist_path.clone();
-				move |cfg| {
-					web_interface::gui::register(cfg, gui_dist_path.as_deref());
-				}
-			})
-			.service(web_interface::websocket)
-			.service(web_interface::input::get_index)
-			.service(web_interface::input::get_subfile)
-			.service(web_interface::output::post)
-			.service(web_interface::output::get_index)
-			.service(web_interface::output::get_subfile)
-			.service(Files::new("/browser-output", output_root.clone()))
-			.service(web_interface::status::get)
-			.service(web_interface::favicon);
-		if let Some(web_ui_resources_path) = runtime.conf.web_ui_resources_path.clone() {
-			app.service(Files::new("/resources", web_ui_resources_path))
-		} else {
-			app
-		}
-	})
-	.workers(workers)
-	.bind(web_ui_address)?
-	.disable_signals()
-	.shutdown_timeout(2)
-	.run();
-	Ok(server)
 }
 
 fn spawn_http_shutdown_watcher(server_handle: ServerHandle, shutdown: Arc<shutdown::ShutdownBroker>) {
