@@ -270,6 +270,7 @@ GUI で自然に扱えることを重視する。ただし source format は手�
 - tests
 - docs metadata
 - lockfile or resolved dependency record
+- WASM compiled module target（Flowgraph native module とは別の配布・高速化ターゲット）
 
 ### 4.6.1 Library Layer Gap
 
@@ -337,6 +338,7 @@ Pure / Stateful / Effectful の大分類だけでは、file / network / db / OBS
 - Error Model
 - Persistence / State Model
 - Documentation Generation
+- WASM compiled module target
 
 詳細計画: [`flowgraph-language-foundation-roadmap.md`](flowgraph-language-foundation-roadmap.md) LF-4 以降。
 

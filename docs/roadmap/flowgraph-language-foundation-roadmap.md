@@ -118,6 +118,32 @@ Flowgraph を「プログラム」として扱うための検証と観測。
 `library_uses` を manifest / lockfile / semver / compatibility policy へ発展させる。
 標準ライブラリー、ユーザーライブラリー、VAC API ライブラリーを配布・固定・依存解決できるようにする。
 
+#### WASM compiled module target
+
+WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
+
+- `.flowgraph.toml`: source / visual editable program
+- Graph-as-node: Flowgraph native module
+- WASM module: 高速・sandbox・配布可能な compiled module
+- VAC API: host function として必要最小限を WASM へ公開する
+
+初期方針:
+
+- LF-1 Schema / Contract と LF-2 Capability / Effect の後に設計する
+- 最初は Pure function module 限定
+- 次に Stateful module
+- Effectful / host API import は capability model が固まってから解禁する
+- WASM は GUI で中身を直接編集できない black box module として扱い、signature / docs / trace を必須にする
+
+必要な設計:
+
+- WASM ABI
+- Flowgraph 型と WASM value の変換
+- schema / signature の同梱形式
+- host function import の capability 宣言
+- versioning / compatibility / lockfile
+- debug symbol / trace metadata
+
 ### LF-5 Generic / Type Parameter
 
 `list<T>`, `dictionary<K,V>`, `result<T>`, future `collection<T>` を自然に扱うための型パラメータ。
@@ -148,4 +174,3 @@ node signature / library signature / schema から manual と GUI catalog を生
 - [ ] LF-6 Error Model
 - [ ] LF-7 Persistence / State Model
 - [ ] LF-8 Documentation Generation
-
