@@ -181,6 +181,24 @@ type StudioCommand = {
    run: () => flowgraphStore.groupSelectedNodes(),
   },
   {
+   id: 'select_group_members',
+   label: 'Select group members',
+   description: 'Select every node in the currently selected visual group.',
+   disabled: !flowgraphStore.selectedGroupId,
+   run: () => {
+    if (flowgraphStore.selectedGroupId) flowgraphStore.selectGroupNodes(flowgraphStore.selectedGroupId);
+   },
+  },
+  {
+   id: 'remove_group',
+   label: 'Remove selected group',
+   description: 'Remove the selected visual group without deleting its member nodes.',
+   disabled: !flowgraphStore.selectedGroupId,
+   run: () => {
+    if (flowgraphStore.selectedGroupId) flowgraphStore.removeGroup(flowgraphStore.selectedGroupId);
+   },
+  },
+  {
    id: 'reload',
    label: 'Reload from disk',
    description: 'Refresh Flowgraph files and diagnostics from the configured root.',

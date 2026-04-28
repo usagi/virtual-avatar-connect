@@ -280,7 +280,7 @@ Flowgraph editor の大規模 UX 改修。ν-β で送った "Svelte Flow handle
 
 - [x] 汎用 Undo/Redo スタック（add/delete/move/connect/disconnect/property-edit を draft snapshot stack で一括対象化。Redo stack も保持）
 - [~] 本物のマルチ選択（`selectedNodeIds` + Svelte Flow 選択 + toolbar layout command + 同一 feature 複数選択時の property editor batch edit / mixed 差異ハイライト + E2E 回帰まで完了。選択 UX の細部は継続）
-- [~] Flowgraph subgraph / group（`[[groups]]` metadata + GUI での Create group + node badge 表示 + Inspector 上の group label/color 編集 + canvas group frame 表示/選択/移動 + member 追加/除外まで完了。engine 側 subgraph 合成と入出力 port 再 export は継続）
+- [~] Flowgraph subgraph / group（`[[groups]]` metadata + GUI での Create group + node badge 表示 + Inspector 上の group label/color 編集 + canvas group frame 表示/選択/移動 + member 追加/除外 + group command palette 操作まで完了。engine 側 subgraph 合成と入出力 port 再 export は継続）
 - [ ] Svelte Flow handle drag edge の E2E 回帰（ν-β+ から昇格）
 
 ### Phase ω — Audio-reactive + Physics (TBD)

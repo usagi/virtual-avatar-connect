@@ -367,6 +367,9 @@ test.describe('§3.2 flowgraph-canvas-basic', () => {
 			await groupFrame.getByText('Group 1').click();
 			await expect(groupFrame).toHaveClass(/selected/);
 			await expect(page.locator('input#group-label-group_1')).toBeVisible();
+			await page.getByRole('button', { name: 'Commands' }).click();
+			await page.getByRole('button', { name: /Select group members/ }).click();
+			await expect(page.getByText('2 nodes selected')).toBeVisible({ timeout: 10_000 });
 			await page.getByTestId('flowgraph-node-learn').click();
 			await page.getByRole('button', { name: /Add selected \(1\)/ }).click();
 			await expect(groupFrame.getByText('3 nodes')).toBeVisible();

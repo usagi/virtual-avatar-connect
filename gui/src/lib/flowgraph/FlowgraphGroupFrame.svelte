@@ -38,7 +38,7 @@
  .group-frame {
   position: relative;
   pointer-events: auto;
-  cursor: pointer;
+  cursor: grab;
   border: 1px solid color-mix(in srgb, var(--group-color, #38bdf8) 42%, transparent);
   border-radius: 8px;
   background:
@@ -64,6 +64,10 @@
    inset 0 0 0 1px color-mix(in srgb, var(--group-color, #38bdf8) 38%, transparent),
    0 0 0 1px color-mix(in srgb, var(--group-color, #38bdf8) 24%, transparent),
    0 14px 36px color-mix(in srgb, var(--group-color, #38bdf8) 14%, transparent);
+ }
+
+ .group-frame:active {
+  cursor: grabbing;
  }
 
  .group-frame-label {
