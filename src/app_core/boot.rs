@@ -14,6 +14,35 @@ pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppC
 
 	spawn_managed_app_monitor(&state, shutdown.clone()).await;
 
+	let flowgraph_io = prepare_flowgraph_io(&conf, &state).await?;
+
+	let motion_handles = motion::MotionHandles::spawn_all(&conf, shutdown.clone());
+
+	let control_api_runtime = web_interface::control::ControlApiRuntime::init(&conf, &state).await?;
+	log_control_api_policy(&control_api_runtime);
+
+	Ok(AppCoreParts {
+		conf,
+		state,
+		shutdown,
+		ai_handles,
+		ingress_handles: flowgraph_io.ingress_handles,
+		motion_handles,
+		web_input_registry: flowgraph_io.web_input_registry,
+		control_api_runtime,
+		flowgraph_web_input_endpoints: flowgraph_io.web_input_endpoints,
+		flowgraph_trigger: flowgraph_io.trigger,
+	})
+}
+
+struct FlowgraphIo {
+	ingress_handles: processor::ingress::IngressHandles,
+	web_input_registry: Arc<web_interface::web_input::WebInputRegistry>,
+	web_input_endpoints: Arc<Vec<bridges::web_input::FlowgraphWebInputEndpoint>>,
+	trigger: Arc<Option<flowgraph::node::TriggerHandle>>,
+}
+
+async fn prepare_flowgraph_io(conf: &Conf, state: &SharedState) -> Result<FlowgraphIo> {
 	let (flowgraph_bridges_catalog, flowgraph_trigger, channel_datum_tx) = {
 		let s = state.read().await;
 		let fg = s.flowgraph.read().await;
@@ -30,34 +59,21 @@ pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppC
 		bridges::twitch_eventsub::v1_skip_broadcaster_logins(&flowgraph_bridges_catalog.twitch_eventsub, &username_fallback)
 	};
 
-	let (ingress_handles, web_input_registry) = processor::ingress::prepare(&conf, state.clone(), &v2_eventsub_skip_broadcasters).await?;
+	let (ingress_handles, web_input_registry) = processor::ingress::prepare(conf, state.clone(), &v2_eventsub_skip_broadcasters).await?;
 
-	let initial_bridges = bridges::spawn_all_from_state(&state, &channel_datum_tx).await;
-	let flowgraph_web_input_endpoints = Arc::new(initial_bridges.web_input_snapshot.clone());
+	let initial_bridges = bridges::spawn_all_from_state(state, &channel_datum_tx).await;
+	let web_input_endpoints = Arc::new(initial_bridges.web_input_snapshot.clone());
 	{
 		let s = state.read().await;
 		let mut slot = s.bridge_handles.lock().await;
 		*slot = initial_bridges;
 	}
 
-	let motion_handles = motion::MotionHandles::spawn_all(&conf, shutdown.clone());
-
-	let flowgraph_trigger: Arc<Option<flowgraph::node::TriggerHandle>> = Arc::new(flowgraph_trigger.clone());
-
-	let control_api_runtime = web_interface::control::ControlApiRuntime::init(&conf, &state).await?;
-	log_control_api_policy(&control_api_runtime);
-
-	Ok(AppCoreParts {
-		conf,
-		state,
-		shutdown,
-		ai_handles,
+	Ok(FlowgraphIo {
 		ingress_handles,
-		motion_handles,
 		web_input_registry,
-		control_api_runtime,
-		flowgraph_web_input_endpoints,
-		flowgraph_trigger,
+		web_input_endpoints,
+		trigger: Arc::new(flowgraph_trigger),
 	})
 }
 
