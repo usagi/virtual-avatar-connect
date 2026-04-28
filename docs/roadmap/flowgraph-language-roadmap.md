@@ -278,6 +278,7 @@ Flowgraph を汎用言語へ近づけるには、単にノードを増やすの�
 
 この分類を持たないままノードを増やすと、GUI catalog と docs が散らかり、ユーザーにとって「何を使えばよいか」が見えにくくなる。Resident I/O の file / convert / table 系は標準ライブラリー、notify / OBS template 系は VAC API ライブラリーとして扱う。
 乱数、分布、ring buffer、sort / search / index などの汎用アルゴリズムは [`flowgraph-stdlib-roadmap.md`](flowgraph-stdlib-roadmap.md) へ分離し、標準ライブラリーとして段階整備する。
+現行の VAC 専用 `Dictionary` は `Glossary` へ改名し、`Dictionary` は汎用 key-value データ構造に譲る（[`glossary-rename-roadmap.md`](glossary-rename-roadmap.md)）。これにより、Iterator / Ranges 操作の `.map` を一般的な名前のまま維持できる。
 
 ### 4.7 Debug Gap
 

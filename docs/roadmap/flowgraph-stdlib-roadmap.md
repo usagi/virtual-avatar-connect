@@ -89,6 +89,7 @@ Table の index として使うか、独立した collection 型として使う�
 - `bytes`: MsgPack / binary file / PRNG state serialization の基礎
 - `result<T>`: distribution parameter error、parse error、DB error の基礎
 - `record`: algorithm input / output の named schema
+- `dictionary<K,V>`: 汎用 key-value データ構造。VAC 専用語彙表は `Glossary` へ移行して名前空間を空ける
 - `table`: sort / filter / draw / index の主対象
 - future `collection<T>`: ring buffer や index を第一級値として扱う場合の候補
 

@@ -8,6 +8,7 @@ VAC 常駐化に伴う配信・日常・仕事・睡眠などの動作状態切�
 v2 GUI を常駐ランタイムの管制卓と Flowgraph Studio へ再設計する計画は [`roadmap/gui-redesign-roadmap.md`](roadmap/gui-redesign-roadmap.md) を参照。
 常駐 VAC が外部データ源・OS 通知・OBS テンプレート出力を扱う次期機能波は [`roadmap/resident-io-roadmap.md`](roadmap/resident-io-roadmap.md) を参照。
 Flowgraph の乱数・分布・データ構造・アルゴリズム標準ライブラリー計画は [`roadmap/flowgraph-stdlib-roadmap.md`](roadmap/flowgraph-stdlib-roadmap.md) を参照。
+VAC 専用 Dictionary を Glossary へ改名し、Dictionary を汎用 key-value 型に譲る計画は [`roadmap/glossary-rename-roadmap.md`](roadmap/glossary-rename-roadmap.md) を参照。
 
 ---
 
@@ -340,6 +341,18 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 - [ ] SL-3 Sequence / buffer data structures。ring buffer、deque、sliding window、reservoir sampling を提供する。
 - [ ] SL-4 Sort / search algorithms。stable sort、bucket sort、top-k、binary search、skip list index を提供する。
 - [ ] SL-5 Indexed collections。ordered map、bucket index、hash index、priority queue を Table / record と接続する。
+
+### Glossary Rename Roadmap（計画中）
+
+現行の VAC 専用 `Dictionary` を `Glossary` へ改名し、`Dictionary` は将来の汎用 key-value データ構造へ譲る。
+詳細: [`roadmap/glossary-rename-roadmap.md`](roadmap/glossary-rename-roadmap.md)
+
+- [ ] GRN-1 docs / terminology。`Glossary` / `Dictionary` / `.map` の意味を固定する。
+- [ ] GRN-2 flowgraph node alias。`flowgraph.glossary.*` を正規名にし、`flowgraph.dictionary.*` は deprecated alias にする。
+- [ ] GRN-3 control API / config role。`role = "glossary"` を正にし、`role = "dictionary"` は互換 alias にする。
+- [ ] GRN-4 GUI rename。Dictionary Editor 系コンポーネント・表示・テストを Glossary に揃える。
+- [ ] GRN-5 examples / tests / migration。sample / E2E / manual / migration note を更新する。
+- [ ] GRN-6 Dictionary as generic key-value。Glossary 移行後に汎用 `dictionary<K,V>` / `flowgraph.dictionary.*` を設計する。
 
 ### Phase ν+（TBD）: E2E 拡張
 
