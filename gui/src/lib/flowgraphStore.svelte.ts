@@ -379,8 +379,44 @@ class FlowgraphStore {
  selectGroup(id: string): boolean {
   if (!this.draftGroups?.some((g) => g.id === id)) return false;
   this.selectedGroupId = id;
-  this.selectedNodeId = null;
-  this.selectedNodeIds = [];
+  return true;
+ }
+
+ addSelectedNodesToGroup(id: string): boolean {
+  if (!this.draftGroups || !this.draftNodes || this.selectedNodeIds.length === 0) return false;
+  const group = this.draftGroups.find((g) => g.id === id);
+  if (!group) return false;
+  const existingNodes = new Set(this.draftNodes.map((n) => n.id));
+  const addIds = this.selectedNodeIds.filter((nodeId) => existingNodes.has(nodeId) && !group.node_ids.includes(nodeId));
+  if (addIds.length === 0) return false;
+  this.#pushHistory('Add nodes to group');
+  this.draftGroups = this.draftGroups.map((g) => (g.id === id ? { ...g, node_ids: [...g.node_ids, ...addIds] } : g));
+  this.selectedGroupId = id;
+  return true;
+ }
+
+ removeSelectedNodesFromGroup(id: string): boolean {
+  if (!this.draftGroups || this.selectedNodeIds.length === 0) return false;
+  const selected = new Set(this.selectedNodeIds);
+  const group = this.draftGroups.find((g) => g.id === id);
+  if (!group || !group.node_ids.some((nodeId) => selected.has(nodeId))) return false;
+  this.#pushHistory('Remove nodes from group');
+  this.draftGroups = this.draftGroups
+   .map((g) => (g.id === id ? { ...g, node_ids: g.node_ids.filter((nodeId) => !selected.has(nodeId)) } : g))
+   .filter((g) => g.node_ids.length > 0);
+  if (!this.draftGroups.some((g) => g.id === id)) this.selectedGroupId = null;
+  return true;
+ }
+
+ removeNodeFromGroup(groupId: string, nodeId: string): boolean {
+  if (!this.draftGroups) return false;
+  const group = this.draftGroups.find((g) => g.id === groupId);
+  if (!group || !group.node_ids.includes(nodeId)) return false;
+  this.#pushHistory('Remove node from group');
+  this.draftGroups = this.draftGroups
+   .map((g) => (g.id === groupId ? { ...g, node_ids: g.node_ids.filter((id) => id !== nodeId) } : g))
+   .filter((g) => g.node_ids.length > 0);
+  if (!this.draftGroups.some((g) => g.id === groupId)) this.selectedGroupId = null;
   return true;
  }
 

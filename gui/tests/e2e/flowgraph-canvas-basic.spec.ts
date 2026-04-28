@@ -367,6 +367,9 @@ test.describe('§3.2 flowgraph-canvas-basic', () => {
 			await groupFrame.getByText('Group 1').click();
 			await expect(groupFrame).toHaveClass(/selected/);
 			await expect(page.locator('input#group-label-group_1')).toBeVisible();
+			await page.getByTestId('flowgraph-node-learn').click();
+			await page.getByRole('button', { name: /Add selected \(1\)/ }).click();
+			await expect(groupFrame.getByText('3 nodes')).toBeVisible();
 
 			const saveBtn = page.getByRole('button', { name: /^Save( \*)?$/ });
 			await expect(saveBtn).toHaveText('Save *', { timeout: 5_000 });
@@ -380,7 +383,7 @@ test.describe('§3.2 flowgraph-canvas-basic', () => {
 			expect(putReqBody.content).toContain('[[groups]]');
 			expect(putReqBody.content).toContain('id = "group_1"');
 			expect(putReqBody.content).toContain('label = "Group 1"');
-			expect(putReqBody.content).toContain('node_ids = ["in", "log"]');
+			expect(putReqBody.content).toContain('node_ids = ["in", "log", "learn"]');
 		} finally {
 			const restore = await request.put(FILE_PATH, {
 				headers: authHeader(),

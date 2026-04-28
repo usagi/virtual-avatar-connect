@@ -270,7 +270,6 @@
    const firstNode = regularNodes[0];
    flowgraphStore.selectedNodeIds = regularNodes.map((n) => n.id);
    flowgraphStore.selectedNodeId = firstNode ? firstNode.id : null;
-   flowgraphStore.selectedGroupId = null;
    return;
   }
   flowgraphStore.selectedNodeIds = [];
@@ -291,14 +290,12 @@
   if (!additive) {
    flowgraphStore.selectedNodeIds = [id];
    flowgraphStore.selectedNodeId = id;
-   flowgraphStore.selectedGroupId = null;
    return;
   }
   const current = flowgraphStore.selectedNodeIds;
   const next = current.includes(id) ? current.filter((selected) => selected !== id) : [...current, id];
   flowgraphStore.selectedNodeIds = next;
   flowgraphStore.selectedNodeId = next[0] ?? null;
-  flowgraphStore.selectedGroupId = null;
  }
 
  function isGroupFrameNode(id: string): boolean {

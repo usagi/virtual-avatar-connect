@@ -233,6 +233,14 @@ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
  function updateGroupColor(id: string, value: string) {
   flowgraphStore.updateGroupColor(id, value);
  }
+
+ function selectedNotInGroup(group: FlowgraphDraftGroup): number {
+  return selectedNodes.filter((n) => !group.node_ids.includes(n.id)).length;
+ }
+
+ function selectedInGroup(group: FlowgraphDraftGroup): number {
+  return selectedNodes.filter((n) => group.node_ids.includes(n.id)).length;
+ }
 </script>
 
 <div class="flex h-full flex-col">
@@ -563,6 +571,26 @@ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
         </button>
        </div>
       </div>
+      {#if selectedNodes.length > 0}
+       <div class="mb-2 flex flex-wrap gap-1">
+        <button
+         type="button"
+         class="rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem] disabled:opacity-40"
+         disabled={selectedNotInGroup(group) === 0}
+         onclick={() => flowgraphStore.addSelectedNodesToGroup(group.id)}
+        >
+         Add selected ({selectedNotInGroup(group)})
+        </button>
+        <button
+         type="button"
+         class="rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem] disabled:opacity-40"
+         disabled={selectedInGroup(group) === 0}
+         onclick={() => flowgraphStore.removeSelectedNodesFromGroup(group.id)}
+        >
+         Exclude selected ({selectedInGroup(group)})
+        </button>
+       </div>
+      {/if}
       <label class="mb-1 block text-[0.65rem] font-semibold opacity-70" for={`group-label-${group.id}`}>
        Label
       </label>
@@ -593,6 +621,23 @@ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
         placeholder="#38bdf8"
         onchange={(e) => updateGroupColor(group.id, (e.target as HTMLInputElement).value)}
        />
+      </div>
+      <div class="mt-2 border-t border-surface-200-800 pt-2">
+       <div class="mb-1 text-[0.65rem] font-semibold opacity-70">Members</div>
+       <div class="flex max-h-24 flex-col gap-1 overflow-y-auto">
+        {#each group.node_ids as nodeId (nodeId)}
+         <div class="flex items-center justify-between gap-2 rounded bg-surface-100-900 px-2 py-1">
+          <span class="truncate font-mono text-[0.65rem]">#{nodeId}</span>
+          <button
+           type="button"
+           class="rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.6rem]"
+           onclick={() => flowgraphStore.removeNodeFromGroup(group.id, nodeId)}
+          >
+           Exclude
+          </button>
+         </div>
+        {/each}
+       </div>
       </div>
      </div>
     {/each}
