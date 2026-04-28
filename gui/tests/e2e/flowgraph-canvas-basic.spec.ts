@@ -208,7 +208,28 @@ test.describe('§3.2 flowgraph-canvas-basic', () => {
 			const before = await page.locator('[data-testid^="flowgraph-node-log"]').count();
 			const logPalette = page.getByTestId('palette-entry-flowgraph_util_log');
 			await expect(logPalette).toBeVisible();
-			await logPalette.dragTo(canvas, { targetPosition: { x: 420, y: 280 } });
+			const pane = page.locator('.svelte-flow__pane');
+			const paneBox = await pane.boundingBox();
+			expect(paneBox, 'Svelte Flow pane box').not.toBeNull();
+			await pane.evaluate(
+				(el, pos) => {
+					const data = new DataTransfer();
+					data.setData('application/x-vac-flowgraph-feature', 'flowgraph.util.log');
+					data.setData('text/plain', 'flowgraph.util.log');
+					for (const type of ['dragover', 'drop']) {
+						el.dispatchEvent(
+							new DragEvent(type, {
+								bubbles: true,
+								cancelable: true,
+								clientX: pos.x,
+								clientY: pos.y,
+								dataTransfer: data,
+							}),
+						);
+					}
+				},
+				{ x: paneBox!.x + 420, y: paneBox!.y + 280 },
+			);
 
 			await expect(page.locator('[data-testid^="flowgraph-node-log"]')).toHaveCount(before + 1, {
 				timeout: 10_000,
@@ -240,6 +261,67 @@ test.describe('§3.2 flowgraph-canvas-basic', () => {
 			await expect(page.locator('[data-testid^="flowgraph-node-"]')).toHaveCount(before + 1, {
 				timeout: 10_000,
 			});
+		} finally {
+			const restore = await request.put(FILE_PATH, {
+				headers: authHeader(),
+				data: { content: originalToml },
+			});
+			expect(restore.status(), await restore.text()).toBe(200);
+		}
+	});
+
+	test('multi-select same feature edits shared property', async ({ page, request }) => {
+		const snapRes = await request.get(FILE_PATH, { headers: authHeader() });
+		expect(snapRes.status(), await snapRes.text()).toBe(200);
+		const originalToml = ((await snapRes.json()) as FlowgraphFileResp).raw_toml;
+		try {
+			await page.goto(`/gui/${tokenQuery()}`);
+			await page.evaluate(() => localStorage.removeItem('vac-flowgraph-palette-hidden-categories'));
+			await page.getByRole('navigation', { name: 'Main tabs' }).getByRole('button', { name: /flowgraph/i }).click();
+			await page.getByRole('button', { name: /^sample\b/ }).click();
+			const canvas = page.locator('.svelte-flow');
+			await expect(canvas).toBeVisible({ timeout: 15_000 });
+
+			const paletteSearch = page.getByPlaceholder(/検索（feature \/ title）/);
+			await paletteSearch.fill('literal.string');
+			const stringAddBtn = page.getByTestId('palette-entry-flowgraph_literal_string');
+			await expect(stringAddBtn).toBeVisible();
+			await stringAddBtn.click();
+			await stringAddBtn.click();
+
+			const stringNode = page.getByTestId('flowgraph-node-string');
+			const stringNode2 = page.getByTestId('flowgraph-node-string_2');
+			await expect(stringNode).toBeVisible({ timeout: 10_000 });
+			await expect(stringNode2).toBeVisible({ timeout: 10_000 });
+
+			await stringNode.click();
+			await stringNode2.click({ modifiers: ['Control'] });
+			const multiSelectionLabel = page.getByText('2 nodes selected');
+			if (!(await multiSelectionLabel.isVisible({ timeout: 1000 }).catch(() => false))) {
+				await stringNode.click();
+				await stringNode2.click({ modifiers: ['Shift'] });
+			}
+
+			const inspector = page.getByText('Inspector', { exact: true }).locator('..').locator('..');
+			await expect(inspector.getByText('2 nodes selected')).toBeVisible({ timeout: 10_000 });
+			await inspector.getByRole('button', { name: 'Set' }).click();
+
+			const valueInput = inspector.locator('input#multi-prop-value');
+			await expect(valueInput).toBeVisible();
+			await valueInput.fill('batch-edited');
+			const saveBtn = page.getByRole('button', { name: /^Save( \*)?$/ });
+			await expect(saveBtn).toHaveText('Save *', { timeout: 5_000 });
+
+			const putPromise = page.waitForResponse(
+				(res) => res.url().includes(FILE_PATH) && res.request().method() === 'PUT' && res.status() === 200,
+				{ timeout: 15_000 },
+			);
+			await saveBtn.click();
+			const putRes = await putPromise;
+			const putReqBody = putRes.request().postDataJSON() as { content: string };
+			expect(putReqBody.content).toContain('id = "string"');
+			expect(putReqBody.content).toContain('id = "string_2"');
+			expect((putReqBody.content.match(/value = "batch-edited"/g) ?? []).length).toBe(2);
 		} finally {
 			const restore = await request.put(FILE_PATH, {
 				headers: authHeader(),

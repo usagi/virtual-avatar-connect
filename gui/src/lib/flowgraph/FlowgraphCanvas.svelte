@@ -197,6 +197,21 @@
   flowgraphStore.selectedNodeId = firstNode ? firstNode.id : null;
  }
 
+ function onNodeClick(params: { node: Node; event: MouseEvent | TouchEvent }) {
+  const id = params.node.id;
+  const event = params.event;
+  const additive = event instanceof MouseEvent && (event.ctrlKey || event.metaKey || event.shiftKey);
+  if (!additive) {
+   flowgraphStore.selectedNodeIds = [id];
+   flowgraphStore.selectedNodeId = id;
+   return;
+  }
+  const current = flowgraphStore.selectedNodeIds;
+  const next = current.includes(id) ? current.filter((selected) => selected !== id) : [...current, id];
+  flowgraphStore.selectedNodeIds = next;
+  flowgraphStore.selectedNodeId = next[0] ?? null;
+ }
+
  const nodeTypes = { flowgraph: FlowgraphNodeCard };
 </script>
 
@@ -227,6 +242,8 @@
    {nodeTypes}
    fitView
    colorMode="system"
+   multiSelectionKey={['Ctrl', 'Shift']}
+   onnodeclick={onNodeClick}
    onconnect={onConnect}
    onnodedragstop={onNodeDragStop}
    ondelete={onDelete}

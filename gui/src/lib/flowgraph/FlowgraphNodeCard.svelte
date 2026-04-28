@@ -93,6 +93,19 @@
   if (!spec) return;
   triggerDialogOpen = true;
  }
+
+ function onMouseDownNode(event: MouseEvent) {
+  const additive = event.ctrlKey || event.metaKey || event.shiftKey;
+  if (!additive) return;
+  event.stopPropagation();
+  event.preventDefault();
+  const current = flowgraphStore.selectedNodeIds;
+  const next = current.includes(data.nodeId)
+   ? current.filter((selected) => selected !== data.nodeId)
+   : [...current, data.nodeId];
+  flowgraphStore.selectedNodeIds = next;
+  flowgraphStore.selectedNodeId = next[0] ?? null;
+ }
 </script>
 
 <div
@@ -101,6 +114,10 @@
  class:missing-spec={!spec}
  title={data.feature}
  data-testid={`flowgraph-node-${data.nodeId}`}
+ role="button"
+ tabindex="0"
+ aria-label={`Flowgraph node ${data.nodeId}`}
+ onmousedown={onMouseDownNode}
 >
  <button
   type="button"
