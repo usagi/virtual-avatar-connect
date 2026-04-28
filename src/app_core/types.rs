@@ -56,7 +56,53 @@ impl AppCoreRuntimeHandle {
 	}
 }
 
+impl AppCoreTasks {
+	pub(super) fn new(
+		ai_handles: Vec<tokio::task::JoinHandle<()>>,
+		ingress_handles: processor::ingress::IngressHandles,
+		motion_handles: motion::MotionHandles,
+	) -> Self {
+		Self {
+			ai_handles,
+			ingress_handles,
+			motion_handles,
+		}
+	}
+}
+
+impl AppCoreServices {
+	pub(super) fn new(
+		web_input_registry: Arc<web_interface::web_input::WebInputRegistry>,
+		control_api_runtime: web_interface::control::ControlApiRuntime,
+		flowgraph_web_input_endpoints: Arc<Vec<bridges::web_input::FlowgraphWebInputEndpoint>>,
+		flowgraph_trigger: Arc<Option<flowgraph::node::TriggerHandle>>,
+	) -> Self {
+		Self {
+			web_input_registry,
+			control_api_runtime,
+			flowgraph_web_input_endpoints,
+			flowgraph_trigger,
+		}
+	}
+}
+
 impl AppCoreParts {
+	pub(super) fn new(
+		conf: Conf,
+		state: SharedState,
+		shutdown: Arc<shutdown::ShutdownBroker>,
+		tasks: AppCoreTasks,
+		services: AppCoreServices,
+	) -> Self {
+		Self {
+			conf,
+			state,
+			shutdown,
+			tasks,
+			services,
+		}
+	}
+
 	pub(super) fn runtime_handle(&self) -> AppCoreRuntimeHandle {
 		let address = address::normalize_loopback_address(self.conf.get_web_ui_address());
 		AppCoreRuntimeHandle {

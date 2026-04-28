@@ -26,20 +26,12 @@ pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppC
 
 	let control_api_runtime = init_control_api_runtime(&conf, &state).await?;
 
-	Ok(AppCoreParts {
-		conf,
-		state,
-		shutdown,
-		tasks: AppCoreTasks {
-			ai_handles,
-			ingress_handles: flowgraph_io.ingress_handles,
-			motion_handles,
-		},
-		services: AppCoreServices {
-			web_input_registry: flowgraph_io.web_input_registry,
-			control_api_runtime,
-			flowgraph_web_input_endpoints: flowgraph_io.web_input_endpoints,
-			flowgraph_trigger: flowgraph_io.trigger,
-		},
-	})
+	let tasks = AppCoreTasks::new(ai_handles, flowgraph_io.ingress_handles, motion_handles);
+	let services = AppCoreServices::new(
+		flowgraph_io.web_input_registry,
+		control_api_runtime,
+		flowgraph_io.web_input_endpoints,
+		flowgraph_io.trigger,
+	);
+	Ok(AppCoreParts::new(conf, state, shutdown, tasks, services))
 }
