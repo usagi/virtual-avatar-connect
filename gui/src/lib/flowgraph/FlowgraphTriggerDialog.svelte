@@ -3,7 +3,7 @@
   * Phase φ-6: Flowgraph Editor 上の単体ノードを Control API から 1-shot 発火するためのダイアログ。
   *
   * - `NodeDescriptor::control_triggerable()` に opt-in しているノード（現状は
-  *   `flowgraph.dictionary.learn` / `.forget` のみ）に対してだけ、`FlowgraphNodeCard.svelte`
+  *   `flowgraph.glossary.learn` / `.forget` のみ）に対してだけ、`FlowgraphNodeCard.svelte`
   *   から ▶ ボタン経由で開かれる想定。
   * - ユーザは各入力ポートに対して「このトリガで上書きしたい値」を手入力できる。
   *   値は JSON としてパースされ、失敗時は string として送る。

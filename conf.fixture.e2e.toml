@@ -75,7 +75,7 @@ bearer_token = "e2e-fixture-token"
 key = "sample_dict"
 path = "gui/tests/e2e/fixtures/dictionary/sample.dict.tsv"
 label = "ν Sample Dictionary"
-role = "dictionary"
+role = "glossary"
 editable = true
 quick_add = { node_id = "sample::learn", forget_node_id = "sample::forget" }
 

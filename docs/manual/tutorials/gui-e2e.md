@@ -6,7 +6,7 @@ Virtual Avatar Connect の GUI には Playwright ベースの E2E テストが�
 
 > Phase ν（`docs/roadmap/phase-nu-gui-e2e-playwright.md`）で導入。
 > 現状 3 specs（`control-panel-smoke` / `channels-ws-live-update` / `live-quick-add-learn-undo`）
-> が landed。残り 2 spec（Flowgraph Canvas DnD / Dictionary Editor 409 merge）は Phase ν-β。
+> が landed。残り 2 spec（Flowgraph Canvas DnD / Glossary Editor 409 merge）は Phase ν-β。
 
 ## 前提
 
@@ -44,7 +44,7 @@ npm run test:e2e:ui       # Playwright UI モード（spec 単位で step-throug
 ## フィクスチャ構成
 
 - `conf.fixture.e2e.toml`（workspace root）: ポート 57098 / 固定 Bearer token `e2e-fixture-token` / 外部 IO 全 OFF / `flowgraph_dir = gui/tests/e2e/fixtures/flowgraph`。
-- `gui/tests/e2e/fixtures/flowgraph/sample.flowgraph.toml`: `web_input → log` ＋ `dictionary.learn` / `dictionary.forget` ＋ `table.from_json` のみの最小セット。
+- `gui/tests/e2e/fixtures/flowgraph/sample.flowgraph.toml`: `web_input → log` ＋ `glossary.learn` / `glossary.forget` ＋ `table.from_json` のみの最小セット。
 - `gui/tests/e2e/fixtures/dictionary/sample.dict.tsv`: 2 行 seed の 11 列辞書。
 - `gui/tests/e2e/fixtures.ts`: `TOKEN` / `authHeader()` / `tokenQuery()` の共有ユーティリティ。
 
@@ -59,7 +59,7 @@ npm run test:e2e:ui       # Playwright UI モード（spec 単位で step-throug
 1. **`webServer` が立ち上がらない**: `target/release/virtual-avatar-connect.exe` がロックされていないか、57098 ポートが他プロセスに掴まれていないか。Windows では開発サーバや旧 fixture プロセスが残っていることがよくある。
 2. **認証 401**: `conf.fixture.e2e.toml` の `bearer_token` と `gui/tests/e2e/fixtures.ts` の `TOKEN` が同じ文字列か確認。
 3. **特定 spec だけ timeout**: `npm run test:e2e -- <spec-name>` で単発実行し、`--ui` モードに切り替えてステップ実行するのが最短。`test-results/<spec>/video.webm` と `error-context.md` も自動生成される。
-4. **Flowgraph trigger API で 503**: fixture flowgraph の先頭ノード（`dictionary.learn` / `dictionary.forget`）に必要な Pure 入力が欠けていないか（現状 `dict_src: table.from_json` 経由で補充している）。
+4. **Flowgraph trigger API で 503**: fixture flowgraph の先頭ノード（`glossary.learn` / `glossary.forget`）に必要な Pure 入力が欠けていないか（現状 `dict_src: table.from_json` 経由で補充している）。
 
 ## CI について
 

@@ -4,11 +4,11 @@
   *
   * - 最上段: 大型 Pause / 再開
   * - 中段: 字幕プレビュー（BosPreview: select + URL コピー + iframe）
-  * - 中下段 1: **V2 Live Quick-Add (φ-4)** — Flowgraph `dictionary.learn` ノードに
+  * - 中下段 1: **V2 Live Quick-Add (φ-4)** — Flowgraph `glossary.learn` ノードに
   *   1-shot trigger を発火して配信中に即語録を追加する。`[[control_api.tables]]`
   *   に `quick_add` を指定した Table が対象。
-  * - 中下段 2: **Dictionary Editor Pane (φ-3)** — Control API 経由で
-  *   `role = "dictionary"` の TSV を GUI から直接編集する。
+  * - 中下段 2: **Glossary Editor Pane (φ-3 / GRN)** — Control API 経由で
+  *   `role = "glossary"` の TSV を GUI から直接編集する。
   * - 中下段 3: V1 widget（`DictionaryQuickAddWidget`）— modify processor 時代の
   *   dead code 寄りだが、環境によっては依然 `modify` を使っていることがあるため
   *   互換のため残す。V2 への完全移行後に χ で削除予定。

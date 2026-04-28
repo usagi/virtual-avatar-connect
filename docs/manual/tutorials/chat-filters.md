@@ -34,15 +34,15 @@ ingress.web_input ─→ command.match (prefix="/")
 
 ## 現時点の限界
 
-- `dictionary.replace` の `dictionary` 入力は `List<Json{from,to}>` を期待するが、現状 literal 側に `list<json>` を構築する適切なノードが未整備。本例では既定の空辞書のまま。δ-9 で `flowgraph.literal.list_json` が入れば `[{"from":"VAC","to":"ヴァック"}]` のように配線可能になる予定
+- `glossary.replace` の `dictionary` 入力は 11 カラム Table を期待する。本例では既定の空用語集のまま。
 - `cmd:args` は `list<string>`、`util.log:value` は `string` のため直接接続不可
 
 ## 応用
 
 - `on_command` から `util.log` の代わりに `tts.speak` や `twitch.chat_send` を繋ぐ → コマンド応答
 - 後段に `regex.replace` を差し込んで禁止語伏せ字化
-- 別系統に `dictionary.command` を噛ませて「学習(X:=Y)」「忘却(X)」をチャットから受け付ける
+- 別系統に `glossary.match` / `glossary.learn` / `glossary.forget` を噛ませて「学習(X:=Y)」「忘却(X)」をチャットから受け付ける
 
 ## 関連ノード
 
-[`flowgraph.command.match`](../node-catalog.md#flowgraph-command-match) / [`flowgraph.dictionary.replace`](../node-catalog.md#flowgraph-dictionary-replace) / [`flowgraph.dictionary.command`](../node-catalog.md#flowgraph-dictionary-command) / [`flowgraph.tts.speak`](../node-catalog.md#flowgraph-tts-speak)
+[`flowgraph.command.match`](../node-catalog.md#flowgraph-command-match) / [`flowgraph.glossary.replace`](../node-catalog.md#flowgraph-glossary-replace) / [`flowgraph.tts.speak`](../node-catalog.md#flowgraph-tts-speak)

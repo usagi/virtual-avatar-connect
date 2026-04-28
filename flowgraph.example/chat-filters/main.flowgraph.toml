@@ -7,7 +7,7 @@
 #   ingress.web_input に来たテキストを `/` で始まるスラッシュコマンドと、
 #   それ以外の一般発話に分岐。
 #     - コマンドは command / args をログに出すのみ（実処理は用途に応じて配線）。
-#     - 一般発話は dictionary.replace（空辞書）を経由して os tts.speak に流す。
+#     - 一般発話は glossary.replace（空の用語集）を経由して os tts.speak に流す。
 #
 # 応用:
 #   - dictionary.replace の `dictionary` 入力は η フェーズで `Table`（11 カラム辞書スキーマ）に
@@ -15,15 +15,15 @@
 #     `.dict.tsv` を読み込み、その出力を `dict:dictionary` に配線する。
 #     詳細は `flowgraph.example/dictionary/basic-replace.flowgraph.toml` を参照。
 #   - `flowgraph.regex.replace` を後段に追加して、より複雑な書き換えルールを適用。
-#   - 「学習(X:=Y)」「忘却(X)」のようなコマンド構文は η で `flowgraph.dictionary.match` ＋
-#     `flowgraph.dictionary.learn` / `.forget` で表現する。サンプル:
+#   - 「学習(X:=Y)」「忘却(X)」のようなコマンド構文は η/GRN で `flowgraph.glossary.match` ＋
+#     `flowgraph.glossary.learn` / `.forget` で表現する。サンプル:
 #     `flowgraph.example/dictionary/command-dispatch.flowgraph.toml`
 # =========================================================================
 
 [meta]
 title = "Chat filters (v2)"
-description = "command.match で分岐し、一般発話は dictionary.replace 経由で os tts.speak に流す最小サンプル。"
-tags = ["example", "command", "dictionary", "tts", "filters"]
+description = "command.match で分岐し、一般発話は glossary.replace 経由で os tts.speak に流す最小サンプル。"
+tags = ["example", "command", "glossary", "tts", "filters"]
 
 
 # ---- Ingress ----
@@ -49,7 +49,7 @@ position = [320, 260]
 # ---- 一般発話経路 ----
 [[nodes]]
 id = "dict"
-feature = "flowgraph.dictionary.replace"
+feature = "flowgraph.glossary.replace"
 position = [600, 340]
 
 [[nodes]]
@@ -114,7 +114,7 @@ to = "log_cmd:value"
 # 注: cmd:args は List<String>、util.log:value は String なので直接接続不可。
 # 将来 `flowgraph.list.join` 等で文字列化してからログに流す想定。
 
-# 非コマンド: dictionary.replace → tts.speak
+# 非コマンド: glossary.replace → tts.speak
 [[edges]]
 from = "cmd:original"
 to = "dict:content"

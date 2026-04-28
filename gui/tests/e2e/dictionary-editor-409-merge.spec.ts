@@ -4,9 +4,9 @@ import { authHeader, tokenQuery } from './fixtures';
 /**
  * §3.3 dictionary-editor-409-merge (ν-β-1)
  *
- * Dictionary Editor の楽観ロック衝突経路を、実 409 を踏ませて検証する。
+ * Glossary Editor の楽観ロック衝突経路を、実 409 を踏ませて検証する。
  *
- *   1. GUI を開き、Live タブの Dictionary Editor セクションを待つ
+ *   1. GUI を開き、Live タブの Glossary Editor セクションを待つ
  *   2. `sample_dict` の `Dr.USAGI`（unlocked な row）を検索で絞り込み、[編集] を押す
  *   3. 編集ダイアログで `replacement` を書き換える
  *   4. ★ 書き換えて「更新する」を押す前に、別クライアント (Playwright `request`) が
@@ -19,7 +19,7 @@ import { authHeader, tokenQuery } from './fixtures';
  *   9. Cleanup: row 1 の replacement を元の値 (`ドクターウサギ`) に戻す
  *
  * 設計メモ:
- *   - Editor は roadmap doc では "Setup → Dictionary Editor" と書かれているが実装は
+ *   - Editor は roadmap doc では "Setup → Glossary Editor" と書かれているが実装は
  *     Live タブ内（`LiveTab.svelte` 33 行）。既定タブなので追加 navigation は不要。
  *   - `revision` 番号は API 上存在しない。`If-Match: b3:<content_hash>` で楽観ロックする。
  *   - 409 レスポンス body は `{ error: "optimistic_lock_failed", detail: ... }` のみで
@@ -75,12 +75,13 @@ test.describe('§3.3 dictionary-editor-409-merge', () => {
 
 		// --- 1. GUI を開く ---------------------------------------------------------
 		await page.goto(`/gui/${tokenQuery()}`);
+		await page.getByRole('button', { name: /Live/ }).click();
 
-		// --- 2. Dictionary Editor セクションが見える（Live タブは既定表示） ---------
+		// --- 2. Glossary Editor セクションが見える -------------------------------
 		// LiveTab.svelte が外側 <section> でラップ → DictionaryEditorPane.svelte の
 		// 内側 <section> の 2 段入れ子になるので、見出しから最近接の <section> を拾う。
 		const dictHeading = page.getByRole('heading', {
-			name: 'Dictionary Editor',
+			name: 'Glossary Editor',
 			level: 3,
 		});
 		await expect(dictHeading).toBeVisible({ timeout: 20_000 });

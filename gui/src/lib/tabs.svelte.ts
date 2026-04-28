@@ -1,7 +1,7 @@
 /**
  * Phase VI-γ-1: トップレベルのタブ構成。
  *
- * - v2 GUI: Now / Modes / Flowgraph Studio / Resources / Observability / Settings
+ * - v2 GUI: Now / Live / Modes / Flowgraph Studio / Resources / Observability / Settings
  * - URL hash (`#live` 等) で永続化。ブラウザ戻る/進むと同期。
  * - シングルトンストアで全コンポーネントに共有。
  *
@@ -9,11 +9,12 @@
  * 既存パネル群は Tools タブに仮配置し、表示経路を壊さないようにする。
  *
  * δ-9 D.5: V1 `Pipeline` タブは廃止。旧 `#pipeline` URL は `flowgraph` に fallback する。
- * GUI redesign: 旧 `#live` / `#setup` / `#logs` / `#tools` は新 IA の対応タブへ fallback する。
+ * GUI redesign: 旧 `#setup` / `#logs` / `#tools` は新 IA の対応タブへ fallback する。
  */
 
 export const TABS = [
  { id: 'now', label: 'Now', icon: 'N' },
+ { id: 'live', label: 'Live', icon: 'L' },
  { id: 'modes', label: 'Modes', icon: 'M' },
  { id: 'flowgraph', label: 'Flowgraph Studio', icon: 'F' },
  { id: 'resources', label: 'Resources', icon: 'R' },
@@ -28,7 +29,6 @@ const VALID_IDS: readonly TabId[] = TABS.map((t) => t.id);
 function fromHash(): TabId {
  if (typeof window === 'undefined') return 'now';
  const h = window.location.hash.replace(/^#/, '').trim().toLowerCase();
- if (h === 'live') return 'now';
  if (h === 'setup') return 'resources';
  if (h === 'logs') return 'observability';
  if (h === 'tools') return 'settings';

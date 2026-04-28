@@ -90,25 +90,25 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 - `POST /api/v1/control/modes/plan` — 本文 `{"target": "..."}` または `{"target": null}`。遷移プレビュー（`ModeTransitionPlan`）。`modes` があるとき未知の `target` は 400。
 - `POST /api/v1/control/modes/transit` — 本文 `{"mode": "...", "dry_run": false, "reason": "..."}`。`dry_run: true` のときは状態を変えず `plan` のみ返す。`dry_run: false` で `PUT .../current` と同様の適用＋応答に `plan` を含む。**非 noop** 時は `managed_apps` 配列を任意同梱。再入時は **409**。
 
-### 5.1 `[[control_api.tables]]` — 辞書 / 汎用 Table の GUI 編集許可リスト (Phase φ)
+### 5.1 `[[control_api.tables]]` — Glossary / 汎用 Table の GUI 編集許可リスト (Phase φ / GRN)
 
-GUI の **Dictionary Editor Pane** と **Live Quick-Add Widget** から操作できる TSV ファイルの allow-list。
+GUI の **Glossary Editor Pane** と **Live Quick-Add Widget** から操作できる TSV ファイルの allow-list。
 `[[control_api.tables]]` に登録されていないファイルは Control API から **404**（存在隠蔽）として扱われ、
 GUI のカタログにも出ません。
 
 ```toml
-# 辞書を 1 件、GUI から編集 + Quick-Add トリガ可能にする例。
+# Glossary を 1 件、GUI から編集 + Quick-Add トリガ可能にする例。
 [[control_api.tables]]
 key      = "chat_dict"                            # 必須。URL / localStorage のキー
 path     = "dictionary.chat.dict.tsv"             # 必須。cwd 相対 or 絶対パス
-label    = "Chat 辞書"                            # 任意。GUI 表示名。省略時は key
-role     = "dictionary"                           # 任意。"dictionary" | "generic" など
+label    = "Chat 用語集"                          # 任意。GUI 表示名。省略時は key
+role     = "glossary"                             # 任意。"glossary" | "generic" など（旧 "dictionary" も互換）
 editable = true                                   # 任意。false で read-only（全 mutation が 403）
 
 [control_api.tables.quick_add]
-node_id        = "chat-echo/main::learn"          # 必須。dictionary.learn ノードの fq ID
+node_id        = "chat-echo/main::learn"          # 必須。glossary.learn ノードの fq ID
 kind           = "literal"                        # 任意。"literal" | "regex"（既定 literal）
-forget_node_id = "chat-echo/main::forget"         # 任意。Undo に使う dictionary.forget ノード
+forget_node_id = "chat-echo/main::forget"         # 任意。Undo に使う glossary.forget ノード
 ```
 
 | キー | 型 | 既定値 | 説明 |
@@ -116,11 +116,11 @@ forget_node_id = "chat-echo/main::forget"         # 任意。Undo に使う dict
 | `key` | string | — | 必須。URL (`/api/v1/control/table/{key}`) と GUI 内の識別子 |
 | `path` | string | — | 必須。TSV の実パス。親ディレクトリは atomic rename 用に自動生成 |
 | `label` | string | `key` | GUI タブに表示するラベル |
-| `role` | string | `null` | `"dictionary"` を指定した Table だけが Dictionary Editor のタブに並ぶ |
+| `role` | string | `null` | `"glossary"` を指定した Table だけが Glossary Editor のタブに並ぶ。旧 `"dictionary"` も互換 alias |
 | `editable` | bool | `true` | `false` で書き込み系 API を 403 に固定。閲覧のみ許可したい時に使う |
-| `quick_add.node_id` | string | — | Live Quick-Add で発火する `flowgraph.dictionary.learn` ノードの fq ID |
+| `quick_add.node_id` | string | — | Live Quick-Add で発火する `flowgraph.glossary.learn` ノードの fq ID |
 | `quick_add.kind` | string | `"literal"` | 既定 kind。GUI で上書き可能 |
-| `quick_add.forget_node_id` | string | `null` | Undo 用 `flowgraph.dictionary.forget` ノードの fq ID。未指定なら [Undo] を自動的に無効化 |
+| `quick_add.forget_node_id` | string | `null` | Undo 用 `flowgraph.glossary.forget` ノードの fq ID。未指定なら [Undo] を自動的に無効化 |
 
 #### 挙動メモ
 
@@ -135,8 +135,8 @@ forget_node_id = "chat-echo/main::forget"         # 任意。Undo に使う dict
 
 #### 対応 Flowgraph ノード（`control_triggerable = true`）
 
-- `flowgraph.dictionary.learn` — Quick-Add の Learn ボタン
-- `flowgraph.dictionary.forget` — Quick-Add の Undo ボタン、Editor の削除
+- `flowgraph.glossary.learn` — Quick-Add の Learn ボタン
+- `flowgraph.glossary.forget` — Quick-Add の Undo ボタン、Editor の削除
 
 上記以外のノードに trigger API を打つと **400 control_triggerable_forbidden** が返る（安全装置）。
 

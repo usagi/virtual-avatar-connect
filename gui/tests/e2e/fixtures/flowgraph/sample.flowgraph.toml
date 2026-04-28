@@ -1,5 +1,5 @@
 [meta]
-title = "ν fixture: web_input + dictionary learn/forget"
+title = "ν fixture: web_input + glossary learn/forget"
 description = """
 Phase ν Playwright E2E で使う最小 flowgraph。
 - `in`  (web_input) → `log` は §3.5 の ingress → WS 配信経路を保つ
@@ -38,10 +38,10 @@ to = "log:value"
 
 [[nodes]]
 id = "learn"
-feature = "flowgraph.dictionary.learn"
+feature = "flowgraph.glossary.learn"
 position = [620, 400]
 
 [[nodes]]
 id = "forget"
-feature = "flowgraph.dictionary.forget"
+feature = "flowgraph.glossary.forget"
 position = [620, 520]

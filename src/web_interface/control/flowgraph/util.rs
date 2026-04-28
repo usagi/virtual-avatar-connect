@@ -297,10 +297,13 @@ mod tests {
 	}
 
 	#[test]
-	fn registry_marks_dictionary_nodes_triggerable() {
+	fn registry_marks_glossary_nodes_triggerable() {
 		use crate::flowgraph::registry::registry;
 
 		let r = registry();
+		assert!(r.is_control_triggerable("flowgraph.glossary.learn"));
+		assert!(r.is_control_triggerable("flowgraph.glossary.forget"));
+		// 旧名は互換 alias として発火可能。
 		assert!(r.is_control_triggerable("flowgraph.dictionary.learn"));
 		assert!(r.is_control_triggerable("flowgraph.dictionary.forget"));
 		// 既定はオプトインされていないはず。
@@ -329,8 +332,8 @@ mod tests {
 		let by_feature: std::collections::HashMap<&str, &serde_json::Value> =
 			values.iter().map(|v| (v["feature"].as_str().unwrap(), v)).collect();
 
-		// opt-in 済み: dictionary.learn / .forget
-		for f in ["flowgraph.dictionary.learn", "flowgraph.dictionary.forget"] {
+		// opt-in 済み: glossary.learn / .forget
+		for f in ["flowgraph.glossary.learn", "flowgraph.glossary.forget"] {
 			let spec = by_feature.get(f).unwrap_or_else(|| panic!("{f} が node-catalog にいない"));
 			assert_eq!(
 				spec["control_triggerable"].as_bool(),
@@ -344,7 +347,7 @@ mod tests {
 			"flowgraph.literal.string",
 			"flowgraph.util.log",
 			"flowgraph.tts.speak",
-			"flowgraph.dictionary.replace",
+			"flowgraph.glossary.replace",
 		] {
 			let spec = by_feature.get(f).unwrap_or_else(|| panic!("{f} が node-catalog にいない"));
 			assert_eq!(

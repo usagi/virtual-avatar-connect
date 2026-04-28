@@ -15,12 +15,12 @@ v0.10.0 では **V1 processor 層が完全撤去**された。`[[processors]]` �
 | `feature = "twitch"`           | `flowgraph.ingress.twitch` / `twitch_eventsub` | `token_key` 指定で DCF 永続トークンを使う。             |
 | `feature = "twitch-out"`       | `flowgraph.twitch.chat_send`             | モデレーターボット発話も兼ねる。                          |
 | `feature = "command"`          | `flowgraph.command.match` + `flowgraph.command.set` | scene switcher は `command.set` の `sets` prop で表現。 |
-| `feature = "dictionary"` 系    | `flowgraph.dictionary.replace` / `dictionary.command` | 既存 `dictionary.*.txt` はそのまま読み込まれる。     |
+| `feature = "dictionary"` 系    | `flowgraph.glossary.replace` / 旧 `dictionary.command` 相当 | 既存 `dictionary.*.txt` はそのまま読み込まれる。     |
 | `feature = "coeiroink"`/`voicevox`/`aivis_speech`/`bouyomichan`/`os_tts` | `flowgraph.tts.speak` | `engine = "coeiroink"` 等で切り替え。 |
 | `feature = "gas-translation"`  | `flowgraph.translate.gas`                |                                                           |
 | `feature = "libre-translation"`| `flowgraph.translate.libre`              |                                                           |
 | `feature = "screenshot"`/`ocr` | `flowgraph.screenshot.capture` + `flowgraph.ocr.recognize` |                                               |
-| `feature = "modify"`           | `flowgraph.dictionary.replace` / `flowgraph.regex.*` | 直接チェインしてパイプ化する。                        |
+| `feature = "modify"`           | `flowgraph.glossary.replace` / `flowgraph.regex.*` | 直接チェインしてパイプ化する。                        |
 
 ## 手順
 
@@ -46,7 +46,7 @@ flowgraph_dir = "flowgraph"   # 任意のディレクトリ
 
 - ingress: `flowgraph.ingress.web_input` / `voice` / `twitch` / `twitch_eventsub` /
   `channel_subscribe` のいずれかでチャンネルを引き込む。
-- 変換層: `flowgraph.dictionary.replace` / `flowgraph.regex.replace` /
+- 変換層: `flowgraph.glossary.replace` / `flowgraph.regex.replace` /
   `flowgraph.translate.*` 等でテキスト加工。
 - 出口: `flowgraph.tts.speak` / `flowgraph.twitch.chat_send` /
   `flowgraph.channel.emit`（browser-output / WS 配信）など。

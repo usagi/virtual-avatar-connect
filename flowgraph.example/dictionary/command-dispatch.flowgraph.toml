@@ -2,14 +2,14 @@
 #  flowgraph.example/dictionary/command-dispatch.flowgraph.toml
 # =========================================================================
 # η-4 サンプル: dictionary.command（V1 時代）を廃し、
-# 汎用 dictionary.match + commands.tsv で「学習(X:=Y) / 忘却(X!)」の
+# 汎用 glossary.match + commands.tsv で「学習(X:=Y) / 忘却(X!)」の
 # コマンド構文をパースする例。
 #
 # 考え方:
 #   commands.tsv の 1,2 行目は regex kind のエントリで、
 #     - `^(?P<src>\S+):=(?P<dst>.+)$` → replacement="learn"
 #     - `^(?P<src>\S+)!$`           → replacement="forget"
-#   になっている。dictionary.match の first_replacement を見ることで
+#   になっている。glossary.match の first_replacement を見ることで
 #   「どのコマンドか」が判別でき、captures[0] に `src` / `dst` が入る。
 #
 # フロー:
@@ -20,16 +20,16 @@
 #
 # 実運用の発展形:
 #   - match.first_replacement と compare.eq("learn") を噛ませて flow.branch で
-#     dictionary.learn の exec_in を叩く。captures[0][0] が source、[0][1] が replacement
-#   - 同様に compare.eq("forget") → dictionary.forget
+#     glossary.learn の exec_in を叩く。captures[0][0] が source、[0][1] が replacement
+#   - 同様に compare.eq("forget") → glossary.forget
 #   - 辞書本体は別 Table（user_dict.dict.tsv）として load_tsv で供給し、
 #     learn/forget → write_tsv で永続化
 # =========================================================================
 
 [meta]
-title = "Dictionary command dispatch"
-description = "dictionary.match + commands.tsv で学習/忘却コマンドを判別する例（dictionary.command 後継）"
-tags = ["example", "dictionary", "command", "match", "eta"]
+title = "Glossary command dispatch"
+description = "glossary.match + commands.tsv で学習/忘却コマンドを判別する例（dictionary.command 後継）"
+tags = ["example", "glossary", "command", "match", "eta"]
 
 
 # ---- 起動 ----
@@ -60,7 +60,7 @@ position = [340, 120]
 # ---- Match（commands.tsv を辞書として）----
 [[nodes]]
 id = "match"
-feature = "flowgraph.dictionary.match"
+feature = "flowgraph.glossary.match"
 position = [620, 260]
 properties.match_policy = "first"
 properties.anchor = "full"

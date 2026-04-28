@@ -1,8 +1,8 @@
 <script lang="ts">
  /**
-  * Phase φ-3b: Dictionary Editor Pane のルート。
+  * Phase φ-3b / GRN: Glossary Editor Pane のルート。
   *
-  * - `/api/v1/control/tables` を初回に取得し、`role == "dictionary"` なエントリのみ tab 化。
+  * - `/api/v1/control/tables` を初回に取得し、`role == "glossary"` なエントリのみ tab 化。
   * - タブ切替で `/api/v1/control/table/{key}` を読み直して `DictionaryTable.svelte` に流し込む。
   * - 追加 / 編集 / 削除のクリックは φ-3c の `DictionaryEntryForm.svelte` / φ-3d の
   *   `DictionaryConflictDialog.svelte` で拾う。φ-3b 時点では placeholder として toast を出す。
@@ -129,11 +129,11 @@
 
 <section class="flex flex-col gap-3">
  <header class="flex flex-wrap items-center gap-2">
-  <h3 class="text-sm font-semibold">Dictionary Editor</h3>
+  <h3 class="text-sm font-semibold">Glossary Editor</h3>
   <span class="text-xs opacity-60">
    conf.toml の
    <code class="rounded bg-surface-100-900 px-1">[[control_api.tables]]</code>
-   で <code>role = "dictionary"</code> を指定した TSV が対象です。
+   で <code>role = "glossary"</code> を指定した TSV が対象です。
   </span>
   <button
    type="button"
@@ -153,14 +153,14 @@
   </div>
  {:else if dictionaryEditorStore.dictionaryTables.length === 0}
   <div class="rounded bg-surface-100-900 px-3 py-2 text-xs opacity-80">
-   <code>[[control_api.tables]]</code> に <code>role = "dictionary"</code> の
+   <code>[[control_api.tables]]</code> に <code>role = "glossary"</code> の
    エントリが登録されていません。<br />
    例:
    <pre class="mt-1 rounded bg-surface-950-50 p-2 text-[0.65rem] leading-snug">{`[[control_api.tables]]
 key       = "chat_dict"
 path      = "dictionary.chat.dict.tsv"
-label     = "Chat 辞書"
-role      = "dictionary"
+label     = "Chat 用語集"
+role      = "glossary"
 editable  = true`}</pre>
    設定を反映するには VAC の再起動が必要です。
   </div>

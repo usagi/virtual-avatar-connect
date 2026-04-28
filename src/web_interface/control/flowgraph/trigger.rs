@@ -260,7 +260,9 @@ mod tests {
 	use serde_json::json;
 
 	fn learn_spec() -> crate::flowgraph::node::NodeSpec {
-		registry::registry().spec("flowgraph.dictionary.learn").expect("learn が registry に必要")
+		registry::registry()
+			.spec("flowgraph.glossary.learn")
+			.expect("learn が registry に必要")
 	}
 
 	#[test]

@@ -1,5 +1,5 @@
 /**
- * Phase φ-3b: Dictionary Editor Pane のストア。
+ * Phase φ-3b / GRN: Glossary Editor Pane のストア。
  *
  * Control API `/tables` と `/table/{key}` を薄くラップして、UI 側から
  * 「ロード中 / エラー / 現在のファイル内容 / content_hash」を runes で購読できるようにする。
@@ -29,11 +29,13 @@ export type DictionaryEditorPhase =
 	| { kind: 'error'; message: string };
 
 /**
- * `role` が "dictionary" かどうかを判定。
- * 未指定 / null の場合は「汎用 Table」として Dictionary Editor からは除外する。
+ * `role` が "glossary" かどうかを判定。
+ * 旧 `dictionary` role は互換 alias として受け付ける。
+ * 未指定 / null の場合は「汎用 Table」として Glossary Editor からは除外する。
  */
 export function isDictionaryRole(item: TableCatalogItem): boolean {
-	return (item.role ?? '').toLowerCase() === 'dictionary';
+	const role = (item.role ?? '').toLowerCase();
+	return role === 'glossary' || role === 'dictionary';
 }
 
 function extractMessage(e: unknown): string {
@@ -48,7 +50,7 @@ function extractMessage(e: unknown): string {
 class DictionaryEditorStore {
 	phase: DictionaryEditorPhase = $state({ kind: 'idle' });
 	catalog: TableCatalogItem[] = $state([]);
-	/** Dictionary Editor Pane から見えるべき Table のみ（role=="dictionary"）。 */
+	/** Glossary Editor Pane から見えるべき Table のみ（role=="glossary" / 旧 "dictionary"）。 */
 	dictionaryTables: TableCatalogItem[] = $state([]);
 	currentKey: string | null = $state(null);
 	currentTable: TableFileDto | null = $state(null);

@@ -5,7 +5,7 @@ import { authHeader, tokenQuery } from './fixtures';
  * §3.4 live-quick-add-learn-undo
  *
  * conf.fixture.e2e.toml の `[[control_api.tables]]` + fixture flowgraph の
- * `dictionary.learn` / `dictionary.forget` ノードを使い、Live タブの
+ * `glossary.learn` / `glossary.forget` ノードを使い、Live タブの
  * Live Quick-Add ウィジェットからの一連の UX を検証する。
  *
  *   1. Quick-Add カタログに sample_dict が出てくる
@@ -31,8 +31,9 @@ test.describe('§3.4 live-quick-add-learn-undo', () => {
 		request,
 	}) => {
 		await page.goto(`/gui/${tokenQuery()}`);
+		await page.getByRole('button', { name: /Live/ }).click();
 
-		// Live タブ（default 表示）と Quick-Add カタログ読み込みを待つ。
+		// Live タブと Quick-Add カタログ読み込みを待つ。
 		// API 経由でも catalog を別途 verify しておくと、UI が見つからないときに
 		// conf 側の問題か UI 側の問題かを切り分けやすい。
 		const catalog = await request.get('/api/v1/control/tables', {

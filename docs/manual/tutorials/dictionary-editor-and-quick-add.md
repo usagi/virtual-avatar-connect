@@ -1,6 +1,6 @@
-# Tutorial: Dictionary Editor & Live Quick-Add (Phase φ)
+# Tutorial: Glossary Editor & Live Quick-Add (Phase φ / GRN)
 
-配信中の「誤読だったので今すぐ辞書に追加したい」「過去の学習を取り消したい」を **GUI だけで完結**させるためのチュートリアル。
+配信中の「誤読だったので今すぐ用語集に追加したい」「過去の学習を取り消したい」を **GUI だけで完結**させるためのチュートリアル。
 
 > 関連ソース:
 > - Control API: [`src/web_interface/control/table/mod.rs`](../../../src/web_interface/control/table/mod.rs) /
@@ -12,8 +12,8 @@
 
 ## ねらい
 
-- **Dictionary Editor Pane**（11 カラム一覧 / sort / filter / 編集 / 削除 / 409 衝突解決）で TSV 辞書を直接編集する
-- **Live Quick-Add Widget** で `dictionary.learn` / `dictionary.forget` に 1-shot trigger を発火する
+- **Glossary Editor Pane**（11 カラム一覧 / sort / filter / 編集 / 削除 / 409 衝突解決）で TSV 用語集を直接編集する
+- **Live Quick-Add Widget** で `glossary.learn` / `glossary.forget` に 1-shot trigger を発火する
 - `conf.toml` の `[[control_api.tables]]` + `quick_add` をどう書くと GUI から見えるようになるかを押さえる
 - `control_triggerable` opt-in の範囲を知る（任意ノードの暴発トリガは不可）
 
@@ -27,19 +27,19 @@
 │        │                                                    │
 │        │ POST /api/v1/control/flowgraph/default/trigger/..  │
 │        ▼                                                    │
-│   Control API  ──[write TSV]──▶  dictionary.*.tsv           │
+│   Control API  ──[write TSV]──▶  glossary / .dict.tsv       │
 │        ▲                                                    │
 │        │ GET /api/v1/control/table/{key}（If-Match 付き）   │
-│  Dictionary Editor Pane                                     │
+│  Glossary Editor Pane                                       │
 └──────────────────────────────────────────────────────────────┘
                          │
                          │ flowgraph.table.load_tsv が次の exec_in で再読み
                          ▼
-        flowgraph.dictionary.replace / .match  → TTS など下流へ
+        flowgraph.glossary.replace / .match  → TTS など下流へ
 ```
 
 - **Editor** は TSV ファイルを直接読み書きする。`If-Match: b3:<hash>` で楽観ロック。
-- **Quick-Add** は Flowgraph Trigger API 経由で `dictionary.learn` ノードを発火する。
+- **Quick-Add** は Flowgraph Trigger API 経由で `glossary.learn` ノードを発火する。
   - ノード側は `control_triggerable = true` を opt-in している必要がある。
   - 学習結果が TSV に永続化されるかどうかは **flowgraph 側の配線**次第
     （`learn → table.write_tsv` を張っていれば永続化、張っていなければメモリ限定）。
@@ -61,12 +61,12 @@
 [[control_api.tables]]
 key      = "chat_dict"                       # URL / localStorage キー
 path     = "dictionary.chat.dict.tsv"        # ディスク上の TSV
-label    = "Chat 辞書"
-role     = "dictionary"                      # これが無いと Editor の tab に出ない
+label    = "Chat 用語集"
+role     = "glossary"                        # これが無いと Editor の tab に出ない
 editable = true
 
 [control_api.tables.quick_add]
-node_id        = "chat-echo/main::learn"     # dictionary.learn の fq ID
+node_id        = "chat-echo/main::learn"     # glossary.learn の fq ID
 kind           = "literal"                   # "literal" | "regex"
 forget_node_id = "chat-echo/main::forget"    # 未指定なら [Undo] は無効化
 ```
@@ -80,7 +80,7 @@ GUI の Flowgraph タブ → Node Card の「id」欄や、`GET /api/v1/control/
 
 ## Step 2 — 対応する Flowgraph を配線
 
-最低限 `dictionary.learn` と（Undo が欲しければ）`dictionary.forget` を置く。
+最低限 `glossary.learn` と（Undo が欲しければ）`glossary.forget` を置く。
 
 ```toml
 # 例: flowgraph/chat-echo/main.flowgraph.toml の抜粋
@@ -95,11 +95,11 @@ feature = "flowgraph.table.load_tsv"
 
 [[nodes]]
 id = "learn"
-feature = "flowgraph.dictionary.learn"
+feature = "flowgraph.glossary.learn"
 
 [[nodes]]
 id = "forget"
-feature = "flowgraph.dictionary.forget"
+feature = "flowgraph.glossary.forget"
 
 # 学習結果を TSV に書き戻す（Quick-Add で学んだ内容を永続化したいなら必要）
 [[nodes]]
@@ -139,7 +139,7 @@ VAC を再起動すると消える（デモや一時的な言い換えには使�
 
 VAC を再起動して Live タブを開く。以下 2 つのウィジェットが現れる。
 
-### Dictionary Editor Pane（11 カラム一覧）
+### Glossary Editor Pane（11 カラム一覧）
 
 - 列: `source / replacement / kind / priority / is_locked / enabled / by / created_at / expires_at / tags / note`
 - ヘッダクリックでソート方向トグル
@@ -181,9 +181,9 @@ Authorization: Bearer <token>
 
 | 症状 | 原因 | 対処 |
 |---|---|---|
-| Editor のタブに何も出ない | `role = "dictionary"` 未指定 | conf の該当エントリに `role` を追加して再起動 |
+| Editor のタブに何も出ない | `role = "glossary"` 未指定 | conf の該当エントリに `role` を追加して再起動 |
 | Quick-Add が出ない | `quick_add` ブロック未指定 | `[control_api.tables.quick_add]` を書き、`node_id` を fq ID で指定 |
-| Trigger 時に 400 `control_triggerable_forbidden` | 発火先が opt-in していないノード | `node_id` が typo、または learn/forget 以外の feature を指している。Phase φ-2 時点で opt-in しているのは `dictionary.learn` / `.forget` のみ |
+| Trigger 時に 400 `control_triggerable_forbidden` | 発火先が opt-in していないノード | `node_id` が typo、または learn/forget 以外の feature を指している。Phase φ-2/GRN 時点で opt-in しているのは `glossary.learn` / `.forget` のみ |
 | Trigger 時に 404 `instance_not_found` | V2 は単一 instance のため `instance_id = "default"` のみ有効 | GUI は自動で `default` を使うので、手動 curl の場合のみ注意 |
 | Learn しても Editor に反映されない | `learn → table.write_tsv` の配線が無く、TSV にまだ書かれていない | 永続化したいなら Step 2 のように `write_tsv` を繋ぐ。もしくは Editor の「↻ Reload」を押す |
 | 409 が連続する | 他ユーザ（別タブ）と同時編集中 | 3-way 解決ダイアログで採用方針を決める。衝突が辛ければ `editable = false` で片側を read-only 化 |
@@ -203,6 +203,6 @@ Authorization: Bearer <token>
 ## 関連
 
 - [conf-reference.md §5.1](../conf-reference.md#51-control_apitables--辞書--汎用-table-の-gui-編集許可リスト-phase-φ)
-- [Node Catalog](../node-catalog.md) の `flowgraph.dictionary.*` / `flowgraph.table.*`
+- [Node Catalog](../node-catalog.md) の `flowgraph.glossary.*` / `flowgraph.table.*`
 - Roadmap: [phase-phi-control-api-dictionary-editor.md](../../roadmap/phase-phi-control-api-dictionary-editor.md)
 - Backlog: [backlog-nodes.md](../../roadmap/backlog-nodes.md)（`flowgraph.util.timer_interval` 予定など）

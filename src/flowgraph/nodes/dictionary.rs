@@ -1,6 +1,6 @@
-//! η-3: `flowgraph.dictionary.*` 4 ノード（spec: `docs/roadmap/phase-eta-dictionary-unification.md` §6.2）。
+//! η-3 / GRN: `flowgraph.glossary.*` 4 ノード（旧 `flowgraph.dictionary.*`）。
 //!
-//! - [`DictionaryReplaceNode`] (Stateful): `Table` を辞書として受け取り、literal(AC)+regex 統合置換
+//! - [`DictionaryReplaceNode`] (Stateful): `Table` を用語集として受け取り、literal(AC)+regex 統合置換
 //! - [`DictionaryMatchNode`] (Stateful): 照合・キャプチャ出力・exec 分岐
 //! - [`DictionaryLearnNode`] (Pure): 11 カラム append、重複検出
 //! - [`DictionaryForgetNode`] (Pure): mode=latest/all/exact、is_locked 尊重
@@ -240,7 +240,7 @@ fn get_required_table<'a>(inputs: &'a InputMap, key: &str) -> Result<&'a Table, 
 }
 
 // ---------------------------------------------------------------------
-// flowgraph.dictionary.replace (Stateful)
+// flowgraph.glossary.replace (Stateful)
 // ---------------------------------------------------------------------
 
 pub struct DictionaryReplaceNode;
@@ -248,15 +248,15 @@ pub struct DictionaryReplaceNode;
 impl NodeDescriptor for DictionaryReplaceNode {
 	fn describe(&self) -> NodeSpec {
 		NodeSpec {
-			feature: "flowgraph.dictionary.replace".into(),
-			title: "Dictionary Replace".into(),
-			category: "dictionary".into(),
+			feature: "flowgraph.glossary.replace".into(),
+			title: "Glossary Replace".into(),
+			category: "glossary".into(),
 			description: Some(
-				"Table 辞書（11 カラム）で content を literal(AC) + regex 統合で逐次置換。Stateful（AC/Regex キャッシュ）".into(),
+				"Glossary Table（11 カラム）で content を literal(AC) + regex 統合で逐次置換。Stateful（AC/Regex キャッシュ）".into(),
 			),
 			inputs: vec![
 				PortSpec::input("content", "Content", SocketType::String),
-				PortSpec::input("dictionary", "Dictionary", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
+				PortSpec::input("dictionary", "Glossary", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
 			],
 			outputs: vec![
 				PortSpec::output("result", "Result", SocketType::String),
@@ -331,7 +331,7 @@ fn replace_with(content: &str, dict: &CompiledDictionary) -> (String, usize) {
 }
 
 // ---------------------------------------------------------------------
-// flowgraph.dictionary.match (Stateful)
+// flowgraph.glossary.match (Stateful)
 // ---------------------------------------------------------------------
 
 pub struct DictionaryMatchNode;
@@ -339,14 +339,14 @@ pub struct DictionaryMatchNode;
 impl NodeDescriptor for DictionaryMatchNode {
 	fn describe(&self) -> NodeSpec {
 		NodeSpec {
-			feature: "flowgraph.dictionary.match".into(),
-			title: "Dictionary Match".into(),
-			category: "dictionary".into(),
-			description: Some("Table 辞書で text を照合し、一致エントリと captures を取り出す。exec 分岐可能。Stateful".into()),
+			feature: "flowgraph.glossary.match".into(),
+			title: "Glossary Match".into(),
+			category: "glossary".into(),
+			description: Some("Glossary Table で text を照合し、一致エントリと captures を取り出す。exec 分岐可能。Stateful".into()),
 			inputs: vec![
 				PortSpec::exec_input("exec_in", "Exec"),
 				PortSpec::input("text", "Text", SocketType::String),
-				PortSpec::input("dictionary", "Dictionary", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
+				PortSpec::input("dictionary", "Glossary", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
 			],
 			outputs: vec![
 				PortSpec::exec_output("on_match", "On Match"),
@@ -538,7 +538,7 @@ fn entry_to_json(entry: &CompiledEntry, _table: &Table, kind: &str) -> JsonValue
 }
 
 // ---------------------------------------------------------------------
-// flowgraph.dictionary.learn (Pure)
+// flowgraph.glossary.learn (Pure)
 // ---------------------------------------------------------------------
 
 pub struct DictionaryLearnNode;
@@ -546,13 +546,13 @@ pub struct DictionaryLearnNode;
 impl NodeDescriptor for DictionaryLearnNode {
 	fn describe(&self) -> NodeSpec {
 		NodeSpec {
-			feature: "flowgraph.dictionary.learn".into(),
-			title: "Dictionary Learn".into(),
-			category: "dictionary".into(),
-			description: Some("Table 辞書に 11 カラムエントリを append。同値エントリは duplicate 検出して no-op".into()),
+			feature: "flowgraph.glossary.learn".into(),
+			title: "Glossary Learn".into(),
+			category: "glossary".into(),
+			description: Some("Glossary Table に 11 カラムエントリを append。同値エントリは duplicate 検出して no-op".into()),
 			inputs: vec![
 				PortSpec::exec_input("exec_in", "Exec"),
-				PortSpec::input("dictionary", "Dictionary", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
+				PortSpec::input("dictionary", "Glossary", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
 				PortSpec::input("source", "Source", SocketType::String),
 				PortSpec::input("replacement", "Replacement", SocketType::String),
 				PortSpec::input("kind", "Kind", SocketType::String).with_default(SocketValue::String("literal".into())),
@@ -565,7 +565,7 @@ impl NodeDescriptor for DictionaryLearnNode {
 			outputs: vec![
 				PortSpec::exec_output("on_learned", "On Learned"),
 				PortSpec::exec_output("on_duplicate", "On Duplicate"),
-				PortSpec::output("updated_dictionary", "Updated Dictionary", SocketType::Table),
+				PortSpec::output("updated_dictionary", "Updated Glossary", SocketType::Table),
 				PortSpec::output("added_entry", "Added Entry", SocketType::Json),
 				PortSpec::output("feedback", "Feedback", SocketType::String),
 			],
@@ -573,7 +573,7 @@ impl NodeDescriptor for DictionaryLearnNode {
 		}
 	}
 
-	// Phase φ-2: Live Quick-Add ウィジェットから 1 shot で「新しい辞書行を追加」する用途に限り
+	// Phase φ-2: Live Quick-Add ウィジェットから 1 shot で「新しい用語集行を追加」する用途に限り
 	// 外部トリガを許可する。副作用は dictionary Table の append のみで、失敗しても Table を破壊しない。
 	fn control_triggerable(&self) -> bool {
 		true
@@ -689,7 +689,7 @@ fn ensure_dictionary_schema(table: Table) -> Table {
 }
 
 // ---------------------------------------------------------------------
-// flowgraph.dictionary.forget (Pure)
+// flowgraph.glossary.forget (Pure)
 // ---------------------------------------------------------------------
 
 pub struct DictionaryForgetNode;
@@ -697,13 +697,13 @@ pub struct DictionaryForgetNode;
 impl NodeDescriptor for DictionaryForgetNode {
 	fn describe(&self) -> NodeSpec {
 		NodeSpec {
-			feature: "flowgraph.dictionary.forget".into(),
-			title: "Dictionary Forget".into(),
-			category: "dictionary".into(),
-			description: Some("Table 辞書から source (+ replacement) 一致行を削除。mode=latest/all/exact、is_locked 保護".into()),
+			feature: "flowgraph.glossary.forget".into(),
+			title: "Glossary Forget".into(),
+			category: "glossary".into(),
+			description: Some("Glossary Table から source (+ replacement) 一致行を削除。mode=latest/all/exact、is_locked 保護".into()),
 			inputs: vec![
 				PortSpec::exec_input("exec_in", "Exec"),
-				PortSpec::input("dictionary", "Dictionary", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
+				PortSpec::input("dictionary", "Glossary", SocketType::Table).with_default(SocketValue::Table(Table::empty())),
 				PortSpec::input("source", "Source", SocketType::String),
 				PortSpec::input("replacement", "Replacement", SocketType::String).with_default(SocketValue::String(String::new())),
 				PortSpec::input("mode", "Mode", SocketType::String).with_default(SocketValue::String("latest".into())),
@@ -712,7 +712,7 @@ impl NodeDescriptor for DictionaryForgetNode {
 				PortSpec::exec_output("on_forgotten", "On Forgotten"),
 				PortSpec::exec_output("on_nothing", "On Nothing"),
 				PortSpec::exec_output("on_locked", "On Locked"),
-				PortSpec::output("updated_dictionary", "Updated Dictionary", SocketType::Table),
+				PortSpec::output("updated_dictionary", "Updated Glossary", SocketType::Table),
 				PortSpec::output("removed_count", "Removed Count", SocketType::Int),
 				PortSpec::output("locked_count", "Locked Count", SocketType::Int),
 				PortSpec::output("feedback", "Feedback", SocketType::String),
@@ -721,7 +721,7 @@ impl NodeDescriptor for DictionaryForgetNode {
 		}
 	}
 
-	// Phase φ-2: Dictionary Editor から「1 行消す」操作のために opt-in する。
+	// Phase φ-2: Glossary Editor から「1 行消す」操作のために opt-in する。
 	// is_locked な行は compute() 内で保護されるため、trigger 経由でも破壊は起きない。
 	fn control_triggerable(&self) -> bool {
 		true

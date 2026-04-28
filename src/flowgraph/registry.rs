@@ -61,11 +61,15 @@ impl NodeArc {
 /// ノードカタログ。`feature` 文字列をキーに singleton を引く。
 pub struct NodeRegistry {
 	map: HashMap<String, NodeArc>,
+	aliases: HashMap<String, String>,
 }
 
 impl NodeRegistry {
 	pub fn empty() -> Self {
-		Self { map: HashMap::new() }
+		Self {
+			map: HashMap::new(),
+			aliases: HashMap::new(),
+		}
 	}
 
 	pub fn register_pure(&mut self, node: Arc<dyn PureNode>) {
@@ -83,14 +87,26 @@ impl NodeRegistry {
 		self.map.insert(feature, NodeArc::Effectful(node));
 	}
 
+	/// 旧 feature 名を正規 feature 名へ向ける。
+	///
+	/// Alias は loader 互換用であり、`features()` / `all_specs()` には出さない。
+	/// GUI catalog は常に正規名だけを表示する。
+	pub fn register_alias(&mut self, alias: &str, canonical: &str) {
+		self.aliases.insert(alias.to_string(), canonical.to_string());
+	}
+
+	fn resolve_feature<'a>(&'a self, feature: &'a str) -> &'a str {
+		self.aliases.get(feature).map(|s| s.as_str()).unwrap_or(feature)
+	}
+
 	/// feature が登録されているか。
 	pub fn contains(&self, feature: &str) -> bool {
-		self.map.contains_key(feature)
+		self.map.contains_key(self.resolve_feature(feature))
 	}
 
 	/// 登録済み feature の `NodeSpec`。
 	pub fn spec(&self, feature: &str) -> Option<NodeSpec> {
-		self.map.get(feature).map(|n| n.describe())
+		self.map.get(self.resolve_feature(feature)).map(|n| n.describe())
 	}
 
 	/// Phase φ-2: Control API の Flowgraph Trigger Endpoint が当該 feature の
@@ -98,12 +114,15 @@ impl NodeRegistry {
 	///
 	/// 未登録 feature は `false` を返す（知らないノードは発火不可）。
 	pub fn is_control_triggerable(&self, feature: &str) -> bool {
-		self.map.get(feature).map(|n| n.control_triggerable()).unwrap_or(false)
+		self.map
+			.get(self.resolve_feature(feature))
+			.map(|n| n.control_triggerable())
+			.unwrap_or(false)
 	}
 
 	/// 登録済み feature から **新しい** `NodeImpl` を作る（Stateful は state slot を新規確保）。
 	pub fn make_impl(&self, feature: &str) -> Option<NodeImpl> {
-		self.map.get(feature).map(|n| n.make_impl())
+		self.map.get(self.resolve_feature(feature)).map(|n| n.make_impl())
 	}
 
 	/// 登録されている全 feature 名。ソートされた順。
@@ -323,11 +342,15 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_effectful(Arc::new(nodes::table_ops::TableLoadTsvNode));
 	r.register_effectful(Arc::new(nodes::table_ops::TableWriteTsvNode));
 
-	// --- dictionary (η-3: Stateful Replace/Match + Pure Learn/Forget) ---
+	// --- glossary (η-3 / GRN: formerly dictionary.*) ---
 	r.register_stateful(Arc::new(nodes::dictionary::DictionaryReplaceNode));
 	r.register_stateful(Arc::new(nodes::dictionary::DictionaryMatchNode));
 	r.register_pure(Arc::new(nodes::dictionary::DictionaryLearnNode));
 	r.register_pure(Arc::new(nodes::dictionary::DictionaryForgetNode));
+	r.register_alias("flowgraph.dictionary.replace", "flowgraph.glossary.replace");
+	r.register_alias("flowgraph.dictionary.match", "flowgraph.glossary.match");
+	r.register_alias("flowgraph.dictionary.learn", "flowgraph.glossary.learn");
+	r.register_alias("flowgraph.dictionary.forget", "flowgraph.glossary.forget");
 
 	// --- ingress (δ-3d, δ-9 Part E) ---
 	r.register_pure(Arc::new(nodes::ingress::WebInputIngressNode));

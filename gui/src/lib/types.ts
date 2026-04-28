@@ -1186,7 +1186,7 @@ export type ZipImportOutcome = ZipImportPreview | ZipImportReport;
 
 /** `[[control_api.tables]].quick_add` のサブ設定。 */
 export type ControlTableQuickAdd = {
-	/** `dictionary.learn` ノードの fq ID（`"main::learn"` など）。 */
+	/** `glossary.learn` ノードの fq ID（`"main::learn"` など）。 */
 	node_id: string;
 	/** 既定の `kind`（`"literal"` | `"regex"` | 省略）。 */
 	kind?: string | null;

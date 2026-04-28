@@ -43,16 +43,16 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.datetime.now`](#flowgraph-datetime-now) — DateTime Now
   - [`flowgraph.datetime.parse`](#flowgraph-datetime-parse) — DateTime Parse
   - [`flowgraph.datetime.sub_duration`](#flowgraph-datetime-sub-duration) — DateTime - Duration
-- **dictionary**
-  - [`flowgraph.dictionary.forget`](#flowgraph-dictionary-forget) — Dictionary Forget
-  - [`flowgraph.dictionary.learn`](#flowgraph-dictionary-learn) — Dictionary Learn
-  - [`flowgraph.dictionary.match`](#flowgraph-dictionary-match) — Dictionary Match
-  - [`flowgraph.dictionary.replace`](#flowgraph-dictionary-replace) — Dictionary Replace
 - **easing**
   - [`flowgraph.easing.apply`](#flowgraph-easing-apply) — Easing apply
 - **flow**
   - [`flowgraph.flow.branch`](#flowgraph-flow-branch) — Branch
   - [`flowgraph.flow.gate`](#flowgraph-flow-gate) — Gate
+- **glossary**
+  - [`flowgraph.glossary.forget`](#flowgraph-glossary-forget) — Glossary Forget
+  - [`flowgraph.glossary.learn`](#flowgraph-glossary-learn) — Glossary Learn
+  - [`flowgraph.glossary.match`](#flowgraph-glossary-match) — Glossary Match
+  - [`flowgraph.glossary.replace`](#flowgraph-glossary-replace) — Glossary Replace
 - **http**
   - [`flowgraph.http.request`](#flowgraph-http-request) — HTTP Request
 - **ingress**
@@ -657,93 +657,6 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 |---|---|---|
 | `result` | `datetime` |  |
 
-## dictionary
-
-### `flowgraph.dictionary.forget`
-
-**Dictionary Forget** — Table 辞書から source (+ replacement) 一致行を削除。mode=latest/all/exact、is_locked 保護
-
-| Input | Type | Default | Note |
-|---|---|---|---|
-| `exec_in` | `exec` (in) | — |  |
-| `dictionary` | `table` | `[]` |  |
-| `source` | `string` | — |  |
-| `replacement` | `string` | `""` |  |
-| `mode` | `string` | `"latest"` |  |
-
-| Output | Type | Note |
-|---|---|---|
-| `on_forgotten` | `exec` (out) |  |
-| `on_nothing` | `exec` (out) |  |
-| `on_locked` | `exec` (out) |  |
-| `updated_dictionary` | `table` |  |
-| `removed_count` | `int` |  |
-| `locked_count` | `int` |  |
-| `feedback` | `string` |  |
-
-### `flowgraph.dictionary.learn`
-
-**Dictionary Learn** — Table 辞書に 11 カラムエントリを append。同値エントリは duplicate 検出して no-op
-
-| Input | Type | Default | Note |
-|---|---|---|---|
-| `exec_in` | `exec` (in) | — |  |
-| `dictionary` | `table` | `[]` |  |
-| `source` | `string` | — |  |
-| `replacement` | `string` | — |  |
-| `kind` | `string` | `"literal"` |  |
-| `priority` | `int` | `0` |  |
-| `by` | `string` | `""` |  |
-| `tags` | `string` | `""` |  |
-| `note` | `string` | `""` |  |
-| `expires_at` | `string` | `""` |  |
-
-| Output | Type | Note |
-|---|---|---|
-| `on_learned` | `exec` (out) |  |
-| `on_duplicate` | `exec` (out) |  |
-| `updated_dictionary` | `table` |  |
-| `added_entry` | `json` |  |
-| `feedback` | `string` |  |
-
-### `flowgraph.dictionary.match`
-
-**Dictionary Match** — Table 辞書で text を照合し、一致エントリと captures を取り出す。exec 分岐可能。Stateful
-
-| Input | Type | Default | Note |
-|---|---|---|---|
-| `exec_in` | `exec` (in) | — |  |
-| `text` | `string` | — |  |
-| `dictionary` | `table` | `[]` |  |
-
-| Output | Type | Note |
-|---|---|---|
-| `on_match` | `exec` (out) |  |
-| `on_no_match` | `exec` (out) |  |
-| `matched_entries` | `list<json>` |  |
-| `matched_count` | `int` |  |
-| `captures` | `list<list<string>>` |  |
-| `first_replacement` | `string` |  |
-
-| Property | Type | Default | Required | Note |
-|---|---|---|---|---|
-| `match_policy` | `string` | `"first"` |  | first / all / longest |
-| `anchor` | `string` | `"anywhere"` |  | anywhere / prefix / full |
-
-### `flowgraph.dictionary.replace`
-
-**Dictionary Replace** — Table 辞書（11 カラム）で content を literal(AC) + regex 統合で逐次置換。Stateful（AC/Regex キャッシュ）
-
-| Input | Type | Default | Note |
-|---|---|---|---|
-| `content` | `string` | — |  |
-| `dictionary` | `table` | `[]` |  |
-
-| Output | Type | Note |
-|---|---|---|
-| `result` | `string` |  |
-| `applied_count` | `int` |  |
-
 ## easing
 
 ### `flowgraph.easing.apply`
@@ -791,6 +704,93 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `exec_out` | `exec` (out) |  |
+
+## glossary
+
+### `flowgraph.glossary.forget`
+
+**Glossary Forget** — Glossary Table から source (+ replacement) 一致行を削除。mode=latest/all/exact、is_locked 保護
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `dictionary` | `table` | `[]` |  |
+| `source` | `string` | — |  |
+| `replacement` | `string` | `""` |  |
+| `mode` | `string` | `"latest"` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_forgotten` | `exec` (out) |  |
+| `on_nothing` | `exec` (out) |  |
+| `on_locked` | `exec` (out) |  |
+| `updated_dictionary` | `table` |  |
+| `removed_count` | `int` |  |
+| `locked_count` | `int` |  |
+| `feedback` | `string` |  |
+
+### `flowgraph.glossary.learn`
+
+**Glossary Learn** — Glossary Table に 11 カラムエントリを append。同値エントリは duplicate 検出して no-op
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `dictionary` | `table` | `[]` |  |
+| `source` | `string` | — |  |
+| `replacement` | `string` | — |  |
+| `kind` | `string` | `"literal"` |  |
+| `priority` | `int` | `0` |  |
+| `by` | `string` | `""` |  |
+| `tags` | `string` | `""` |  |
+| `note` | `string` | `""` |  |
+| `expires_at` | `string` | `""` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_learned` | `exec` (out) |  |
+| `on_duplicate` | `exec` (out) |  |
+| `updated_dictionary` | `table` |  |
+| `added_entry` | `json` |  |
+| `feedback` | `string` |  |
+
+### `flowgraph.glossary.match`
+
+**Glossary Match** — Glossary Table で text を照合し、一致エントリと captures を取り出す。exec 分岐可能。Stateful
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `text` | `string` | — |  |
+| `dictionary` | `table` | `[]` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_match` | `exec` (out) |  |
+| `on_no_match` | `exec` (out) |  |
+| `matched_entries` | `list<json>` |  |
+| `matched_count` | `int` |  |
+| `captures` | `list<list<string>>` |  |
+| `first_replacement` | `string` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `match_policy` | `string` | `"first"` |  | first / all / longest |
+| `anchor` | `string` | `"anywhere"` |  | anywhere / prefix / full |
+
+### `flowgraph.glossary.replace`
+
+**Glossary Replace** — Glossary Table（11 カラム）で content を literal(AC) + regex 統合で逐次置換。Stateful（AC/Regex キャッシュ）
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `content` | `string` | — |  |
+| `dictionary` | `table` | `[]` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `string` |  |
+| `applied_count` | `int` |  |
 
 ## http
 

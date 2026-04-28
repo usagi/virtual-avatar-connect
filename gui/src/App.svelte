@@ -22,6 +22,7 @@
  import './lib/theme.svelte';
 
  import NowTab from './lib/tabs/NowTab.svelte';
+ import LiveTab from './lib/tabs/LiveTab.svelte';
  import ModesTab from './lib/tabs/ModesTab.svelte';
  import ResourcesTab from './lib/tabs/ResourcesTab.svelte';
  import SettingsTab from './lib/tabs/SettingsTab.svelte';
@@ -112,6 +113,8 @@
   <main class="vac-main-surface min-w-0 flex-1 px-4 py-4 lg:px-6">
    {#if tabNavStore.active === 'now'}
     <NowTab />
+   {:else if tabNavStore.active === 'live'}
+    <LiveTab />
    {:else if tabNavStore.active === 'modes'}
     <ModesTab />
    {:else if tabNavStore.active === 'flowgraph'}

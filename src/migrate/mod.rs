@@ -312,7 +312,7 @@ position = [80, 200]\n\
 \n\
 [[nodes]]\n\
 id = \"dict\"\n\
-feature = \"flowgraph.dictionary.replace\"\n\
+feature = \"flowgraph.glossary.replace\"\n\
 position = [400, 200]\n\
 # TODO: v1 の dictionary_files / regex_files をここに配線する必要があるが、\n\
 # 現状 `list<json>` を構築できる literal ノードが未整備のため空辞書のまま。\n\

@@ -470,7 +470,7 @@ mod tests {
 					key: "sample".into(),
 					path: tsv_path.clone(),
 					label: Some("Sample".into()),
-					role: Some("dictionary".into()),
+					role: Some("glossary".into()),
 					editable: true,
 					quick_add: None,
 				},

@@ -6,19 +6,19 @@
 # 流れ:
 #   1. web_input が発火したタイミングで flowgraph.table.load_tsv が
 #      flowgraph.example/dictionary/commands.tsv を Table として読み込む
-#   2. ingress.web_input の content を flowgraph.dictionary.replace に流す
+#   2. ingress.web_input の content を flowgraph.glossary.replace に流す
 #   3. 置換結果を util.log に出す
 #
 # 実運用の発展形:
 #   - commands.tsv の代わりに辞書本体（dictionary.arknights.dict.tsv など）を指定
-#   - Table は flowgraph.dictionary.learn / .forget で更新し、flowgraph.table.write_tsv で永続化
+#   - Table は flowgraph.glossary.learn / .forget で更新し、flowgraph.table.write_tsv で永続化
 #   - state.latch へ格納したければ flowgraph.table.to_json を経由して List<Json> に変換
 # =========================================================================
 
 [meta]
-title = "Dictionary basic replace"
+title = "Glossary basic replace"
 description = "TSV を Table として読み込み、web_input のテキストを辞書置換してログに出す最小サンプル"
-tags = ["example", "dictionary", "table", "tsv", "eta"]
+tags = ["example", "glossary", "table", "tsv", "eta"]
 
 
 # ---- 辞書ファイル path ----
@@ -49,7 +49,7 @@ position = [80, 340]
 # ---- 辞書置換 ----
 [[nodes]]
 id = "replace"
-feature = "flowgraph.dictionary.replace"
+feature = "flowgraph.glossary.replace"
 position = [600, 320]
 
 # ---- 結果ログ ----

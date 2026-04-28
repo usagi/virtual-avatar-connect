@@ -237,7 +237,7 @@
  <header class="mb-2 flex flex-wrap items-center gap-2">
   <h3 class="text-xs font-semibold">Live Quick-Add</h3>
   <span class="opacity-60">
-   `dictionary.learn` ノードに 1-shot trigger を発火して配信中に即語録を追加します。
+   `glossary.learn` ノードに 1-shot trigger を発火して配信中に即語録を追加します。
   </span>
   {#if quickAddTables.length > 1}
    <select
