@@ -75,11 +75,12 @@ flowchart LR
 
 `run()` の最終盤では、以下の順で片付ける。
 
-1. `managed_app::stop_all_graceful(registry, 2_000)`（= `run_with` 子プロセス群を WM_CLOSE → grace → TerminateProcess で畳む）
-2. `ingress_handles.twitch[*].finish()` / `flowgraph_voice_handles[*].finish()`
-3. `ingress_handles.eventsub[*].abort()` / `ai_handles[*].abort()`
-4. `libretranslate.stop()`（ManagedApp 経由で既に落ちている可能性が高いが、個別起動ケースに備えて保険）
-5. `Ok(())` で return → プロセス終了
+1. `managed_app::stop_all_graceful(registry)`（= `run_with` 子プロセス群を WM_CLOSE → grace → TerminateProcess で畳む）
+2. motion handles を `finish_all()` で停止する。
+3. bridge handles を `finish_all()` で停止する。
+4. `libretranslate.stop()`（ManagedApp 経由で既に落ちている可能性が高いが、個別起動ケースに備えて timeout 付き保険）
+5. `ingress_handles.eventsub[*].abort()` / `ai_handles[*].abort()`
+6. `Ok(())` で return → プロセス終了
 
 ### 2.5 GUI 側
 
@@ -106,24 +107,12 @@ flowchart LR
 
 ### 3.2 前提となる事前リファクタ（ε-2a）
 
-現 [src/lib.rs](../../src/lib.rs) の `run()` は「init → serve → cleanup」が 1 本の関数に混ざっている。Tauri の `.setup()` からは `serve` だけを別スレッドで回したいので、以下の抽出を先に行う:
+現実装では標準起動準備を [src/bootstrap.rs](../../src/bootstrap.rs)、常駐 runtime 本体を [src/app_core/](../../src/app_core/) に分離済み。Tauri の `.setup()` と CLI runner が同じ boot 経路を共有できるよう、`AppCore` は次の runner 向け API を持つ:
 
 ```rust
-pub struct AppCore {
-    pub conf: Conf,
-    pub state: SharedState,
-    pub shutdown: Arc<ShutdownBroker>,
-    pub ai_handles: Vec<JoinHandle<()>>,
-    pub ingress_handles: IngressHandles,
-    pub flowgraph_voice_handles: Vec<VoiceHandle>,
-    pub control_api_runtime: ControlApiRuntime,
-    pub flowgraph_web_input_endpoints: Arc<Vec<FlowgraphWebInputEndpoint>>,
-    pub flowgraph_trigger: Arc<Option<TriggerHandle>>,
-    pub web_input_registry: Arc<WebInputRegistry>,
-}
-
 impl AppCore {
     pub async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<Self> { .. }
+    pub fn runtime_handle(&self) -> AppCoreRuntimeHandle { .. }
     pub async fn run(self) -> AppCoreRunResult { .. /* serve + cleanup */ }
 }
 ```
@@ -138,20 +127,20 @@ pub async fn run() -> Result<()> {
 }
 ```
 
-そして Tauri bin は `.setup()` の前に `AppCore::boot`、runtime task で `core.run()`、`on_window_event(CloseRequested)` や tray の `終了` で `ShutdownBroker` を trigger する構造に載せる。`serve` と `cleanup` の順序制御は `AppCore` 内部へ閉じる。
+そして desktop runner は `.setup()` の前に `AppCore::boot`、runtime task で `core.run()`、tray の `終了` や GUI の終了ボタンで `ShutdownBroker` を trigger する構造に載せる。window close は終了ではなく hide とし、tray 常駐を維持する。`serve` と `cleanup` の順序制御は `AppCore` 内部へ閉じる。
 
-### 3.3 Tauri bin の追加（ε-2b）
+### 3.3 Tauri bin の追加（ε-2b, 実装済み）
 
-- [Cargo.toml] に `[[bin]]` を追加して `virtual-avatar-connect-tauri` を定義。
-- `cargo features`: `tauri = ["dep:tauri"]` を default off に。
+- [Cargo.toml] に `virtual-avatar-connect-cli` / `virtual-avatar-connect-desktop` の 2 runner を定義。
+- `cargo features`: GUI 同梱は `embed-gui` を使う。
 - Windows では `#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]` を付けて、リリースビルド時はコンソールを出さない。dev ビルドでは付けないので開発中は従来通りログが流れる。
-- Tauri window の初期 URL は `http://127.0.0.1:<actix port>`。既存の GUI 静的配信（`gui_dist_path`）をそのまま見せる。
-- `on_window_event(CloseRequested)`: `api.prevent_close()` で 1 段止めて runtime handle の `shutdown.trigger(Tauri)` を呼ぶ。cleanup は runtime task 側の `core.run()` に閉じ、完了後に `app.exit(0)` へ進める。
+- Tauri window の初期 URL は `runtime_handle()` から得た loopback `/gui/`。既存の GUI 静的配信（`gui_dist_path` / `embed-gui`）をそのまま見せる。
+- `on_window_event(CloseRequested)`: `api.prevent_close()` で 1 段止めて window を hide する。終了は tray の `終了` または GUI の終了ボタンへ寄せる。
 
-### 3.4 System Tray（ε-2c, オプション）
+### 3.4 System Tray（ε-2c, 実装済み）
 
-- 最小: 「Restart / Shutdown / Show Window」3 項目のみ。
-- `shutdown.trigger(Tauri)` で統一する。tray の Shutdown と window の close は同じコードパスに流す。
+- 最小: 「GUI を開く」「終了」2 項目のみ。
+- tray の `終了` は `ShutdownBroker` へ流す。window close は常駐維持のため hide のみ。
 
 ### 3.5 IPC 方針
 
