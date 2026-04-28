@@ -150,6 +150,9 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 - **noise**
   - [`flowgraph.noise.perlin_1d`](#flowgraph-noise-perlin-1d) — Perlin 1D
   - [`flowgraph.noise.perlin_2d`](#flowgraph-noise-perlin-2d) — Perlin 2D
+- **obs**
+  - [`flowgraph.obs.request`](#flowgraph-obs-request) — OBS: Request
+  - [`flowgraph.obs.set_current_program_scene`](#flowgraph-obs-set-current-program-scene) — OBS: Set Current Program Scene
 - **ocr**
   - [`flowgraph.ocr.recognize`](#flowgraph-ocr-recognize) — OCR Recognize
 - **osc**
@@ -1959,6 +1962,51 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `value` | `float` |  |
+
+## obs
+
+### `flowgraph.obs.request`
+
+**OBS: Request** — OBS WebSocket v5 に 1 request を送る汎用ノード。OBS 側で WebSocket Server を有効化しておく。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `url` | `string` | `"ws://127.0.0.1:4455"` |  |
+| `password` | `string` | `""` |  |
+| `request_type` | `string` | — |  |
+| `request_data` | `json` | `{}` |  |
+| `timeout_ms` | `int` | `3000` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `ok` | `bool` |  |
+| `status_code` | `int` |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.obs.set_current_program_scene`
+
+**OBS: Set Current Program Scene** — OBS WebSocket v5 の `SetCurrentProgramScene` を呼び、現在の番組シーンを切り替える。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `url` | `string` | `"ws://127.0.0.1:4455"` |  |
+| `password` | `string` | `""` |  |
+| `scene_name` | `string` | — |  |
+| `timeout_ms` | `int` | `3000` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `ok` | `bool` |  |
+| `status_code` | `int` |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
 
 ## ocr
 

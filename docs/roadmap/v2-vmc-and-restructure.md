@@ -242,7 +242,7 @@ flowgraph.motion.map
 * 表情トリガー — first slice: `flowgraph.vmc.extract_blendshape` で `/VMC/Ext/Blend/Val` を JSON + 型付き `found/name/value` として取り出す。例: `flowgraph.example/vmc-blendshape-trigger`
 * ジェスチャ検出 — first slice: pose 抽出ノードが `found/bone/px/py/pz/rx/ry/rz/rw` を出すため、既存の vec / math / compare / edge 系へ直結可能
 * AI 入力 — first slice: `flowgraph.channel.emit` で AI ペルソナの `observe.triggers` 対象チャンネルへ motion event を投入する。例: `flowgraph.example/vmc-ai-mode-control`
-* 配信制御 — first slice: motion trigger から `flowgraph.mode.transit` で Runtime Mode を切り替える。OBS 等の配信アプリ直制御は Phase ρ の `flowgraph.obs.*` へ接続する
+* 配信制御 — first slice: motion trigger から `flowgraph.mode.transit` で Runtime Mode を切り替え、`flowgraph.obs.set_current_program_scene` で OBS scene を切り替える。例: `flowgraph.example/vmc-ai-mode-control` / `flowgraph.example/vmc-obs-scene-control`
 
 ---
 

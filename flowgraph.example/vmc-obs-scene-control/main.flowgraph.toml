@@ -1,0 +1,134 @@
+# Phase M5 / Phase sigma first slice:
+# VMC 表情トリガーから OBS の現在シーンを切り替える例。
+#
+# 前提:
+# - OBS Studio 側で WebSocket Server を有効化する。
+# - 既定 URL は `ws://127.0.0.1:4455`。
+# - OBS WebSocket にパスワードを設定している場合は `obs_password` を差し替える。
+#
+# この例では `/VMC/Ext/Blend/Val` の `Joy > 0.7` を検出したとき、
+# `Scene-Gaming` へ切り替える。
+
+[meta]
+title = "vmc obs scene control demo"
+description = "VMC BlendShape trigger -> OBS SetCurrentProgramScene"
+tags = ["example", "vmc", "obs", "scene", "streaming", "trigger"]
+
+[[nodes]]
+id = "vmc_in"
+feature = "flowgraph.ingress.vmc_udp"
+position = [80, 140]
+properties.bind = "127.0.0.1:39543"
+properties.fixed_channel = ""
+
+[[nodes]]
+id = "parse"
+feature = "flowgraph.motion.vmc_parse"
+position = [320, 140]
+
+[[nodes]]
+id = "extract_joy"
+feature = "flowgraph.vmc.extract_blendshape"
+position = [560, 140]
+
+[[nodes]]
+id = "joy_name"
+feature = "flowgraph.literal.string"
+position = [560, 300]
+properties.value = "Joy"
+
+[[nodes]]
+id = "threshold"
+feature = "flowgraph.literal.float"
+position = [800, 300]
+properties.value = 0.7
+
+[[nodes]]
+id = "is_active"
+feature = "flowgraph.compare.float_gt"
+position = [800, 140]
+
+[[nodes]]
+id = "gate"
+feature = "flowgraph.flow.gate"
+position = [1040, 140]
+
+[[nodes]]
+id = "obs_url"
+feature = "flowgraph.literal.string"
+position = [1040, 320]
+properties.value = "ws://127.0.0.1:4455"
+
+[[nodes]]
+id = "obs_password"
+feature = "flowgraph.literal.string"
+position = [1040, 400]
+properties.value = ""
+
+[[nodes]]
+id = "scene_name"
+feature = "flowgraph.literal.string"
+position = [1040, 480]
+properties.value = "Scene-Gaming"
+
+[[nodes]]
+id = "obs_scene"
+feature = "flowgraph.obs.set_current_program_scene"
+position = [1280, 140]
+
+[[nodes]]
+id = "log_obs_error"
+feature = "flowgraph.util.log"
+position = [1520, 220]
+
+[[edges]]
+from = "vmc_in:exec_out"
+to = "gate:exec_in"
+
+[[edges]]
+from = "vmc_in:content"
+to = "parse:payload_b64"
+
+[[edges]]
+from = "parse:frame"
+to = "extract_joy:frame"
+
+[[edges]]
+from = "joy_name:value"
+to = "extract_joy:blendshape_name"
+
+[[edges]]
+from = "extract_joy:value"
+to = "is_active:a"
+
+[[edges]]
+from = "threshold:value"
+to = "is_active:b"
+
+[[edges]]
+from = "is_active:result"
+to = "gate:open"
+
+[[edges]]
+from = "gate:exec_out"
+to = "obs_scene:exec_in"
+
+[[edges]]
+from = "obs_url:value"
+to = "obs_scene:url"
+
+[[edges]]
+from = "obs_password:value"
+to = "obs_scene:password"
+
+[[edges]]
+from = "scene_name:value"
+to = "obs_scene:scene_name"
+
+[[edges]]
+from = "obs_scene:on_error"
+to = "log_obs_error:exec_in"
+
+[[edges]]
+from = "obs_scene:error"
+to = "log_obs_error:value"

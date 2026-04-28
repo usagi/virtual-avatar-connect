@@ -320,6 +320,8 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::motion_vmc::MotionFilterNode));
 	r.register_pure(Arc::new(nodes::motion_vmc::MotionMapNode));
 	r.register_effectful(Arc::new(nodes::osc_send::OscSendNode));
+	r.register_effectful(Arc::new(nodes::obs::ObsRequestNode));
+	r.register_effectful(Arc::new(nodes::obs::ObsSetCurrentProgramSceneNode));
 	r.register_effectful(Arc::new(nodes::vmc_send::VmcSendBonePosNode));
 	r.register_effectful(Arc::new(nodes::vmc_send::VmcSendRootPosNode));
 	r.register_pure(Arc::new(nodes::vmc_extract::VmcExtractBonePosNode));
@@ -471,6 +473,8 @@ mod tests {
 			"flowgraph.motion.filter",
 			"flowgraph.motion.map",
 			"flowgraph.osc.send",
+			"flowgraph.obs.request",
+			"flowgraph.obs.set_current_program_scene",
 			"flowgraph.vmc.send_bone_pos",
 			"flowgraph.vmc.send_root_pos",
 			"flowgraph.vmc.extract_bone_pos",

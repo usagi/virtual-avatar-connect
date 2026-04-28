@@ -77,4 +77,11 @@ mod tests {
 		let ok = load_fixture_program(&dir).expect("load");
 		let _ = ok.program;
 	}
+
+	#[tokio::test]
+	async fn vmc_obs_scene_control_example_loads() {
+		let dir = example_dir("vmc-obs-scene-control");
+		let ok = load_fixture_program(&dir).expect("load");
+		let _ = ok.program;
+	}
 }

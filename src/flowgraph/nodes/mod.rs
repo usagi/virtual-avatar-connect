@@ -72,6 +72,7 @@ pub mod logic;
 pub mod math;
 pub mod mode;
 pub mod motion_vmc;
+pub mod obs;
 pub mod ocr;
 pub mod osc_send;
 pub mod vmc_send;

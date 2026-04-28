@@ -183,7 +183,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] M-3 feat(web_interface,gui): Control API `GET /api/v1/control/vmc/status` + runtime bind / forward add/remove + Resources GUI 管理。
 - [x] M-4a feat(flowgraph,motion,deps): `flowgraph.motion.vmc_parse`（Base64→OSC→JSON）+ Phase ρ 先取り `flowgraph.osc.send`（UDP）+ `rosc` + `flowgraph::fixture_runner` 最小 + `src/app_core/`（Step 7 一段）
 - [x] M-4 feat(flowgraph): `MotionFrame` 第一級型 + `motion_frame` ソケット（`json` と coerce 往復）+ `flowgraph.motion.vmc_parse` / `filter` / `map`（ワイヤ表現は `byte_len` + `osc_messages`。**head_pose 等の意味 IR**は M5 以降 / `v2-vmc` §M4 参照）
-- [ ] M-5 docs+flowgraph: 用途拡張の first slice として `flowgraph.vmc.extract_blendshape` と型付き pose / blendshape 出力、`flowgraph.example/vmc-blendshape-trigger` / `vmc-ai-mode-control` を追加（表情・gesture トリガー、AI 入力、Runtime Mode 制御の土台）。残りは OBS 等の配信アプリ直制御ノード化。
+- [x] M-5 docs+flowgraph: 用途拡張の first slice として `flowgraph.vmc.extract_blendshape` と型付き pose / blendshape 出力、`flowgraph.example/vmc-blendshape-trigger` / `vmc-ai-mode-control` / `vmc-obs-scene-control`、`flowgraph.obs.request` / `flowgraph.obs.set_current_program_scene` を追加（表情・gesture トリガー、AI 入力、Runtime Mode 制御、OBS scene 制御の土台）。
 
 ### v2 crate / runner / GUI 同梱（再構造化メタ）
 
@@ -256,7 +256,7 @@ Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・
 外部 API 系の横串拡張フェーズ。既存 `[src/flowgraph/nodes/twitch.rs](../src/flowgraph/nodes/twitch.rs)` の Helix / OAuth 基盤を流用しつつ、HTTP 汎用ノード / OBS WebSocket / system metrics を同じ phase に詰める。
 
 - [ ] `flowgraph.http.request`（GET/POST/PUT/DELETE/PATCH、headers / JSON body / timeout / status / body / retry policy）
-- [ ] `flowgraph.obs.*`（`obws` crate 想定、scene switch / source visibility / record start-stop / stream start-stop / current scene / studio mode transition）
+- [ ] `flowgraph.obs.*`（first slice: `obs.request` / `obs.set_current_program_scene`。残り: source visibility / record start-stop / stream start-stop / current scene / studio mode transition）
 - [ ] `flowgraph.system.*`（`sysinfo` crate、cpu_usage / mem_used / mem_total / load_avg / process_list。GPU は NVML 依存で後回し）
 - [ ] `flowgraph.twitch.*` 拡張（ユーザ要求分）: `raid_start` / `raid_cancel` / `ad_run`（1 分広告）/ `chat_settings_update`（subscribers_only / followers_only / emote_only / slow / unique）/ `prediction_create` / `prediction_end` / `poll_create` / `poll_end` / `shield_mode_update`（防御モード）/ `stream_marker_create`（説明付き対応）/ `clip_create` / `channel_info_update` / `goals_get` / `chat_clear` / チャット履歴リフレッシュ
 - open question: ユーザ要求の「RAID を 1 時間停止する」は Twitch 側に 1:1 の Helix エンドポイントが無く、`blocked_terms` 運用か独自 state で "incoming raid 遮断" を表現する必要あり → phase doc 内で TBD として扱う
