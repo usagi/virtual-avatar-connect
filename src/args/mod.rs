@@ -62,6 +62,14 @@ pub struct Args {
 	/// `--migrate` で warning も error 扱いとし、1 件でも出たら exit 1 する。
 	#[arg(long)]
 	pub migrate_strict: bool,
+
+	/// Flowgraph ディレクトリをロードし、1-shot fixture 実行して終了します（LF-3a）。
+	#[arg(long)]
+	pub flowgraph_test_dir: Option<String>,
+
+	/// `--flowgraph-test-dir` の結果を JSON で出力します。
+	#[arg(long)]
+	pub flowgraph_test_json: bool,
 }
 
 // note: Args の impl 群はサブモジュールに分離されています。

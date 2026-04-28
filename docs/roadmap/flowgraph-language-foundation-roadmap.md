@@ -140,6 +140,19 @@ Flowgraph を「プログラム」として扱うための検証と観測。
 - 次に GUI の watch / trigger history / data pull tree
 - E2E は GUI 操作ではなく Flowgraph runtime の言語テストを主にする
 
+### LF-3a CLI fixture runner / trace JSON ✅
+
+既存の `flowgraph::fixture_runner` を CLI から呼べるようにし、Flowgraph ディレクトリを 1-shot 実行して summary / trace を出力する。
+
+```powershell
+cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-dir flowgraph.example/lambda-demo
+cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-dir flowgraph.example/lambda-demo --flowgraph-test-json
+```
+
+初期版は `FlowgraphProgram::execute()` による 1-shot 実行のみを扱う。
+出力は `generation`, `node_count`, `trace`, `stored_values`, `exec_count`, `pure_evaluations`, `cache_hits`, `cache_misses`。
+外部 I/O mock、trigger sequence、expected assertion は LF-3b 以降で追加する。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。
@@ -199,7 +212,7 @@ node signature / library signature / schema から manual と GUI catalog を生
 
 - [~] LF-1 Schema / Contract
 - [~] LF-2 Capability / Effect
-- [ ] LF-3 Testing / Debugger
+- [~] LF-3 Testing / Debugger
 - [ ] LF-4 Module / Package System
 - [ ] LF-5 Generic / Type Parameter
 - [ ] LF-6 Error Model

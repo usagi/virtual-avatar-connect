@@ -44,6 +44,40 @@ impl Args {
 			}
 		}
 
+		if let Some(dir) = &self.flowgraph_test_dir {
+			let root = std::path::PathBuf::from(dir);
+			match crate::flowgraph::fixture_runner::run_fixture_once_report(&root).await {
+				Ok(report) => {
+					if self.flowgraph_test_json {
+						println!("{}", serde_json::to_string_pretty(&report)?);
+					} else {
+						println!("Flowgraph fixture OK: {}", report.root);
+						println!("  nodes: {}", report.node_count);
+						println!("  generation: {}", report.generation);
+						println!("  trace: {} line(s)", report.trace_count);
+						println!("  stored_values: {}", report.stored_values.len());
+						println!("  cache: {} hit(s), {} miss(es)", report.cache_hits, report.cache_misses);
+					}
+					std::process::exit(0);
+				}
+				Err(e) => {
+					if self.flowgraph_test_json {
+						println!(
+							"{}",
+							serde_json::to_string_pretty(&serde_json::json!({
+								"ok": false,
+								"root": root.display().to_string(),
+								"error": e.to_string(),
+							}))?
+						);
+					} else {
+						log::error!("Flowgraph fixture 失敗: {e}");
+					}
+					std::process::exit(1);
+				}
+			}
+		}
+
 		Ok(())
 	}
 }
