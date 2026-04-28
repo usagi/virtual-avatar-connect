@@ -3,7 +3,7 @@ use crate::conf::Conf;
 use crate::state::SharedState;
 use crate::{bridges, flowgraph, shutdown, web_interface, Result};
 use actix_files::Files;
-use actix_web::dev::ServerHandle;
+use actix_web::dev::{Server, ServerHandle};
 use actix_web::web::Data;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -11,6 +11,16 @@ use std::sync::Arc;
 pub(super) async fn run_services(parts: &AppCoreParts) -> Result<()> {
 	let runtime = ServerRuntime::from_app_core(parts);
 	let shutdown = runtime.shutdown.clone();
+	let server = build_http_server(runtime)?;
+
+	spawn_http_shutdown_watcher(server.handle(), shutdown);
+
+	server.await?;
+	log::info!("《Shutdown》 actix HTTP サーバーが停止しました。");
+	Ok(())
+}
+
+fn build_http_server(runtime: ServerRuntime) -> Result<Server> {
 	let workers = runtime.workers;
 	let web_ui_address = runtime.web_ui_address.clone();
 	let server = actix_web::HttpServer::new(move || {
@@ -66,12 +76,7 @@ pub(super) async fn run_services(parts: &AppCoreParts) -> Result<()> {
 	.disable_signals()
 	.shutdown_timeout(2)
 	.run();
-
-	spawn_http_shutdown_watcher(server.handle(), shutdown);
-
-	server.await?;
-	log::info!("《Shutdown》 actix HTTP サーバーが停止しました。");
-	Ok(())
+	Ok(server)
 }
 
 fn spawn_http_shutdown_watcher(server_handle: ServerHandle, shutdown: Arc<shutdown::ShutdownBroker>) {
