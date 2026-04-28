@@ -3,6 +3,7 @@ use crate::conf::Conf;
 use crate::state::SharedState;
 use crate::{bridges, flowgraph, shutdown, web_interface, Result};
 use actix_files::Files;
+use actix_web::dev::ServerHandle;
 use actix_web::web::Data;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -86,17 +87,19 @@ pub(super) async fn run_services(parts: &AppCoreParts) -> Result<()> {
 	.shutdown_timeout(2)
 	.run();
 
-	let server_handle = server.handle();
-	let shutdown_for_server = shutdown.clone();
-	tokio::spawn(async move {
-		shutdown_for_server.wait().await;
-		log::info!("《Shutdown》 actix HTTP サーバーへの graceful stop を要求します。");
-		server_handle.stop(true).await;
-	});
+	spawn_http_shutdown_watcher(server.handle(), shutdown);
 
 	server.await?;
 	log::info!("《Shutdown》 actix HTTP サーバーが停止しました。");
 	Ok(())
+}
+
+fn spawn_http_shutdown_watcher(server_handle: ServerHandle, shutdown: Arc<shutdown::ShutdownBroker>) {
+	tokio::spawn(async move {
+		shutdown.wait().await;
+		log::info!("《Shutdown》 actix HTTP サーバーへの graceful stop を要求します。");
+		server_handle.stop(true).await;
+	});
 }
 
 #[derive(Clone)]
