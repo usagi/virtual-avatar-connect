@@ -166,6 +166,11 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.ocr.recognize`](#flowgraph-ocr-recognize) — OCR Recognize
 - **osc**
   - [`flowgraph.osc.send`](#flowgraph-osc-send) — OSC: UDP Send
+- **process**
+  - [`flowgraph.process.kill`](#flowgraph-process-kill) — Process: Kill
+  - [`flowgraph.process.running`](#flowgraph-process-running) — Process: Running
+  - [`flowgraph.process.spawn`](#flowgraph-process-spawn) — Process: Spawn
+  - [`flowgraph.process.wait`](#flowgraph-process-wait) — Process: Wait
 - **random**
   - [`flowgraph.random.normal`](#flowgraph-random-normal) — Random normal
   - [`flowgraph.random.uniform_float`](#flowgraph-random-uniform-float) — Random uniform (float)
@@ -2249,6 +2254,90 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_success` | `exec` (out) |  |
 | `on_error` | `exec` (out) |  |
 | `bytes_sent` | `int` |  |
+| `error` | `string` |  |
+
+## process
+
+### `flowgraph.process.kill`
+
+**Process: Kill** — pid または name_filter に一致する process を終了する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `pid` | `int` | `0` |  |
+| `name_filter` | `string` | `""` |  |
+| `exact` | `bool` | `false` |  |
+| `force` | `bool` | `true` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `killed_count` | `int` |  |
+| `pids` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.process.running`
+
+**Process: Running** — pid または name_filter で process の生存状態を確認する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `pid` | `int` | `0` |  |
+| `name_filter` | `string` | `""` |  |
+| `exact` | `bool` | `false` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `running` | `bool` |  |
+| `count` | `int` |  |
+| `pids` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.process.spawn`
+
+**Process: Spawn** — 外部 process を起動する。shell は介さず command + args を直接実行する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `command` | `string` | — |  |
+| `args` | `list<string>` | `[]` |  |
+| `working_dir` | `string` | `""` |  |
+| `env` | `json` | `{}` |  |
+| `wait` | `bool` | `false` |  |
+| `timeout_ms` | `int` | `0` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `pid` | `int` |  |
+| `exit_code` | `int` |  |
+| `stdout` | `string` |  |
+| `stderr` | `string` |  |
+| `error` | `string` |  |
+
+### `flowgraph.process.wait`
+
+**Process: Wait** — 指定 pid が終了するまで polling で待つ。exit_code は未取得時 -1。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `pid` | `int` | — |  |
+| `timeout_ms` | `int` | `30000` |  |
+| `poll_interval_ms` | `int` | `250` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_exit` | `exec` (out) |  |
+| `on_timeout` | `exec` (out) |  |
+| `exited` | `bool` |  |
+| `exit_code` | `int` |  |
 | `error` | `string` |  |
 
 ## random

@@ -76,6 +76,7 @@ pub mod motion_vmc;
 pub mod obs;
 pub mod ocr;
 pub mod osc_send;
+pub mod process;
 pub mod vmc_send;
 pub mod vmc_extract;
 pub mod vrchat_osc;

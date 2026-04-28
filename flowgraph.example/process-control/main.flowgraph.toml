@@ -1,0 +1,59 @@
+# Phase tau:
+# Web input をきっかけに process の生存確認を行う例。
+#
+# spawn / kill は実行環境へ副作用が強いため、この example では running のみを使う。
+
+[meta]
+title = "process control demo"
+description = "Web Input Ingress -> Process Running -> Log"
+tags = ["example", "process", "resident-app", "flowgraph"]
+
+[[nodes]]
+id = "process_in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 160]
+properties.path = "/input/process-control"
+properties.method = "POST"
+properties.body_format = "plain"
+properties.fixed_channel = "process_control_demo"
+
+[[nodes]]
+id = "name_filter"
+feature = "flowgraph.literal.string"
+position = [360, 260]
+properties.value = "virtual-avatar-connect"
+
+[[nodes]]
+id = "running"
+feature = "flowgraph.process.running"
+position = [620, 160]
+
+[[nodes]]
+id = "count_to_string"
+feature = "flowgraph.convert.int_to_string"
+position = [900, 220]
+
+[[nodes]]
+id = "log_count"
+feature = "flowgraph.util.log"
+position = [1160, 160]
+
+[[edges]]
+from = "process_in:exec_out"
+to = "running:exec_in"
+
+[[edges]]
+from = "name_filter:value"
+to = "running:name_filter"
+
+[[edges]]
+from = "running:exec_out"
+to = "log_count:exec_in"
+
+[[edges]]
+from = "running:count"
+to = "count_to_string:value"
+
+[[edges]]
+from = "count_to_string:result"
+to = "log_count:value"

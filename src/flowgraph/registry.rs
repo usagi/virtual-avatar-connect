@@ -290,6 +290,10 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_effectful(Arc::new(nodes::system::SystemMemoryNode));
 	r.register_effectful(Arc::new(nodes::system::SystemLoadAvgNode));
 	r.register_effectful(Arc::new(nodes::system::SystemProcessListNode));
+	r.register_effectful(Arc::new(nodes::process::ProcessSpawnNode));
+	r.register_effectful(Arc::new(nodes::process::ProcessRunningNode));
+	r.register_effectful(Arc::new(nodes::process::ProcessKillNode));
+	r.register_effectful(Arc::new(nodes::process::ProcessWaitNode));
 
 	// --- collection ---
 	r.register_pure(Arc::new(nodes::collection::ListLenNode));

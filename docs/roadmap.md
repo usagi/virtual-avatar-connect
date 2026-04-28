@@ -266,7 +266,7 @@ Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・
 
 OS プロセス / ウィンドウ制御ノード群。Windows を第一級 target、他 OS は degrade policy を phase doc で固定する。
 
-- [ ] `flowgraph.process.spawn` / `.kill` / `.wait` / `.running`（PID / exe 名で条件判定）
+- [x] `flowgraph.process.spawn` / `.kill` / `.wait` / `.running`（PID / exe 名で条件判定、shell を介さない command + args 実行、`flowgraph.example/process-control` 追加）
 - [ ] `flowgraph.window.enum`（現在開いているウィンドウ一覧を Table で返す）
 - [ ] `flowgraph.window.move` / `.resize` / `.minimize` / `.maximize` / `.restore` / `.close` / `.foreground`
 - [ ] `flowgraph.window.pseudo_fullscreen` / `.pseudo_fullscreen_exit`（borderless + monitor-size 化 / 元サイズ復帰）
