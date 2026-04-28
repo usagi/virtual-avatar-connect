@@ -8,13 +8,10 @@
 #   - AI は `channel_utterance = "ai"` に発話を emit する（常駐ループで独立稼働）。
 #
 # 注意（v2 進捗）:
-#   現状の v2 には **任意チャンネルを購読する ingress ノード**が未実装。
-#   AI が emit する `channel = "ai"` の ChannelDatum を Flowgraph 側で直接受ける仕組みは
-#   δ-9 以降で `flowgraph.ingress.channel` として追加予定。
-#
-#   そのため本サンプルは「Web UI で手入力した文字列を OS TTS に流す」最小構成の
-#   graph を示すに留める。AI とは直接接続していないが、将来 ingress.channel ノードで
-#   `in` を差し替えれば同じ下流（TTS 等）がそのまま使える想定。
+#   任意チャンネル購読は `flowgraph.ingress.channel_subscribe` で利用可能。
+#   本サンプルは「Web UI で手入力した文字列を OS TTS に流す」最小構成を残しているが、
+#   AI が emit する `channel = "ai"` を TTS へつなぐ場合は `in` を
+#   `channel_subscribe(channel="ai")` に差し替える。
 # =========================================================================
 
 [meta]

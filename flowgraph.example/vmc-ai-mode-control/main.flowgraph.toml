@@ -1,0 +1,169 @@
+# Phase M5: VMC 表情トリガーを AI 入力と Runtime Mode 制御へ接続する例。
+#
+# VMC UDP の `/VMC/Ext/Blend/Val` から `Joy` の値を取り出し、
+# 0.7 を超えたフレームで以下を実行する。
+#
+# - `flowgraph.channel.emit` で `channel = "user"` にイベント文を流す。
+#   AI ペルソナ側の `observe.triggers` に `"user"` が入っていれば AI 入力になる。
+# - `flowgraph.mode.transit` で Runtime Mode を `streaming` へ切り替える。
+#   実運用では `conf.toml` に `[modes.streaming]` を定義しておく。
+#
+# 注意: この例は load smoke 対象。実行には VMC UDP 入力と State 接続済みの VAC runtime が必要。
+
+[meta]
+title = "vmc ai and mode control demo"
+description = "VMC BlendShape trigger -> AI channel input + Runtime Mode transit"
+tags = ["example", "vmc", "ai", "mode", "streaming", "trigger"]
+
+[[nodes]]
+id = "vmc_in"
+feature = "flowgraph.ingress.vmc_udp"
+position = [80, 140]
+properties.bind = "127.0.0.1:39542"
+properties.fixed_channel = ""
+
+[[nodes]]
+id = "parse"
+feature = "flowgraph.motion.vmc_parse"
+position = [320, 140]
+
+[[nodes]]
+id = "extract_joy"
+feature = "flowgraph.vmc.extract_blendshape"
+position = [560, 140]
+
+[[nodes]]
+id = "joy_name"
+feature = "flowgraph.literal.string"
+position = [560, 300]
+properties.value = "Joy"
+
+[[nodes]]
+id = "threshold"
+feature = "flowgraph.literal.float"
+position = [800, 300]
+properties.value = 0.7
+
+[[nodes]]
+id = "is_active"
+feature = "flowgraph.compare.float_gt"
+position = [800, 140]
+
+[[nodes]]
+id = "branch"
+feature = "flowgraph.flow.branch"
+position = [1040, 140]
+
+[[nodes]]
+id = "ai_channel"
+feature = "flowgraph.literal.string"
+position = [1040, 360]
+properties.value = "user"
+
+[[nodes]]
+id = "ai_content"
+feature = "flowgraph.literal.string"
+position = [1040, 440]
+properties.value = "VMC expression trigger: Joy > 0.7"
+
+[[nodes]]
+id = "emit_ai_input"
+feature = "flowgraph.channel.emit"
+position = [1280, 80]
+properties.fallback_channel = "user"
+properties.auto_tag_source_actor = true
+
+[[nodes]]
+id = "streaming_mode"
+feature = "flowgraph.literal.string"
+position = [1280, 280]
+properties.value = "streaming"
+
+[[nodes]]
+id = "mode_reason"
+feature = "flowgraph.literal.string"
+position = [1280, 360]
+properties.value = "vmc_blendshape_trigger"
+
+[[nodes]]
+id = "enter_streaming"
+feature = "flowgraph.mode.transit"
+position = [1520, 240]
+
+[[nodes]]
+id = "log_emit_error"
+feature = "flowgraph.util.log"
+position = [1520, 40]
+
+[[nodes]]
+id = "log_mode_reject"
+feature = "flowgraph.util.log"
+position = [1760, 320]
+
+[[edges]]
+from = "vmc_in:exec_out"
+to = "branch:exec_in"
+
+[[edges]]
+from = "vmc_in:content"
+to = "parse:payload_b64"
+
+[[edges]]
+from = "parse:frame"
+to = "extract_joy:frame"
+
+[[edges]]
+from = "joy_name:value"
+to = "extract_joy:blendshape_name"
+
+[[edges]]
+from = "extract_joy:value"
+to = "is_active:a"
+
+[[edges]]
+from = "threshold:value"
+to = "is_active:b"
+
+[[edges]]
+from = "is_active:result"
+to = "branch:cond"
+
+[[edges]]
+from = "branch:then"
+to = "emit_ai_input:exec_in"
+
+[[edges]]
+from = "ai_channel:value"
+to = "emit_ai_input:channel"
+
+[[edges]]
+from = "ai_content:value"
+to = "emit_ai_input:content"
+
+[[edges]]
+from = "emit_ai_input:on_error"
+to = "log_emit_error:exec_in"
+
+[[edges]]
+from = "ai_content:value"
+to = "log_emit_error:value"
+
+[[edges]]
+from = "branch:then"
+to = "enter_streaming:exec_in"
+
+[[edges]]
+from = "streaming_mode:value"
+to = "enter_streaming:mode"
+
+[[edges]]
+from = "mode_reason:value"
+to = "enter_streaming:reason"
+
+[[edges]]
+from = "enter_streaming:on_reject"
+to = "log_mode_reject:exec_in"
+
+[[edges]]
+from = "enter_streaming:message"
+to = "log_mode_reject:value"

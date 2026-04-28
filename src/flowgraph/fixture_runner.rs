@@ -70,4 +70,11 @@ mod tests {
 		let ok = load_fixture_program(&dir).expect("load");
 		let _ = ok.program;
 	}
+
+	#[tokio::test]
+	async fn vmc_ai_mode_control_example_loads() {
+		let dir = example_dir("vmc-ai-mode-control");
+		let ok = load_fixture_program(&dir).expect("load");
+		let _ = ok.program;
+	}
 }
