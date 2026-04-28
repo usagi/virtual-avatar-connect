@@ -1,81 +1,12 @@
 use super::address;
-use crate::conf::Conf;
-use crate::state::SharedState;
-use crate::{bridges, flowgraph, motion, processor, shutdown, web_interface};
-use std::sync::Arc;
 
+mod parts;
 mod run;
 
+pub(in crate::app_core) use parts::{AppCoreParts, AppCoreServices, AppCoreTasks};
 pub(crate) use run::{AppCoreRunResult, AppCoreRuntimeHandle};
 
-pub(super) struct AppCoreParts {
-	pub(super) conf: Conf,
-	pub(super) state: SharedState,
-	pub(super) shutdown: Arc<shutdown::ShutdownBroker>,
-	pub(super) tasks: AppCoreTasks,
-	pub(super) services: AppCoreServices,
-}
-
-pub(super) struct AppCoreTasks {
-	pub(super) ai_handles: Vec<tokio::task::JoinHandle<()>>,
-	pub(super) ingress_handles: processor::ingress::IngressHandles,
-	pub(super) motion_handles: motion::MotionHandles,
-}
-
-pub(super) struct AppCoreServices {
-	pub(super) web_input_registry: Arc<web_interface::web_input::WebInputRegistry>,
-	pub(super) control_api_runtime: web_interface::control::ControlApiRuntime,
-	pub(super) flowgraph_web_input_endpoints: Arc<Vec<bridges::web_input::FlowgraphWebInputEndpoint>>,
-	pub(super) flowgraph_trigger: Arc<Option<flowgraph::node::TriggerHandle>>,
-}
-
-impl AppCoreTasks {
-	pub(super) fn new(
-		ai_handles: Vec<tokio::task::JoinHandle<()>>,
-		ingress_handles: processor::ingress::IngressHandles,
-		motion_handles: motion::MotionHandles,
-	) -> Self {
-		Self {
-			ai_handles,
-			ingress_handles,
-			motion_handles,
-		}
-	}
-}
-
-impl AppCoreServices {
-	pub(super) fn new(
-		web_input_registry: Arc<web_interface::web_input::WebInputRegistry>,
-		control_api_runtime: web_interface::control::ControlApiRuntime,
-		flowgraph_web_input_endpoints: Arc<Vec<bridges::web_input::FlowgraphWebInputEndpoint>>,
-		flowgraph_trigger: Arc<Option<flowgraph::node::TriggerHandle>>,
-	) -> Self {
-		Self {
-			web_input_registry,
-			control_api_runtime,
-			flowgraph_web_input_endpoints,
-			flowgraph_trigger,
-		}
-	}
-}
-
 impl AppCoreParts {
-	pub(super) fn new(
-		conf: Conf,
-		state: SharedState,
-		shutdown: Arc<shutdown::ShutdownBroker>,
-		tasks: AppCoreTasks,
-		services: AppCoreServices,
-	) -> Self {
-		Self {
-			conf,
-			state,
-			shutdown,
-			tasks,
-			services,
-		}
-	}
-
 	pub(super) fn runtime_handle(&self) -> AppCoreRuntimeHandle {
 		let address = address::normalize_loopback_address(self.conf.get_web_ui_address());
 		AppCoreRuntimeHandle::new(format!("http://{address}/gui/"), self.shutdown.clone())
