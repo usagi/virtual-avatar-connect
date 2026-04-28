@@ -2,6 +2,7 @@ use crate::app_core::AppCore;
 use crate::shutdown::{ShutdownBroker, ShutdownReason};
 use crate::Result;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::task::JoinHandle;
 
 pub(super) fn build_tokio_runtime() -> Result<Arc<tokio::runtime::Runtime>> {
@@ -33,4 +34,18 @@ pub(super) fn spawn_vac_runtime_task(
 			app_handle.exit(0);
 		}
 	})
+}
+
+pub(super) fn wait_for_vac_runtime_shutdown(runtime: &Arc<tokio::runtime::Runtime>, serve_handle: JoinHandle<()>, timeout: Duration) {
+	match runtime.block_on(tokio::time::timeout(timeout, serve_handle)) {
+		Ok(Ok(())) => {
+			log::info!("《Desktop》 VAC runtime は正常に停止しました。");
+		}
+		Ok(Err(e)) => {
+			log::error!("《Desktop》 VAC runtime task の終了待機に失敗しました: {e}");
+		}
+		Err(_) => {
+			log::warn!("《Desktop》 VAC runtime の停止待機が timeout しました: {timeout:?}");
+		}
+	}
 }

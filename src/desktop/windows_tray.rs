@@ -1,6 +1,6 @@
 use crate::shutdown::ShutdownReason;
 use crate::Result;
-use runtime::{build_tokio_runtime, spawn_vac_runtime_task};
+use runtime::{build_tokio_runtime, spawn_vac_runtime_task, wait_for_vac_runtime_shutdown};
 use ui::setup_desktop_ui;
 
 mod runtime;
@@ -27,9 +27,10 @@ pub fn run() -> Result<()> {
 		.map_err(anyhow::Error::from)?;
 
 	shutdown.trigger(ShutdownReason::Desktop);
-	let _ = runtime_for_after_run.block_on(tokio::time::timeout(
-		std::time::Duration::from_secs(DESKTOP_RUNTIME_SHUTDOWN_WAIT_SECONDS),
+	wait_for_vac_runtime_shutdown(
+		&runtime_for_after_run,
 		serve_handle,
-	));
+		std::time::Duration::from_secs(DESKTOP_RUNTIME_SHUTDOWN_WAIT_SECONDS),
+	);
 	Ok(())
 }
