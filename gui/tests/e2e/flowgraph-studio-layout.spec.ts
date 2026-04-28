@@ -39,4 +39,17 @@ test.describe('GUI redesign: Flowgraph Studio layout', () => {
   await dialog.getByRole('button', { name: 'Close' }).click();
   await expect(dialog).toBeHidden();
  });
+
+ test('Flowgraph Studio shows node effect metadata in the palette', async ({ page }) => {
+  await page.goto(`/gui/${tokenQuery()}#flowgraph`);
+
+  const paletteSearch = page.getByPlaceholder(/検索（feature \/ title）/);
+  await expect(paletteSearch).toBeVisible({ timeout: 15_000 });
+  await paletteSearch.fill('util.log');
+
+  const logEntry = page.getByTestId('palette-entry-flowgraph_util_log');
+  await expect(logEntry).toBeVisible();
+  await expect(logEntry.getByText('Effect', { exact: true })).toBeVisible();
+  await expect(logEntry.getByText('Trace', { exact: true })).toBeVisible();
+ });
 });

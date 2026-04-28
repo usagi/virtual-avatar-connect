@@ -11,6 +11,7 @@
  import { SvelteSet } from 'svelte/reactivity';
  import { flowgraphStore } from '../flowgraphStore.svelte';
  import type { FlowgraphNodeSpec } from '../types';
+ import { capabilitySummary, effectClassLabel, effectTooltip } from './effectMetadata';
 
  const LS_HIDDEN = 'vac-flowgraph-palette-hidden-categories';
 
@@ -18,6 +19,20 @@
   const parts = feature.split('.');
   if (parts.length <= 1) return feature;
   return parts[parts.length - 1];
+ }
+
+ function effectBadgeClass(effectClass: FlowgraphNodeSpec['effect_class']): string {
+  const base = 'rounded border px-1 py-px text-[0.58rem] font-semibold uppercase leading-none';
+  switch (effectClass) {
+   case 'pure':
+    return `${base} border-emerald-500/40 bg-emerald-500/10 text-emerald-700`;
+   case 'stateful':
+    return `${base} border-sky-500/40 bg-sky-500/10 text-sky-700`;
+   case 'effectful':
+    return `${base} border-amber-500/50 bg-amber-500/10 text-amber-700`;
+   default:
+    return `${base} border-surface-300-700 bg-surface-100-900 text-surface-600-400`;
+  }
  }
 
  let search = $state('');
@@ -133,7 +148,7 @@
         <button
          type="button"
          class="w-full cursor-pointer rounded px-2 py-1 text-left hover:bg-surface-200-800"
-         title={spec.feature + (spec.description ? `\n${spec.description}` : '')}
+         title={[spec.feature, spec.description, effectTooltip(spec)].filter(Boolean).join('\n')}
          draggable="true"
          data-testid={`palette-entry-${spec.feature.replace(/[^a-zA-Z0-9_-]/g, '_')}`}
          onclick={() => onAdd(spec)}
@@ -142,6 +157,14 @@
          <div class="flex items-baseline justify-between gap-1">
           <span class="truncate font-medium">{spec.title}</span>
           <span class="truncate text-[0.65rem] opacity-50">{shortFeature(spec.feature)}</span>
+         </div>
+         <div class="mt-0.5 flex min-w-0 items-center gap-1">
+          <span class={effectBadgeClass(spec.effect_class)}>
+           {effectClassLabel(spec.effect_class)}
+          </span>
+          {#if capabilitySummary(spec)}
+           <span class="truncate text-[0.58rem] opacity-55">{capabilitySummary(spec)}</span>
+          {/if}
          </div>
         </button>
        </li>

@@ -17,6 +17,7 @@
  import { quantityFamilyClassFromDim, quantityPortTooltip } from '../quantityDisplay';
  import { toastStore } from '../toasts.svelte';
  import type { FlowgraphNodeSpec, FlowgraphPortSpec } from '../types';
+ import { capabilitySummary, effectClassLabel, effectTooltip } from './effectMetadata';
  import FlowgraphTriggerDialog from './FlowgraphTriggerDialog.svelte';
 
  type Data = {
@@ -113,7 +114,7 @@
  class="flowgraph-node"
  class:selected
  class:missing-spec={!spec}
- title={data.feature}
+ title={[data.feature, effectTooltip(spec)].filter(Boolean).join('\n')}
  data-testid={`flowgraph-node-${data.nodeId}`}
  role="button"
  tabindex="0"
@@ -147,6 +148,21 @@
   <div class="feature">{shortFeature(data.feature)}</div>
  </div>
  <div class="id">#{data.nodeId}</div>
+ {#if spec?.effect_class}
+  <div class="effects">
+   <span
+    class="effect-badge"
+    class:pure={spec.effect_class === 'pure'}
+    class:stateful={spec.effect_class === 'stateful'}
+    class:effectful={spec.effect_class === 'effectful'}
+   >
+    {effectClassLabel(spec.effect_class)}
+   </span>
+   {#if capabilitySummary(spec, 2)}
+    <span class="capability-badge">{capabilitySummary(spec, 2)}</span>
+   {/if}
+  </div>
+ {/if}
  {#if data.groupBadges?.length}
   <div class="groups">
    {#each data.groupBadges.slice(0, 2) as group (group.id)}
@@ -228,6 +244,7 @@
   grid-template-areas:
     'head head'
     'id id'
+    'effects effects'
     'groups groups'
     'inputs outputs'
     'warn warn';
@@ -331,6 +348,52 @@
   flex-wrap: wrap;
   gap: 3px;
   padding: 0 8px 4px;
+ }
+ .effects {
+  grid-area: effects;
+  display: flex;
+  min-width: 0;
+  gap: 3px;
+  padding: 0 8px 3px;
+ }
+ .effect-badge,
+ .capability-badge {
+  max-width: 125px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 9px;
+  line-height: 1.35;
+ }
+ .effect-badge {
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(148, 163, 184, 0.12);
+  color: rgb(71, 85, 105);
+  font-weight: 700;
+  text-transform: uppercase;
+ }
+ .effect-badge.pure {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.12);
+  color: rgb(4, 120, 87);
+ }
+ .effect-badge.stateful {
+  border-color: rgba(14, 165, 233, 0.45);
+  background: rgba(14, 165, 233, 0.12);
+  color: rgb(3, 105, 161);
+ }
+ .effect-badge.effectful {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(245, 158, 11, 0.14);
+  color: rgb(180, 83, 9);
+ }
+ .capability-badge {
+  min-width: 0;
+  flex: 1 1 auto;
+  background: rgba(100, 116, 139, 0.1);
+  color: rgba(71, 85, 105, 0.95);
  }
  .groups span {
   max-width: 120px;

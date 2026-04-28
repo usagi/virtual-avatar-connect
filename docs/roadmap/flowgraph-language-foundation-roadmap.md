@@ -97,6 +97,12 @@ Pure / Stateful / Effectful の大分類に加えて、具体的な権限と eff
 `capabilities` は現時点では feature / category からの保守的な推定であり、policy enforcement は行わない。
 GUI 表示、graph capability summary、fixture test の mock capability 設計に使うための read-only metadata とする。
 
+### LF-2b GUI effect visibility ✅
+
+Node Palette と Flowgraph Node Card に `effect_class` と capability summary を表示する。
+ユーザーは node を追加する前後で、Pure / Stateful / Effectful と外部 I/O の種別を確認できる。
+これは hard permission UI ではなく、LF-2a metadata の可視化である。
+
 ## 4. LF-3 Testing / Debugger
 
 Flowgraph を「プログラム」として扱うための検証と観測。
