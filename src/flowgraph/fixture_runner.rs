@@ -23,20 +23,14 @@ pub enum FixtureError {
 /// `flowgraph_dir` をロードする。診断付き失敗は [`FixtureError::Load`]。
 pub fn load_fixture_program(root: &Path) -> Result<FixtureLoadOk, FixtureError> {
 	let report = load_flowgraph_dir(root).map_err(FixtureError::Load)?;
-	Ok(FixtureLoadOk {
-		program: report.program,
-	})
+	Ok(FixtureLoadOk { program: report.program })
 }
 
 /// ロード後に `execute` を 1 回試行する（headless `ExecCtx`）。
 pub async fn load_and_execute_once(root: &Path) -> Result<ProgramRun, FixtureError> {
 	let mut fixture = load_fixture_program(root)?;
 	let mut ctx = ExecCtx::default();
-	fixture
-		.program
-		.execute(&mut ctx)
-		.await
-		.map_err(FixtureError::Execute)
+	fixture.program.execute(&mut ctx).await.map_err(FixtureError::Execute)
 }
 
 #[cfg(test)]
@@ -45,9 +39,7 @@ mod tests {
 	use std::path::PathBuf;
 
 	fn example_dir(name: &str) -> PathBuf {
-		PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-			.join("flowgraph.example")
-			.join(name)
+		PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("flowgraph.example").join(name)
 	}
 
 	#[tokio::test]
@@ -68,6 +60,13 @@ mod tests {
 	#[tokio::test]
 	async fn osc_udp_ingress_example_loads() {
 		let dir = example_dir("osc-udp-ingress");
+		let ok = load_fixture_program(&dir).expect("load");
+		let _ = ok.program;
+	}
+
+	#[tokio::test]
+	async fn vmc_blendshape_trigger_example_loads() {
+		let dir = example_dir("vmc-blendshape-trigger");
 		let ok = load_fixture_program(&dir).expect("load");
 		let _ = ok.program;
 	}

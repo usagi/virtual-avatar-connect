@@ -27,6 +27,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.compare.int_lt`](#flowgraph-compare-int-lt) — Int <
   - [`flowgraph.compare.neq`](#flowgraph-compare-neq) — Not Equal
 - **convert**
+  - [`flowgraph.convert.bool_to_string`](#flowgraph-convert-bool-to-string) — Bool → String
   - [`flowgraph.convert.float_to_int`](#flowgraph-convert-float-to-int) — Float → Int
   - [`flowgraph.convert.float_to_string`](#flowgraph-convert-float-to-string) — Float → String
   - [`flowgraph.convert.int_to_float`](#flowgraph-convert-int-to-float) — Int → Float
@@ -416,6 +417,18 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `result` | `bool` |  |
 
 ## convert
+
+### `flowgraph.convert.bool_to_string`
+
+**Bool → String**
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `value` | `bool` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `result` | `string` |  |
 
 ### `flowgraph.convert.float_to_int`
 

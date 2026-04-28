@@ -4,11 +4,41 @@
 //! 明示的にこれらのノードを挟む。
 
 use crate::flowgraph::node::{
-	get_required_float, get_required_int, get_required_string, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec,
-	PortSpec, PureNode,
+	get_required_bool, get_required_float, get_required_int, get_required_string, ExecFireSet, InputMap, NodeDescriptor, NodeExecError,
+	NodeOutput, NodeSpec, PortSpec, PureNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
+
+// ----- int → string --------------------------------------------------------
+
+pub struct BoolToStringNode;
+impl NodeDescriptor for BoolToStringNode {
+	fn describe(&self) -> NodeSpec {
+		NodeSpec {
+			feature: "flowgraph.convert.bool_to_string".into(),
+			title: "Bool → String".into(),
+			category: "convert".into(),
+			description: None,
+			inputs: vec![PortSpec::input("value", "Value", SocketType::Bool)],
+			outputs: vec![PortSpec::output("result", "Result", SocketType::String)],
+			properties: vec![],
+		}
+	}
+}
+#[async_trait]
+impl PureNode for BoolToStringNode {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
+		let v = get_required_bool(inputs, "value")?;
+		Ok(NodeOutput::new().set_data("result", SocketValue::String(v.to_string())))
+	}
+}
 
 // ----- int → string --------------------------------------------------------
 
@@ -28,7 +58,13 @@ impl NodeDescriptor for IntToStringNode {
 }
 #[async_trait]
 impl PureNode for IntToStringNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let v = get_required_int(inputs, "value")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::String(v.to_string())))
 	}
@@ -52,7 +88,13 @@ impl NodeDescriptor for StringToIntNode {
 }
 #[async_trait]
 impl PureNode for StringToIntNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let s = get_required_string(inputs, "value")?;
 		let v: i64 = s
 			.trim()
@@ -80,7 +122,13 @@ impl NodeDescriptor for FloatToStringNode {
 }
 #[async_trait]
 impl PureNode for FloatToStringNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let v = get_required_float(inputs, "value")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::String(v.to_string())))
 	}
@@ -104,7 +152,13 @@ impl NodeDescriptor for StringToFloatNode {
 }
 #[async_trait]
 impl PureNode for StringToFloatNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let s = get_required_string(inputs, "value")?;
 		let v: f64 = s
 			.trim()
@@ -132,7 +186,13 @@ impl NodeDescriptor for IntToFloatNode {
 }
 #[async_trait]
 impl PureNode for IntToFloatNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let v = get_required_int(inputs, "value")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Float(v as f64)))
 	}
@@ -156,7 +216,13 @@ impl NodeDescriptor for FloatToIntNode {
 }
 #[async_trait]
 impl PureNode for FloatToIntNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let v = get_required_float(inputs, "value")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Int(v.trunc() as i64)))
 	}
@@ -170,24 +236,54 @@ mod tests {
 	async fn int_string_roundtrip() {
 		let inputs: InputMap = [("value".into(), SocketValue::Int(42))].into_iter().collect();
 		let out = IntToStringNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::String("42".into())));
 
 		let inputs: InputMap = [("value".into(), SocketValue::String("42".into()))].into_iter().collect();
 		let out = StringToIntNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Int(42)));
 	}
 
 	#[tokio::test]
+	async fn bool_to_string_outputs_lowercase_literal() {
+		let inputs: InputMap = [("value".into(), SocketValue::Bool(true))].into_iter().collect();
+		let out = BoolToStringNode
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("result"), Some(&SocketValue::String("true".into())));
+	}
+
+	#[tokio::test]
 	async fn string_to_int_fails_on_nonnumeric() {
 		let inputs: InputMap = [("value".into(), SocketValue::String("abc".into()))].into_iter().collect();
 		let e = StringToIntNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap_err();
 		assert!(matches!(e, NodeExecError::Generic(_)));
@@ -197,14 +293,24 @@ mod tests {
 	async fn int_to_float_and_back() {
 		let inputs: InputMap = [("value".into(), SocketValue::Int(3))].into_iter().collect();
 		let out = IntToFloatNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Float(3.0)));
 
 		let inputs: InputMap = [("value".into(), SocketValue::Float(3.7))].into_iter().collect();
 		let out = FloatToIntNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Int(3)));
@@ -214,14 +320,24 @@ mod tests {
 	async fn float_string_roundtrip() {
 		let inputs: InputMap = [("value".into(), SocketValue::Float(1.5))].into_iter().collect();
 		let out = FloatToStringNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::String("1.5".into())));
 
 		let inputs: InputMap = [("value".into(), SocketValue::String("1.5".into()))].into_iter().collect();
 		let out = StringToFloatNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Float(1.5)));

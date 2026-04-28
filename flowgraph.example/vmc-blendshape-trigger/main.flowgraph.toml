@@ -1,0 +1,87 @@
+# Phase M5: VMC BlendShape を Flowgraph の表情トリガーとして使う最小例。
+#
+# VMC UDP の `/VMC/Ext/Blend/Val` から `Joy` の値を取り出し、
+# 0.7 を超えたら `true` を log に出す。
+# 実際の制御では、この `is_active` を `state.bool` / `edge_detect` / `flow.gate`
+# などへつないで、TTS・VRChat OSC・配信制御へ分岐させる。
+
+[meta]
+title = "vmc blendshape trigger demo"
+description = "VMC UDP ingress -> parse -> extract_blendshape -> float threshold"
+tags = ["example", "vmc", "motion", "blendshape", "trigger"]
+
+[[nodes]]
+id = "vmc_in"
+feature = "flowgraph.ingress.vmc_udp"
+position = [100, 120]
+properties.bind = "127.0.0.1:39541"
+properties.fixed_channel = ""
+
+[[nodes]]
+id = "parse"
+feature = "flowgraph.motion.vmc_parse"
+position = [340, 120]
+
+[[nodes]]
+id = "extract_joy"
+feature = "flowgraph.vmc.extract_blendshape"
+position = [600, 120]
+
+[[nodes]]
+id = "joy_name"
+feature = "flowgraph.literal.string"
+position = [600, 260]
+properties.value = "Joy"
+
+[[nodes]]
+id = "threshold"
+feature = "flowgraph.literal.float"
+position = [860, 260]
+properties.value = 0.7
+
+[[nodes]]
+id = "is_active"
+feature = "flowgraph.compare.float_gt"
+position = [860, 120]
+
+[[nodes]]
+id = "log_active"
+feature = "flowgraph.util.log"
+position = [1120, 120]
+
+[[nodes]]
+id = "active_text"
+feature = "flowgraph.convert.bool_to_string"
+position = [1040, 240]
+
+[[edges]]
+from = "vmc_in:exec_out"
+to = "log_active:exec_in"
+
+[[edges]]
+from = "vmc_in:content"
+to = "parse:payload_b64"
+
+[[edges]]
+from = "parse:frame"
+to = "extract_joy:frame"
+
+[[edges]]
+from = "joy_name:value"
+to = "extract_joy:blendshape_name"
+
+[[edges]]
+from = "extract_joy:value"
+to = "is_active:a"
+
+[[edges]]
+from = "threshold:value"
+to = "is_active:b"
+
+[[edges]]
+from = "is_active:result"
+to = "active_text:value"
+
+[[edges]]
+from = "active_text:result"
+to = "log_active:value"

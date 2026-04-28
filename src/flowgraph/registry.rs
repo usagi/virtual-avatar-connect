@@ -271,6 +271,7 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::regex_ops::RegexReplaceNode));
 
 	// --- convert ---
+	r.register_pure(Arc::new(nodes::convert::BoolToStringNode));
 	r.register_pure(Arc::new(nodes::convert::IntToStringNode));
 	r.register_pure(Arc::new(nodes::convert::StringToIntNode));
 	r.register_pure(Arc::new(nodes::convert::FloatToStringNode));
@@ -413,6 +414,7 @@ mod tests {
 			"flowgraph.logic.not",
 			"flowgraph.compare.eq",
 			"flowgraph.compare.neq",
+			"flowgraph.convert.bool_to_string",
 			"flowgraph.string.concat",
 			"flowgraph.string.len",
 			"flowgraph.string.contains",

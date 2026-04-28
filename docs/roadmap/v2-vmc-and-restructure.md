@@ -239,8 +239,8 @@ flowgraph.motion.map
 
 #### 追加用途
 
-* 表情トリガー — first slice: `flowgraph.vmc.extract_blendshape` で `/VMC/Ext/Blend/Val` を `{ name, value }` として取り出す
-* ジェスチャ検出
+* 表情トリガー — first slice: `flowgraph.vmc.extract_blendshape` で `/VMC/Ext/Blend/Val` を JSON + 型付き `found/name/value` として取り出す。例: `flowgraph.example/vmc-blendshape-trigger`
+* ジェスチャ検出 — first slice: pose 抽出ノードが `found/bone/px/py/pz/rx/ry/rz/rw` を出すため、既存の vec / math / compare / edge 系へ直結可能
 * AI 入力
 * 配信制御
 
