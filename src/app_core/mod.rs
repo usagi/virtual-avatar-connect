@@ -10,7 +10,8 @@ mod types;
 
 use crate::conf::Conf;
 use crate::{Result, SharedAudioSink};
-pub(crate) use types::{AppCoreParts, AppCoreRunResult, AppCoreRuntimeHandle};
+use types::AppCoreParts;
+pub(crate) use types::{AppCoreRunResult, AppCoreRuntimeHandle};
 
 /// conf ロード済み・`run_with` 済みの状態から起動する VAC 常駐ランタイム本体。
 ///
@@ -40,19 +41,10 @@ impl AppCore {
 	}
 
 	async fn serve(&self) -> Result<()> {
-		server::run_services(
-			self.parts.conf.clone(),
-			self.parts.state.clone(),
-			self.parts.web_input_registry.clone(),
-			self.parts.control_api_runtime.clone(),
-			self.parts.flowgraph_web_input_endpoints.clone(),
-			self.parts.flowgraph_trigger.clone(),
-			self.parts.shutdown.clone(),
-		)
-		.await
+		server::run_services(&self.parts).await
 	}
 
 	async fn cleanup(self) -> Result<()> {
-		cleanup::cleanup(self).await
+		cleanup::cleanup(self.parts).await
 	}
 }

@@ -1,10 +1,8 @@
-use crate::conf::Conf;
-use crate::state::SharedState;
-use crate::{bridges, flowgraph, shutdown, web_interface, Result};
+use super::AppCoreParts;
+use crate::{bridges, web_interface, Result};
 use actix_files::Files;
 use actix_web::web::Data;
 use std::net::SocketAddr;
-use std::sync::Arc;
 
 pub(super) fn normalize_loopback_address(address: &str) -> String {
 	if let Ok(socket) = address.parse::<SocketAddr>() {
@@ -25,15 +23,14 @@ pub(super) fn normalize_loopback_address(address: &str) -> String {
 		.unwrap_or_else(|| address.to_string())
 }
 
-pub(super) async fn run_services(
-	conf: Conf,
-	state: SharedState,
-	web_input_registry: Arc<web_interface::web_input::WebInputRegistry>,
-	control_api_runtime: web_interface::control::ControlApiRuntime,
-	flowgraph_web_input_endpoints: Arc<Vec<bridges::web_input::FlowgraphWebInputEndpoint>>,
-	flowgraph_trigger: Arc<Option<flowgraph::node::TriggerHandle>>,
-	shutdown: Arc<shutdown::ShutdownBroker>,
-) -> Result<()> {
+pub(super) async fn run_services(parts: &AppCoreParts) -> Result<()> {
+	let conf = parts.conf.clone();
+	let state = parts.state.clone();
+	let web_input_registry = parts.web_input_registry.clone();
+	let control_api_runtime = parts.control_api_runtime.clone();
+	let flowgraph_web_input_endpoints = parts.flowgraph_web_input_endpoints.clone();
+	let flowgraph_trigger = parts.flowgraph_trigger.clone();
+	let shutdown = parts.shutdown.clone();
 	let workers = conf.get_workers();
 	let web_ui_address = conf.get_web_ui_address().to_string();
 	let output_root = conf
