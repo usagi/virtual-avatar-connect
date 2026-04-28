@@ -59,7 +59,7 @@ export default defineConfig({
   {
    // We rely on the developer having run `cargo build --release` at
    // least once. `cargo run --release` on a warm target is ~1-2s.
-   command: `cargo run --quiet --release --bin virtual-avatar-connect -- ${FIXTURE_CONF}`,
+   command: `cargo run --quiet --release --bin virtual-avatar-connect-cli -- ${FIXTURE_CONF}`,
    cwd: '..',
    url: `${BASE_URL}/gui/`,
    reuseExistingServer: !isCI,

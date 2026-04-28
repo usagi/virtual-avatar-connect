@@ -14,5 +14,9 @@ test.describe('GUI redesign: リソース概要', () => {
   await expect(page.getByText('起動中', { exact: true })).toBeVisible();
   await expect(page.getByText('追跡対象', { exact: true })).toBeVisible();
   await expect(page.getByText('PIDs', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'VMC passthrough' })).toBeVisible();
+  await expect(page.getByText('motion 層の UDP 転送状態と packet 統計を確認します。')).toBeVisible();
+  await expect(page.getByText('Routes', { exact: true })).toBeVisible();
+  await expect(page.getByText('Packets', { exact: true })).toBeVisible();
  });
 });

@@ -67,6 +67,7 @@ import {
  type RunWithListResponse,
  type RunWithMutationResponse,
  type StateSnapshot,
+ type VmcStatusResponse,
  type WhoAmIResponse,
  type FlowgraphNodeCatalogResponse,
  type FlowgraphTreeResponse,
@@ -283,6 +284,11 @@ export const api = {
    method: 'POST',
    body: req,
   });
+ },
+
+ // --- VMC passthrough (M3) ---
+ vmcStatus(): Promise<VmcStatusResponse> {
+  return request<VmcStatusResponse>('/vmc/status');
  },
 
  // --- Processor / AI Persona config (γ-3a) ---

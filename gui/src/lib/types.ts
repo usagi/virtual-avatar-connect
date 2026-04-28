@@ -534,6 +534,31 @@ export type ManagedAppRestartResponse = {
 };
 
 // ---------------------------------------------------------------------------
+// /vmc/status (Phase M3)
+// ---------------------------------------------------------------------------
+
+export type VmcPassthroughBindState = 'configured' | 'skipped' | 'running' | 'failed' | 'stopped';
+
+export type VmcPassthroughStatusView = {
+ id: string;
+ label: string | null;
+ enabled: boolean;
+ bind: string;
+ forward_to: string[];
+ state: VmcPassthroughBindState;
+ error: string | null;
+ packets_received: number;
+ bytes_received: number;
+ packets_forwarded: number;
+ send_errors: number;
+ last_packet_at: string | null;
+};
+
+export type VmcStatusResponse = {
+ entries: VmcPassthroughStatusView[];
+};
+
+// ---------------------------------------------------------------------------
 // /modify/:id/dictionary|regex/entries (Phase VI-γ-8a)
 // ---------------------------------------------------------------------------
 

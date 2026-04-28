@@ -8,6 +8,7 @@
  import OAuthPanel from '../OAuthPanel.svelte';
  import PausePanel from '../PausePanel.svelte';
  import ResourceOverviewPanel from '../resources/ResourceOverviewPanel.svelte';
+ import VmcStatusPanel from '../resources/VmcStatusPanel.svelte';
  import RunWithEditorPanel from './RunWithEditorPanel.svelte';
 </script>
 
@@ -18,6 +19,7 @@
  </div>
  <div class="space-y-4">
   <ResourceOverviewPanel />
+  <VmcStatusPanel />
   <OAuthPanel />
  </div>
 </div>
