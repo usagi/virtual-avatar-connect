@@ -6,6 +6,7 @@
 mod boot;
 mod cleanup;
 mod server;
+mod types;
 
 use crate::bridges;
 use crate::conf::Conf;
@@ -15,6 +16,7 @@ use crate::shutdown;
 use crate::state::SharedState;
 use crate::{flowgraph, web_interface, Result, SharedAudioSink};
 use std::sync::Arc;
+pub(crate) use types::{AppCoreRunResult, AppCoreRuntimeHandle};
 
 /// conf ロード済み・`run_with` 済みの状態から起動する VAC 常駐ランタイム本体。
 ///
@@ -67,22 +69,5 @@ impl AppCore {
 
 	async fn cleanup(self) -> Result<()> {
 		cleanup::cleanup(self).await
-	}
-}
-
-pub(crate) struct AppCoreRuntimeHandle {
-	pub(crate) gui_url: String,
-	pub(crate) shutdown: Arc<shutdown::ShutdownBroker>,
-}
-
-pub(crate) struct AppCoreRunResult {
-	pub(crate) serve: Result<()>,
-	pub(crate) cleanup: Result<()>,
-}
-
-impl AppCoreRunResult {
-	pub(crate) fn into_result(self) -> Result<()> {
-		self.serve?;
-		self.cleanup
 	}
 }
