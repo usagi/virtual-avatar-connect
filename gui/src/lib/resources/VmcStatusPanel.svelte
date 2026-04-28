@@ -7,11 +7,19 @@
   */
  import { onMount } from 'svelte';
  import { api } from '../api';
- import { ControlApiError, type VmcPassthroughBindState, type VmcStatusResponse } from '../types';
+ import {
+  ControlApiError,
+  type VmcPassthroughBindState,
+  type VmcPassthroughStatusView,
+  type VmcStatusResponse,
+ } from '../types';
 
  let loading = $state(true);
  let error = $state<string | null>(null);
  let status = $state<VmcStatusResponse | null>(null);
+ let addDestById = $state<Record<string, string>>({});
+ let editErrorById = $state<Record<string, string>>({});
+ let editingId = $state<string | null>(null);
 
  const entries = $derived(status?.entries ?? []);
  const total = $derived(entries.length);
@@ -34,6 +42,36 @@
   } finally {
    loading = false;
   }
+ }
+
+ async function addForward(entry: VmcPassthroughStatusView): Promise<void> {
+  const dest = (addDestById[entry.id] ?? '').trim();
+  if (!dest) return;
+  await editForward(entry.id, dest, true);
+  addDestById = { ...addDestById, [entry.id]: '' };
+ }
+
+ async function removeForward(entry: VmcPassthroughStatusView, dest: string): Promise<void> {
+  await editForward(entry.id, dest, false);
+ }
+
+ async function editForward(id: string, dest: string, add: boolean): Promise<void> {
+  editingId = id;
+  editErrorById = { ...editErrorById, [id]: '' };
+  try {
+   const updated = add ? await api.vmcForwardAdd(id, { dest }) : await api.vmcForwardRemove(id, { dest });
+   replaceEntry(updated);
+  } catch (e) {
+   editErrorById = { ...editErrorById, [id]: formatError(e) };
+  } finally {
+   editingId = null;
+  }
+ }
+
+ function replaceEntry(updated: VmcPassthroughStatusView): void {
+  if (!status) return;
+  const next = status.entries.map((entry) => (entry.id === updated.id ? updated : entry));
+  status = { ...status, entries: next };
  }
 
  function formatError(e: unknown): string {
@@ -151,6 +189,40 @@
          <div>{entry.packets_forwarded} tx / {entry.send_errors} err</div>
         </div>
        </div>
+       <form class="mt-2 flex flex-wrap items-center gap-2" onsubmit={(event) => {
+        event.preventDefault();
+        void addForward(entry);
+       }}>
+        <input
+         class="min-w-48 flex-1 rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1 font-mono text-xs disabled:opacity-50"
+         placeholder="127.0.0.1:39540"
+         value={addDestById[entry.id] ?? ''}
+         disabled={entry.state !== 'running' || editingId === entry.id}
+         oninput={(event) => {
+          addDestById = { ...addDestById, [entry.id]: event.currentTarget.value };
+         }}
+        />
+        <button
+         type="submit"
+         class="rounded border border-surface-300-700 px-2 py-1 text-xs hover:bg-surface-200-800 disabled:opacity-50"
+         disabled={entry.state !== 'running' || editingId === entry.id || !(addDestById[entry.id] ?? '').trim()}
+        >
+         追加
+        </button>
+        {#each entry.forward_to as dest (dest)}
+         <button
+          type="button"
+          class="rounded border border-surface-300-700 px-2 py-1 font-mono text-xs hover:bg-surface-200-800 disabled:opacity-50"
+          disabled={entry.state !== 'running' || editingId === entry.id}
+          onclick={() => void removeForward(entry, dest)}
+         >
+          remove {dest}
+         </button>
+        {/each}
+       </form>
+       {#if editErrorById[entry.id]}
+        <p class="mt-2 rounded border border-error-500/40 bg-error-500/10 p-2 text-xs">{editErrorById[entry.id]}</p>
+       {/if}
       </li>
      {/each}
     </ul>

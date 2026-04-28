@@ -67,6 +67,8 @@ import {
  type RunWithListResponse,
  type RunWithMutationResponse,
  type StateSnapshot,
+ type VmcForwardRequest,
+ type VmcPassthroughStatusView,
  type VmcStatusResponse,
  type WhoAmIResponse,
  type FlowgraphNodeCatalogResponse,
@@ -289,6 +291,18 @@ export const api = {
  // --- VMC passthrough (M3) ---
  vmcStatus(): Promise<VmcStatusResponse> {
   return request<VmcStatusResponse>('/vmc/status');
+ },
+ vmcForwardAdd(id: string, req: VmcForwardRequest): Promise<VmcPassthroughStatusView> {
+  return request<VmcPassthroughStatusView>(`/vmc/${encodeURIComponent(id)}/forward/add`, {
+   method: 'POST',
+   body: req,
+  });
+ },
+ vmcForwardRemove(id: string, req: VmcForwardRequest): Promise<VmcPassthroughStatusView> {
+  return request<VmcPassthroughStatusView>(`/vmc/${encodeURIComponent(id)}/forward/remove`, {
+   method: 'POST',
+   body: req,
+  });
  },
 
  // --- Processor / AI Persona config (γ-3a) ---

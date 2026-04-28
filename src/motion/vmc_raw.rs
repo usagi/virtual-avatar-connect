@@ -84,9 +84,13 @@ pub fn spawn_passthrough_task(
 				 continue;
 				}
 				let payload = &buf[..n];
-				let send_errors = router::forward_datagram(&sock, payload, &forward, &log_ctx, &send_fail).await;
+				let current_forward = status
+					.as_ref()
+					.map(|status| status.forward_addrs_snapshot())
+					.unwrap_or_else(|| forward.clone());
+				let send_errors = router::forward_datagram(&sock, payload, &current_forward, &log_ctx, &send_fail).await;
 				if let Some(status) = status.as_ref() {
-					status.record_receive(n, forward.len().saturating_sub(send_errors));
+					status.record_receive(n, current_forward.len().saturating_sub(send_errors));
 					for _ in 0..send_errors {
 						status.record_send_error();
 					}
@@ -96,7 +100,7 @@ pub fn spawn_passthrough_task(
 					log_ctx,
 					n,
 					src,
-					forward.len()
+					current_forward.len()
 				);
 			   }
 			   Err(e) => {

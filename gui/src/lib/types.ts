@@ -558,6 +558,10 @@ export type VmcStatusResponse = {
  entries: VmcPassthroughStatusView[];
 };
 
+export type VmcForwardRequest = {
+ dest: string;
+};
+
 // ---------------------------------------------------------------------------
 // /modify/:id/dictionary|regex/entries (Phase VI-γ-8a)
 // ---------------------------------------------------------------------------

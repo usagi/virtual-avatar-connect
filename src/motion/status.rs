@@ -2,6 +2,7 @@
 
 use crate::conf::{Conf, VmcPassthroughSpec};
 use serde::Serialize;
+use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -42,7 +43,8 @@ pub struct VmcPassthroughStatusEntry {
 	label: Option<String>,
 	enabled: bool,
 	bind: String,
-	forward_to: Vec<String>,
+	forward_to: Mutex<Vec<String>>,
+	forward_addrs: Mutex<Vec<SocketAddr>>,
 	state: Mutex<VmcPassthroughBindState>,
 	error: Mutex<Option<String>>,
 	packets_received: AtomicU64,
@@ -61,7 +63,8 @@ impl VmcPassthroughStatusEntry {
 			label,
 			enabled: spec.enabled,
 			bind: spec.bind.clone(),
-			forward_to: spec.forward_to.clone(),
+			forward_to: Mutex::new(spec.forward_to.clone()),
+			forward_addrs: Mutex::new(parse_socket_addrs_lossy(&spec.forward_to)),
 			state: Mutex::new(VmcPassthroughBindState::Configured),
 			error: Mutex::new(None),
 			packets_received: AtomicU64::new(0),
@@ -101,6 +104,45 @@ impl VmcPassthroughStatusEntry {
 		self.send_errors.fetch_add(1, Ordering::Relaxed);
 	}
 
+	pub(crate) fn is_running(&self) -> bool {
+		self.state.lock().map(|g| *g == VmcPassthroughBindState::Running).unwrap_or(false)
+	}
+
+	pub(crate) fn forward_addrs_snapshot(&self) -> Vec<SocketAddr> {
+		self.forward_addrs.lock().map(|g| g.clone()).unwrap_or_default()
+	}
+
+	pub(crate) fn add_forward(&self, raw: &str) -> Result<VmcPassthroughStatusView, String> {
+		let addr = parse_socket_addr(raw)?;
+		let normalized = addr.to_string();
+		let mut addrs = self.forward_addrs.lock().map_err(|_| "forward address lock poisoned".to_string())?;
+		if addrs.contains(&addr) {
+			return Ok(self.snapshot());
+		}
+		addrs.push(addr);
+		drop(addrs);
+
+		let mut raw_list = self.forward_to.lock().map_err(|_| "forward list lock poisoned".to_string())?;
+		raw_list.push(normalized);
+		drop(raw_list);
+		Ok(self.snapshot())
+	}
+
+	pub(crate) fn remove_forward(&self, raw: &str) -> Result<VmcPassthroughStatusView, String> {
+		let addr = parse_socket_addr(raw)?;
+		let mut addrs = self.forward_addrs.lock().map_err(|_| "forward address lock poisoned".to_string())?;
+		let before = addrs.len();
+		addrs.retain(|a| *a != addr);
+		let removed = addrs.len() != before;
+		drop(addrs);
+
+		if removed {
+			let mut raw_list = self.forward_to.lock().map_err(|_| "forward list lock poisoned".to_string())?;
+			raw_list.retain(|s| parse_socket_addr(s).map(|a| a != addr).unwrap_or(true));
+		}
+		Ok(self.snapshot())
+	}
+
 	fn set_state(&self, state: VmcPassthroughBindState, error: Option<String>) {
 		if let Ok(mut g) = self.state.lock() {
 			*g = state;
@@ -116,7 +158,7 @@ impl VmcPassthroughStatusEntry {
 			label: self.label.clone(),
 			enabled: self.enabled,
 			bind: self.bind.clone(),
-			forward_to: self.forward_to.clone(),
+			forward_to: self.forward_to.lock().map(|g| g.clone()).unwrap_or_default(),
 			state: self.state.lock().map(|g| g.clone()).unwrap_or(VmcPassthroughBindState::Failed),
 			error: self.error.lock().ok().and_then(|g| g.clone()),
 			packets_received: self.packets_received.load(Ordering::Relaxed),
@@ -155,11 +197,25 @@ impl VmcPassthroughStatusRegistry {
 		self.entries.get(index).cloned()
 	}
 
+	pub(crate) fn find(&self, id: &str) -> Option<Arc<VmcPassthroughStatusEntry>> {
+		self.entries.iter().find(|entry| entry.id == id).cloned()
+	}
+
 	pub fn snapshot(&self) -> VmcStatusSnapshot {
 		VmcStatusSnapshot {
 			entries: self.entries.iter().map(|entry| entry.snapshot()).collect(),
 		}
 	}
+}
+
+fn parse_socket_addr(raw: &str) -> Result<SocketAddr, String> {
+	raw.trim()
+		.parse::<SocketAddr>()
+		.map_err(|e| format!("invalid SocketAddr {:?}: {}", raw, e))
+}
+
+fn parse_socket_addrs_lossy(raw: &[String]) -> Vec<SocketAddr> {
+	raw.iter().filter_map(|s| parse_socket_addr(s).ok()).collect()
 }
 
 #[cfg(test)]
@@ -206,5 +262,28 @@ mod tests {
 		assert_eq!(view.packets_forwarded, 2);
 		assert_eq!(view.send_errors, 1);
 		assert!(view.last_packet_at.is_some());
+	}
+
+	#[test]
+	fn entry_add_remove_forward_updates_snapshot_and_addrs() {
+		let registry = Arc::new(VmcPassthroughStatusRegistry {
+			entries: VmcPassthroughStatusRegistry::entries_from_specs(&[VmcPassthroughSpec {
+				enabled: true,
+				label: Some("primary".into()),
+				bind: "0.0.0.0:39539".into(),
+				forward_to: vec!["127.0.0.1:39540".into()],
+			}]),
+		});
+		let entry = registry.entry(0).expect("entry");
+		entry.add_forward("127.0.0.1:39541").expect("add forward");
+		assert_eq!(entry.forward_addrs_snapshot().len(), 2);
+		assert_eq!(
+			entry.snapshot().forward_to,
+			vec!["127.0.0.1:39540".to_string(), "127.0.0.1:39541".to_string()]
+		);
+
+		entry.remove_forward("127.0.0.1:39540").expect("remove forward");
+		assert_eq!(entry.forward_addrs_snapshot().len(), 1);
+		assert_eq!(entry.snapshot().forward_to, vec!["127.0.0.1:39541".to_string()]);
 	}
 }

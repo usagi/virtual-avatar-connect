@@ -191,11 +191,11 @@ VAC（vmc_ingress）
 ```http
 GET  /api/v1/control/vmc/status
 POST /api/v1/control/vmc/bind
-POST /api/v1/control/vmc/forward/add
-POST /api/v1/control/vmc/forward/remove
+POST /api/v1/control/vmc/{id}/forward/add
+POST /api/v1/control/vmc/{id}/forward/remove
 ```
 
-実装メモ（M3 first slice）: `GET /api/v1/control/vmc/status` は実装済み。`[[motion.vmc_passthrough]]` ごとに `configured` / `skipped` / `running` / `failed` / `stopped`、受信 packet / byte 数、転送成功数、送信 error 数、最終受信時刻を返す。add/remove/bind は runtime 変更 semantics を固定してから実装する。
+実装メモ（M3）: `GET /api/v1/control/vmc/status` は実装済み。`[[motion.vmc_passthrough]]` ごとに `configured` / `skipped` / `running` / `failed` / `stopped`、受信 packet / byte 数、転送成功数、送信 error 数、最終受信時刻を返す。既存 route の `forward_to` は `POST /api/v1/control/vmc/{id}/forward/add|remove` で runtime 変更でき、Resources GUI からも操作できる。新規 bind route の動的追加は worker lifecycle を別途固定してから実装する。
 
 #### GUI
 
