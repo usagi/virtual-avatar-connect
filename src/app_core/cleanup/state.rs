@@ -1,6 +1,8 @@
 use crate::state::SharedState;
 use crate::{bridges, managed_app};
 
+const LIBRETRANSLATE_STOP_TIMEOUT_SECS: u64 = 5;
+
 pub(super) async fn stop_managed_apps(state: &SharedState) {
 	let managed_stop = {
 		let s = state.read().await;
@@ -30,7 +32,10 @@ pub(super) async fn stop_libretranslate(state: &SharedState) {
 	let fut = async {
 		s.libretranslate.lock().await.stop().await;
 	};
-	if tokio::time::timeout(std::time::Duration::from_secs(5), fut).await.is_err() {
+	if tokio::time::timeout(std::time::Duration::from_secs(LIBRETRANSLATE_STOP_TIMEOUT_SECS), fut)
+		.await
+		.is_err()
+	{
 		log::warn!("《Shutdown》 LibreTranslate.stop() が 5 秒以内に完了しませんでした。続行します。");
 	}
 }
