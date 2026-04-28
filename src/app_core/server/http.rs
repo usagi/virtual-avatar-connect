@@ -4,6 +4,10 @@ use actix_files::Files;
 use actix_web::dev::Server;
 use actix_web::web::Data;
 
+const BROWSER_OUTPUT_ROUTE: &str = "/browser-output";
+const RESOURCES_ROUTE: &str = "/resources";
+const HTTP_SHUTDOWN_TIMEOUT_SECONDS: u64 = 2;
+
 pub(super) fn build_http_server(runtime: ServerRuntime) -> Result<Server> {
 	let workers = runtime.workers;
 	let web_ui_address = runtime.web_ui_address.clone();
@@ -46,11 +50,11 @@ pub(super) fn build_http_server(runtime: ServerRuntime) -> Result<Server> {
 			.service(web_interface::output::post)
 			.service(web_interface::output::get_index)
 			.service(web_interface::output::get_subfile)
-			.service(Files::new("/browser-output", output_root.clone()))
+			.service(Files::new(BROWSER_OUTPUT_ROUTE, output_root.clone()))
 			.service(web_interface::status::get)
 			.service(web_interface::favicon);
 		if let Some(web_ui_resources_path) = runtime.conf.web_ui_resources_path.clone() {
-			app.service(Files::new("/resources", web_ui_resources_path))
+			app.service(Files::new(RESOURCES_ROUTE, web_ui_resources_path))
 		} else {
 			app
 		}
@@ -58,7 +62,7 @@ pub(super) fn build_http_server(runtime: ServerRuntime) -> Result<Server> {
 	.workers(workers)
 	.bind(web_ui_address)?
 	.disable_signals()
-	.shutdown_timeout(2)
+	.shutdown_timeout(HTTP_SHUTDOWN_TIMEOUT_SECONDS)
 	.run();
 	Ok(server)
 }
