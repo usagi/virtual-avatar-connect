@@ -5,6 +5,8 @@ use crate::{bridges, flowgraph, shutdown, web_interface};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+const DEFAULT_BROWSER_OUTPUT_ROOT: &str = "output";
+
 #[derive(Clone)]
 pub(super) struct ServerRuntime {
 	pub(super) conf: Conf,
@@ -26,7 +28,7 @@ impl ServerRuntime {
 			.browser_source
 			.as_ref()
 			.and_then(|b| b.document_root.clone())
-			.unwrap_or_else(|| PathBuf::from("output"));
+			.unwrap_or_else(|| PathBuf::from(DEFAULT_BROWSER_OUTPUT_ROOT));
 		let workers = conf.get_workers();
 		let web_ui_address = conf.get_web_ui_address().to_string();
 		Self {
