@@ -42,11 +42,11 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 
 ### `src/lib.rs` / `src/main.rs` / `src/runtime.rs`
 
-- プロセスエントリ: `main` → `lib::run()` はロガー・CLI 特殊モード・conf ロードまで。常駐本体は `src/app_core.rs` の `run_vac_application`（`ShutdownBroker` 以降〜 actix `run_services` 〜 cleanup）。
+- プロセスエントリ: `main` → `lib::run()` はロガー・CLI 特殊モード・conf ロードまで。常駐本体は `src/app_core/` の `run_vac_application`（`ShutdownBroker` 以降〜 actix serve 〜 cleanup）。
 
-### `src/app_core.rs`
+### `src/app_core/`
 
-- 再構造化 Step 7 / R1: `AppCore::boot` / `serve` / `cleanup` に分離。`ShutdownBroker` / `State::new` / bridges・motion・Control API・HTTP サーバ・shutdown cleanup を集約し、将来 `vac-app` runner に移す境界の目印。
+- 再構造化 Step 7 / R1: `AppCore::boot` / `serve` / `cleanup` に分離。`mod.rs` は起動 orchestration、`server.rs` は actix HTTP サーバ、`cleanup.rs` は shutdown cleanup を担当する。`ShutdownBroker` / `State::new` / bridges・motion・Control API を集約し、将来 `vac-app` runner に移す境界の目印。
 
 ### `src/conf/`
 

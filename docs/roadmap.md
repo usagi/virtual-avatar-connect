@@ -181,7 +181,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] M-1 feat(flowgraph,bridges): `flowgraph.ingress.vmc_udp` + `vmc_ingress` ブリッジ + `` `TriggerEvent` `` 投入（`phase-mu` §8、`flowgraph.example/vmc-udp-ingress`）
 - [x] M-2 feat(motion): パススルー・ハブ運用の conf / ログ整備（複数受信ソケットの運用例）
 - [ ] M-3 feat(web_interface,gui): Control API `POST /api/v1/vmc/*` + トレイ/Web UI の転送先管理
-- [x] M-4a feat(flowgraph,motion,deps): `flowgraph.motion.vmc_parse`（Base64→OSC→JSON）+ Phase ρ 先取り `flowgraph.osc.send`（UDP）+ `rosc` + `flowgraph::fixture_runner` 最小 + `src/app_core.rs`（Step 7 一段）
+- [x] M-4a feat(flowgraph,motion,deps): `flowgraph.motion.vmc_parse`（Base64→OSC→JSON）+ Phase ρ 先取り `flowgraph.osc.send`（UDP）+ `rosc` + `flowgraph::fixture_runner` 最小 + `src/app_core/`（Step 7 一段）
 - [x] M-4 feat(flowgraph): `MotionFrame` 第一級型 + `motion_frame` ソケット（`json` と coerce 往復）+ `flowgraph.motion.vmc_parse` / `filter` / `map`（ワイヤ表現は `byte_len` + `osc_messages`。**head_pose 等の意味 IR**は M5 以降 / `v2-vmc` §M4 参照）
 - [ ] M-5 docs+flowgraph: 表情・ジェスチャ等の用途拡張（`v2-vmc` §5 参照）
 
@@ -193,7 +193,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] Step 5（部分）: ワークスペース化（`crates/vac-gui-assets` のみメンバ追加、`default-members = ["."]`）。他 crate の分割は継続
 - [x] Step 6a: Cargo feature **`embed-gui`** — `/gui/*` メモリ配信（`gui_embedded` / `gui_path`）
 - [x] Step 6b（crate）: **`crates/vac-gui-assets`** メンバ（`include_dir` + `build.rs`）。**CI は §1.3 どおり未着手**
-- [x] Step 7（一段）: `src/app_core.rs` の `run_vac_application`（`ShutdownBroker` 以降〜 cleanup）+ `run_services` 集約。将来 `vac-app` への切り出し境界
+- [x] Step 7（一段）: `src/app_core/` の `run_vac_application`（`ShutdownBroker` 以降〜 cleanup）+ `server` / `cleanup` module 分離。将来 `vac-app` への切り出し境界
 - [x] Step 7d: crate / runner / desktop 再編の実装順と担当境界を固定（[`roadmap/crate-runner-desktop-restructure.md`](roadmap/crate-runner-desktop-restructure.md)）
 - [x] R1: `AppCore::boot` / `serve` / `cleanup` 分離。CLI / desktop runner が共有する起動境界をコード上に固定
 - [x] R4（一段）: `crates/vac-motion` 追加。`MotionFrame` / OSC decode / UDP forwarding helper を root crate から物理分割

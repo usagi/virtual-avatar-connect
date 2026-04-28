@@ -60,7 +60,7 @@ virtual-avatar-connect/
 
 ### R1: `AppCore` API を runner 前提に分ける（実装済み）
 
-現状の `src/app_core.rs` は `run_vac_application(conf, audio_sink)` の中で boot、serve、cleanup を直列に実行している。これを次の形へ寄せる。
+現状の `src/app_core/` は `run_vac_application(conf, audio_sink)` の中で boot、serve、cleanup を直列に実行している。これを次の形へ寄せる。
 
 ```rust
 pub struct AppCore {
@@ -175,7 +175,7 @@ Tauri GUI shell は desktop runner に載せる。CLI は従来型の開発者�
 
 避けた方がよい並行作業:
 
-- `src/app_core.rs`
+- `src/app_core/`
 - `src/lib.rs`
 - `src/main.rs`
 - root `Cargo.toml` の bin / workspace 周辺
