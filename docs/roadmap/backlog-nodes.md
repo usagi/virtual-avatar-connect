@@ -175,6 +175,8 @@ API が無ければ `DelayNode` と同じ経路で対応する。
 - `flowgraph.web.rss_fetch`: RSS / Atom を polling し、JSON と `Table` に正規化する。
 - `flowgraph.notify.desktop`: OS の desktop notification / Toast を出す。Runtime Mode の通知 policy に従う。
 - `flowgraph.constants.physics`: 物理定数を pure output として提供する。
+- `flowgraph.list.*` / `flowgraph.table.*` query: Ranges / LINQ / Iterator 的な map / filter / window / aggregate。
+- `flowgraph.stream.*`: debounce / throttle / window などの常駐 stream operator。
 - `flowgraph.random.*`: PRNG と分布 sampling。
 - `flowgraph.collection.*`: ring buffer / deque / index / priority queue。
 

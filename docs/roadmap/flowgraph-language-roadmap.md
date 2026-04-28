@@ -609,6 +609,7 @@ Effectful node を含む library も graph-as-node 化できる。ただし grap
 `list.map` が callback graph を受け取ると、Flowgraph は高階関数を持つことになる。
 
 Stage 3 では callback graph を pure-only に制限する。Effectful iteration は明示的な bounded exec loop として別扱いにする。
+標準ライブラリー側ではこれを Ranges / LINQ / Iterator foundation として扱い、list / table / stream の query pipeline を先に整える（[`flowgraph-stdlib-roadmap.md`](flowgraph-stdlib-roadmap.md) SL-0）。
 
 ### 8.5 Text Language
 

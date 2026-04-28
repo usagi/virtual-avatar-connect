@@ -334,6 +334,7 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 汎用言語化のため、乱数・分布・応用データ構造・アルゴリズムを段階追加する。
 詳細: [`roadmap/flowgraph-stdlib-roadmap.md`](roadmap/flowgraph-stdlib-roadmap.md)
 
+- [ ] SL-0 Ranges / LINQ / Iterator foundation。list / table / stream の map / filter / window / aggregate を標準化し、有限で観測可能なコレクション処理を先に整える。
 - [ ] SL-1 PRNG foundation。LCG / PCG / xoshiro / Philox / ChaCha / SplitMix64 を seedable に扱う。
 - [ ] SL-2 Distribution library。一様、正規、指数、ポアソン、カテゴリ、ディリクレなどを PRNG に接続する。
 - [ ] SL-3 Sequence / buffer data structures。ring buffer、deque、sliding window、reservoir sampling を提供する。

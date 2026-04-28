@@ -1,7 +1,7 @@
 # Flowgraph Standard Library Roadmap
 
 VAC Flowgraph を汎用言語へ近づけるための標準ライブラリー計画。
-目的は C++ の STL を再実装することではなく、常駐データフロー、配信支援、シミュレーション、抽選、イベント処理で実用になるデータ構造とアルゴリズムを、Flowgraph から安全に使える形で提供すること。
+目的は C++ の STL を再実装することではなく、常駐データフロー、配信支援、シミュレーション、抽選、イベント処理で実用になる Ranges / LINQ / Iterator 的なコレクション処理、データ構造、アルゴリズムを、Flowgraph から安全に使える形で提供すること。
 
 ## 1. 方針
 
@@ -10,8 +10,22 @@ VAC Flowgraph を汎用言語へ近づけるための標準ライブラリー計
 - **巨大計算を許さない**: max items / timeout / memory budget を持たせ、常駐ランタイムを詰まらせない。
 - **GUI で選べる粒度にする**: 教科書的に正しいだけでなく、ユーザーが選びやすい名前とプリセットを用意する。
 - **Rust crate に寄せる**: PRNG / distribution / data structure は信頼できる crate を使い、Flowgraph 側は型・診断・capability の wrapper に集中する。
+- **Iterator 風パイプラインを中核にする**: list / table / stream を map / filter / take / window / aggregate でつなぎ、無制限 loop より先に有限で観測可能な処理を整える。
 
 ## 2. 実装順序
+
+### SL-0 Ranges / LINQ / Iterator foundation
+
+標準ライブラリーの中核。C++ Ranges / C# LINQ / Rust Iterator の発想を Flowgraph 向けに落とし込む。
+
+- `flowgraph.list.map`, `flowgraph.list.filter`, `flowgraph.list.flat_map`
+- `flowgraph.list.take`, `flowgraph.list.skip`, `flowgraph.list.chunk`, `flowgraph.list.window`
+- `flowgraph.list.fold`, `flowgraph.list.reduce`, `flowgraph.list.scan`
+- `flowgraph.table.select`, `flowgraph.table.filter`, `flowgraph.table.map_rows`
+- `flowgraph.table.join`, `flowgraph.table.group_by`, `flowgraph.table.aggregate`
+- `flowgraph.stream.debounce`, `flowgraph.stream.throttle`, `flowgraph.stream.window`
+
+Stage 3 Collection Processing と接続する。callback graph は最初 Pure only とし、Effectful callback は bounded exec loop として別フェーズに分離する。
 
 ### SL-1 PRNG foundation
 
@@ -84,10 +98,12 @@ Catalog ではアルゴリズム名を前面に出しすぎない。
 
 - Random / PRNG
 - Random / Distribution
+- List / Query
+- Table / Query
 - Table / Sort
 - Table / Draw
+- Stream / Window
 - Collection / Buffer
 - Collection / Index
 
-高度な実装名は Advanced 設定に隠す。通常ユーザーには「正規分布」「重み付き抽選」「直近 N 件」「上位 K 件」のような目的で見せる。
-
+高度な実装名は Advanced 設定に隠す。通常ユーザーには「絞り込み」「列を選ぶ」「直近 N 件」「グループ集計」「正規分布」「重み付き抽選」「上位 K 件」のような目的で見せる。
