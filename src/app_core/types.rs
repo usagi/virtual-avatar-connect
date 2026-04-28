@@ -26,19 +26,33 @@ pub(super) struct AppCoreServices {
 }
 
 pub(crate) struct AppCoreRuntimeHandle {
-	pub(crate) gui_url: String,
-	pub(crate) shutdown: Arc<shutdown::ShutdownBroker>,
+	gui_url: String,
+	shutdown: Arc<shutdown::ShutdownBroker>,
 }
 
 pub(crate) struct AppCoreRunResult {
-	pub(crate) serve: Result<()>,
-	pub(crate) cleanup: Result<()>,
+	serve: Result<()>,
+	cleanup: Result<()>,
 }
 
 impl AppCoreRunResult {
+	pub(crate) fn new(serve: Result<()>, cleanup: Result<()>) -> Self {
+		Self { serve, cleanup }
+	}
+
+	pub(crate) fn into_parts(self) -> (Result<()>, Result<()>) {
+		(self.serve, self.cleanup)
+	}
+
 	pub(crate) fn into_result(self) -> Result<()> {
 		self.serve?;
 		self.cleanup
+	}
+}
+
+impl AppCoreRuntimeHandle {
+	pub(crate) fn into_parts(self) -> (String, Arc<shutdown::ShutdownBroker>) {
+		(self.gui_url, self.shutdown)
 	}
 }
 

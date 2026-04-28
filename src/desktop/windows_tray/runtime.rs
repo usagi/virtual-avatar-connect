@@ -21,12 +21,12 @@ pub(super) fn spawn_vac_runtime_task(
 ) -> JoinHandle<()> {
 	runtime.spawn(async move {
 		let app_handle = app_handle_rx.await.ok();
-		let run_result = core.run().await;
-		if let Err(e) = run_result.serve {
+		let (serve_result, cleanup_result) = core.run().await.into_parts();
+		if let Err(e) = serve_result {
 			log::error!("《Desktop》 VAC runtime serve がエラー終了しました: {e}");
 			shutdown.trigger(ShutdownReason::Fatal);
 		}
-		if let Err(e) = run_result.cleanup {
+		if let Err(e) = cleanup_result {
 			log::error!("《Desktop》 VAC runtime cleanup がエラー終了しました: {e}");
 		}
 		if let Some(app_handle) = app_handle {

@@ -10,9 +10,7 @@ pub fn run() -> Result<()> {
 	let runtime = build_tokio_runtime()?;
 
 	let core = runtime.block_on(crate::bootstrap::boot_app_core_with_standard_bootstrap())?;
-	let core_handle = core.runtime_handle();
-	let gui_url = core_handle.gui_url;
-	let shutdown = core_handle.shutdown;
+	let (gui_url, shutdown) = core.runtime_handle().into_parts();
 	let runtime_for_after_run = runtime.clone();
 	let shutdown_for_setup = shutdown.clone();
 	let (app_handle_tx, app_handle_rx) = tokio::sync::oneshot::channel::<tauri::AppHandle>();

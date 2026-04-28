@@ -31,7 +31,7 @@ impl AppCore {
 	pub(crate) async fn run(self) -> AppCoreRunResult {
 		let serve = self.serve().await;
 		let cleanup = self.cleanup().await;
-		AppCoreRunResult { serve, cleanup }
+		AppCoreRunResult::new(serve, cleanup)
 	}
 
 	pub(crate) fn runtime_handle(&self) -> AppCoreRuntimeHandle {
