@@ -10,7 +10,7 @@
   * - 不明プロパティ（spec 側に無い）は "Unknown" バッジ + 削除ボタン。
   */
  import { api } from '../api';
- import { flowgraphStore, type FlowgraphDraftNode } from '../flowgraphStore.svelte';
+ import { flowgraphStore, type FlowgraphDraftGroup, type FlowgraphDraftNode } from '../flowgraphStore.svelte';
  import type { FlowgraphNodeSpec, FlowgraphPropertySpec } from '../types';
 
  const UNIT_PARSE_PROP_NAMES = new Set(['unit', 'target_unit', 'unit_override']);
@@ -214,6 +214,22 @@ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
  }
 
  const multiProps = $derived(multiPropsView());
+
+ const visibleGroups: FlowgraphDraftGroup[] = $derived.by(() => {
+  const groups = flowgraphStore.draftGroups ?? [];
+  if (groups.length === 0) return [];
+  const selectedIds = new Set(selectedNodes.map((n) => n.id));
+  if (selectedIds.size === 0) return groups;
+  return groups.filter((g) => g.node_ids.some((id) => selectedIds.has(id)));
+ });
+
+ function updateGroupLabel(id: string, value: string) {
+  flowgraphStore.updateGroupLabel(id, value);
+ }
+
+ function updateGroupColor(id: string, value: string) {
+  flowgraphStore.updateGroupColor(id, value);
+ }
 </script>
 
 <div class="flex h-full flex-col">
@@ -356,7 +372,7 @@ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
    {/if}
   </div>
  {:else if !node}
-  <div class="p-3 text-xs opacity-60">ノードが選択されていません。</div>
+  <div class="flex-1 overflow-y-auto p-3 text-xs opacity-60">ノードが選択されていません。</div>
  {:else if !spec}
   <div class="p-3 text-xs text-error-500">
    未知 feature: <code>{node.feature}</code>
@@ -506,6 +522,73 @@ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
        </div>
       </div>
       <div class="font-mono text-[0.7rem] opacity-70">{asJson(item.value)}</div>
+     </div>
+    {/each}
+   </div>
+  </div>
+ {/if}
+ {#if visibleGroups.length > 0}
+  <div class="border-t border-surface-200-800 p-2 text-xs">
+   <div class="mb-2 flex items-center justify-between gap-2">
+    <div class="font-semibold uppercase tracking-wider opacity-60">Groups</div>
+    <div class="text-[0.65rem] opacity-60">{visibleGroups.length}</div>
+   </div>
+   <div class="space-y-2">
+    {#each visibleGroups as group (group.id)}
+     <div class="rounded border border-surface-200-800 p-2">
+      <div class="mb-2 flex items-center justify-between gap-2">
+       <div class="min-w-0">
+        <div class="truncate font-mono text-[0.65rem] opacity-60">#{group.id}</div>
+        <div class="truncate text-[0.65rem] opacity-60">{group.node_ids.length} nodes</div>
+       </div>
+       <div class="flex shrink-0 items-center gap-1">
+        <button
+         type="button"
+         class="rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem]"
+         onclick={() => flowgraphStore.selectGroupNodes(group.id)}
+        >
+         Select
+        </button>
+        <button
+         type="button"
+         class="rounded border border-error-500/50 px-1.5 py-0.5 text-[0.65rem] text-error-700-300"
+         onclick={() => flowgraphStore.removeGroup(group.id)}
+        >
+         Remove
+        </button>
+       </div>
+      </div>
+      <label class="mb-1 block text-[0.65rem] font-semibold opacity-70" for={`group-label-${group.id}`}>
+       Label
+      </label>
+      <input
+       id={`group-label-${group.id}`}
+       type="text"
+       class="mb-2 w-full rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1"
+       value={group.label ?? ''}
+       placeholder={group.id}
+       onchange={(e) => updateGroupLabel(group.id, (e.target as HTMLInputElement).value)}
+      />
+      <label class="mb-1 block text-[0.65rem] font-semibold opacity-70" for={`group-color-${group.id}`}>
+       Color
+      </label>
+      <div class="flex items-center gap-2">
+       <input
+        id={`group-color-${group.id}`}
+        type="color"
+        class="h-7 w-10 rounded border border-surface-300-700 bg-surface-50-950"
+        value={group.color ?? '#38bdf8'}
+        onchange={(e) => updateGroupColor(group.id, (e.target as HTMLInputElement).value)}
+       />
+       <input
+        aria-label={`Group color ${group.id}`}
+        type="text"
+        class="min-w-0 flex-1 rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1 font-mono text-[0.65rem]"
+        value={group.color ?? ''}
+        placeholder="#38bdf8"
+        onchange={(e) => updateGroupColor(group.id, (e.target as HTMLInputElement).value)}
+       />
+      </div>
      </div>
     {/each}
    </div>

@@ -370,10 +370,48 @@ class FlowgraphStore {
   return true;
  }
 
+ updateGroupLabel(id: string, label: string): boolean {
+  if (!this.draftGroups) return false;
+  const nextLabel = label.trim();
+  const index = this.draftGroups.findIndex((g) => g.id === id);
+  if (index < 0) return false;
+  if ((this.draftGroups[index].label ?? '') === nextLabel) return false;
+  this.#pushHistory('Edit group label');
+  this.draftGroups = this.draftGroups.map((g) => (g.id === id ? { ...g, label: nextLabel || null } : g));
+  return true;
+ }
+
+ updateGroupColor(id: string, color: string): boolean {
+  if (!this.draftGroups) return false;
+  const nextColor = color.trim();
+  const index = this.draftGroups.findIndex((g) => g.id === id);
+  if (index < 0) return false;
+  if ((this.draftGroups[index].color ?? '') === nextColor) return false;
+  this.#pushHistory('Edit group color');
+  this.draftGroups = this.draftGroups.map((g) => (g.id === id ? { ...g, color: nextColor || null } : g));
+  return true;
+ }
+
+ selectGroupNodes(id: string): boolean {
+  if (!this.draftGroups || !this.draftNodes) return false;
+  const group = this.draftGroups.find((g) => g.id === id);
+  if (!group) return false;
+  const existing = new Set(this.draftNodes.map((n) => n.id));
+  const ids = group.node_ids.filter((nodeId) => existing.has(nodeId));
+  if (ids.length === 0) return false;
+  this.selectedNodeIds = ids;
+  this.selectedNodeId = ids[0] ?? null;
+  return true;
+ }
+
  groupLabelsForNode(nodeId: string): string[] {
+  return this.groupBadgesForNode(nodeId).map((g) => g.label);
+ }
+
+ groupBadgesForNode(nodeId: string): Array<{ id: string; label: string; color: string | null }> {
   return (this.draftGroups ?? [])
    .filter((g) => g.node_ids.includes(nodeId))
-   .map((g) => g.label || g.id);
+   .map((g) => ({ id: g.id, label: g.label || g.id, color: g.color }));
  }
 
  #makeUniqueGroupId(existing: FlowgraphDraftGroup[]): string {

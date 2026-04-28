@@ -23,7 +23,7 @@
  nodeId: string;
  feature: string;
  spec: FlowgraphNodeSpec | undefined;
- groupLabels?: string[];
+ groupBadges?: Array<{ id: string; label: string; color: string | null }>;
 };
 
  let { data, selected }: { data: Data; selected?: boolean } = $props();
@@ -147,10 +147,10 @@
   <div class="feature">{shortFeature(data.feature)}</div>
  </div>
  <div class="id">#{data.nodeId}</div>
- {#if data.groupLabels?.length}
+ {#if data.groupBadges?.length}
   <div class="groups">
-   {#each data.groupLabels.slice(0, 2) as label (label)}
-    <span>{label}</span>
+   {#each data.groupBadges.slice(0, 2) as group (group.id)}
+    <span style={`--group-color: ${group.color ?? '#38bdf8'}`}>{group.label}</span>
    {/each}
   </div>
  {/if}
@@ -335,10 +335,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  border: 1px solid rgba(56, 189, 248, 0.45);
+  border: 1px solid color-mix(in srgb, var(--group-color, #38bdf8) 55%, transparent);
   border-radius: 999px;
-  background: rgba(56, 189, 248, 0.12);
-  color: rgb(14, 116, 144);
+  background: color-mix(in srgb, var(--group-color, #38bdf8) 15%, transparent);
+  color: color-mix(in srgb, var(--group-color, #38bdf8) 70%, currentColor);
   padding: 1px 5px;
   font-size: 9px;
   line-height: 1.35;

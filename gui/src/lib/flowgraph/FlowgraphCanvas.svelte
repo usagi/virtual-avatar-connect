@@ -76,7 +76,7 @@
      nodeId: n.id,
      feature: n.feature,
      spec,
-     groupLabels: flowgraphStore.groupLabelsForNode(n.id),
+     groupBadges: flowgraphStore.groupBadgesForNode(n.id),
     },
     selected: flowgraphStore.selectedNodeIds.includes(n.id) || flowgraphStore.selectedNodeId === n.id,
    };
