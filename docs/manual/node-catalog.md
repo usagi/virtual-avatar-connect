@@ -3007,7 +3007,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ### `flowgraph.vmc.extract_bone_pos`
 
-**VMC: Extract Bone Pos** — `MotionFrame` から `/VMC/Ext/Bone/Pos` を探し、`{ bone, position, rotation }` の JSON を返す。無ければ null
+**VMC: Extract Bone Pos** — `MotionFrame` から `/VMC/Ext/Bone/Pos` を探し、JSON と型付きの `found/bone/px/py/pz/rx/ry/rz/rw` を返す。無ければ JSON は null、typed output は既定値。
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3017,10 +3017,19 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `pose` | `json` |  |
+| `found` | `bool` |  |
+| `bone` | `string` |  |
+| `px` | `float` |  |
+| `py` | `float` |  |
+| `pz` | `float` |  |
+| `rx` | `float` |  |
+| `ry` | `float` |  |
+| `rz` | `float` |  |
+| `rw` | `float` |  |
 
 ### `flowgraph.vmc.extract_root_pos`
 
-**VMC: Extract Root Pos** — `MotionFrame` から `/VMC/Ext/Root/Pos` を探し、`{ bone, position, rotation }` の JSON を返す。無ければ null
+**VMC: Extract Root Pos** — `MotionFrame` から `/VMC/Ext/Root/Pos` を探し、JSON と型付きの `found/bone/px/py/pz/rx/ry/rz/rw` を返す。無ければ JSON は null、typed output は既定値。
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3029,6 +3038,15 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `pose` | `json` |  |
+| `found` | `bool` |  |
+| `bone` | `string` |  |
+| `px` | `float` |  |
+| `py` | `float` |  |
+| `pz` | `float` |  |
+| `rx` | `float` |  |
+| `ry` | `float` |  |
+| `rz` | `float` |  |
+| `rw` | `float` |  |
 
 ### `flowgraph.vmc.send_bone_pos`
 

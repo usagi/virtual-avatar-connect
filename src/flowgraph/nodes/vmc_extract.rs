@@ -20,14 +20,14 @@ impl NodeDescriptor for VmcExtractBonePosNode {
 			title: "VMC: Extract Bone Pos".into(),
 			category: "vmc".into(),
 			description: Some(
-				"`MotionFrame` から `/VMC/Ext/Bone/Pos` を探し、`{ bone, position, rotation }` の JSON を返す。無ければ null".into(),
+				"`MotionFrame` から `/VMC/Ext/Bone/Pos` を探し、JSON と型付きの `found/bone/px/py/pz/rx/ry/rz/rw` を返す。無ければ JSON は null、typed output は既定値。".into(),
 			),
 			inputs: vec![
 				PortSpec::input("frame", "Frame", SocketType::MotionFrame),
 				PortSpec::input("bone_name", "Bone name (exact, optional)", SocketType::String)
 					.with_default(SocketValue::String(String::new())),
 			],
-			outputs: vec![PortSpec::output("pose", "Pose (JSON)", SocketType::Json)],
+			outputs: pose_outputs(),
 			properties: vec![],
 		}
 	}
@@ -44,10 +44,7 @@ impl PureNode for VmcExtractBonePosNode {
 	) -> Result<NodeOutput, NodeExecError> {
 		let frame = get_required_motion_frame(inputs, "frame")?;
 		let filter = get_optional_string(inputs, "bone_name", "")?;
-		let pose = vmc::extract_first_bone_pos(&frame, &filter)
-			.map(|s| s.to_json_value())
-			.unwrap_or(serde_json::Value::Null);
-		Ok(NodeOutput::new().set_data("pose", SocketValue::Json(pose)))
+		Ok(pose_output(vmc::extract_first_bone_pos(&frame, &filter)))
 	}
 }
 
@@ -61,10 +58,10 @@ impl NodeDescriptor for VmcExtractRootPosNode {
 			title: "VMC: Extract Root Pos".into(),
 			category: "vmc".into(),
 			description: Some(
-				"`MotionFrame` から `/VMC/Ext/Root/Pos` を探し、`{ bone, position, rotation }` の JSON を返す。無ければ null".into(),
+				"`MotionFrame` から `/VMC/Ext/Root/Pos` を探し、JSON と型付きの `found/bone/px/py/pz/rx/ry/rz/rw` を返す。無ければ JSON は null、typed output は既定値。".into(),
 			),
 			inputs: vec![PortSpec::input("frame", "Frame", SocketType::MotionFrame)],
-			outputs: vec![PortSpec::output("pose", "Pose (JSON)", SocketType::Json)],
+			outputs: pose_outputs(),
 			properties: vec![],
 		}
 	}
@@ -80,11 +77,50 @@ impl PureNode for VmcExtractRootPosNode {
 		_fired: &ExecFireSet,
 	) -> Result<NodeOutput, NodeExecError> {
 		let frame = get_required_motion_frame(inputs, "frame")?;
-		let pose = vmc::extract_first_root_pos(&frame)
-			.map(|s| s.to_json_value())
-			.unwrap_or(serde_json::Value::Null);
-		Ok(NodeOutput::new().set_data("pose", SocketValue::Json(pose)))
+		Ok(pose_output(vmc::extract_first_root_pos(&frame)))
 	}
+}
+
+fn pose_outputs() -> Vec<PortSpec> {
+	vec![
+		PortSpec::output("pose", "Pose (JSON)", SocketType::Json),
+		PortSpec::output("found", "Found", SocketType::Bool),
+		PortSpec::output("bone", "Bone", SocketType::String),
+		PortSpec::output("px", "Position X", SocketType::Float),
+		PortSpec::output("py", "Position Y", SocketType::Float),
+		PortSpec::output("pz", "Position Z", SocketType::Float),
+		PortSpec::output("rx", "Rotation X", SocketType::Float),
+		PortSpec::output("ry", "Rotation Y", SocketType::Float),
+		PortSpec::output("rz", "Rotation Z", SocketType::Float),
+		PortSpec::output("rw", "Rotation W", SocketType::Float),
+	]
+}
+
+fn pose_output(sample: Option<vmc::VmcPosQuatSample>) -> NodeOutput {
+	let Some(sample) = sample else {
+		return NodeOutput::new()
+			.set_data("pose", SocketValue::Json(serde_json::Value::Null))
+			.set_data("found", SocketValue::Bool(false))
+			.set_data("bone", SocketValue::String(String::new()))
+			.set_data("px", SocketValue::Float(0.0))
+			.set_data("py", SocketValue::Float(0.0))
+			.set_data("pz", SocketValue::Float(0.0))
+			.set_data("rx", SocketValue::Float(0.0))
+			.set_data("ry", SocketValue::Float(0.0))
+			.set_data("rz", SocketValue::Float(0.0))
+			.set_data("rw", SocketValue::Float(1.0));
+	};
+	NodeOutput::new()
+		.set_data("pose", SocketValue::Json(sample.to_json_value()))
+		.set_data("found", SocketValue::Bool(true))
+		.set_data("bone", SocketValue::String(sample.bone))
+		.set_data("px", SocketValue::Float(sample.position[0]))
+		.set_data("py", SocketValue::Float(sample.position[1]))
+		.set_data("pz", SocketValue::Float(sample.position[2]))
+		.set_data("rx", SocketValue::Float(sample.rotation[0]))
+		.set_data("ry", SocketValue::Float(sample.rotation[1]))
+		.set_data("rz", SocketValue::Float(sample.rotation[2]))
+		.set_data("rw", SocketValue::Float(sample.rotation[3]))
 }
 
 /// 最初の `/VMC/Ext/Blend/Val` を抽出。`blendshape_name` が空でなければ名前 **完全一致**で最初の 1 件。
@@ -175,6 +211,12 @@ mod tests {
 		let v = out.data.get("pose").unwrap().as_json().unwrap();
 		assert_eq!(v["bone"], "Head");
 		assert_eq!(v["position"], json!([1.0, 2.0, 3.0]));
+		assert_eq!(out.data.get("found").unwrap().as_bool().unwrap(), true);
+		assert_eq!(out.data.get("bone").unwrap().as_str().unwrap(), "Head");
+		assert_eq!(out.data.get("px").unwrap().as_f64().unwrap(), 1.0);
+		assert_eq!(out.data.get("py").unwrap().as_f64().unwrap(), 2.0);
+		assert_eq!(out.data.get("pz").unwrap().as_f64().unwrap(), 3.0);
+		assert_eq!(out.data.get("rw").unwrap().as_f64().unwrap(), 1.0);
 	}
 
 	#[tokio::test]
