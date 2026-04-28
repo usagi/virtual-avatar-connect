@@ -1,11 +1,11 @@
 use super::AppCoreParts;
-use crate::{shutdown, Result};
-use actix_web::dev::ServerHandle;
+use crate::Result;
 use http::build_http_server;
+use lifecycle::spawn_http_shutdown_watcher;
 use runtime::ServerRuntime;
-use std::sync::Arc;
 
 mod http;
+mod lifecycle;
 mod runtime;
 
 pub(super) async fn run_services(parts: &AppCoreParts) -> Result<()> {
@@ -18,12 +18,4 @@ pub(super) async fn run_services(parts: &AppCoreParts) -> Result<()> {
 	server.await?;
 	log::info!("《Shutdown》 actix HTTP サーバーが停止しました。");
 	Ok(())
-}
-
-fn spawn_http_shutdown_watcher(server_handle: ServerHandle, shutdown: Arc<shutdown::ShutdownBroker>) {
-	tokio::spawn(async move {
-		shutdown.wait().await;
-		log::info!("《Shutdown》 actix HTTP サーバーへの graceful stop を要求します。");
-		server_handle.stop(true).await;
-	});
 }
