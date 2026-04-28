@@ -1,4 +1,5 @@
-use super::*;
+use super::AppCore;
+use crate::{bridges, managed_app, Result};
 
 pub(super) async fn cleanup(core: AppCore) -> Result<()> {
 	let managed_stop = {

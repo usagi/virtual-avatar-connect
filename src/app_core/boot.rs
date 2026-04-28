@@ -1,4 +1,7 @@
-use super::*;
+use super::AppCore;
+use crate::conf::Conf;
+use crate::{ai, bridges, flowgraph, managed_app, motion, processor, shutdown, web_interface, Result, SharedAudioSink};
+use std::sync::Arc;
 
 pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppCore> {
 	let shutdown = shutdown::ShutdownBroker::new();
@@ -7,16 +10,8 @@ pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppC
 	let state = crate::State::new(&conf, audio_sink, shutdown.clone()).await?;
 
 	let ai_tx = state.read().await.ai_observation_tx.clone();
-	let twitch_eventsub_for_ai = conf
-		.twitch
-		.as_ref()
-		.and_then(|t| t.eventsub.as_ref())
-		.map(|e| Arc::new(e.clone()));
-	let twitch_moderator_for_ai = conf
-		.twitch
-		.as_ref()
-		.and_then(|t| t.moderator.as_ref())
-		.map(|m| Arc::new(m.clone()));
+	let twitch_eventsub_for_ai = conf.twitch.as_ref().and_then(|t| t.eventsub.as_ref()).map(|e| Arc::new(e.clone()));
+	let twitch_moderator_for_ai = conf.twitch.as_ref().and_then(|t| t.moderator.as_ref()).map(|m| Arc::new(m.clone()));
 	let twitch_default_broadcaster_login = conf.twitch.as_ref().map(|t| {
 		t.eventsub
 			.as_ref()
@@ -59,8 +54,7 @@ pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppC
 		bridges::twitch_eventsub::v1_skip_broadcaster_logins(&flowgraph_bridges_catalog.twitch_eventsub, &username_fallback)
 	};
 
-	let (ingress_handles, web_input_registry) =
-		processor::ingress::prepare(&conf, state.clone(), &v2_eventsub_skip_broadcasters).await?;
+	let (ingress_handles, web_input_registry) = processor::ingress::prepare(&conf, state.clone(), &v2_eventsub_skip_broadcasters).await?;
 
 	let initial_bridges = bridges::spawn_all_from_state(&state, &channel_datum_tx).await;
 	let flowgraph_web_input_endpoints = Arc::new(initial_bridges.web_input_snapshot.clone());

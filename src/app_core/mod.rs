@@ -9,12 +9,11 @@ mod server;
 
 use crate::bridges;
 use crate::conf::Conf;
-use crate::managed_app;
 use crate::motion;
 use crate::processor;
 use crate::shutdown;
 use crate::state::SharedState;
-use crate::{ai, flowgraph, web_interface, Result, SharedAudioSink};
+use crate::{flowgraph, web_interface, Result, SharedAudioSink};
 use std::sync::Arc;
 
 /// conf ロード済み・`run_with` 済みの状態から起動する VAC 常駐ランタイム本体。
