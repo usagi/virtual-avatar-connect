@@ -6,6 +6,7 @@ Virtual Avatar Connect の全フェーズ × サブフェーズ単位のチェ�
 VAC Flowgraph を常駐型汎用データフロー処理エンジン、および汎用プログラミング言語に近い実行記述へ伸ばす横断計画は [`roadmap/flowgraph-language-roadmap.md`](roadmap/flowgraph-language-roadmap.md) を参照。
 VAC 常駐化に伴う配信・日常・仕事・睡眠などの動作状態切替計画は [`roadmap/runtime-mode-roadmap.md`](roadmap/runtime-mode-roadmap.md) を参照。
 v2 GUI を常駐ランタイムの管制卓と Flowgraph Studio へ再設計する計画は [`roadmap/gui-redesign-roadmap.md`](roadmap/gui-redesign-roadmap.md) を参照。
+常駐 VAC が外部データ源・OS 通知・OBS テンプレート出力を扱う次期機能波は [`roadmap/resident-io-roadmap.md`](roadmap/resident-io-roadmap.md) を参照。
 
 ---
 
@@ -307,6 +308,22 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 - [ ] `previous_response_id` / `conversation` / `compact` API による server-side memory（ψ-α を経てなお解決しない長期会話ユースケースが残る場合のみ検討。VAC の `include_all` / `overflow_summary` / hot-reload と構造的に衝突するため、既定は `store: false` を維持。設計判断メモ: [`roadmap/phase-chi-openai-responses.md`](roadmap/phase-chi-openai-responses.md) §11.1）
 - [ ] built-in tools（`web_search_preview` / `file_search` / `code_interpreter` / MCP tool）
 - [ ] `vac-openai-responses` shared crate 化（un-discord-kaltsitpseudo との共有）
+
+### Resident I/O Roadmap（計画中）
+
+常駐型データフローアプリとして、VAC が「外部データを Table に入れる」「ユーザーへ OS 通知する」「OBS へ完成形テンプレートを出す」ための次期機能波。
+詳細: [`roadmap/resident-io-roadmap.md`](roadmap/resident-io-roadmap.md)
+
+推奨実装順:
+
+- [ ] RI-1 `.xlsx -> Table` 読み込み。まずローカルファイルから sheet / range / header を扱い、Table パイプラインの入口を増やす。
+- [ ] RI-2 Google Sheets public URL / ID -> Table 読み込み。OAuth なしの公開共有・公開 CSV 経路から始め、RI-1 と同じ Table 仕様へ正規化する。
+- [ ] RI-3 Table draw node。Table から抽選し、配信企画・コメント抽選・ランダム選択を Flowgraph で扱えるようにする。
+- [ ] RI-4 RSS polling / WebSub bridge。初期は RSS / Atom fetch、次に WebSub を外部イベント ingress として扱う。
+- [ ] RI-5 OS desktop notification。desktop 常駐 runner の通知サービス + Flowgraph ノードとして追加し、Runtime Mode の通知ポリシーに従わせる。
+- [ ] RI-6 OBS Browser Source template output。OBS 側は 1 ソースで取り込める完成形テンプレートを優先し、字幕・会話・チャット・RAID 演出を段階追加する。
+- [ ] RI-7 physical constants。標準ライブラリー寄りの低リスク pure node / constants provider として追加する。
+- [ ] RI-8 authenticated Google Sheets。OAuth / token storage / scope 設計が必要なため、public reader の実用確認後に着手する。
 
 ### Phase ν+（TBD）: E2E 拡張
 

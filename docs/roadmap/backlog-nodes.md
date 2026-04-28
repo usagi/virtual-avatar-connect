@@ -5,6 +5,7 @@
 
 関連: [src/flowgraph/registry.rs](../../src/flowgraph/registry.rs) / [src/flowgraph/nodes/](../../src/flowgraph/nodes/)
 / [phase-phi-control-api-dictionary-editor.md](phase-phi-control-api-dictionary-editor.md)
+/ [resident-io-roadmap.md](resident-io-roadmap.md)
 / [docs/manual/node-catalog.md](../manual/node-catalog.md)
 
 ---
@@ -157,5 +158,18 @@ API が無ければ `DelayNode` と同じ経路で対応する。
 - **φ 完了後の Phase χ は OpenAI Responses API 全面移行に確定**（[`phase-chi-openai-responses.md`](phase-chi-openai-responses.md)）したため、本ノードは **Phase χ 以降の単独ノード PR** として別途扱う。
 - もし GUI の Editor Pane live-refresh（e.g. テーブル変更を polling する用途）で内部的に必要になれば
   前倒しも検討。
+
+---
+
+## 2. Resident I/O node candidates
+
+詳細設計と実装順序は [`resident-io-roadmap.md`](resident-io-roadmap.md) に集約する。
+
+- `flowgraph.table.load_xlsx`: `.xlsx` を `Table` へ読み込む。
+- `flowgraph.table.load_google_sheet_public`: 公開 Google Sheets を URL / ID から `Table` へ読み込む。
+- `flowgraph.table.draw`: `Table` の行抽選。重み列、seed、重複あり / なしを扱う。
+- `flowgraph.web.rss_fetch`: RSS / Atom を polling し、JSON と `Table` に正規化する。
+- `flowgraph.notify.desktop`: OS の desktop notification / Toast を出す。Runtime Mode の通知 policy に従う。
+- `flowgraph.constants.physics`: 物理定数を pure output として提供する。
 
 ---
