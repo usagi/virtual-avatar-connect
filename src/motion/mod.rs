@@ -23,7 +23,19 @@ use crate::shutdown::ShutdownBroker;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::task::JoinHandle;
+
+pub(crate) async fn spawn_vmc_passthrough_route(
+	spec: VmcPassthroughSpec,
+	shutdown: Arc<ShutdownBroker>,
+	status: Arc<VmcPassthroughStatusRegistry>,
+) -> Result<status::VmcPassthroughStatusView, String> {
+	let entry = status.add_dynamic_entry(&spec)?;
+	let Some(handle) = vmc_raw::try_spawn(&spec, shutdown, Some(entry.clone())) else {
+		return Err("VMC passthrough route を起動できませんでした".to_string());
+	};
+	status.push_task(handle).await;
+	Ok(entry.snapshot())
+}
 
 fn warn_duplicate_vmcbinds(specs: &[VmcPassthroughSpec]) {
 	let mut counts: HashMap<SocketAddr, usize> = HashMap::new();
@@ -76,43 +88,43 @@ pub(crate) fn duplicate_vmc_bind_addrs_for_test(specs: &[VmcPassthroughSpec]) ->
 
 /// 起動中の motion タスク。`run()` の cleanup で [`MotionHandles::finish_all`] する。
 pub struct MotionHandles {
-	tasks: Vec<JoinHandle<()>>,
+	status: Arc<VmcPassthroughStatusRegistry>,
 }
 
 impl MotionHandles {
+	#[allow(dead_code)] // テストと将来の no-motion 分岐用。通常起動では `spawn_all` から空 registry を返す。
 	pub fn empty() -> Self {
-		Self { tasks: Vec::new() }
+		Self {
+			status: VmcPassthroughStatusRegistry::empty(),
+		}
 	}
 
 	#[allow(dead_code)] // 将来の診断・条件分岐用（現状は spawn 直後のみ参照）
 	pub fn is_empty(&self) -> bool {
-		self.tasks.is_empty()
+		self.status.snapshot().entries.is_empty()
 	}
 
 	/// `conf.motion` に従い VMC passthrough タスクを spawn する。
 	pub fn spawn_all(conf: &Conf, shutdown: Arc<ShutdownBroker>, status: Arc<VmcPassthroughStatusRegistry>) -> Self {
 		let Some(m) = conf.motion.as_ref() else {
-			return Self::empty();
+			return Self { status };
 		};
 		warn_duplicate_vmcbinds(&m.vmc_passthrough);
-		let mut tasks = Vec::new();
 		for (index, spec) in m.vmc_passthrough.iter().enumerate() {
 			if let Some(h) = vmc_raw::try_spawn(spec, shutdown.clone(), status.entry(index)) {
-				tasks.push(h);
+				status.push_task_blocking(h);
 			}
 		}
-		if !tasks.is_empty() {
-			log::info!("《Motion》 ワーカー {} 本起動（VMC passthrough）", tasks.len());
+		let count = status.task_count_blocking();
+		if count > 0 {
+			log::info!("《Motion》 ワーカー {} 本起動（VMC passthrough）", count);
 		}
-		Self { tasks }
+		Self { status }
 	}
 
 	/// 全タスクを中止し、終了を待つ（cleanup 用）。
 	pub async fn finish_all(self) {
-		for h in self.tasks {
-			h.abort();
-			let _ = h.await;
-		}
+		self.status.finish_all_tasks().await;
 	}
 }
 

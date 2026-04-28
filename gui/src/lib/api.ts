@@ -67,6 +67,7 @@ import {
  type RunWithListResponse,
  type RunWithMutationResponse,
  type StateSnapshot,
+ type VmcBindRequest,
  type VmcForwardRequest,
  type VmcPassthroughStatusView,
  type VmcStatusResponse,
@@ -291,6 +292,12 @@ export const api = {
  // --- VMC passthrough (M3) ---
  vmcStatus(): Promise<VmcStatusResponse> {
   return request<VmcStatusResponse>('/vmc/status');
+ },
+ vmcBind(req: VmcBindRequest): Promise<VmcPassthroughStatusView> {
+  return request<VmcPassthroughStatusView>('/vmc/bind', {
+   method: 'POST',
+   body: req,
+  });
  },
  vmcForwardAdd(id: string, req: VmcForwardRequest): Promise<VmcPassthroughStatusView> {
   return request<VmcPassthroughStatusView>(`/vmc/${encodeURIComponent(id)}/forward/add`, {

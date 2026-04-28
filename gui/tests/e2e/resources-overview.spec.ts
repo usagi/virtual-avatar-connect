@@ -18,5 +18,6 @@ test.describe('GUI redesign: リソース概要', () => {
   await expect(page.getByText('motion 層の UDP 転送状態と packet 統計を確認します。')).toBeVisible();
   await expect(page.getByText('Routes', { exact: true })).toBeVisible();
   await expect(page.getByText('Packets', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'route 追加' })).toBeVisible();
  });
 });

@@ -562,6 +562,12 @@ export type VmcForwardRequest = {
  dest: string;
 };
 
+export type VmcBindRequest = {
+ bind: string;
+ forward_to: string[];
+ label?: string | null;
+};
+
 // ---------------------------------------------------------------------------
 // /modify/:id/dictionary|regex/entries (Phase VI-γ-8a)
 // ---------------------------------------------------------------------------

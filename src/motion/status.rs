@@ -5,6 +5,7 @@ use serde::Serialize;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use tokio::task::JoinHandle;
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -112,6 +113,10 @@ impl VmcPassthroughStatusEntry {
 		self.forward_addrs.lock().map(|g| g.clone()).unwrap_or_default()
 	}
 
+	pub(crate) fn bind_addr(&self) -> Result<SocketAddr, String> {
+		parse_socket_addr(&self.bind)
+	}
+
 	pub(crate) fn add_forward(&self, raw: &str) -> Result<VmcPassthroughStatusView, String> {
 		let addr = parse_socket_addr(raw)?;
 		let normalized = addr.to_string();
@@ -152,7 +157,7 @@ impl VmcPassthroughStatusEntry {
 		}
 	}
 
-	fn snapshot(&self) -> VmcPassthroughStatusView {
+	pub(crate) fn snapshot(&self) -> VmcPassthroughStatusView {
 		VmcPassthroughStatusView {
 			id: self.id.clone(),
 			label: self.label.clone(),
@@ -172,17 +177,28 @@ impl VmcPassthroughStatusEntry {
 
 #[derive(Debug)]
 pub struct VmcPassthroughStatusRegistry {
-	entries: Vec<Arc<VmcPassthroughStatusEntry>>,
+	entries: Mutex<Vec<Arc<VmcPassthroughStatusEntry>>>,
+	tasks: Mutex<Vec<JoinHandle<()>>>,
 }
 
 impl VmcPassthroughStatusRegistry {
+	pub fn empty() -> Arc<Self> {
+		Arc::new(Self {
+			entries: Mutex::new(Vec::new()),
+			tasks: Mutex::new(Vec::new()),
+		})
+	}
+
 	pub fn from_conf(conf: &Conf) -> Arc<Self> {
 		let entries = conf
 			.motion
 			.as_ref()
 			.map(|m| Self::entries_from_specs(&m.vmc_passthrough))
 			.unwrap_or_default();
-		Arc::new(Self { entries })
+		Arc::new(Self {
+			entries: Mutex::new(entries),
+			tasks: Mutex::new(Vec::new()),
+		})
 	}
 
 	fn entries_from_specs(specs: &[VmcPassthroughSpec]) -> Vec<Arc<VmcPassthroughStatusEntry>> {
@@ -194,16 +210,58 @@ impl VmcPassthroughStatusRegistry {
 	}
 
 	pub(crate) fn entry(&self, index: usize) -> Option<Arc<VmcPassthroughStatusEntry>> {
-		self.entries.get(index).cloned()
+		self.entries.lock().ok().and_then(|entries| entries.get(index).cloned())
 	}
 
 	pub(crate) fn find(&self, id: &str) -> Option<Arc<VmcPassthroughStatusEntry>> {
-		self.entries.iter().find(|entry| entry.id == id).cloned()
+		self.entries
+			.lock()
+			.ok()
+			.and_then(|entries| entries.iter().find(|entry| entry.id == id).cloned())
 	}
 
 	pub fn snapshot(&self) -> VmcStatusSnapshot {
+		let entries = self.entries.lock().map(|entries| entries.clone()).unwrap_or_default();
 		VmcStatusSnapshot {
-			entries: self.entries.iter().map(|entry| entry.snapshot()).collect(),
+			entries: entries.iter().map(|entry| entry.snapshot()).collect(),
+		}
+	}
+
+	pub(crate) fn add_dynamic_entry(&self, spec: &VmcPassthroughSpec) -> Result<Arc<VmcPassthroughStatusEntry>, String> {
+		let bind = parse_socket_addr(&spec.bind)?;
+		let mut entries = self.entries.lock().map_err(|_| "vmc entries lock poisoned".to_string())?;
+		if entries.iter().any(|entry| entry.bind_addr().ok() == Some(bind)) {
+			return Err(format!("bind {} は既に登録されています", bind));
+		}
+		let index = entries.len();
+		let entry = VmcPassthroughStatusEntry::from_spec(index, spec);
+		entries.push(entry.clone());
+		Ok(entry)
+	}
+
+	pub(crate) async fn push_task(&self, handle: JoinHandle<()>) {
+		self.push_task_blocking(handle);
+	}
+
+	pub(crate) fn push_task_blocking(&self, handle: JoinHandle<()>) {
+		if let Ok(mut tasks) = self.tasks.lock() {
+			tasks.push(handle);
+		}
+	}
+
+	pub(crate) fn task_count_blocking(&self) -> usize {
+		self.tasks.lock().map(|tasks| tasks.len()).unwrap_or(0)
+	}
+
+	pub(crate) async fn finish_all_tasks(&self) {
+		let tasks = self
+			.tasks
+			.lock()
+			.map(|mut tasks| tasks.drain(..).collect::<Vec<_>>())
+			.unwrap_or_default();
+		for handle in tasks {
+			handle.abort();
+			let _ = handle.await;
 		}
 	}
 }
@@ -226,12 +284,13 @@ mod tests {
 	#[test]
 	fn snapshot_includes_configured_entries() {
 		let registry = Arc::new(VmcPassthroughStatusRegistry {
-			entries: VmcPassthroughStatusRegistry::entries_from_specs(&[VmcPassthroughSpec {
+			entries: Mutex::new(VmcPassthroughStatusRegistry::entries_from_specs(&[VmcPassthroughSpec {
 				enabled: true,
 				label: Some("primary".into()),
 				bind: "0.0.0.0:39539".into(),
 				forward_to: vec!["127.0.0.1:39540".into()],
-			}]),
+			}])),
+			tasks: Mutex::new(Vec::new()),
 		});
 		let snapshot = registry.snapshot();
 		assert_eq!(snapshot.entries.len(), 1);
@@ -242,12 +301,13 @@ mod tests {
 	#[test]
 	fn entry_records_receive_stats() {
 		let registry = Arc::new(VmcPassthroughStatusRegistry {
-			entries: VmcPassthroughStatusRegistry::entries_from_specs(&[VmcPassthroughSpec {
+			entries: Mutex::new(VmcPassthroughStatusRegistry::entries_from_specs(&[VmcPassthroughSpec {
 				enabled: true,
 				label: None,
 				bind: "0.0.0.0:39539".into(),
 				forward_to: vec!["127.0.0.1:39540".into(), "127.0.0.1:39541".into()],
-			}]),
+			}])),
+			tasks: Mutex::new(Vec::new()),
 		});
 		let entry = registry.entry(0).expect("entry");
 		entry.mark_running();
@@ -267,12 +327,13 @@ mod tests {
 	#[test]
 	fn entry_add_remove_forward_updates_snapshot_and_addrs() {
 		let registry = Arc::new(VmcPassthroughStatusRegistry {
-			entries: VmcPassthroughStatusRegistry::entries_from_specs(&[VmcPassthroughSpec {
+			entries: Mutex::new(VmcPassthroughStatusRegistry::entries_from_specs(&[VmcPassthroughSpec {
 				enabled: true,
 				label: Some("primary".into()),
 				bind: "0.0.0.0:39539".into(),
 				forward_to: vec!["127.0.0.1:39540".into()],
-			}]),
+			}])),
+			tasks: Mutex::new(Vec::new()),
 		});
 		let entry = registry.entry(0).expect("entry");
 		entry.add_forward("127.0.0.1:39541").expect("add forward");

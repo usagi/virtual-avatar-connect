@@ -180,7 +180,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] M-0 feat(motion): `src/motion/`（`vmc_raw` + `router` + `osc` プレースホルダ）+ `[motion]` / `MotionHandles` 起動・`ShutdownBroker` 連携
 - [x] M-1 feat(flowgraph,bridges): `flowgraph.ingress.vmc_udp` + `vmc_ingress` ブリッジ + `` `TriggerEvent` `` 投入（`phase-mu` §8、`flowgraph.example/vmc-udp-ingress`）
 - [x] M-2 feat(motion): パススルー・ハブ運用の conf / ログ整備（複数受信ソケットの運用例）
-- [ ] M-3 feat(web_interface,gui): Control API `GET /api/v1/control/vmc/status` + runtime forward add/remove + Resources GUI 管理を実装。残りは新規 bind route の動的追加。
+- [x] M-3 feat(web_interface,gui): Control API `GET /api/v1/control/vmc/status` + runtime bind / forward add/remove + Resources GUI 管理。
 - [x] M-4a feat(flowgraph,motion,deps): `flowgraph.motion.vmc_parse`（Base64→OSC→JSON）+ Phase ρ 先取り `flowgraph.osc.send`（UDP）+ `rosc` + `flowgraph::fixture_runner` 最小 + `src/app_core/`（Step 7 一段）
 - [x] M-4 feat(flowgraph): `MotionFrame` 第一級型 + `motion_frame` ソケット（`json` と coerce 往復）+ `flowgraph.motion.vmc_parse` / `filter` / `map`（ワイヤ表現は `byte_len` + `osc_messages`。**head_pose 等の意味 IR**は M5 以降 / `v2-vmc` §M4 参照）
 - [ ] M-5 docs+flowgraph: 表情・ジェスチャ等の用途拡張（`v2-vmc` §5 参照）

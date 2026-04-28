@@ -20,6 +20,11 @@
  let addDestById = $state<Record<string, string>>({});
  let editErrorById = $state<Record<string, string>>({});
  let editingId = $state<string | null>(null);
+ let bindLabel = $state('');
+ let bindAddress = $state('');
+ let bindForwardTo = $state('');
+ let bindBusy = $state(false);
+ let bindError = $state<string | null>(null);
 
  const entries = $derived(status?.entries ?? []);
  const total = $derived(entries.length);
@@ -65,6 +70,32 @@
    editErrorById = { ...editErrorById, [id]: formatError(e) };
   } finally {
    editingId = null;
+  }
+ }
+
+ async function addRoute(): Promise<void> {
+  const bind = bindAddress.trim();
+  const forwardTo = bindForwardTo
+   .split(/[,\s]+/)
+   .map((s) => s.trim())
+   .filter(Boolean);
+  if (!bind || forwardTo.length === 0) return;
+  bindBusy = true;
+  bindError = null;
+  try {
+   const entry = await api.vmcBind({
+    bind,
+    forward_to: forwardTo,
+    label: bindLabel.trim() || null,
+   });
+   status = { entries: [...entries, entry] };
+   bindLabel = '';
+   bindAddress = '';
+   bindForwardTo = '';
+  } catch (e) {
+   bindError = formatError(e);
+  } finally {
+   bindBusy = false;
   }
  }
 
@@ -126,15 +157,60 @@
    <h3 class="text-sm font-semibold opacity-80">VMC passthrough</h3>
    <p class="mt-0.5 text-xs opacity-60">motion 層の UDP 転送状態と packet 統計を確認します。</p>
   </div>
-  <button
+ <button
    type="button"
    class="rounded border border-surface-300-700 px-2 py-0.5 text-xs hover:bg-surface-200-800 disabled:opacity-50"
    disabled={loading}
    onclick={() => void refresh()}
   >
    更新
-  </button>
+ </button>
  </header>
+
+ <form class="mb-3 rounded border border-surface-200-800 bg-surface-50-950 p-3 text-xs" onsubmit={(event) => {
+  event.preventDefault();
+  void addRoute();
+ }}>
+  <div class="grid gap-2 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1.4fr)_auto]">
+   <input
+    class="rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1 disabled:opacity-50"
+    placeholder="label"
+    value={bindLabel}
+    disabled={bindBusy}
+    oninput={(event) => {
+     bindLabel = event.currentTarget.value;
+    }}
+   />
+   <input
+    class="rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1 font-mono disabled:opacity-50"
+    placeholder="0.0.0.0:39539"
+    value={bindAddress}
+    disabled={bindBusy}
+    oninput={(event) => {
+     bindAddress = event.currentTarget.value;
+    }}
+   />
+   <input
+    class="rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1 font-mono disabled:opacity-50"
+    placeholder="127.0.0.1:39540, 127.0.0.1:39541"
+    value={bindForwardTo}
+    disabled={bindBusy}
+    oninput={(event) => {
+     bindForwardTo = event.currentTarget.value;
+    }}
+   />
+   <button
+    type="submit"
+    class="rounded border border-surface-300-700 px-2 py-1 hover:bg-surface-200-800 disabled:opacity-50"
+    disabled={bindBusy || !bindAddress.trim() || !bindForwardTo.trim()}
+   >
+    route 追加
+   </button>
+  </div>
+  {#if bindError}
+   <p class="mt-2 rounded border border-error-500/40 bg-error-500/10 p-2">{bindError}</p>
+  {/if}
+ </form>
 
  {#if error}
   <p class="rounded border border-error-500/40 bg-error-500/10 p-2 text-xs">{error}</p>

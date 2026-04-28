@@ -195,7 +195,7 @@ POST /api/v1/control/vmc/{id}/forward/add
 POST /api/v1/control/vmc/{id}/forward/remove
 ```
 
-実装メモ（M3）: `GET /api/v1/control/vmc/status` は実装済み。`[[motion.vmc_passthrough]]` ごとに `configured` / `skipped` / `running` / `failed` / `stopped`、受信 packet / byte 数、転送成功数、送信 error 数、最終受信時刻を返す。既存 route の `forward_to` は `POST /api/v1/control/vmc/{id}/forward/add|remove` で runtime 変更でき、Resources GUI からも操作できる。新規 bind route の動的追加は worker lifecycle を別途固定してから実装する。
+実装メモ（M3）: `GET /api/v1/control/vmc/status` は実装済み。`[[motion.vmc_passthrough]]` ごとに `configured` / `skipped` / `running` / `failed` / `stopped`、受信 packet / byte 数、転送成功数、送信 error 数、最終受信時刻を返す。`POST /api/v1/control/vmc/bind` で新規 runtime route を追加でき、既存 route の `forward_to` は `POST /api/v1/control/vmc/{id}/forward/add|remove` で runtime 変更できる。Resources GUI からも route 追加・転送先追加・転送先削除を操作できる。現時点では runtime 変更であり、conf への永続化は行わない。
 
 #### GUI
 
