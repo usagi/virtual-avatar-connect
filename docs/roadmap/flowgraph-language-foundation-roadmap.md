@@ -39,6 +39,21 @@ VAC Flowgraph を汎用プログラミング言語に近づけるための基礎
 - runtime 値は既存 `serde_json::Value` / `Table` を活かし、schema validation を外側に足す
 - GUI は schema を読んで入力フォームとエラー表示を強化する
 
+### LF-1a node catalog contract metadata ✅
+
+初段として、`GET /flowgraph/node-catalog` の各 node spec に派生 `contract` metadata を追加する。
+既存の `inputs` / `outputs` / `properties` は互換維持し、`contract` は今後の library signature / GUI 補完 / schema validation が読む machine-readable 入口とする。
+
+`contract` v1:
+
+- `kind = "node"`
+- `feature`
+- `inputs[]` / `outputs[]`: `name`, `type`, `direction`, `exec`, `optional`, `multi`, `default`, `enum`
+- `properties[]`: `name`, `type`, `default`, `required`, `validator`, `enum`
+- `summary`: port / property 数、exec 入出力の有無
+
+この段階では validation enforcement は行わない。既存 `NodeSpec` からの派生値として出し、後続で named `record` / `table schema` / library signature に接続する。
+
 ## 3. LF-2 Capability / Effect
 
 Pure / Stateful / Effectful の大分類に加えて、具体的な権限と effect kind を扱う。
@@ -71,6 +86,16 @@ Pure / Stateful / Effectful の大分類に加えて、具体的な権限と eff
 - loader は graph 全体の required capability summary を生成する
 - GUI は graph load 時と node palette で effect を表示する
 - policy enforcement は read-only diagnostics から始め、後続で hard deny / mode policy を導入する
+
+### LF-2a node catalog effect metadata ✅
+
+初段として、`GET /flowgraph/node-catalog` の各 node spec に以下を追加する。
+
+- `effect_class`: `pure` / `stateful` / `effectful`
+- `capabilities`: node が要求する capability の配列
+
+`capabilities` は現時点では feature / category からの保守的な推定であり、policy enforcement は行わない。
+GUI 表示、graph capability summary、fixture test の mock capability 設計に使うための read-only metadata とする。
 
 ## 4. LF-3 Testing / Debugger
 
@@ -166,8 +191,8 @@ node signature / library signature / schema から manual と GUI catalog を生
 
 ## 6. 実装順序
 
-- [ ] LF-1 Schema / Contract
-- [ ] LF-2 Capability / Effect
+- [~] LF-1 Schema / Contract
+- [~] LF-2 Capability / Effect
 - [ ] LF-3 Testing / Debugger
 - [ ] LF-4 Module / Package System
 - [ ] LF-5 Generic / Type Parameter

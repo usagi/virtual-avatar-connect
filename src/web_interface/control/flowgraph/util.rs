@@ -52,7 +52,170 @@ pub(crate) fn enrich_quantity_port_ui_hints(port: &mut serde_json::Value) {
 	obj.insert("quantity_unit_full".to_string(), serde_json::Value::String(full));
 }
 
-/// node-catalog の各 spec JSON に control_triggerable + Quantity UI ヒントを注入する。
+fn port_contracts(v: &serde_json::Value, key: &str) -> Vec<serde_json::Value> {
+	v.get(key)
+		.and_then(|x| x.as_array())
+		.map(|arr| {
+			arr.iter()
+				.filter_map(|p| {
+					let obj = p.as_object()?;
+					let mut out = serde_json::Map::new();
+					for (from, to) in [
+						("name", "name"),
+						("label", "label"),
+						("ty", "type"),
+						("direction", "direction"),
+						("is_exec", "exec"),
+						("optional", "optional"),
+						("multi", "multi"),
+						("default", "default"),
+						("closed_string_variants", "enum"),
+					] {
+						if let Some(value) = obj.get(from) {
+							out.insert(to.to_string(), value.clone());
+						}
+					}
+					Some(serde_json::Value::Object(out))
+				})
+				.collect()
+		})
+		.unwrap_or_default()
+}
+
+fn property_contracts(v: &serde_json::Value) -> Vec<serde_json::Value> {
+	v.get("properties")
+		.and_then(|x| x.as_array())
+		.map(|arr| {
+			arr.iter()
+				.filter_map(|p| {
+					let obj = p.as_object()?;
+					let mut out = serde_json::Map::new();
+					for (from, to) in [
+						("name", "name"),
+						("label", "label"),
+						("ty", "type"),
+						("default", "default"),
+						("required", "required"),
+						("validator", "validator"),
+						("choices", "enum"),
+					] {
+						if let Some(value) = obj.get(from) {
+							out.insert(to.to_string(), value.clone());
+						}
+					}
+					Some(serde_json::Value::Object(out))
+				})
+				.collect()
+		})
+		.unwrap_or_default()
+}
+
+/// LF-1: 既存 NodeSpec から node signature / contract を派生する。
+///
+/// 現段階では `inputs` / `outputs` / `properties` を壊さず、GUI と将来の library
+/// signature が同じ machine-readable 語彙を参照できるよう catalog JSON にだけ注入する。
+pub(crate) fn enrich_contract_json(v: &mut serde_json::Value) {
+	let feature = v.get("feature").cloned().unwrap_or(serde_json::Value::Null);
+	let inputs = port_contracts(v, "inputs");
+	let outputs = port_contracts(v, "outputs");
+	let properties = property_contracts(v);
+	let has_exec_input = inputs.iter().any(|p| p.get("exec").and_then(|x| x.as_bool()) == Some(true));
+	let has_exec_output = outputs.iter().any(|p| p.get("exec").and_then(|x| x.as_bool()) == Some(true));
+	let Some(obj) = v.as_object_mut() else {
+		return;
+	};
+	obj.insert(
+		"contract".to_string(),
+		serde_json::json!({
+			"version": 1,
+			"kind": "node",
+			"feature": feature,
+			"inputs": inputs,
+			"outputs": outputs,
+			"properties": properties,
+			"summary": {
+				"input_count": inputs.len(),
+				"output_count": outputs.len(),
+				"property_count": properties.len(),
+				"has_exec_input": has_exec_input,
+				"has_exec_output": has_exec_output,
+			}
+		}),
+	);
+}
+
+fn infer_capabilities(feature: &str, category: &str, effect_class: &str) -> Vec<&'static str> {
+	if effect_class != "effectful" {
+		return Vec::new();
+	}
+	let mut caps = Vec::new();
+	let mut add = |cap: &'static str| {
+		if !caps.contains(&cap) {
+			caps.push(cap);
+		}
+	};
+
+	if feature == "flowgraph.table.load_tsv" {
+		add("file_read");
+	}
+	if feature == "flowgraph.table.write_tsv" {
+		add("file_write");
+	}
+	if feature.starts_with("flowgraph.http.") || feature.starts_with("flowgraph.translate.") {
+		add("network");
+	}
+	if feature.starts_with("flowgraph.obs.") {
+		add("network");
+		add("obs_control");
+	}
+	if feature.starts_with("flowgraph.twitch.") {
+		add("network");
+		add("twitch_api");
+	}
+	if feature == "flowgraph.twitch.get_token" {
+		add("credential_access");
+	}
+	if feature.starts_with("flowgraph.osc.") || feature.starts_with("flowgraph.vmc.") || feature.starts_with("flowgraph.vrchat.") {
+		add("network");
+	}
+	if feature.starts_with("flowgraph.process.") {
+		add("process_control");
+	}
+	if feature.starts_with("flowgraph.window.") {
+		add("window_control");
+	}
+	if feature.starts_with("flowgraph.screenshot.") || feature.starts_with("flowgraph.ocr.") {
+		add("desktop_capture");
+	}
+	if feature.starts_with("flowgraph.tts.") {
+		add("audio_output");
+	}
+	if category == "log" || feature == "flowgraph.util.log" {
+		add("trace_write");
+	}
+	caps
+}
+
+/// LF-2: catalog JSON に副作用クラスと capability summary を注入する。
+///
+/// まだ policy enforcement は行わない。GUI 表示、graph summary、mock capability 設計のための
+/// read-only metadata として扱う。
+pub(crate) fn enrich_effect_metadata_json(reg: &crate::flowgraph::registry::NodeRegistry, v: &mut serde_json::Value) {
+	let Some(obj) = v.as_object_mut() else {
+		return;
+	};
+	let feature = obj.get("feature").and_then(|f| f.as_str()).unwrap_or("");
+	let category = obj.get("category").and_then(|c| c.as_str()).unwrap_or("");
+	let effect_class = reg.effect_class(feature).unwrap_or("unknown");
+	let caps = infer_capabilities(feature, category, effect_class);
+	obj.insert("effect_class".to_string(), serde_json::Value::String(effect_class.to_string()));
+	obj.insert(
+		"capabilities".to_string(),
+		serde_json::Value::Array(caps.into_iter().map(|s| serde_json::Value::String(s.to_string())).collect()),
+	);
+}
+
+/// node-catalog の各 spec JSON に control_triggerable + Quantity UI ヒント + contract/effect metadata を注入する。
 pub(crate) fn enrich_node_catalog_spec_json(reg: &crate::flowgraph::registry::NodeRegistry, v: &mut serde_json::Value) {
 	let Some(obj) = v.as_object_mut() else {
 		return;
@@ -69,6 +232,8 @@ pub(crate) fn enrich_node_catalog_spec_json(reg: &crate::flowgraph::registry::No
 			}
 		}
 	}
+	enrich_contract_json(v);
+	enrich_effect_metadata_json(reg, v);
 }
 
 /// `state.flowgraph` と `conf.flowgraph_dir` を取り出す。dir 未設定なら 500。
@@ -356,5 +521,60 @@ mod tests {
 				"{f} は control_triggerable=false であるべき"
 			);
 		}
+	}
+
+	#[test]
+	fn node_catalog_json_injects_lf1_contract() {
+		use crate::flowgraph::registry::registry;
+
+		let reg = registry();
+		let spec = reg.spec("flowgraph.glossary.learn").expect("glossary.learn が registry に必要");
+		let mut v = serde_json::to_value(&spec).unwrap();
+		enrich_node_catalog_spec_json(reg, &mut v);
+
+		let contract = &v["contract"];
+		assert_eq!(contract["version"].as_i64(), Some(1));
+		assert_eq!(contract["kind"].as_str(), Some("node"));
+		assert_eq!(contract["feature"].as_str(), Some("flowgraph.glossary.learn"));
+		assert_eq!(contract["summary"]["has_exec_input"].as_bool(), Some(true));
+		assert_eq!(contract["summary"]["has_exec_output"].as_bool(), Some(true));
+
+		let inputs = contract["inputs"].as_array().expect("inputs contract");
+		let dictionary = inputs.iter().find(|p| p["name"].as_str() == Some("dictionary")).expect("dictionary input");
+		assert_eq!(dictionary["type"].as_str(), Some("table"));
+		assert_eq!(dictionary["optional"].as_bool(), Some(true));
+
+		let outputs = contract["outputs"].as_array().expect("outputs contract");
+		assert!(outputs.iter().any(|p| p["name"].as_str() == Some("updated_dictionary") && p["type"].as_str() == Some("table")));
+	}
+
+	#[test]
+	fn node_catalog_json_injects_lf2_effect_metadata() {
+		use crate::flowgraph::registry::registry;
+
+		let reg = registry();
+		let mut specs = std::collections::HashMap::new();
+		for feature in [
+			"flowgraph.literal.string",
+			"flowgraph.glossary.match",
+			"flowgraph.table.write_tsv",
+			"flowgraph.twitch.chat_send",
+			"flowgraph.obs.set_current_program_scene",
+		] {
+			let spec = reg.spec(feature).unwrap_or_else(|| panic!("{feature} が registry に必要"));
+			let mut v = serde_json::to_value(&spec).unwrap();
+			enrich_node_catalog_spec_json(reg, &mut v);
+			specs.insert(feature, v);
+		}
+
+		assert_eq!(specs["flowgraph.literal.string"]["effect_class"].as_str(), Some("pure"));
+		assert_eq!(specs["flowgraph.glossary.match"]["effect_class"].as_str(), Some("stateful"));
+		assert_eq!(specs["flowgraph.table.write_tsv"]["effect_class"].as_str(), Some("effectful"));
+		assert!(specs["flowgraph.table.write_tsv"]["capabilities"].as_array().unwrap().contains(&serde_json::json!("file_write")));
+		assert!(specs["flowgraph.twitch.chat_send"]["capabilities"].as_array().unwrap().contains(&serde_json::json!("twitch_api")));
+		assert!(specs["flowgraph.obs.set_current_program_scene"]["capabilities"]
+			.as_array()
+			.unwrap()
+			.contains(&serde_json::json!("obs_control")));
 	}
 }

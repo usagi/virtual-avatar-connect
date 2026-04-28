@@ -872,6 +872,64 @@ export type FlowgraphPortSpec = {
  quantity_unit_full?: string | null;
 };
 
+export type FlowgraphContractPort = {
+ name: string;
+ label?: string;
+ type: FlowgraphSocketType;
+ direction: FlowgraphPortDirection;
+ exec: boolean;
+ optional: boolean;
+ multi: boolean;
+ default?: unknown;
+ enum?: string[] | null;
+};
+
+export type FlowgraphContractProperty = {
+ name: string;
+ label?: string;
+ type: FlowgraphSocketType;
+ default?: unknown;
+ required: boolean;
+ validator?: string;
+ enum?: string[] | null;
+};
+
+export type FlowgraphNodeContract = {
+ version: 1;
+ kind: 'node';
+ feature: string;
+ inputs: FlowgraphContractPort[];
+ outputs: FlowgraphContractPort[];
+ properties: FlowgraphContractProperty[];
+ summary: {
+  input_count: number;
+  output_count: number;
+  property_count: number;
+  has_exec_input: boolean;
+  has_exec_output: boolean;
+ };
+};
+
+export type FlowgraphEffectClass = 'pure' | 'stateful' | 'effectful' | 'unknown';
+
+export type FlowgraphCapability =
+ | 'file_read'
+ | 'file_write'
+ | 'file_watch'
+ | 'network'
+ | 'db_read'
+ | 'db_write'
+ | 'process_control'
+ | 'window_control'
+ | 'desktop_capture'
+ | 'desktop_notification'
+ | 'obs_control'
+ | 'twitch_api'
+ | 'credential_access'
+ | 'audio_output'
+ | 'trace_write'
+ | string;
+
 export type FlowgraphPropertySpec = {
  name: string;
  label: string;
@@ -905,8 +963,14 @@ export type FlowgraphNodeSpec = {
   * このノードを外部から発火できるか。サーバ側では `NodeDescriptor::control_triggerable()`
   * の opt-in が source of truth で、node-catalog レスポンス JSON にだけこの field が注入される。
   * 古いバックエンドに繋いだ場合は undefined になる可能性があるため `?` を付ける。
-  */
+ */
  control_triggerable?: boolean;
+ /** LF-1: node signature / library signature 共通化に向けた machine-readable contract。 */
+ contract?: FlowgraphNodeContract;
+ /** LF-2: Pure / Stateful / Effectful の catalog metadata。 */
+ effect_class?: FlowgraphEffectClass;
+ /** LF-2: node が要求する外部 capability。現段階では read-only metadata。 */
+ capabilities?: FlowgraphCapability[];
 };
 
 export type FlowgraphNodeCatalogResponse = {

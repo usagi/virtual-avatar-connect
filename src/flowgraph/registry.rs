@@ -49,6 +49,14 @@ impl NodeArc {
 		}
 	}
 
+	fn effect_class(&self) -> &'static str {
+		match self {
+			NodeArc::Pure(_) => "pure",
+			NodeArc::Stateful(_) => "stateful",
+			NodeArc::Effectful(_) => "effectful",
+		}
+	}
+
 	fn make_impl(&self) -> NodeImpl {
 		match self {
 			NodeArc::Pure(n) => NodeImpl::pure(n.clone()),
@@ -118,6 +126,11 @@ impl NodeRegistry {
 			.get(self.resolve_feature(feature))
 			.map(|n| n.control_triggerable())
 			.unwrap_or(false)
+	}
+
+	/// LF-2: feature の副作用クラス。alias は正規 feature へ解決して返す。
+	pub fn effect_class(&self, feature: &str) -> Option<&'static str> {
+		self.map.get(self.resolve_feature(feature)).map(|n| n.effect_class())
 	}
 
 	/// 登録済み feature から **新しい** `NodeImpl` を作る（Stateful は state slot を新規確保）。
@@ -649,5 +662,15 @@ mod tests {
 		let r = registry();
 		assert!(r.make_impl("flowgraph.does.not.exist").is_none());
 		assert!(r.spec("flowgraph.does.not.exist").is_none());
+	}
+
+	#[test]
+	fn effect_class_resolves_aliases() {
+		let r = registry();
+		assert_eq!(r.effect_class("flowgraph.literal.string"), Some("pure"));
+		assert_eq!(r.effect_class("flowgraph.state.int_counter"), Some("stateful"));
+		assert_eq!(r.effect_class("flowgraph.util.log"), Some("effectful"));
+		assert_eq!(r.effect_class("flowgraph.dictionary.learn"), Some("pure"));
+		assert_eq!(r.effect_class("flowgraph.does.not.exist"), None);
 	}
 }

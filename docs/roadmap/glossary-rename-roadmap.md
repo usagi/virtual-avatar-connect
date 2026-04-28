@@ -1,5 +1,7 @@
 # Glossary Rename Roadmap
 
+> Status: GRN-1〜GRN-5 完了。`flowgraph.glossary.*` と `role = "glossary"` を正規名とし、旧 `flowgraph.dictionary.*` / `role = "dictionary"` は互換 alias として残す。GRN-6 は汎用 `Dictionary` 設計に送る。
+
 現行 VAC 専用の `Dictionary` 機能を `Glossary` へ改名し、`Dictionary` を将来の汎用 key-value / map 型に譲るための破壊変更計画。
 目的は、データ構造の `Dictionary` と Iterator / Ranges 操作の `.map` を共存させ、Flowgraph の言語感を長期的に濁らせないこと。
 
@@ -43,11 +45,11 @@ v2 中は破壊変更を許容するが、ユーザーの既存サンプルを�
 
 ## 4. 実装順序
 
-### GRN-1 docs / terminology
+### GRN-1 docs / terminology ✅
 
 計画と用語を固定する。`Dictionary` は汎用 key-value、`Glossary` は VAC 専用語彙表として定義する。
 
-### GRN-2 flowgraph node alias
+### GRN-2 flowgraph node alias ✅
 
 `flowgraph.glossary.*` を正規 feature 名として追加し、既存 `flowgraph.dictionary.*` は deprecated alias にする。
 
@@ -55,7 +57,7 @@ v2 中は破壊変更を許容するが、ユーザーの既存サンプルを�
 - catalog は `glossary.*` だけを通常表示する
 - alias は diagnostics で旧称 warning
 
-### GRN-3 control API / config role
+### GRN-3 control API / config role ✅
 
 Control API table catalog の role を `glossary` に移行する。
 
@@ -63,17 +65,14 @@ Control API table catalog の role を `glossary` に移行する。
 - `role = "dictionary"` は互換 alias
 - Quick-Add node id の説明を `glossary.learn` / `glossary.forget` に更新する
 
-### GRN-4 GUI rename
+### GRN-4 GUI rename ✅
 
 GUI 表示名とコンポーネント名を移行する。
 
-- `DictionaryEditorPane` -> `GlossaryEditorPane`
-- `DictionaryTable` -> `GlossaryTable`
-- `DictionaryEntryForm` -> `GlossaryEntryForm`
-- `DictionaryConflictDialog` -> `GlossaryConflictDialog`
-- stores / tests / labels を glossary に揃える
+- 表示名・説明・E2E を `Glossary` に揃える
+- 内部コンポーネント名は段階移行でよい。ユーザーに見える名前と role / feature 名を優先して完了扱いにする
 
-### GRN-5 examples / tests / migration
+### GRN-5 examples / tests / migration ✅
 
 サンプル Flowgraph、E2E fixture、manual を更新する。
 
@@ -93,4 +92,3 @@ Glossary 移行後に、汎用 `dictionary<K,V>` / `flowgraph.dictionary.*` を�
 - `.map` は Iterator / Ranges の変換操作として維持する
 - GUI では `Map` データ構造を前面に出さず、`Dictionary` / `Key-Value` と説明する
 - `table.map_rows` は `table.map_rows` のまま。ただし UI 表示は「行を変換」でもよい
-

@@ -349,11 +349,11 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 現行の VAC 専用 `Dictionary` を `Glossary` へ改名し、`Dictionary` は将来の汎用 key-value データ構造へ譲る。
 詳細: [`roadmap/glossary-rename-roadmap.md`](roadmap/glossary-rename-roadmap.md)
 
-- [ ] GRN-1 docs / terminology。`Glossary` / `Dictionary` / `.map` の意味を固定する。
-- [ ] GRN-2 flowgraph node alias。`flowgraph.glossary.*` を正規名にし、`flowgraph.dictionary.*` は deprecated alias にする。
-- [ ] GRN-3 control API / config role。`role = "glossary"` を正にし、`role = "dictionary"` は互換 alias にする。
-- [ ] GRN-4 GUI rename。Dictionary Editor 系コンポーネント・表示・テストを Glossary に揃える。
-- [ ] GRN-5 examples / tests / migration。sample / E2E / manual / migration note を更新する。
+- [x] GRN-1 docs / terminology。`Glossary` / `Dictionary` / `.map` の意味を固定する。
+- [x] GRN-2 flowgraph node alias。`flowgraph.glossary.*` を正規名にし、`flowgraph.dictionary.*` は deprecated alias にする。
+- [x] GRN-3 control API / config role。`role = "glossary"` を正にし、`role = "dictionary"` は互換 alias にする。
+- [x] GRN-4 GUI rename。Dictionary Editor 系表示・テストを Glossary に揃える。
+- [x] GRN-5 examples / tests / migration。sample / E2E / manual / migration note を更新する。
 - [ ] GRN-6 Dictionary as generic key-value。Glossary 移行後に汎用 `dictionary<K,V>` / `flowgraph.dictionary.*` を設計する。
 
 ### Flowgraph Language Foundation Roadmap（計画中）
@@ -362,8 +362,8 @@ Flowgraph を汎用プログラミング言語へ近づけるための基礎整�
 
 優先:
 
-- [ ] LF-1 Schema / Contract。`record` / `table schema` / node signature / library signature を統一する。
-- [ ] LF-2 Capability / Effect。file / network / db / notification / OBS / Twitch などの権限と effect kind を明示する。
+- [~] LF-1 Schema / Contract。`record` / `table schema` / node signature / library signature を統一する。初段として node catalog に派生 `contract` metadata を追加。
+- [~] LF-2 Capability / Effect。file / network / db / notification / OBS / Twitch などの権限と effect kind を明示する。初段として node catalog に `effect_class` / `capabilities` metadata を追加。
 - [ ] LF-3 Testing / Debugger。graph fixture test、mock capability、trace、watch、trigger history を整える。
 
 計画として保持:
