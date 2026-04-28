@@ -23,7 +23,8 @@ pub(crate) struct AppCore {
 
 impl AppCore {
 	pub(crate) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<Self> {
-		boot::boot(conf, audio_sink).await
+		let parts = boot::boot(conf, audio_sink).await?;
+		Ok(Self::from_parts(parts))
 	}
 
 	pub(crate) async fn run(self) -> AppCoreRunResult {
@@ -42,6 +43,10 @@ impl AppCore {
 
 	async fn cleanup(self) -> Result<()> {
 		cleanup::cleanup(self.parts).await
+	}
+
+	fn from_parts(parts: AppCoreParts) -> Self {
+		Self { parts }
 	}
 }
 
