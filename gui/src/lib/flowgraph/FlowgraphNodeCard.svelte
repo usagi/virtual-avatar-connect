@@ -20,10 +20,11 @@
  import FlowgraphTriggerDialog from './FlowgraphTriggerDialog.svelte';
 
  type Data = {
-  nodeId: string;
-  feature: string;
-  spec: FlowgraphNodeSpec | undefined;
- };
+ nodeId: string;
+ feature: string;
+ spec: FlowgraphNodeSpec | undefined;
+ groupLabels?: string[];
+};
 
  let { data, selected }: { data: Data; selected?: boolean } = $props();
 
@@ -146,6 +147,13 @@
   <div class="feature">{shortFeature(data.feature)}</div>
  </div>
  <div class="id">#{data.nodeId}</div>
+ {#if data.groupLabels?.length}
+  <div class="groups">
+   {#each data.groupLabels.slice(0, 2) as label (label)}
+    <span>{label}</span>
+   {/each}
+  </div>
+ {/if}
 
  <div class="ports inputs">
   {#each inputs as p (p.name)}
@@ -218,6 +226,7 @@
   grid-template-areas:
     'head head'
     'id id'
+    'groups groups'
     'inputs outputs'
     'warn warn';
   column-gap: 6px;
@@ -313,6 +322,26 @@
   padding: 0 8px 3px;
   font-size: 10px;
   opacity: 0.55;
+ }
+ .groups {
+  grid-area: groups;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 0 8px 4px;
+ }
+ .groups span {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  color: rgb(14, 116, 144);
+  padding: 1px 5px;
+  font-size: 9px;
+  line-height: 1.35;
  }
  .ports {
   display: flex;

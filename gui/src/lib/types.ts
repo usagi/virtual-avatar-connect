@@ -964,11 +964,19 @@ export type FlowgraphEnumDef = {
  variants: string[];
 };
 
+export type FlowgraphGroupDef = {
+ id: string;
+ label?: string | null;
+ node_ids: string[];
+ color?: string | null;
+};
+
 export type FlowgraphFileDocument = {
  meta: FlowgraphFileMeta | null;
  nodes: FlowgraphNodeEntry[];
  edges: FlowgraphEdgeEntry[];
  enums?: FlowgraphEnumDef[];
+ groups?: FlowgraphGroupDef[];
 };
 
 export type FlowgraphFileResponse = {

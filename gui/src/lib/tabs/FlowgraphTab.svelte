@@ -175,8 +175,8 @@ type StudioCommand = {
   },
   {
    id: 'group_layout',
-   label: 'Group layout',
-   description: 'Pack selected nodes into a compact visual group without adding source metadata.',
+   label: 'Create group',
+   description: 'Save selected nodes as a visual Flowgraph group and pack them into a compact layout.',
    disabled: flowgraphStore.selectedNodeIds.length < 2,
    run: () => flowgraphStore.groupSelectedNodes(),
   },

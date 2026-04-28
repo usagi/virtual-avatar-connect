@@ -33,6 +33,9 @@ pub struct FlowgraphFile {
 	/// Phase λ: ユーザ定義閉集合（`[[enums]]`）。未指定は空。
 	#[serde(default)]
 	pub enums: Vec<FlowgraphEnumDef>,
+	/// Phase υ: GUI 上の編集グループ。engine 実行には影響しない。
+	#[serde(default)]
+	pub groups: Vec<FlowgraphGroupDef>,
 }
 
 /// TOML `[[enums]]` 1 行相当。
@@ -44,6 +47,18 @@ pub struct FlowgraphEnumDef {
 	pub primitive: Option<String>,
 	#[serde(default)]
 	pub variants: Vec<String>,
+}
+
+/// TOML `[[groups]]` 1 行相当。Flowgraph editor の視覚的なまとまりを保存する。
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct FlowgraphGroupDef {
+	pub id: String,
+	#[serde(default)]
+	pub label: Option<String>,
+	#[serde(default)]
+	pub node_ids: Vec<String>,
+	#[serde(default)]
+	pub color: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -115,12 +130,9 @@ fn validate_file_activation_meta(file: &FlowgraphFile, file_path: &Path, diagnos
 	for (i, g) in meta.mode_groups.iter().enumerate() {
 		if g.trim().is_empty() {
 			diagnostics.push(
-				Diagnostic::error(
-					DiagnosticCode::InvalidModeMetadata,
-					format!("[meta].mode_groups[{i}] が空です"),
-				)
-				.with_file(file_path.to_path_buf())
-				.with_hint("mode_groups"),
+				Diagnostic::error(DiagnosticCode::InvalidModeMetadata, format!("[meta].mode_groups[{i}] が空です"))
+					.with_file(file_path.to_path_buf())
+					.with_hint("mode_groups"),
 			);
 		}
 	}
@@ -280,11 +292,8 @@ impl BuildContext {
 		for (_, file_path, file) in &self.files {
 			validate_file_activation_meta(file, file_path, &mut diagnostics);
 		}
-		let file_activation: HashMap<String, FlowgraphFileActivationMeta> = self
-			.files
-			.iter()
-			.map(|(fq, _, f)| (fq.clone(), file_activation_meta(f)))
-			.collect();
+		let file_activation: HashMap<String, FlowgraphFileActivationMeta> =
+			self.files.iter().map(|(fq, _, f)| (fq.clone(), file_activation_meta(f))).collect();
 
 		let mut builder = FlowgraphBuilder::new();
 		let mut node_meta: HashMap<String, LoadedNodeMeta> = HashMap::new();
@@ -875,6 +884,27 @@ mod tests {
 	}
 
 	#[test]
+	fn parse_groups_section() {
+		let src = r##"
+			[[groups]]
+			id = "g1"
+			label = "Input stage"
+			node_ids = ["in", "log"]
+			color = "#38bdf8"
+
+			[[nodes]]
+			id = "in"
+			feature = "flowgraph.ingress.web_input"
+		"##;
+		let f = parse_flowgraph_file(src, None).unwrap();
+		assert_eq!(f.groups.len(), 1);
+		assert_eq!(f.groups[0].id, "g1");
+		assert_eq!(f.groups[0].label.as_deref(), Some("Input stage"));
+		assert_eq!(f.groups[0].node_ids, vec!["in", "log"]);
+		assert_eq!(f.groups[0].color.as_deref(), Some("#38bdf8"));
+	}
+
+	#[test]
 	fn load_duplicate_enum_id_errors() {
 		let path = write_tmp(
 			"graph.flowgraph.toml",
@@ -951,11 +981,7 @@ mod tests {
 			"#,
 		);
 		let report = load_file(&path, Some("demo")).expect("load");
-		let act = report
-			.file_activation
-			.get("demo")
-			.expect("fq key")
-			.clone();
+		let act = report.file_activation.get("demo").expect("fq key").clone();
 		assert_eq!(act.mode_groups, vec!["assistant".to_string(), "rss".to_string()]);
 		assert!(!act.default_enabled);
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());

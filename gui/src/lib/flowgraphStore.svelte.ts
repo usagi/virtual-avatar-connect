@@ -25,6 +25,7 @@ import {
  type FlowgraphEnumDef,
  type FlowgraphFileMeta,
  type FlowgraphFileResponse,
+ type FlowgraphGroupDef,
  type FlowgraphNodeCatalogResponse,
  type FlowgraphNodeSpec,
  type FlowgraphTreeResponse,
@@ -65,6 +66,7 @@ class FlowgraphStore {
  /** ノード位置やプロパティの GUI 編集を parsed 層で持つ。保存時に raw へ再シリアライズ。 */
  draftNodes: FlowgraphDraftNode[] | null = $state(null);
  draftEdges: FlowgraphDraftEdge[] | null = $state(null);
+ draftGroups: FlowgraphDraftGroup[] | null = $state(null);
 
  /** いま選択しているキャンバス上のノード ID。プロパティエディタが参照する。 */
  selectedNodeId: string | null = $state(null);
@@ -142,6 +144,14 @@ class FlowgraphStore {
       }))
     : null;
    this.draftEdges = resp.parsed ? resp.parsed.edges.map((e) => ({ from: e.from, to: e.to })) : null;
+   this.draftGroups = resp.parsed
+    ? (resp.parsed.groups ?? []).map((g) => ({
+       id: g.id,
+       label: g.label ?? null,
+       node_ids: [...g.node_ids],
+       color: g.color ?? null,
+      }))
+    : null;
    this.undoStack = [];
    this.redoStack = [];
    this.currentState = 'ok';
@@ -158,6 +168,7 @@ class FlowgraphStore {
   this.draftToml = null;
   this.draftNodes = null;
   this.draftEdges = null;
+  this.draftGroups = null;
   this.selectedNodeId = null;
   this.selectedNodeIds = [];
   this.undoStack = [];
@@ -322,8 +333,21 @@ class FlowgraphStore {
 
  groupSelectedNodes(): boolean {
   if (!this.draftNodes || this.selectedNodeIds.length < 2) return false;
-  const selected = new Set(this.selectedNodeIds);
-  this.#pushHistory('Group nodes');
+  if (!this.draftGroups) this.draftGroups = [];
+  const selectedIds = [...this.selectedNodeIds];
+  const selected = new Set(selectedIds);
+  this.#pushHistory('Create group');
+  const id = this.#makeUniqueGroupId(this.draftGroups);
+  const index = this.draftGroups.length + 1;
+  this.draftGroups = [
+   ...this.draftGroups,
+   {
+    id,
+    label: `Group ${index}`,
+    node_ids: selectedIds,
+    color: '#38bdf8',
+   },
+  ];
   const rows = this.draftNodes.filter((n) => selected.has(n.id));
   const positions = rows.map((n) => n.position ?? ([100, 100] as [number, number]));
   const minX = Math.min(...positions.map((p) => p[0]));
@@ -336,6 +360,31 @@ class FlowgraphStore {
    return { ...n, position: [Math.round(minX + col * 220), Math.round(minY + row * 150)] };
   });
   return true;
+ }
+
+ removeGroup(id: string): boolean {
+  if (!this.draftGroups) return false;
+  if (!this.draftGroups.some((g) => g.id === id)) return false;
+  this.#pushHistory('Remove group');
+  this.draftGroups = this.draftGroups.filter((g) => g.id !== id);
+  return true;
+ }
+
+ groupLabelsForNode(nodeId: string): string[] {
+  return (this.draftGroups ?? [])
+   .filter((g) => g.node_ids.includes(nodeId))
+   .map((g) => g.label || g.id);
+ }
+
+ #makeUniqueGroupId(existing: FlowgraphDraftGroup[]): string {
+  const used = new Set(existing.map((g) => g.id));
+  let i = existing.length + 1;
+  let id = `group_${i}`;
+  while (used.has(id)) {
+   i += 1;
+   id = `group_${i}`;
+  }
+  return id;
  }
 
  #defaultPropertiesForSpec(spec: FlowgraphNodeSpec): Record<string, unknown> {
@@ -382,6 +431,9 @@ class FlowgraphStore {
   if (this.draftEdges) {
    this.draftEdges = this.draftEdges.filter((e) => !edgeMentionsNode(e, id));
   }
+  if (this.draftGroups) {
+   this.draftGroups = pruneGroupsAfterNodeRemoval(this.draftGroups, new Set([id]));
+  }
   if (this.selectedNodeId === id) this.selectedNodeId = null;
   this.selectedNodeIds = this.selectedNodeIds.filter((selected) => selected !== id);
  }
@@ -422,6 +474,9 @@ class FlowgraphStore {
   this.draftEdges = this.draftEdges.filter(
    (e) => !edgeKeys.has(`${e.from}||${e.to}`) && !edgeMentionsAny(e, nodeSet),
   );
+  if (this.draftGroups) {
+   this.draftGroups = pruneGroupsAfterNodeRemoval(this.draftGroups, nodeSet);
+  }
   if (this.selectedNodeId && nodeSet.has(this.selectedNodeId)) this.selectedNodeId = null;
   this.selectedNodeIds = this.selectedNodeIds.filter((id) => !nodeSet.has(id));
 
@@ -498,7 +553,10 @@ class FlowgraphStore {
   if (baseNodes !== draftNodes) return true;
   const baseEdges = JSON.stringify(base.edges.map((e) => ({ from: e.from, to: e.to })));
   const draftEdges = JSON.stringify(this.draftEdges.map((e) => ({ from: e.from, to: e.to })));
-  return baseEdges !== draftEdges;
+  if (baseEdges !== draftEdges) return true;
+  const baseGroups = JSON.stringify((base.groups ?? []).map(normalizeGroup));
+  const draftGroups = JSON.stringify((this.draftGroups ?? []).map(normalizeGroup));
+  return baseGroups !== draftGroups;
  }
 
  #lastDeletion: {
@@ -517,6 +575,7 @@ class FlowgraphStore {
    label,
    nodes: cloneNodes(this.draftNodes ?? []),
    edges: cloneEdges(this.draftEdges ?? []),
+   groups: cloneGroups(this.draftGroups ?? []),
    selectedNodeIds: [...this.selectedNodeIds],
    selectedNodeId: this.selectedNodeId,
   };
@@ -525,6 +584,7 @@ class FlowgraphStore {
  #restoreSnapshot(entry: FlowgraphHistoryEntry): void {
   this.draftNodes = cloneNodes(entry.nodes);
   this.draftEdges = cloneEdges(entry.edges);
+  this.draftGroups = cloneGroups(entry.groups);
   this.selectedNodeIds = [...entry.selectedNodeIds];
   this.selectedNodeId = entry.selectedNodeId;
   this.#lastDeletion = null;
@@ -545,12 +605,13 @@ class FlowgraphStore {
 
  /** 現在の draft を TOML に書き戻してディスクへ保存する。 */
  async saveCurrent(): Promise<boolean> {
-  if (!this.currentFq || !this.draftNodes || !this.draftEdges) return false;
+ if (!this.currentFq || !this.draftNodes || !this.draftEdges) return false;
   const nextToml = serializeFlowgraph({
    meta: this.currentFile?.parsed?.meta ?? null,
    nodes: this.draftNodes,
    edges: this.draftEdges,
    enums: this.currentFile?.parsed?.enums ?? [],
+   groups: this.draftGroups ?? [],
   });
   this.mutating = true;
   try {
@@ -886,10 +947,18 @@ export type FlowgraphDraftEdge = {
  to: string;
 };
 
+export type FlowgraphDraftGroup = {
+ id: string;
+ label: string | null;
+ node_ids: string[];
+ color: string | null;
+};
+
 type FlowgraphHistoryEntry = {
  label: string;
  nodes: FlowgraphDraftNode[];
  edges: FlowgraphDraftEdge[];
+ groups: FlowgraphDraftGroup[];
  selectedNodeIds: string[];
  selectedNodeId: string | null;
 };
@@ -905,6 +974,30 @@ function cloneNodes(nodes: FlowgraphDraftNode[]): FlowgraphDraftNode[] {
 
 function cloneEdges(edges: FlowgraphDraftEdge[]): FlowgraphDraftEdge[] {
  return edges.map((e) => ({ from: e.from, to: e.to }));
+}
+
+function cloneGroups(groups: FlowgraphDraftGroup[]): FlowgraphDraftGroup[] {
+ return groups.map((g) => ({
+  id: g.id,
+  label: g.label,
+  node_ids: [...g.node_ids],
+  color: g.color,
+ }));
+}
+
+function normalizeGroup(g: FlowgraphGroupDef | FlowgraphDraftGroup): FlowgraphDraftGroup {
+ return {
+  id: g.id,
+  label: g.label ?? null,
+  node_ids: [...g.node_ids],
+  color: g.color ?? null,
+ };
+}
+
+function pruneGroupsAfterNodeRemoval(groups: FlowgraphDraftGroup[], removedNodeIds: Set<string>): FlowgraphDraftGroup[] {
+ return groups
+  .map((g) => ({ ...g, node_ids: g.node_ids.filter((id) => !removedNodeIds.has(id)) }))
+  .filter((g) => g.node_ids.length > 0);
 }
 
 function edgeMentionsNode(edge: FlowgraphDraftEdge, nodeId: string): boolean {
@@ -960,6 +1053,7 @@ export function serializeFlowgraph(doc: {
  nodes: FlowgraphDraftNode[];
  edges: FlowgraphDraftEdge[];
  enums?: FlowgraphEnumDef[];
+ groups?: FlowgraphDraftGroup[];
 }): string {
  const lines: string[] = [];
  const m = doc.meta;
@@ -997,6 +1091,15 @@ export function serializeFlowgraph(doc: {
   lines.push(`id = ${tomlString(en.id)}`);
   if (en.primitive) lines.push(`primitive = ${tomlString(en.primitive)}`);
   lines.push(`variants = [${en.variants.map(tomlString).join(', ')}]`);
+  lines.push('');
+ }
+
+ for (const group of doc.groups ?? []) {
+  lines.push('[[groups]]');
+  lines.push(`id = ${tomlString(group.id)}`);
+  if (group.label) lines.push(`label = ${tomlString(group.label)}`);
+  lines.push(`node_ids = [${group.node_ids.map(tomlString).join(', ')}]`);
+  if (group.color) lines.push(`color = ${tomlString(group.color)}`);
   lines.push('');
  }
 

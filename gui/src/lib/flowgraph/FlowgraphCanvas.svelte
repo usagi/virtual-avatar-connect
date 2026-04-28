@@ -76,6 +76,7 @@
      nodeId: n.id,
      feature: n.feature,
      spec,
+     groupLabels: flowgraphStore.groupLabelsForNode(n.id),
     },
     selected: flowgraphStore.selectedNodeIds.includes(n.id) || flowgraphStore.selectedNodeId === n.id,
    };
