@@ -197,7 +197,9 @@ value = "hello fixture"
 
 初期版は trigger を順に投入し、全 trigger の合計遅延 + 短い余白で shutdown する。
 `flowgraph.example/twitch-echo` はこの形式で `ingress.twitch -> util.log` を fixture 化済み。
-mock capability と trigger history の詳細レポートは次段で追加する。
+JSON 出力には `trigger_count` と `trigger_history[]` を載せ、投入した node / exec / delay / override を後から確認できる。
+`[tests.expect]` では `trigger_count` も検証できる。
+mock capability と、GUI 側の trigger history 表示は次段で追加する。
 
 ## 5. 追加計画項目
 

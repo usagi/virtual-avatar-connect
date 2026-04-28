@@ -79,6 +79,8 @@ pub struct FixtureRunReport {
 	pub root: String,
 	pub generation: u64,
 	pub node_count: usize,
+	pub trigger_count: usize,
+	pub trigger_history: Vec<FixtureTriggerHistory>,
 	pub trace: Vec<String>,
 	pub trace_count: usize,
 	pub stored_values: Vec<FixtureTraceValue>,
@@ -88,6 +90,21 @@ pub struct FixtureRunReport {
 	pub cache_misses: usize,
 	pub tests: Vec<FixtureTestResult>,
 	pub failed_tests: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FixtureTriggerHistory {
+	pub node: String,
+	pub exec: Vec<String>,
+	pub delay_ms: u64,
+	pub overrides: Vec<FixtureTriggerHistoryOverride>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FixtureTriggerHistoryOverride {
+	pub port: String,
+	pub ty: String,
+	pub value: serde_json::Value,
 }
 
 #[derive(Debug, Serialize)]
@@ -139,6 +156,7 @@ struct FixtureTestCase {
 #[derive(Debug, Default, Deserialize)]
 struct FixtureExpect {
 	node_count: Option<usize>,
+	trigger_count: Option<usize>,
 	trace_count: Option<usize>,
 	trace: Option<Vec<String>>,
 	#[serde(default)]
@@ -171,8 +189,8 @@ pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, Fi
 	let mut fixture = load_fixture_program(root)?;
 	let node_count = fixture.program.node_ids().count();
 	let declared_tests = read_declared_tests(root)?;
-	let (run, ctx) = run_fixture_program(&mut fixture.program, &declared_tests).await?;
-	let mut report = make_report(root, node_count, run, ctx);
+	let (run, ctx, trigger_history) = run_fixture_program(&mut fixture.program, &declared_tests).await?;
+	let mut report = make_report(root, node_count, run, ctx, trigger_history);
 	report.tests = evaluate_declared_tests(&declared_tests, &report);
 	report.failed_tests = report.tests.iter().filter(|t| !t.ok).count();
 	report.ok = report.failed_tests == 0;
@@ -182,12 +200,13 @@ pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, Fi
 async fn run_fixture_program(
 	program: &mut FlowgraphProgram,
 	declared_tests: &[ParsedFixtureTestFile],
-) -> Result<(ProgramRun, ExecCtx), FixtureError> {
+) -> Result<(ProgramRun, ExecCtx, Vec<FixtureTriggerHistory>), FixtureError> {
 	let trigger_events = build_trigger_events(declared_tests)?;
+	let trigger_history = trigger_events.iter().map(|trigger| trigger.history.clone()).collect();
 	let mut ctx = ExecCtx::default();
 	if trigger_events.is_empty() {
 		let run = program.execute(&mut ctx).await.map_err(FixtureError::Execute)?;
-		return Ok((run, ctx));
+		return Ok((run, ctx, trigger_history));
 	}
 
 	let total_delay_ms = trigger_events
@@ -217,13 +236,14 @@ async fn run_fixture_program(
 		node: "<trigger-task>".into(),
 		reason: e.to_string(),
 	})??;
-	Ok((run, ctx))
+	Ok((run, ctx, trigger_history))
 }
 
 struct FixtureTriggerEvent {
 	node: String,
 	delay_ms: u64,
 	event: TriggerEvent,
+	history: FixtureTriggerHistory,
 }
 
 fn build_trigger_events(declared_tests: &[ParsedFixtureTestFile]) -> Result<Vec<FixtureTriggerEvent>, FixtureError> {
@@ -243,17 +263,44 @@ fn build_trigger_events(declared_tests: &[ParsedFixtureTestFile]) -> Result<Vec<
 				})?;
 				event = event.with_override(&override_value.port, value);
 			}
+			let history = trigger_history_from_event(trigger.delay_ms, &event);
 			events.push(FixtureTriggerEvent {
 				node: trigger.node.clone(),
 				delay_ms: trigger.delay_ms,
 				event,
+				history,
 			});
 		}
 	}
 	Ok(events)
 }
 
-fn make_report(root: &Path, node_count: usize, run: ProgramRun, ctx: ExecCtx) -> FixtureRunReport {
+fn trigger_history_from_event(delay_ms: u64, event: &TriggerEvent) -> FixtureTriggerHistory {
+	let mut overrides: Vec<FixtureTriggerHistoryOverride> = event
+		.data_overrides
+		.iter()
+		.map(|(port, value)| FixtureTriggerHistoryOverride {
+			port: port.clone(),
+			ty: value.type_of().to_string(),
+			value: SocketValueRepr::from_value(value).0,
+		})
+		.collect();
+	overrides.sort_by(|a, b| a.port.cmp(&b.port));
+	FixtureTriggerHistory {
+		node: event.node_id.clone(),
+		exec: event.fired_exec.clone(),
+		delay_ms,
+		overrides,
+	}
+}
+
+fn make_report(
+	root: &Path,
+	node_count: usize,
+	run: ProgramRun,
+	ctx: ExecCtx,
+	trigger_history: Vec<FixtureTriggerHistory>,
+) -> FixtureRunReport {
 	let mut stored_values: Vec<FixtureTraceValue> = run
 		.stored_values
 		.iter()
@@ -277,6 +324,8 @@ fn make_report(root: &Path, node_count: usize, run: ProgramRun, ctx: ExecCtx) ->
 		root: root.display().to_string(),
 		generation: run.generation,
 		node_count,
+		trigger_count: trigger_history.len(),
+		trigger_history,
 		trace_count: ctx.trace.len(),
 		trace: ctx.trace,
 		stored_values,
@@ -334,6 +383,11 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 	if let Some(expected) = case.expect.node_count {
 		if report.node_count != expected {
 			failures.push(format!("node_count: expected {expected}, actual {}", report.node_count));
+		}
+	}
+	if let Some(expected) = case.expect.trigger_count {
+		if report.trigger_count != expected {
+			failures.push(format!("trigger_count: expected {expected}, actual {}", report.trigger_count));
 		}
 	}
 	if let Some(expected) = case.expect.trace_count {
@@ -518,6 +572,8 @@ mod tests {
 			root: "test".into(),
 			generation: 1,
 			node_count: 1,
+			trigger_count: 0,
+			trigger_history: Vec::new(),
 			trace: Vec::new(),
 			trace_count: 0,
 			stored_values: vec![FixtureTraceValue {
