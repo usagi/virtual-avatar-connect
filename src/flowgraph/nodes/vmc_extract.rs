@@ -1,4 +1,4 @@
-//! Phase ρ: [`MotionFrame`](crate::motion::MotionFrame) から VMC **姿勢メッセージ**を Pure に取り出す。
+//! Phase ρ: [`MotionFrame`](crate::motion::MotionFrame) から VMC **姿勢・表情メッセージ**を Pure に取り出す。
 //!
 //! UDP 受信は `flowgraph.ingress.vmc_udp`（または `osc_udp`）→ `flowgraph.motion.vmc_parse` を前提とする。
 
@@ -87,7 +87,7 @@ impl PureNode for VmcExtractRootPosNode {
 	}
 }
 
-/// 最初の `/VMC/Ext/Blend/Val` を JSON 化。`blendshape_name` が空でなければ名前 **完全一致**で最初の 1 件。
+/// 最初の `/VMC/Ext/Blend/Val` を抽出。`blendshape_name` が空でなければ名前 **完全一致**で最初の 1 件。
 pub struct VmcExtractBlendshapeNode;
 
 impl NodeDescriptor for VmcExtractBlendshapeNode {
@@ -96,13 +96,18 @@ impl NodeDescriptor for VmcExtractBlendshapeNode {
 			feature: "flowgraph.vmc.extract_blendshape".into(),
 			title: "VMC: Extract BlendShape".into(),
 			category: "vmc".into(),
-			description: Some("`MotionFrame` から `/VMC/Ext/Blend/Val` を探し、`{ name, value }` の JSON を返す。無ければ null".into()),
+			description: Some("`MotionFrame` から `/VMC/Ext/Blend/Val` を探し、JSON と型付きの `found/name/value` を返す。無ければ JSON は null、typed output は既定値。".into()),
 			inputs: vec![
 				PortSpec::input("frame", "Frame", SocketType::MotionFrame),
 				PortSpec::input("blendshape_name", "BlendShape name (exact, optional)", SocketType::String)
 					.with_default(SocketValue::String(String::new())),
 			],
-			outputs: vec![PortSpec::output("blendshape", "BlendShape (JSON)", SocketType::Json)],
+			outputs: vec![
+				PortSpec::output("blendshape", "BlendShape (JSON)", SocketType::Json),
+				PortSpec::output("found", "Found", SocketType::Bool),
+				PortSpec::output("name", "Name", SocketType::String),
+				PortSpec::output("value", "Value", SocketType::Float),
+			],
 			properties: vec![],
 		}
 	}
@@ -119,10 +124,18 @@ impl PureNode for VmcExtractBlendshapeNode {
 	) -> Result<NodeOutput, NodeExecError> {
 		let frame = get_required_motion_frame(inputs, "frame")?;
 		let filter = get_optional_string(inputs, "blendshape_name", "")?;
-		let sample = vmc::extract_first_blendshape(&frame, &filter)
-			.map(|s| s.to_json_value())
-			.unwrap_or(serde_json::Value::Null);
-		Ok(NodeOutput::new().set_data("blendshape", SocketValue::Json(sample)))
+		let Some(sample) = vmc::extract_first_blendshape(&frame, &filter) else {
+			return Ok(NodeOutput::new()
+				.set_data("blendshape", SocketValue::Json(serde_json::Value::Null))
+				.set_data("found", SocketValue::Bool(false))
+				.set_data("name", SocketValue::String(String::new()))
+				.set_data("value", SocketValue::Float(0.0)));
+		};
+		Ok(NodeOutput::new()
+			.set_data("blendshape", SocketValue::Json(sample.to_json_value()))
+			.set_data("found", SocketValue::Bool(true))
+			.set_data("name", SocketValue::String(sample.name))
+			.set_data("value", SocketValue::Float(sample.value)))
 	}
 }
 
@@ -183,5 +196,30 @@ mod tests {
 		let v = out.data.get("blendshape").unwrap().as_json().unwrap();
 		assert_eq!(v["name"], "Joy");
 		assert_eq!(v["value"], json!(0.5));
+		assert_eq!(out.data.get("found").unwrap().as_bool().unwrap(), true);
+		assert_eq!(out.data.get("name").unwrap().as_str().unwrap(), "Joy");
+		assert_eq!(out.data.get("value").unwrap().as_f64().unwrap(), 0.5);
+	}
+
+	#[tokio::test]
+	async fn extract_blendshape_node_missing_returns_typed_defaults() {
+		let frame = MotionFrame {
+			byte_len: 0,
+			osc_messages: vec![OscMessageWire {
+				address: VMC_EXT_BLEND_VAL.into(),
+				args: vec![json!("Joy"), json!(0.5)],
+			}],
+		};
+		let mut inputs = InputMap::new();
+		inputs.insert("frame".into(), SocketValue::MotionFrame(frame));
+		inputs.insert("blendshape_name".into(), SocketValue::String("Angry".into()));
+		let out = VmcExtractBlendshapeNode
+			.compute(&PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.await
+			.unwrap();
+		assert!(out.data.get("blendshape").unwrap().as_json().unwrap().is_null());
+		assert_eq!(out.data.get("found").unwrap().as_bool().unwrap(), false);
+		assert_eq!(out.data.get("name").unwrap().as_str().unwrap(), "");
+		assert_eq!(out.data.get("value").unwrap().as_f64().unwrap(), 0.0);
 	}
 }

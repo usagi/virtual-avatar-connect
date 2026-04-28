@@ -2991,7 +2991,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ### `flowgraph.vmc.extract_blendshape`
 
-**VMC: Extract BlendShape** — `MotionFrame` から `/VMC/Ext/Blend/Val` を探し、`{ name, value }` の JSON を返す。無ければ null
+**VMC: Extract BlendShape** — `MotionFrame` から `/VMC/Ext/Blend/Val` を探し、JSON と型付きの `found/name/value` を返す。無ければ JSON は null、typed output は既定値。
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3001,6 +3001,9 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `blendshape` | `json` |  |
+| `found` | `bool` |  |
+| `name` | `string` |  |
+| `value` | `float` |  |
 
 ### `flowgraph.vmc.extract_bone_pos`
 
