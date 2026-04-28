@@ -63,14 +63,14 @@ virtual-avatar-connect/
 現状の `src/app_core/` は `run_vac_application(conf, audio_sink)` の中で boot、serve、cleanup を直列に実行している。これを次の形へ寄せる。
 
 ```rust
-pub struct AppCore {
+pub(crate) struct AppCore {
     /* conf / state / shutdown / handles */
 }
 
 impl AppCore {
-    pub async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<Self>;
-    pub async fn serve(&self) -> Result<()>;
-    pub async fn cleanup(self) -> Result<()>;
+    pub(crate) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<Self>;
+    pub(crate) async fn serve(&self) -> Result<()>;
+    pub(crate) async fn cleanup(self) -> Result<()>;
 }
 ```
 

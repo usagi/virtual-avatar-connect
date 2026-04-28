@@ -60,14 +60,14 @@ impl std::fmt::Debug for AudioSink {
 }
 
 async fn run_with_standard_bootstrap() -> Result<()> {
-	let core = boot_with_standard_bootstrap().await?;
+	let core = boot_app_core_with_standard_bootstrap().await?;
 	core.serve().await?;
 	core.cleanup().await?;
 
 	Ok(())
 }
 
-async fn boot_with_standard_bootstrap() -> Result<app_core::AppCore> {
+async fn boot_app_core_with_standard_bootstrap() -> Result<app_core::AppCore> {
 	// ロガーの実装を初期化
 	logger::init();
 

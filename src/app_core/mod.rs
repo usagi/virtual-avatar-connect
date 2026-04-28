@@ -20,7 +20,7 @@ use std::sync::Arc;
 ///
 /// CLI / desktop runner は、最終的にこの `boot` / `serve` / `cleanup`
 /// 境界を共有する。現時点では `run_vac_application` が従来通り直列に呼ぶ。
-pub struct AppCore {
+pub(crate) struct AppCore {
 	conf: Conf,
 	state: SharedState,
 	shutdown: Arc<shutdown::ShutdownBroker>,
@@ -34,11 +34,11 @@ pub struct AppCore {
 }
 
 impl AppCore {
-	pub async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<Self> {
+	pub(crate) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<Self> {
 		boot::boot(conf, audio_sink).await
 	}
 
-	pub async fn serve(&self) -> Result<()> {
+	pub(crate) async fn serve(&self) -> Result<()> {
 		server::run_services(
 			self.conf.clone(),
 			self.state.clone(),
@@ -51,16 +51,16 @@ impl AppCore {
 		.await
 	}
 
-	pub fn shutdown_broker(&self) -> Arc<shutdown::ShutdownBroker> {
+	pub(crate) fn shutdown_broker(&self) -> Arc<shutdown::ShutdownBroker> {
 		self.shutdown.clone()
 	}
 
-	pub fn gui_url(&self) -> String {
+	pub(crate) fn gui_url(&self) -> String {
 		let address = server::normalize_loopback_address(self.conf.get_web_ui_address());
 		format!("http://{address}/gui/")
 	}
 
-	pub async fn cleanup(self) -> Result<()> {
+	pub(crate) async fn cleanup(self) -> Result<()> {
 		cleanup::cleanup(self).await
 	}
 }
