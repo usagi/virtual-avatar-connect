@@ -123,8 +123,7 @@ pub struct AppCore {
 
 impl AppCore {
     pub async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<Self> { .. }
-    pub async fn serve(&self) -> Result<()> { .. /* run_services と同等 */ }
-    pub async fn cleanup(self) -> Result<()> { .. /* stop_all_graceful 以下 */ }
+    pub async fn run(self) -> AppCoreRunResult { .. /* serve + cleanup */ }
 }
 ```
 
@@ -134,13 +133,11 @@ impl AppCore {
 pub async fn run() -> Result<()> {
     let conf = ...;
     let core = AppCore::boot(conf, audio_sink).await?;
-    core.serve().await?;
-    core.cleanup().await?;
-    Ok(())
+    core.run().await.into_result()
 }
 ```
 
-そして Tauri bin は `.setup()` の中で `AppCore::boot` → `spawn(core.serve())`、`on_window_event(CloseRequested)` で `core.shutdown.trigger(Tauri)` → `core.cleanup()` を走らせる構造に素直に載る。
+そして Tauri bin は `.setup()` の前に `AppCore::boot`、runtime task で `core.run()`、`on_window_event(CloseRequested)` や tray の `終了` で `ShutdownBroker` を trigger する構造に載せる。`serve` と `cleanup` の順序制御は `AppCore` 内部へ閉じる。
 
 ### 3.3 Tauri bin の追加（ε-2b）
 

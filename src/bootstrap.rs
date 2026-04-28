@@ -4,10 +4,7 @@ use tokio::sync::Mutex;
 
 pub(crate) async fn run_app_core_with_standard_bootstrap() -> Result<()> {
 	let core = boot_app_core_with_standard_bootstrap().await?;
-	core.serve().await?;
-	core.cleanup().await?;
-
-	Ok(())
+	core.run().await.into_result()
 }
 
 pub(crate) async fn boot_app_core_with_standard_bootstrap() -> Result<app_core::AppCore> {

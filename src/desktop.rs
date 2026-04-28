@@ -37,13 +37,12 @@ mod windows_tray {
 		let (app_handle_tx, app_handle_rx) = tokio::sync::oneshot::channel::<tauri::AppHandle>();
 		let serve_handle = runtime.spawn(async move {
 			let app_handle = app_handle_rx.await.ok();
-			let serve_result = core.serve().await;
-			let cleanup_result = core.cleanup().await;
-			if let Err(e) = serve_result {
+			let run_result = core.run().await;
+			if let Err(e) = run_result.serve {
 				log::error!("《Desktop》 VAC runtime serve がエラー終了しました: {e}");
 				shutdown_for_serve.trigger(ShutdownReason::Fatal);
 			}
-			if let Err(e) = cleanup_result {
+			if let Err(e) = run_result.cleanup {
 				log::error!("《Desktop》 VAC runtime cleanup がエラー終了しました: {e}");
 			}
 			if let Some(app_handle) = app_handle {

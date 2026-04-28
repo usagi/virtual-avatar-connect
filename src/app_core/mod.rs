@@ -38,7 +38,13 @@ impl AppCore {
 		boot::boot(conf, audio_sink).await
 	}
 
-	pub(crate) async fn serve(&self) -> Result<()> {
+	pub(crate) async fn run(self) -> AppCoreRunResult {
+		let serve = self.serve().await;
+		let cleanup = self.cleanup().await;
+		AppCoreRunResult { serve, cleanup }
+	}
+
+	async fn serve(&self) -> Result<()> {
 		server::run_services(
 			self.conf.clone(),
 			self.state.clone(),
@@ -60,7 +66,19 @@ impl AppCore {
 		format!("http://{address}/gui/")
 	}
 
-	pub(crate) async fn cleanup(self) -> Result<()> {
+	async fn cleanup(self) -> Result<()> {
 		cleanup::cleanup(self).await
+	}
+}
+
+pub(crate) struct AppCoreRunResult {
+	pub(crate) serve: Result<()>,
+	pub(crate) cleanup: Result<()>,
+}
+
+impl AppCoreRunResult {
+	pub(crate) fn into_result(self) -> Result<()> {
+		self.serve?;
+		self.cleanup
 	}
 }
