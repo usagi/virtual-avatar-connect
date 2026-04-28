@@ -239,7 +239,7 @@ flowgraph.motion.map
 
 #### 追加用途
 
-* 表情トリガー
+* 表情トリガー — first slice: `flowgraph.vmc.extract_blendshape` で `/VMC/Ext/Blend/Val` を `{ name, value }` として取り出す
 * ジェスチャ検出
 * AI 入力
 * 配信制御

@@ -183,7 +183,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] M-3 feat(web_interface,gui): Control API `GET /api/v1/control/vmc/status` + runtime bind / forward add/remove + Resources GUI 管理。
 - [x] M-4a feat(flowgraph,motion,deps): `flowgraph.motion.vmc_parse`（Base64→OSC→JSON）+ Phase ρ 先取り `flowgraph.osc.send`（UDP）+ `rosc` + `flowgraph::fixture_runner` 最小 + `src/app_core/`（Step 7 一段）
 - [x] M-4 feat(flowgraph): `MotionFrame` 第一級型 + `motion_frame` ソケット（`json` と coerce 往復）+ `flowgraph.motion.vmc_parse` / `filter` / `map`（ワイヤ表現は `byte_len` + `osc_messages`。**head_pose 等の意味 IR**は M5 以降 / `v2-vmc` §M4 参照）
-- [ ] M-5 docs+flowgraph: 表情・ジェスチャ等の用途拡張（`v2-vmc` §5 参照）
+- [ ] M-5 docs+flowgraph: 用途拡張の first slice として `flowgraph.vmc.extract_blendshape` を追加（表情トリガー入口）。残りは gesture / AI 入力 / 配信制御の具体ノード化。
 
 ### v2 crate / runner / GUI 同梱（再構造化メタ）
 

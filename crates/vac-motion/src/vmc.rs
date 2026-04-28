@@ -2,7 +2,7 @@
 //!
 //! 正本: <https://protocol.vmc.info/english.html>  
 //! - **送出**: [`VMC_EXT_BONE_POS`] / [`VMC_EXT_ROOT_POS`] の単一メッセージエンコード（全骨ストリームは呼び出し側ループ）。
-//! - **受信**: [`MotionFrame`](crate::MotionFrame) 内の上記アドレスを [`try_parse_ext_pos_message`] で構造化（ingress は `vmc_udp` + `vmc_parse`）。
+//! - **受信**: [`MotionFrame`](crate::MotionFrame) 内の姿勢・表情アドレスを構造化（ingress は `vmc_udp` + `vmc_parse`）。
 
 use crate::osc;
 use crate::{MotionFrame, OscMessageWire};
@@ -15,6 +15,9 @@ pub const VMC_EXT_BONE_POS: &str = "/VMC/Ext/Bone/Pos";
 
 /// `/VMC/Ext/Root/Pos` — 先頭文字列は通常 `"root"`。
 pub const VMC_EXT_ROOT_POS: &str = "/VMC/Ext/Root/Pos";
+
+/// `/VMC/Ext/Blend/Val` — `(string){BlendShape 名}` + `(float)value`。
+pub const VMC_EXT_BLEND_VAL: &str = "/VMC/Ext/Blend/Val";
 
 /// JSON 配列 `[x,y,z]` を位置としてパースする。
 pub fn parse_json_vec3(label: &str, v: &JsonValue) -> Result<[f64; 3], String> {
@@ -96,6 +99,19 @@ pub struct VmcPosQuatSample {
 	pub rotation: [f64; 4],
 }
 
+/// VMC BlendShape 値 1 メッセージ分の構造化サンプル。
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct VmcBlendShapeSample {
+	pub name: String,
+	pub value: f64,
+}
+
+impl VmcBlendShapeSample {
+	pub fn to_json_value(&self) -> JsonValue {
+		serde_json::to_value(self).unwrap_or(JsonValue::Null)
+	}
+}
+
 impl VmcPosQuatSample {
 	pub fn to_json_value(&self) -> JsonValue {
 		serde_json::to_value(self).unwrap_or(JsonValue::Null)
@@ -136,6 +152,22 @@ pub fn try_parse_ext_pos_message(msg: &OscMessageWire, expected_address: &str) -
 	Some(VmcPosQuatSample { bone, position, rotation })
 }
 
+/// `/VMC/Ext/Blend/Val` を `(name, value)` として解釈する。
+pub fn try_parse_blend_val_message(msg: &OscMessageWire) -> Option<VmcBlendShapeSample> {
+	if msg.address != VMC_EXT_BLEND_VAL {
+		return None;
+	}
+	if msg.args.len() < 2 {
+		return None;
+	}
+	let name = msg.args[0].as_str()?.to_string();
+	let value = json_arg_as_f64(&msg.args[1])?;
+	if !value.is_finite() {
+		return None;
+	}
+	Some(VmcBlendShapeSample { name, value })
+}
+
 /// 最初に見つかった `/VMC/Ext/Bone/Pos`。`bone_name_equals` が空でなければ骨名が **完全一致**のもののみ。
 pub fn extract_first_bone_pos(frame: &MotionFrame, bone_name_equals: &str) -> Option<VmcPosQuatSample> {
 	let want = bone_name_equals.trim();
@@ -154,6 +186,19 @@ pub fn extract_first_root_pos(frame: &MotionFrame) -> Option<VmcPosQuatSample> {
 	for m in &frame.osc_messages {
 		if let Some(s) = try_parse_ext_pos_message(m, VMC_EXT_ROOT_POS) {
 			return Some(s);
+		}
+	}
+	None
+}
+
+/// 最初に見つかった `/VMC/Ext/Blend/Val`。`name_equals` が空でなければ blendshape 名が **完全一致**のもののみ。
+pub fn extract_first_blendshape(frame: &MotionFrame, name_equals: &str) -> Option<VmcBlendShapeSample> {
+	let want = name_equals.trim();
+	for m in &frame.osc_messages {
+		if let Some(s) = try_parse_blend_val_message(m) {
+			if want.is_empty() || s.name == want {
+				return Some(s);
+			}
 		}
 	}
 	None
@@ -266,6 +311,29 @@ mod tests {
 		let s = extract_first_root_pos(&frame).expect("root");
 		assert_eq!(s.bone, "root");
 		assert_eq!(s.position, [0.0, 1.0, 2.0]);
+	}
+
+	#[test]
+	fn extract_blendshape_respects_name_filter() {
+		let frame = MotionFrame {
+			byte_len: 0,
+			osc_messages: vec![
+				OscMessageWire {
+					address: VMC_EXT_BLEND_VAL.into(),
+					args: vec![JsonValue::String("Joy".into()), json!(0.25)],
+				},
+				OscMessageWire {
+					address: VMC_EXT_BLEND_VAL.into(),
+					args: vec![JsonValue::String("Blink_L".into()), json!(0.75)],
+				},
+			],
+		};
+		let first = extract_first_blendshape(&frame, "").expect("first blendshape");
+		assert_eq!(first.name, "Joy");
+		assert_eq!(first.value, 0.25);
+		let blink = extract_first_blendshape(&frame, "Blink_L").expect("blink");
+		assert_eq!(blink.value, 0.75);
+		assert!(extract_first_blendshape(&frame, "Angry").is_none());
 	}
 
 	#[test]
