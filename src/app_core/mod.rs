@@ -30,6 +30,10 @@ impl AppCore {
 
 	pub(crate) async fn run(self) -> AppCoreRunResult {
 		let serve = self.serve().await;
+		if let Err(e) = &serve {
+			log::error!("《AppCore》 VAC runtime serve がエラー終了しました: {e}");
+			self.parts.shutdown.trigger(crate::shutdown::ShutdownReason::Fatal);
+		}
 		let cleanup = self.cleanup().await;
 		AppCoreRunResult::new(serve, cleanup)
 	}

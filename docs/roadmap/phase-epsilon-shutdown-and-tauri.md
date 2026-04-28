@@ -12,7 +12,7 @@
 
 1. **`Ctrl+C`** — `tokio::signal::ctrl_c()` で spawn した task が `state.libretranslate.stop()` を呼ぶだけ。actix-web 本体は別系統で SIGINT を拾って自前でシャットダウンする。
 2. **`POST /api/v1/control/restart`** — 新プロセスを spawn したあと restart 専用 helper で遅延 `std::process::exit(0)` する。cleanup は走らない。
-3. **致命的エラー経路** — `AppCore::run()` は serve 結果と cleanup 結果を分離して返す。desktop 版は serve error を `ShutdownReason::Fatal` として broker に記録するが、CLI 版の fatal reason 表現はまだ薄い。
+3. **致命的エラー経路** — `AppCore::run()` は serve 結果と cleanup 結果を分離して返す。serve error は runner によらず `ShutdownReason::Fatal` として broker に記録する。
 
 結果として:
 
@@ -196,7 +196,7 @@ Windows では `#[actix_web::main]` がコンソールサブシステムで走�
 - `--silent` / windows subsystem 切替（§4.2 の 1,2,3,4）。
 - GUI の停止画面 / `window.close()` 試行。ユーザー指定で最小 UX（API 呼んで toast だけ）に留めた。
 - Ctrl+C で GUI セッション状態を保存する仕組み。
-- CLI 版の致命的エラー reason 表現。desktop 版は serve error を `ShutdownReason::Fatal` として broker に流すが、CLI 版は `AppCoreRunOutcome::into_result()` で error を返すだけなので、ログ上の reason はまだ粗い。
+- boot 中に起きる致命的エラーの reason 表現。`AppCore::run()` まで到達した serve error は `ShutdownReason::Fatal` として broker に流れるが、conf load / special mode / `run_with` / `AppCore::boot()` 中の error は broker 生成前または生成直後のため、従来通り `Result` として返る。
 
 ---
 

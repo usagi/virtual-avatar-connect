@@ -36,8 +36,7 @@ pub enum ShutdownReason {
 	ControlApi,
 	/// desktop runner の tray / window close からの停止要求。
 	Desktop,
-	/// 将来的な致命的エラー経路（現状は未使用だが、今後 `run()` 内で `?` を直叩きする前に
-	/// 明示的に `trigger(Fatal)` を呼べるように取っておく）。
+	/// `AppCore::run()` の serve error など、通常の停止要求ではない致命的エラー経路。
 	Fatal,
 }
 

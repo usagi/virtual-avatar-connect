@@ -1,4 +1,3 @@
-use crate::shutdown::ShutdownReason;
 use crate::Result;
 use runtime::{build_tokio_runtime, spawn_vac_runtime_task, wait_for_vac_runtime_shutdown};
 use ui::setup_desktop_ui;
@@ -16,7 +15,7 @@ pub fn run() -> Result<()> {
 	let runtime_for_after_run = runtime.clone();
 	let shutdown_for_setup = shutdown.clone();
 	let (app_handle_tx, app_handle_rx) = tokio::sync::oneshot::channel::<tauri::AppHandle>();
-	let serve_handle = spawn_vac_runtime_task(&runtime, core, shutdown.clone(), app_handle_rx);
+	let serve_handle = spawn_vac_runtime_task(&runtime, core, app_handle_rx);
 
 	tauri::Builder::default()
 		.setup(move |app| {
@@ -26,7 +25,7 @@ pub fn run() -> Result<()> {
 		.run(tauri::generate_context!("./tauri.conf.json"))
 		.map_err(anyhow::Error::from)?;
 
-	shutdown.trigger(ShutdownReason::Desktop);
+	shutdown.trigger(crate::shutdown::ShutdownReason::Desktop);
 	wait_for_vac_runtime_shutdown(
 		&runtime_for_after_run,
 		serve_handle,
