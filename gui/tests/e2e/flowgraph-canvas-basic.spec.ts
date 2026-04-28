@@ -243,6 +243,60 @@ test.describe('§3.2 flowgraph-canvas-basic', () => {
 		}
 	});
 
+	test('handle drag connects a new exec edge', async ({ page, request }) => {
+		const snapRes = await request.get(FILE_PATH, { headers: authHeader() });
+		expect(snapRes.status(), await snapRes.text()).toBe(200);
+		const originalToml = ((await snapRes.json()) as FlowgraphFileResp).raw_toml;
+		try {
+			await page.goto(`/gui/${tokenQuery()}`);
+			await page.evaluate(() => localStorage.removeItem('vac-flowgraph-palette-hidden-categories'));
+			await page.getByRole('navigation', { name: 'Main tabs' }).getByRole('button', { name: /flowgraph/i }).click();
+			await page.getByRole('button', { name: /^sample\b/ }).click();
+			const canvas = page.locator('.svelte-flow');
+			await expect(canvas).toBeVisible({ timeout: 15_000 });
+
+			const paletteSearch = page.getByPlaceholder(/検索（feature \/ title）/);
+			await paletteSearch.fill('util.log');
+			const logAddBtn = page.locator('button[title^="flowgraph.util.log"]');
+			await expect(logAddBtn).toHaveCount(1);
+			await logAddBtn.click();
+			await expect(page.getByTestId('flowgraph-node-log_2')).toBeVisible({ timeout: 10_000 });
+
+			const source = page.getByTestId('flowgraph-handle-in-exec_out-source');
+			const target = page.getByTestId('flowgraph-handle-log_2-exec_in-target');
+			await expect(source).toBeVisible();
+			await expect(target).toBeVisible();
+			const sourceBox = await source.boundingBox();
+			const targetBox = await target.boundingBox();
+			expect(sourceBox, 'source handle box').not.toBeNull();
+			expect(targetBox, 'target handle box').not.toBeNull();
+
+			await page.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
+			await page.mouse.down();
+			await page.mouse.move(targetBox!.x + targetBox!.width / 2, targetBox!.y + targetBox!.height / 2, { steps: 12 });
+			await page.mouse.up();
+
+			const saveBtn = page.getByRole('button', { name: /^Save( \*)?$/ });
+			await expect(saveBtn).toHaveText('Save *', { timeout: 5_000 });
+			const putPromise = page.waitForResponse(
+				(res) => res.url().includes(FILE_PATH) && res.request().method() === 'PUT' && res.status() === 200,
+				{ timeout: 15_000 },
+			);
+			await saveBtn.click();
+			const putRes = await putPromise;
+			const putReqBody = putRes.request().postDataJSON() as { content: string };
+			expect(putReqBody.content).toContain('id = "log_2"');
+			expect(putReqBody.content).toContain('from = "in:exec_out"');
+			expect(putReqBody.content).toContain('to = "log_2:exec_in"');
+		} finally {
+			const restore = await request.put(FILE_PATH, {
+				headers: authHeader(),
+				data: { content: originalToml },
+			});
+			expect(restore.status(), await restore.text()).toBe(200);
+		}
+	});
+
 	test('Ctrl+D duplicates selected node', async ({ page, request }) => {
 		const snapRes = await request.get(FILE_PATH, { headers: authHeader() });
 		expect(snapRes.status(), await snapRes.text()).toBe(200);

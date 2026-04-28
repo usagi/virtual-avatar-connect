@@ -163,6 +163,7 @@
      position={Position.Left}
      id={p.name}
      class={handleClass(p)}
+     data-testid={`flowgraph-handle-${data.nodeId}-${p.name}-target`}
      title={quantityPortTooltip(p)}
     />
     <span class="label">{p.label}</span>
@@ -184,6 +185,7 @@
      position={Position.Right}
      id={p.name}
      class={handleClass(p)}
+     data-testid={`flowgraph-handle-${data.nodeId}-${p.name}-source`}
      title={quantityPortTooltip(p)}
     />
    </div>
