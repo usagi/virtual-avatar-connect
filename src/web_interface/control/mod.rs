@@ -30,6 +30,7 @@ pub mod restart;
 pub mod run_with;
 pub mod shutdown;
 pub mod table;
+pub mod vmc;
 pub mod ws;
 
 pub use auth::{ControlApiRuntime, TokenSource};
@@ -60,6 +61,7 @@ pub fn register(cfg: &mut web::ServiceConfig) {
 			.configure(ingress::configure)
 			.configure(modes::configure)
 			.configure(flowgraph::configure)
-			.configure(table::configure),
+			.configure(table::configure)
+			.configure(vmc::configure),
 	);
 }

@@ -42,10 +42,15 @@ impl SendFailLogThrottle {
 }
 
 /// `payload` を各 `dests` へ同一内容で `send_to` する。失敗は `throttle` 経由で `warn!`（ホットパスを止めない）。
-pub async fn forward_datagram(sock: &UdpSocket, payload: &[u8], dests: &[SocketAddr], ctx: &str, send_fail: &SendFailLogThrottle) {
+///
+/// 戻り値は失敗した送信数。Control API の統計表示用で、転送ループ自体は止めない。
+pub async fn forward_datagram(sock: &UdpSocket, payload: &[u8], dests: &[SocketAddr], ctx: &str, send_fail: &SendFailLogThrottle) -> usize {
+	let mut errors = 0;
 	for d in dests {
 		if let Err(e) = sock.send_to(payload, *d).await {
 			send_fail.log_send_to_failure(ctx, *d, &e);
+			errors += 1;
 		}
 	}
+	errors
 }

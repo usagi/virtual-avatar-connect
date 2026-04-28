@@ -198,6 +198,9 @@ pub struct State {
 	/// ingress 起動後も動的に追加されうるため `Arc<RwLock<..>>`。
 	pub twitch_ignore_logins: Arc<RwLock<HashSet<String>>>,
 
+	/// Phase M3: VMC passthrough の Control API 表示用ランタイム状態。
+	pub vmc_passthrough_status: std::sync::Arc<crate::motion::VmcPassthroughStatusRegistry>,
+
 	/// Phase δ-6: Flowgraph ランタイム（ロード済み program + 診断）。
 	///
 	/// `conf.flowgraph_dir` が指すディレクトリを起動時にロードした結果を保持する。
@@ -275,6 +278,7 @@ impl State {
 
 		let runtime_mode_id = std::sync::Arc::new(std::sync::RwLock::new(conf.default_runtime_mode.clone()));
 		let runtime_mode_id_for_flowgraph = runtime_mode_id.clone();
+		let vmc_passthrough_status = crate::motion::VmcPassthroughStatusRegistry::from_conf(conf);
 
 		// δ-6: Flowgraph ランタイム共有ハンドル。opt-in なので `flowgraph_dir` が None / 非存在なら `None` 保持。
 		// δ-9 Part A: ロード + 実行ワーカー spawn は `State` 生成後に遅延実行する（`Weak<RwLock<State>>` が必要なため）。
@@ -302,6 +306,7 @@ impl State {
 			browser_source_document_root: conf.browser_source.as_ref().and_then(|b| b.document_root.clone()),
 			managed_apps: std::sync::Arc::new(tokio::sync::RwLock::new(crate::managed_app::ManagedAppRegistry::from_conf(conf))),
 			twitch_ignore_logins,
+			vmc_passthrough_status,
 			flowgraph,
 			bridge_handles: std::sync::Arc::new(tokio::sync::Mutex::new(crate::bridges::BridgeHandles::empty())),
 			voicepeak_fallback_exe,

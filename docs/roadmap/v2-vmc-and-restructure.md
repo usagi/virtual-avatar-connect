@@ -189,11 +189,13 @@ VAC（vmc_ingress）
 #### API
 
 ```http
-POST /api/v1/vmc/bind
-POST /api/v1/vmc/forward/add
-POST /api/v1/vmc/forward/remove
-GET  /api/v1/vmc/status
+GET  /api/v1/control/vmc/status
+POST /api/v1/control/vmc/bind
+POST /api/v1/control/vmc/forward/add
+POST /api/v1/control/vmc/forward/remove
 ```
+
+実装メモ（M3 first slice）: `GET /api/v1/control/vmc/status` は実装済み。`[[motion.vmc_passthrough]]` ごとに `configured` / `skipped` / `running` / `failed` / `stopped`、受信 packet / byte 数、転送成功数、送信 error 数、最終受信時刻を返す。add/remove/bind は runtime 変更 semantics を固定してから実装する。
 
 #### GUI
 

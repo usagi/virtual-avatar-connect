@@ -9,11 +9,13 @@
 //! **`flowgraph` / `bridges` / `state` / `web_interface` へは依存しない**（VMC の Flowgraph 入口は `bridges::vmc_ingress`）。
 
 mod osc;
+mod status;
 mod vmc_raw;
 
-pub use vac_motion::{parse_vmc_payload, MotionFrame};
+pub use status::VmcPassthroughStatusRegistry;
 #[cfg(test)]
 pub use vac_motion::OscMessageWire;
+pub use vac_motion::{parse_vmc_payload, MotionFrame};
 
 use crate::conf::Conf;
 use crate::conf::VmcPassthroughSpec;
@@ -88,14 +90,14 @@ impl MotionHandles {
 	}
 
 	/// `conf.motion` に従い VMC passthrough タスクを spawn する。
-	pub fn spawn_all(conf: &Conf, shutdown: Arc<ShutdownBroker>) -> Self {
+	pub fn spawn_all(conf: &Conf, shutdown: Arc<ShutdownBroker>, status: Arc<VmcPassthroughStatusRegistry>) -> Self {
 		let Some(m) = conf.motion.as_ref() else {
 			return Self::empty();
 		};
 		warn_duplicate_vmcbinds(&m.vmc_passthrough);
 		let mut tasks = Vec::new();
-		for spec in &m.vmc_passthrough {
-			if let Some(h) = vmc_raw::try_spawn(spec, shutdown.clone()) {
+		for (index, spec) in m.vmc_passthrough.iter().enumerate() {
+			if let Some(h) = vmc_raw::try_spawn(spec, shutdown.clone(), status.entry(index)) {
 				tasks.push(h);
 			}
 		}

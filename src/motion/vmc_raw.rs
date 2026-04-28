@@ -1,6 +1,7 @@
 //! VMC 互換の **生 UDP** 受信とパススルー転送。
 
 use crate::conf::VmcPassthroughSpec;
+use crate::motion::status::VmcPassthroughStatusEntry;
 use crate::shutdown::ShutdownBroker;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -43,6 +44,7 @@ pub fn spawn_passthrough_task(
 	forward: Vec<SocketAddr>,
 	shutdown: Arc<ShutdownBroker>,
 	log_ctx: String,
+	status: Option<Arc<VmcPassthroughStatusEntry>>,
 ) -> JoinHandle<()> {
 	let send_fail = SendFailLogThrottle::new();
 	tokio::spawn(async move {
@@ -50,9 +52,15 @@ pub fn spawn_passthrough_task(
 			Ok(s) => s,
 			Err(e) => {
 				log::error!("《Motion/VMC》[{}] UDP bind 失敗 {}: {}", log_ctx, bind, e);
+				if let Some(status) = status.as_ref() {
+					status.mark_failed(format!("UDP bind 失敗 {bind}: {e}"));
+				}
 				return;
 			}
 		};
+		if let Some(status) = status.as_ref() {
+			status.mark_running();
+		}
 		let dests = forward.iter().map(SocketAddr::to_string).collect::<Vec<_>>().join(", ");
 		log::info!(
 			"《Motion/VMC》[{}] passthrough 起動 bind={} → [{}]（{} 宛先）",
@@ -76,7 +84,13 @@ pub fn spawn_passthrough_task(
 				 continue;
 				}
 				let payload = &buf[..n];
-				router::forward_datagram(&sock, payload, &forward, &log_ctx, &send_fail).await;
+				let send_errors = router::forward_datagram(&sock, payload, &forward, &log_ctx, &send_fail).await;
+				if let Some(status) = status.as_ref() {
+					status.record_receive(n, forward.len().saturating_sub(send_errors));
+					for _ in 0..send_errors {
+						status.record_send_error();
+					}
+				}
 				log::trace!(
 					"《Motion/VMC》[{}] {} bytes from {} → {} 先",
 					log_ctx,
@@ -92,12 +106,22 @@ pub fn spawn_passthrough_task(
 			 }
 			}
 		}
+		if let Some(status) = status.as_ref() {
+			status.mark_stopped();
+		}
 	})
 }
 
 /// 設定を検証し、有効ならタスクを返す。
-pub fn try_spawn(spec: &VmcPassthroughSpec, shutdown: Arc<ShutdownBroker>) -> Option<JoinHandle<()>> {
+pub fn try_spawn(
+	spec: &VmcPassthroughSpec,
+	shutdown: Arc<ShutdownBroker>,
+	status: Option<Arc<VmcPassthroughStatusEntry>>,
+) -> Option<JoinHandle<()>> {
 	if !spec.enabled {
+		if let Some(status) = status.as_ref() {
+			status.mark_skipped("disabled");
+		}
 		return None;
 	}
 	if spec.forward_to.is_empty() {
@@ -105,12 +129,18 @@ pub fn try_spawn(spec: &VmcPassthroughSpec, shutdown: Arc<ShutdownBroker>) -> Op
 			"《Motion/VMC》 vmc_passthrough bind={:?} は forward_to が空のためスキップします",
 			spec.bind
 		);
+		if let Some(status) = status.as_ref() {
+			status.mark_skipped("forward_to が空");
+		}
 		return None;
 	}
 	let bind = match parse_bind(spec) {
 		Ok(a) => a,
 		Err(e) => {
 			log::error!("《Motion/VMC》 {}", e);
+			if let Some(status) = status.as_ref() {
+				status.mark_failed(e);
+			}
 			return None;
 		}
 	};
@@ -118,9 +148,12 @@ pub fn try_spawn(spec: &VmcPassthroughSpec, shutdown: Arc<ShutdownBroker>) -> Op
 		Ok(v) => v,
 		Err(e) => {
 			log::error!("《Motion/VMC》 {}", e);
+			if let Some(status) = status.as_ref() {
+				status.mark_failed(e);
+			}
 			return None;
 		}
 	};
 	let log_ctx = passthrough_log_ctx(spec, bind);
-	Some(spawn_passthrough_task(bind, forward, shutdown, log_ctx))
+	Some(spawn_passthrough_task(bind, forward, shutdown, log_ctx, status))
 }

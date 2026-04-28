@@ -22,7 +22,11 @@ pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppC
 
 	let flowgraph_io = prepare_flowgraph_io(&conf, &state).await?;
 
-	let motion_handles = motion::MotionHandles::spawn_all(&conf, shutdown.clone());
+	let motion_status = {
+		let s = state.read().await;
+		s.vmc_passthrough_status.clone()
+	};
+	let motion_handles = motion::MotionHandles::spawn_all(&conf, shutdown.clone(), motion_status);
 
 	let control_api_runtime = init_control_api_runtime(&conf, &state).await?;
 
