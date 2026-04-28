@@ -273,11 +273,7 @@ pub async fn post_restart(state: Data<SharedState>, body: Json<RestartRequest>) 
   "《Restart》 新プロセス spawn 完了 (pid={new_pid}) conf={new_conf_arg}。{graceful_ms}ms 後に現プロセス(pid={current_pid}) を exit します。"
  );
 
-	tokio::spawn(async move {
-		tokio::time::sleep(std::time::Duration::from_millis(graceful_ms)).await;
-		log::info!("《Restart》 graceful_ms 経過。現プロセスを終了します。");
-		std::process::exit(0);
-	});
+	schedule_current_process_exit(graceful_ms);
 
 	HttpResponse::Ok().json(RestartResponse {
 		new_conf_path: new_conf_arg,
@@ -290,6 +286,14 @@ pub async fn post_restart(state: Data<SharedState>, body: Json<RestartRequest>) 
 pub fn configure(cfg: &mut web::ServiceConfig) {
 	cfg.service(get_profiles);
 	cfg.service(post_restart);
+}
+
+fn schedule_current_process_exit(graceful_ms: u64) {
+	tokio::spawn(async move {
+		tokio::time::sleep(std::time::Duration::from_millis(graceful_ms)).await;
+		log::info!("《Restart》 graceful_ms 経過。現プロセスを終了します。");
+		std::process::exit(0);
+	});
 }
 
 #[cfg(test)]
