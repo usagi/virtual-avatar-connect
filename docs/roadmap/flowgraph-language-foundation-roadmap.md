@@ -151,7 +151,7 @@ cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-dir flowgraph.exa
 
 初期版は `FlowgraphProgram::execute()` による 1-shot 実行のみを扱う。
 出力は `generation`, `node_count`, `trace`, `stored_values`, `exec_count`, `pure_evaluations`, `cache_hits`, `cache_misses`。
-外部 I/O mock、trigger sequence、expected assertion は LF-3b 以降で追加する。
+外部 I/O mock、trigger sequence、より高度な expected assertion は LF-3b 以降で追加する。
 
 ### LF-3b `*.flowgraph.test.toml` minimal assertions ✅
 
@@ -165,11 +165,18 @@ name = "one-shot smoke"
 node_count = 3
 trace_count = 0
 trace = []
+
+[[tests.expect.stored_values]]
+node = "node_id"
+port = "value"
+ty = "string"
+value = "expected"
 ```
 
-初期版の assertion は `node_count`, `trace_count`, `trace` のみ。
+初期版の assertion は `node_count`, `trace_count`, `trace`, `stored_values[]`。
+`stored_values[]` は `node`, `port`, `value` を比較し、任意で `ty` も検証する。
 失敗時は CLI が non-zero exit し、JSON 出力では `tests[]` / `failed_tests` に結果を載せる。
-stored value assertion、trigger sequence、mock capability は次段で追加する。
+trigger sequence、mock capability、近似比較や部分一致などの高度な assertion は次段で追加する。
 
 ## 5. 追加計画項目
 

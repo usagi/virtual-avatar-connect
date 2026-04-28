@@ -87,6 +87,17 @@ struct FixtureExpect {
 	node_count: Option<usize>,
 	trace_count: Option<usize>,
 	trace: Option<Vec<String>>,
+	#[serde(default)]
+	stored_values: Vec<FixtureExpectedValue>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureExpectedValue {
+	node: String,
+	port: String,
+	#[serde(default)]
+	ty: Option<String>,
+	value: toml::Value,
 }
 
 /// `flowgraph_dir` をロードする。診断付き失敗は [`FixtureError::Load`]。
@@ -170,10 +181,7 @@ fn run_declared_tests(root: &Path, report: &FixtureRunReport) -> Result<Vec<Fixt
 	let mut results = Vec::new();
 	for path in discover_test_files(root)? {
 		let raw = std::fs::read_to_string(&path).map_err(FixtureError::TestIo)?;
-		let parsed: FixtureTestFile = toml::from_str(&raw).map_err(|error| FixtureError::TestParse {
-			path: path.clone(),
-			error,
-		})?;
+		let parsed: FixtureTestFile = toml::from_str(&raw).map_err(|error| FixtureError::TestParse { path: path.clone(), error })?;
 		for (index, case) in parsed.tests.iter().enumerate() {
 			results.push(evaluate_test_case(&path, index, case, report));
 		}
@@ -198,12 +206,61 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 			failures.push(format!("trace: expected {expected:?}, actual {:?}", report.trace));
 		}
 	}
+	for expected in &case.expect.stored_values {
+		match report
+			.stored_values
+			.iter()
+			.find(|actual| actual.node == expected.node && actual.port == expected.port)
+		{
+			Some(actual) => {
+				if let Some(expected_ty) = &expected.ty {
+					if &actual.ty != expected_ty {
+						failures.push(format!(
+							"stored_value {}:{} type: expected {}, actual {}",
+							expected.node, expected.port, expected_ty, actual.ty
+						));
+					}
+				}
+				let expected_value = toml_value_to_json(&expected.value);
+				if actual.value != expected_value {
+					failures.push(format!(
+						"stored_value {}:{} value: expected {}, actual {}",
+						expected.node,
+						expected.port,
+						compact_json(&expected_value),
+						compact_json(&actual.value)
+					));
+				}
+			}
+			None => failures.push(format!("stored_value {}:{}: missing", expected.node, expected.port)),
+		}
+	}
 	FixtureTestResult {
 		file: path.file_name().and_then(|s| s.to_str()).unwrap_or("").to_string(),
 		name: case.name.clone().unwrap_or_else(|| format!("test#{index}")),
 		ok: failures.is_empty(),
 		failures,
 	}
+}
+
+fn toml_value_to_json(value: &toml::Value) -> serde_json::Value {
+	match value {
+		toml::Value::String(v) => serde_json::Value::String(v.clone()),
+		toml::Value::Integer(v) => serde_json::Value::Number((*v).into()),
+		toml::Value::Float(v) => serde_json::Number::from_f64(*v)
+			.map(serde_json::Value::Number)
+			.unwrap_or(serde_json::Value::Null),
+		toml::Value::Boolean(v) => serde_json::Value::Bool(*v),
+		toml::Value::Datetime(v) => serde_json::Value::String(v.to_string()),
+		toml::Value::Array(values) => serde_json::Value::Array(values.iter().map(toml_value_to_json).collect()),
+		toml::Value::Table(values) => {
+			serde_json::Value::Object(values.iter().map(|(key, value)| (key.clone(), toml_value_to_json(value))).collect())
+		}
+	}
+}
+
+fn compact_json(value: &serde_json::Value) -> String {
+	serde_json::to_string(value).unwrap_or_else(|_| format!("{value:?}"))
 }
 
 #[cfg(test)]
@@ -247,6 +304,86 @@ mod tests {
 		assert!(report.ok, "report: {:?}", report.tests);
 		assert!(!report.tests.is_empty());
 		assert_eq!(report.failed_tests, 0);
+	}
+
+	#[test]
+	fn stored_value_assertion_passes() {
+		let report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		let case = FixtureTestCase {
+			name: Some("stored".into()),
+			expect: FixtureExpect {
+				stored_values: vec![FixtureExpectedValue {
+					node: "n".into(),
+					port: "out".into(),
+					ty: Some("string".into()),
+					value: toml::Value::String("ok".into()),
+				}],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(result.ok, "{:?}", result.failures);
+	}
+
+	#[test]
+	fn stored_value_assertion_reports_missing_type_and_value() {
+		let report = report_with_stored_value("n", "out", "string", serde_json::json!("actual"));
+		let case = FixtureTestCase {
+			name: Some("stored".into()),
+			expect: FixtureExpect {
+				stored_values: vec![
+					FixtureExpectedValue {
+						node: "n".into(),
+						port: "out".into(),
+						ty: Some("int".into()),
+						value: toml::Value::String("expected".into()),
+					},
+					FixtureExpectedValue {
+						node: "missing".into(),
+						port: "value".into(),
+						ty: None,
+						value: toml::Value::Integer(1),
+					},
+				],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(!result.ok);
+		assert_eq!(result.failures.len(), 3);
+		assert!(result.failures.iter().any(|f| f.contains("type: expected int")));
+		assert!(result
+			.failures
+			.iter()
+			.any(|f| f.contains("value: expected \"expected\", actual \"actual\"")));
+		assert!(result.failures.iter().any(|f| f == "stored_value missing:value: missing"));
+	}
+
+	fn report_with_stored_value(node: &str, port: &str, ty: &str, value: serde_json::Value) -> FixtureRunReport {
+		FixtureRunReport {
+			ok: true,
+			root: "test".into(),
+			generation: 1,
+			node_count: 1,
+			trace: Vec::new(),
+			trace_count: 0,
+			stored_values: vec![FixtureTraceValue {
+				node: node.into(),
+				port: port.into(),
+				ty: ty.into(),
+				value,
+			}],
+			exec_count: Vec::new(),
+			pure_evaluations: Vec::new(),
+			cache_hits: 0,
+			cache_misses: 0,
+			tests: Vec::new(),
+			failed_tests: 0,
+		}
 	}
 
 	#[tokio::test]
