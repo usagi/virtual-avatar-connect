@@ -60,7 +60,7 @@ virtual-avatar-connect/
 
 ### R1: `AppCore` API を runner 前提に分ける（実装済み）
 
-現状の `src/app_core/` は `run_vac_application(conf, audio_sink)` の中で boot、serve、cleanup を直列に実行している。これを次の形へ寄せる。
+現状の `src/app_core/` は `AppCore::boot(conf, audio_sink)` で起動準備を行い、CLI では `AppCore::run()` で serve、cleanup を直列に実行する。desktop では `runtime_handle()` を取り出して tray / Tauri と並走させたうえで `run()` する。
 
 ```rust
 pub(crate) struct AppCore {
@@ -76,7 +76,7 @@ impl AppCore {
 
 `crate::run()` は `Args`、特殊モード、`Conf::new`、`conf.execute_run_with()` までを担当し、その後は `AppCore` に委譲する。ここでは挙動を変えない。
 
-実装は `src/app_core/` 配下で `boot.rs` / `server.rs` / `cleanup.rs` に分け、`mod.rs` は `AppCore` 型と runner 向け API の薄い境界に寄せる。
+実装は `src/app_core/` 配下で `boot.rs` / `server.rs` / `cleanup.rs` / `types/` に分け、`mod.rs` は `AppCore` 型と runner 向け API の薄い境界に寄せる。`types/parts.rs` は boot / serve / cleanup が共有する内部保持物、`types/run.rs` は runner へ返す runtime handle / run result を担当する。
 標準起動手順は `src/bootstrap.rs` に分け、`src/lib.rs` は `run_cli()` / `run_desktop()` など公開 runner entry の表面に寄せる。
 
 ### R2: runner 用 entry API を追加（実装済み）

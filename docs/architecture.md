@@ -46,7 +46,7 @@ Virtual Avatar Connect のレイヤ構成と依存方向、および開発時の
 
 ### `src/app_core/`
 
-- 再構造化 Step 7 / R1: `AppCore::boot` / `runtime_handle` / `run` に runner 向け境界を整理。`mod.rs` は `AppCore` 型、`types.rs` は `AppCoreParts` / runtime handle / run result、`boot.rs` は起動初期化、`server.rs` は actix HTTP サーバ、`cleanup.rs` は shutdown cleanup を担当する。`server` / `cleanup` は `AppCore` 本体ではなく `AppCoreParts` を受け取り、将来 `vac-app` runner に移す境界の目印。
+- 再構造化 Step 7 / R1: `AppCore::boot` / `runtime_handle` / `run` に runner 向け境界を整理。`mod.rs` は `AppCore` 型、`types.rs` は facade、`types/parts.rs` は `AppCoreParts` / tasks / services、`types/run.rs` は runtime handle / run result、`boot.rs` は起動初期化、`server.rs` は actix HTTP サーバ、`cleanup.rs` は shutdown cleanup を担当する。`server` / `cleanup` は `AppCore` 本体ではなく `AppCoreParts` を受け取り、将来 `vac-app` runner に移す境界の目印。
 
 ### `src/conf/`
 

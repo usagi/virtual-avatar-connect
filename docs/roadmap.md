@@ -193,9 +193,9 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] Step 5（部分）: ワークスペース化（`crates/vac-gui-assets` のみメンバ追加、`default-members = ["."]`）。他 crate の分割は継続
 - [x] Step 6a: Cargo feature **`embed-gui`** — `/gui/*` メモリ配信（`gui_embedded` / `gui_path`）
 - [x] Step 6b（crate）: **`crates/vac-gui-assets`** メンバ（`include_dir` + `build.rs`）。**CI は §1.3 どおり未着手**
-- [x] Step 7（一段）: `src/app_core/` の `run_vac_application`（`ShutdownBroker` 以降〜 cleanup）+ `boot` / `server` / `cleanup` module 分離。将来 `vac-app` への切り出し境界
+- [x] Step 7（一段）: `src/app_core/` の `AppCore`（`ShutdownBroker` 以降〜 cleanup）+ `boot` / `server` / `cleanup` / `types` module 分離。将来 `vac-app` への切り出し境界
 - [x] Step 7d: crate / runner / desktop 再編の実装順と担当境界を固定（[`roadmap/crate-runner-desktop-restructure.md`](roadmap/crate-runner-desktop-restructure.md)）
-- [x] R1: `AppCore::boot` / `serve` / `cleanup` 分離。CLI / desktop runner が共有する起動境界をコード上に固定
+- [x] R1: `AppCore::boot` / `runtime_handle` / `run` 分離。CLI / desktop runner が共有する起動境界をコード上に固定し、`types/parts.rs` / `types/run.rs` へ内部型を整理
 - [x] R4（一段）: `crates/vac-motion` 追加。`MotionFrame` / OSC decode / UDP forwarding helper を root crate から物理分割
 - [x] R4（一段追加）: OSC / VMC / VRChat encoding helper を `crates/vac-motion` へ移動。既存 `crate::flowgraph::{osc, vmc, vrchat}::*` API は再エクスポートで維持
 - [x] R4（二段）: `crates/vac-flowgraph` 追加。pure な Quantity system を root crate から物理分割し、既存 `crate::flowgraph::quantity::*` API は再エクスポートで維持
