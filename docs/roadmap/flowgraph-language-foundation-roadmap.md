@@ -153,6 +153,24 @@ cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-dir flowgraph.exa
 出力は `generation`, `node_count`, `trace`, `stored_values`, `exec_count`, `pure_evaluations`, `cache_hits`, `cache_misses`。
 外部 I/O mock、trigger sequence、expected assertion は LF-3b 以降で追加する。
 
+### LF-3b `*.flowgraph.test.toml` minimal assertions ✅
+
+Flowgraph ディレクトリ直下の `*.flowgraph.test.toml` を読み、`[[tests]]` の最小 assertion を評価する。
+
+```toml
+[[tests]]
+name = "one-shot smoke"
+
+[tests.expect]
+node_count = 3
+trace_count = 0
+trace = []
+```
+
+初期版の assertion は `node_count`, `trace_count`, `trace` のみ。
+失敗時は CLI が non-zero exit し、JSON 出力では `tests[]` / `failed_tests` に結果を載せる。
+stored value assertion、trigger sequence、mock capability は次段で追加する。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。

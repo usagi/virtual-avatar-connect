@@ -6,8 +6,8 @@
 
 use crate::flowgraph::node::{ExecCtx, SocketValueRepr};
 use crate::flowgraph::{load_flowgraph_dir, FlowgraphProgram, LoadError, NodeExecError, ProgramRun};
-use serde::Serialize;
-use std::path::Path;
+use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 /// ロードに成功したときの結果。
 pub struct FixtureLoadOk {
@@ -19,6 +19,8 @@ pub struct FixtureLoadOk {
 pub enum FixtureError {
 	Load(LoadError),
 	Execute(NodeExecError),
+	TestIo(std::io::Error),
+	TestParse { path: PathBuf, error: toml::de::Error },
 }
 
 impl std::fmt::Display for FixtureError {
@@ -26,6 +28,8 @@ impl std::fmt::Display for FixtureError {
 		match self {
 			FixtureError::Load(e) => write!(f, "load failed: {e}"),
 			FixtureError::Execute(e) => write!(f, "execute failed: {e}"),
+			FixtureError::TestIo(e) => write!(f, "test file io failed: {e}"),
+			FixtureError::TestParse { path, error } => write!(f, "test file parse failed: {}: {error}", path.display()),
 		}
 	}
 }
@@ -53,6 +57,36 @@ pub struct FixtureRunReport {
 	pub pure_evaluations: Vec<(String, usize)>,
 	pub cache_hits: usize,
 	pub cache_misses: usize,
+	pub tests: Vec<FixtureTestResult>,
+	pub failed_tests: usize,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FixtureTestResult {
+	pub file: String,
+	pub name: String,
+	pub ok: bool,
+	pub failures: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureTestFile {
+	#[serde(default)]
+	tests: Vec<FixtureTestCase>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureTestCase {
+	name: Option<String>,
+	#[serde(default)]
+	expect: FixtureExpect,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct FixtureExpect {
+	node_count: Option<usize>,
+	trace_count: Option<usize>,
+	trace: Option<Vec<String>>,
 }
 
 /// `flowgraph_dir` をロードする。診断付き失敗は [`FixtureError::Load`]。
@@ -73,7 +107,11 @@ pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, Fi
 	let node_count = fixture.program.node_ids().count();
 	let mut ctx = ExecCtx::default();
 	let run = fixture.program.execute(&mut ctx).await.map_err(FixtureError::Execute)?;
-	Ok(make_report(root, node_count, run, ctx))
+	let mut report = make_report(root, node_count, run, ctx);
+	report.tests = run_declared_tests(root, &report)?;
+	report.failed_tests = report.tests.iter().filter(|t| !t.ok).count();
+	report.ok = report.failed_tests == 0;
+	Ok(report)
 }
 
 fn make_report(root: &Path, node_count: usize, run: ProgramRun, ctx: ExecCtx) -> FixtureRunReport {
@@ -107,6 +145,64 @@ fn make_report(root: &Path, node_count: usize, run: ProgramRun, ctx: ExecCtx) ->
 		pure_evaluations,
 		cache_hits: run.cache_hits,
 		cache_misses: run.cache_misses,
+		tests: Vec::new(),
+		failed_tests: 0,
+	}
+}
+
+fn discover_test_files(root: &Path) -> Result<Vec<PathBuf>, FixtureError> {
+	let mut out = Vec::new();
+	for entry in std::fs::read_dir(root).map_err(FixtureError::TestIo)? {
+		let entry = entry.map_err(FixtureError::TestIo)?;
+		let path = entry.path();
+		let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
+			continue;
+		};
+		if name.ends_with(".flowgraph.test.toml") {
+			out.push(path);
+		}
+	}
+	out.sort();
+	Ok(out)
+}
+
+fn run_declared_tests(root: &Path, report: &FixtureRunReport) -> Result<Vec<FixtureTestResult>, FixtureError> {
+	let mut results = Vec::new();
+	for path in discover_test_files(root)? {
+		let raw = std::fs::read_to_string(&path).map_err(FixtureError::TestIo)?;
+		let parsed: FixtureTestFile = toml::from_str(&raw).map_err(|error| FixtureError::TestParse {
+			path: path.clone(),
+			error,
+		})?;
+		for (index, case) in parsed.tests.iter().enumerate() {
+			results.push(evaluate_test_case(&path, index, case, report));
+		}
+	}
+	Ok(results)
+}
+
+fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report: &FixtureRunReport) -> FixtureTestResult {
+	let mut failures = Vec::new();
+	if let Some(expected) = case.expect.node_count {
+		if report.node_count != expected {
+			failures.push(format!("node_count: expected {expected}, actual {}", report.node_count));
+		}
+	}
+	if let Some(expected) = case.expect.trace_count {
+		if report.trace_count != expected {
+			failures.push(format!("trace_count: expected {expected}, actual {}", report.trace_count));
+		}
+	}
+	if let Some(expected) = &case.expect.trace {
+		if &report.trace != expected {
+			failures.push(format!("trace: expected {expected:?}, actual {:?}", report.trace));
+		}
+	}
+	FixtureTestResult {
+		file: path.file_name().and_then(|s| s.to_str()).unwrap_or("").to_string(),
+		name: case.name.clone().unwrap_or_else(|| format!("test#{index}")),
+		ok: failures.is_empty(),
+		failures,
 	}
 }
 
@@ -142,6 +238,15 @@ mod tests {
 		assert!(report.generation > 0);
 		assert!(report.node_count > 0);
 		assert_eq!(report.trace_count, report.trace.len());
+	}
+
+	#[tokio::test]
+	async fn lambda_demo_declared_tests_pass() {
+		let dir = example_dir("lambda-demo");
+		let report = run_fixture_once_report(&dir).await.expect("report");
+		assert!(report.ok, "report: {:?}", report.tests);
+		assert!(!report.tests.is_empty());
+		assert_eq!(report.failed_tests, 0);
 	}
 
 	#[tokio::test]

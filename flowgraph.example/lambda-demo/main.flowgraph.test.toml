@@ -1,0 +1,7 @@
+[[tests]]
+name = "one-shot smoke"
+
+[tests.expect]
+node_count = 3
+trace_count = 0
+trace = []
