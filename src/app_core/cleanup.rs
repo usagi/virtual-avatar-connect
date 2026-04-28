@@ -1,9 +1,26 @@
 use super::AppCoreParts;
+use crate::state::SharedState;
 use crate::{bridges, managed_app, Result};
 
 pub(super) async fn cleanup(parts: AppCoreParts) -> Result<()> {
+	let state = parts.state.clone();
+
+	stop_managed_apps(&state).await;
+
+	parts.motion_handles.finish_all().await;
+
+	finish_bridge_handles(&state).await;
+	stop_libretranslate(&state).await;
+	abort_ingress_handles(parts.ingress_handles);
+	abort_ai_handles(parts.ai_handles);
+
+	log::info!("《Shutdown》 cleanup 完了。プロセスを終了します。");
+	Ok(())
+}
+
+async fn stop_managed_apps(state: &SharedState) {
 	let managed_stop = {
-		let s = parts.state.read().await;
+		let s = state.read().await;
 		let registry = s.managed_apps.clone();
 		log::info!("《Shutdown》 ManagedApp 全停止を試行します（entry ごとの shutdown cfg を使用）。");
 		managed_app::stop_all_graceful(&registry).await
@@ -16,32 +33,33 @@ pub(super) async fn cleanup(parts: AppCoreParts) -> Result<()> {
 			outcome.terminated_pids
 		);
 	}
+}
 
-	parts.motion_handles.finish_all().await;
+async fn finish_bridge_handles(state: &SharedState) {
+	let handles_arc = state.read().await.bridge_handles.clone();
+	let mut slot = handles_arc.lock().await;
+	let taken = std::mem::replace(&mut *slot, bridges::BridgeHandles::empty());
+	taken.finish_all().await;
+}
 
-	{
-		let handles_arc = parts.state.read().await.bridge_handles.clone();
-		let mut slot = handles_arc.lock().await;
-		let taken = std::mem::replace(&mut *slot, bridges::BridgeHandles::empty());
-		taken.finish_all().await;
-	}
-	for h in parts.ingress_handles.eventsub {
+fn abort_ingress_handles(handles: crate::processor::ingress::IngressHandles) {
+	for h in handles.eventsub {
 		h.abort();
 	}
-	for h in parts.ai_handles {
+}
+
+fn abort_ai_handles(handles: Vec<tokio::task::JoinHandle<()>>) {
+	for h in handles {
 		h.abort();
 	}
+}
 
-	{
-		let s = parts.state.read().await;
-		let fut = async {
-			s.libretranslate.lock().await.stop().await;
-		};
-		if tokio::time::timeout(std::time::Duration::from_secs(5), fut).await.is_err() {
-			log::warn!("《Shutdown》 LibreTranslate.stop() が 5 秒以内に完了しませんでした。続行します。");
-		}
+async fn stop_libretranslate(state: &SharedState) {
+	let s = state.read().await;
+	let fut = async {
+		s.libretranslate.lock().await.stop().await;
+	};
+	if tokio::time::timeout(std::time::Duration::from_secs(5), fut).await.is_err() {
+		log::warn!("《Shutdown》 LibreTranslate.stop() が 5 秒以内に完了しませんでした。続行します。");
 	}
-
-	log::info!("《Shutdown》 cleanup 完了。プロセスを終了します。");
-	Ok(())
 }
