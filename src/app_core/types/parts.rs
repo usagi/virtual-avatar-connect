@@ -1,3 +1,5 @@
+use super::run::AppCoreRuntimeHandle;
+use crate::app_core::address;
 use crate::conf::Conf;
 use crate::state::SharedState;
 use crate::{bridges, flowgraph, motion, processor, shutdown, web_interface};
@@ -69,5 +71,10 @@ impl AppCoreParts {
 			tasks,
 			services,
 		}
+	}
+
+	pub(in crate::app_core) fn runtime_handle(&self) -> AppCoreRuntimeHandle {
+		let address = address::normalize_loopback_address(self.conf.get_web_ui_address());
+		AppCoreRuntimeHandle::new(format!("http://{address}/gui/"), self.shutdown.clone())
 	}
 }
