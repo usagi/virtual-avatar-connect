@@ -17,7 +17,7 @@ pub(crate) use types::{AppCoreRunResult, AppCoreRuntimeHandle};
 /// conf ロード済み・`run_with` 済みの状態から起動する VAC 常駐ランタイム本体。
 ///
 /// CLI / desktop runner は、最終的にこの `boot` / `serve` / `cleanup`
-/// 境界を共有する。現時点では `run_vac_application` が従来通り直列に呼ぶ。
+/// 境界を共有する。CLI は直列実行し、desktop は Tauri / tray と並走させる。
 pub(crate) struct AppCore {
 	parts: AppCoreParts,
 }
@@ -39,7 +39,7 @@ impl AppCore {
 	}
 
 	async fn serve(&self) -> Result<()> {
-		self.parts.serve().await
+		server::run_services(&self.parts).await
 	}
 
 	async fn cleanup(self) -> Result<()> {
@@ -48,11 +48,5 @@ impl AppCore {
 
 	fn from_parts(parts: AppCoreParts) -> Self {
 		Self { parts }
-	}
-}
-
-impl AppCoreParts {
-	async fn serve(&self) -> Result<()> {
-		server::run_services(self).await
 	}
 }
