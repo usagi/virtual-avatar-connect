@@ -218,6 +218,9 @@ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
  const visibleGroups: FlowgraphDraftGroup[] = $derived.by(() => {
   const groups = flowgraphStore.draftGroups ?? [];
   if (groups.length === 0) return [];
+  if (flowgraphStore.selectedGroupId) {
+   return groups.filter((g) => g.id === flowgraphStore.selectedGroupId);
+  }
   const selectedIds = new Set(selectedNodes.map((n) => n.id));
   if (selectedIds.size === 0) return groups;
   return groups.filter((g) => g.node_ids.some((id) => selectedIds.has(id)));
@@ -535,7 +538,9 @@ const unitParseTimers = new Map<string, ReturnType<typeof setTimeout>>();
    </div>
    <div class="space-y-2">
     {#each visibleGroups as group (group.id)}
-     <div class="rounded border border-surface-200-800 p-2">
+     <div
+      class={`rounded border p-2 ${flowgraphStore.selectedGroupId === group.id ? 'border-primary-500/70 bg-primary-500/5' : 'border-surface-200-800'}`}
+     >
       <div class="mb-2 flex items-center justify-between gap-2">
        <div class="min-w-0">
         <div class="truncate font-mono text-[0.65rem] opacity-60">#{group.id}</div>

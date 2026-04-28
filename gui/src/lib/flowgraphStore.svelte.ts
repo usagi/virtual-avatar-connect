@@ -72,6 +72,8 @@ class FlowgraphStore {
  selectedNodeId: string | null = $state(null);
  /** 複数選択中のノード ID。先頭は Inspector が扱う primary selection。 */
  selectedNodeIds: string[] = $state([]);
+ /** キャンバス上で選択している視覚 group。node selection とは別の Inspector 対象。 */
+ selectedGroupId: string | null = $state(null);
  undoStack: FlowgraphHistoryEntry[] = $state([]);
  redoStack: FlowgraphHistoryEntry[] = $state([]);
 
@@ -131,6 +133,7 @@ class FlowgraphStore {
   this.currentError = null;
   this.selectedNodeId = null;
   this.selectedNodeIds = [];
+  this.selectedGroupId = null;
   try {
    const resp = await api.flowgraphFile(fq);
    this.currentFile = resp;
@@ -171,6 +174,7 @@ class FlowgraphStore {
   this.draftGroups = null;
   this.selectedNodeId = null;
   this.selectedNodeIds = [];
+  this.selectedGroupId = null;
   this.undoStack = [];
   this.redoStack = [];
   this.currentState = 'idle';
@@ -348,6 +352,7 @@ class FlowgraphStore {
     color: '#38bdf8',
    },
   ];
+  this.selectedGroupId = id;
   const rows = this.draftNodes.filter((n) => selected.has(n.id));
   const positions = rows.map((n) => n.position ?? ([100, 100] as [number, number]));
   const minX = Math.min(...positions.map((p) => p[0]));
@@ -367,6 +372,15 @@ class FlowgraphStore {
   if (!this.draftGroups.some((g) => g.id === id)) return false;
   this.#pushHistory('Remove group');
   this.draftGroups = this.draftGroups.filter((g) => g.id !== id);
+  if (this.selectedGroupId === id) this.selectedGroupId = null;
+  return true;
+ }
+
+ selectGroup(id: string): boolean {
+  if (!this.draftGroups?.some((g) => g.id === id)) return false;
+  this.selectedGroupId = id;
+  this.selectedNodeId = null;
+  this.selectedNodeIds = [];
   return true;
  }
 
@@ -399,6 +413,7 @@ class FlowgraphStore {
   const existing = new Set(this.draftNodes.map((n) => n.id));
   const ids = group.node_ids.filter((nodeId) => existing.has(nodeId));
   if (ids.length === 0) return false;
+  this.selectedGroupId = id;
   this.selectedNodeIds = ids;
   this.selectedNodeId = ids[0] ?? null;
   return true;
@@ -472,6 +487,9 @@ class FlowgraphStore {
   if (this.draftGroups) {
    this.draftGroups = pruneGroupsAfterNodeRemoval(this.draftGroups, new Set([id]));
   }
+  if (this.selectedGroupId && !this.draftGroups?.some((g) => g.id === this.selectedGroupId)) {
+   this.selectedGroupId = null;
+  }
   if (this.selectedNodeId === id) this.selectedNodeId = null;
   this.selectedNodeIds = this.selectedNodeIds.filter((selected) => selected !== id);
  }
@@ -514,6 +532,9 @@ class FlowgraphStore {
   );
   if (this.draftGroups) {
    this.draftGroups = pruneGroupsAfterNodeRemoval(this.draftGroups, nodeSet);
+  }
+  if (this.selectedGroupId && !this.draftGroups?.some((g) => g.id === this.selectedGroupId)) {
+   this.selectedGroupId = null;
   }
   if (this.selectedNodeId && nodeSet.has(this.selectedNodeId)) this.selectedNodeId = null;
   this.selectedNodeIds = this.selectedNodeIds.filter((id) => !nodeSet.has(id));
@@ -616,6 +637,7 @@ class FlowgraphStore {
    groups: cloneGroups(this.draftGroups ?? []),
    selectedNodeIds: [...this.selectedNodeIds],
    selectedNodeId: this.selectedNodeId,
+   selectedGroupId: this.selectedGroupId,
   };
  }
 
@@ -625,6 +647,7 @@ class FlowgraphStore {
   this.draftGroups = cloneGroups(entry.groups);
   this.selectedNodeIds = [...entry.selectedNodeIds];
   this.selectedNodeId = entry.selectedNodeId;
+  this.selectedGroupId = entry.selectedGroupId;
   this.#lastDeletion = null;
  }
 
@@ -999,6 +1022,7 @@ type FlowgraphHistoryEntry = {
  groups: FlowgraphDraftGroup[];
  selectedNodeIds: string[];
  selectedNodeId: string | null;
+ selectedGroupId: string | null;
 };
 
 function cloneNodes(nodes: FlowgraphDraftNode[]): FlowgraphDraftNode[] {

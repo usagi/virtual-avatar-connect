@@ -363,6 +363,10 @@ test.describe('§3.2 flowgraph-canvas-basic', () => {
 			await expect(groupFrame).toBeVisible({ timeout: 10_000 });
 			await expect(groupFrame.getByText('Group 1')).toBeVisible();
 			await expect(page.getByText('Groups')).toBeVisible();
+			await inNode.click();
+			await groupFrame.getByText('Group 1').click();
+			await expect(groupFrame).toHaveClass(/selected/);
+			await expect(page.locator('input#group-label-group_1')).toBeVisible();
 
 			const saveBtn = page.getByRole('button', { name: /^Save( \*)?$/ });
 			await expect(saveBtn).toHaveText('Save *', { timeout: 5_000 });

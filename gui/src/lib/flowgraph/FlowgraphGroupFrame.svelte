@@ -1,21 +1,41 @@
 <script lang="ts">
+ import { flowgraphStore } from '../flowgraphStore.svelte';
+
  type Data = {
   groupId: string;
   label: string;
   nodeCount: number;
   color: string | null;
+  selected: boolean;
   width: number;
   height: number;
  };
 
  let { data }: { data: Data } = $props();
+
+ function selectGroup(ev?: Event) {
+  ev?.stopPropagation();
+  flowgraphStore.selectGroup(data.groupId);
+ }
+
+ function onKeydown(ev: KeyboardEvent) {
+  if (ev.key !== 'Enter' && ev.key !== ' ') return;
+  ev.preventDefault();
+  selectGroup(ev);
+ }
 </script>
 
 <div
  class="group-frame"
+ class:selected={data.selected}
  style={`--group-color: ${data.color ?? '#38bdf8'}; width: ${data.width}px; height: ${data.height}px;`}
+ role="button"
+ tabindex="0"
  aria-label={`Flowgraph group ${data.groupId}`}
  data-testid={`flowgraph-group-${data.groupId}`}
+ onpointerdown={(ev) => selectGroup(ev)}
+ onclick={(ev) => selectGroup(ev)}
+ onkeydown={onKeydown}
 >
  <div class="group-frame-label">
   <span>{data.label}</span>
@@ -26,7 +46,8 @@
 <style>
  .group-frame {
   position: relative;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
   border: 1px solid color-mix(in srgb, var(--group-color, #38bdf8) 42%, transparent);
   border-radius: 8px;
   background:
@@ -38,6 +59,20 @@
   box-shadow:
    inset 0 0 0 1px rgba(255, 255, 255, 0.28),
    0 12px 32px color-mix(in srgb, var(--group-color, #38bdf8) 10%, transparent);
+ }
+
+ .group-frame.selected {
+  border-color: color-mix(in srgb, var(--group-color, #38bdf8) 72%, white);
+  background:
+   linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--group-color, #38bdf8) 14%, transparent),
+    color-mix(in srgb, var(--group-color, #38bdf8) 6%, transparent)
+   );
+  box-shadow:
+   inset 0 0 0 1px color-mix(in srgb, var(--group-color, #38bdf8) 38%, transparent),
+   0 0 0 1px color-mix(in srgb, var(--group-color, #38bdf8) 24%, transparent),
+   0 14px 36px color-mix(in srgb, var(--group-color, #38bdf8) 14%, transparent);
  }
 
  .group-frame-label {

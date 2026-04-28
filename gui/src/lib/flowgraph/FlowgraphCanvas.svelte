@@ -140,10 +140,11 @@
     label: g.label,
     nodeCount: g.nodeIds.length,
     color: g.color,
+    selected: flowgraphStore.selectedGroupId === g.id,
     width: g.width,
     height: g.height,
    },
-   selectable: false,
+   selectable: true,
    draggable: false,
    deletable: false,
    focusable: false,
@@ -263,29 +264,49 @@
  }
 
  function onSelectionChange(params: { nodes: Node[]; edges: Edge[] }) {
- const firstNode = params.nodes[0];
-  flowgraphStore.selectedNodeIds = params.nodes.map((n) => n.id);
-  flowgraphStore.selectedNodeId = firstNode ? firstNode.id : null;
+  const regularNodes = params.nodes.filter((n) => !isGroupFrameNode(n.id));
+  const groupNode = params.nodes.find((n) => isGroupFrameNode(n.id));
+  if (regularNodes.length > 0) {
+   const firstNode = regularNodes[0];
+   flowgraphStore.selectedNodeIds = regularNodes.map((n) => n.id);
+   flowgraphStore.selectedNodeId = firstNode ? firstNode.id : null;
+   flowgraphStore.selectedGroupId = null;
+   return;
+  }
+  flowgraphStore.selectedNodeIds = [];
+  flowgraphStore.selectedNodeId = null;
+  if (groupNode) {
+   flowgraphStore.selectGroup(groupIdFromFrameNode(groupNode.id));
+  }
  }
 
  function onNodeClick(params: { node: Node; event: MouseEvent | TouchEvent }) {
   const id = params.node.id;
-  if (isGroupFrameNode(id)) return;
+  if (isGroupFrameNode(id)) {
+   flowgraphStore.selectGroup(groupIdFromFrameNode(id));
+   return;
+  }
   const event = params.event;
   const additive = event instanceof MouseEvent && (event.ctrlKey || event.metaKey || event.shiftKey);
   if (!additive) {
    flowgraphStore.selectedNodeIds = [id];
    flowgraphStore.selectedNodeId = id;
+   flowgraphStore.selectedGroupId = null;
    return;
   }
   const current = flowgraphStore.selectedNodeIds;
   const next = current.includes(id) ? current.filter((selected) => selected !== id) : [...current, id];
   flowgraphStore.selectedNodeIds = next;
   flowgraphStore.selectedNodeId = next[0] ?? null;
+  flowgraphStore.selectedGroupId = null;
  }
 
  function isGroupFrameNode(id: string): boolean {
   return id.startsWith('__group:');
+ }
+
+ function groupIdFromFrameNode(id: string): string {
+  return id.replace(/^__group:/, '');
  }
 
  const nodeTypes = { flowgraph: FlowgraphNodeCard, flowgraphGroup: FlowgraphGroupFrame };
