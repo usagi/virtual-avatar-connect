@@ -1,4 +1,4 @@
-use super::AppCore;
+use super::{AppCore, AppCoreParts};
 use crate::conf::Conf;
 use crate::{ai, bridges, flowgraph, managed_app, motion, processor, shutdown, web_interface, Result, SharedAudioSink};
 use std::sync::Arc;
@@ -72,16 +72,18 @@ pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppC
 	log_control_api_policy(&control_api_runtime);
 
 	Ok(AppCore {
-		conf,
-		state,
-		shutdown,
-		ai_handles,
-		ingress_handles,
-		motion_handles,
-		web_input_registry,
-		control_api_runtime,
-		flowgraph_web_input_endpoints,
-		flowgraph_trigger,
+		parts: AppCoreParts {
+			conf,
+			state,
+			shutdown,
+			ai_handles,
+			ingress_handles,
+			motion_handles,
+			web_input_registry,
+			control_api_runtime,
+			flowgraph_web_input_endpoints,
+			flowgraph_trigger,
+		},
 	})
 }
 

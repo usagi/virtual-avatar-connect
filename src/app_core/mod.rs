@@ -8,31 +8,16 @@ mod cleanup;
 mod server;
 mod types;
 
-use crate::bridges;
 use crate::conf::Conf;
-use crate::motion;
-use crate::processor;
-use crate::shutdown;
-use crate::state::SharedState;
-use crate::{flowgraph, web_interface, Result, SharedAudioSink};
-use std::sync::Arc;
-pub(crate) use types::{AppCoreRunResult, AppCoreRuntimeHandle};
+use crate::{Result, SharedAudioSink};
+pub(crate) use types::{AppCoreParts, AppCoreRunResult, AppCoreRuntimeHandle};
 
 /// conf ロード済み・`run_with` 済みの状態から起動する VAC 常駐ランタイム本体。
 ///
 /// CLI / desktop runner は、最終的にこの `boot` / `serve` / `cleanup`
 /// 境界を共有する。現時点では `run_vac_application` が従来通り直列に呼ぶ。
 pub(crate) struct AppCore {
-	conf: Conf,
-	state: SharedState,
-	shutdown: Arc<shutdown::ShutdownBroker>,
-	ai_handles: Vec<tokio::task::JoinHandle<()>>,
-	ingress_handles: processor::ingress::IngressHandles,
-	motion_handles: motion::MotionHandles,
-	web_input_registry: Arc<web_interface::web_input::WebInputRegistry>,
-	control_api_runtime: web_interface::control::ControlApiRuntime,
-	flowgraph_web_input_endpoints: Arc<Vec<bridges::web_input::FlowgraphWebInputEndpoint>>,
-	flowgraph_trigger: Arc<Option<flowgraph::node::TriggerHandle>>,
+	parts: AppCoreParts,
 }
 
 impl AppCore {
@@ -47,22 +32,22 @@ impl AppCore {
 	}
 
 	pub(crate) fn runtime_handle(&self) -> AppCoreRuntimeHandle {
-		let address = server::normalize_loopback_address(self.conf.get_web_ui_address());
+		let address = server::normalize_loopback_address(self.parts.conf.get_web_ui_address());
 		AppCoreRuntimeHandle {
 			gui_url: format!("http://{address}/gui/"),
-			shutdown: self.shutdown.clone(),
+			shutdown: self.parts.shutdown.clone(),
 		}
 	}
 
 	async fn serve(&self) -> Result<()> {
 		server::run_services(
-			self.conf.clone(),
-			self.state.clone(),
-			self.web_input_registry.clone(),
-			self.control_api_runtime.clone(),
-			self.flowgraph_web_input_endpoints.clone(),
-			self.flowgraph_trigger.clone(),
-			self.shutdown.clone(),
+			self.parts.conf.clone(),
+			self.parts.state.clone(),
+			self.parts.web_input_registry.clone(),
+			self.parts.control_api_runtime.clone(),
+			self.parts.flowgraph_web_input_endpoints.clone(),
+			self.parts.flowgraph_trigger.clone(),
+			self.parts.shutdown.clone(),
 		)
 		.await
 	}

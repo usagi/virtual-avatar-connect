@@ -3,7 +3,7 @@ use crate::{bridges, managed_app, Result};
 
 pub(super) async fn cleanup(core: AppCore) -> Result<()> {
 	let managed_stop = {
-		let s = core.state.read().await;
+		let s = core.parts.state.read().await;
 		let registry = s.managed_apps.clone();
 		log::info!("《Shutdown》 ManagedApp 全停止を試行します（entry ごとの shutdown cfg を使用）。");
 		managed_app::stop_all_graceful(&registry).await
@@ -17,23 +17,23 @@ pub(super) async fn cleanup(core: AppCore) -> Result<()> {
 		);
 	}
 
-	core.motion_handles.finish_all().await;
+	core.parts.motion_handles.finish_all().await;
 
 	{
-		let handles_arc = core.state.read().await.bridge_handles.clone();
+		let handles_arc = core.parts.state.read().await.bridge_handles.clone();
 		let mut slot = handles_arc.lock().await;
 		let taken = std::mem::replace(&mut *slot, bridges::BridgeHandles::empty());
 		taken.finish_all().await;
 	}
-	for h in core.ingress_handles.eventsub {
+	for h in core.parts.ingress_handles.eventsub {
 		h.abort();
 	}
-	for h in core.ai_handles {
+	for h in core.parts.ai_handles {
 		h.abort();
 	}
 
 	{
-		let s = core.state.read().await;
+		let s = core.parts.state.read().await;
 		let fut = async {
 			s.libretranslate.lock().await.stop().await;
 		};
