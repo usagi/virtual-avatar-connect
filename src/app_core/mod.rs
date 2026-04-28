@@ -33,18 +33,28 @@ impl AppCore {
 	}
 
 	pub(crate) fn runtime_handle(&self) -> AppCoreRuntimeHandle {
-		let address = server::normalize_loopback_address(self.parts.conf.get_web_ui_address());
-		AppCoreRuntimeHandle {
-			gui_url: format!("http://{address}/gui/"),
-			shutdown: self.parts.shutdown.clone(),
-		}
+		self.parts.runtime_handle()
 	}
 
 	async fn serve(&self) -> Result<()> {
-		server::run_services(&self.parts).await
+		self.parts.serve().await
 	}
 
 	async fn cleanup(self) -> Result<()> {
 		cleanup::cleanup(self.parts).await
+	}
+}
+
+impl AppCoreParts {
+	fn runtime_handle(&self) -> AppCoreRuntimeHandle {
+		let address = server::normalize_loopback_address(self.conf.get_web_ui_address());
+		AppCoreRuntimeHandle {
+			gui_url: format!("http://{address}/gui/"),
+			shutdown: self.shutdown.clone(),
+		}
+	}
+
+	async fn serve(&self) -> Result<()> {
+		server::run_services(self).await
 	}
 }
