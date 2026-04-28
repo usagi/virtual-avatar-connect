@@ -4,10 +4,13 @@
 //! 外部 IO・ingress・`state_handle` 必須ノードを含むグラフは失敗しうるため、CI 用の厳密 runner ではなく
 //! **ロード＋純粋グラフのスモーク**向け。
 
-use crate::flowgraph::node::{ExecCtx, SocketValueRepr};
+use crate::flowgraph::engine::create_trigger_bus;
+use crate::flowgraph::node::{ExecCtx, SocketValueRepr, TriggerEvent};
+use crate::flowgraph::socket::{from_toml_value, SocketType};
 use crate::flowgraph::{load_flowgraph_dir, FlowgraphProgram, LoadError, NodeExecError, ProgramRun};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 /// ロードに成功したときの結果。
 pub struct FixtureLoadOk {
@@ -20,7 +23,20 @@ pub enum FixtureError {
 	Load(LoadError),
 	Execute(NodeExecError),
 	TestIo(std::io::Error),
-	TestParse { path: PathBuf, error: toml::de::Error },
+	TestParse {
+		path: PathBuf,
+		error: toml::de::Error,
+	},
+	TriggerValue {
+		path: PathBuf,
+		trigger: usize,
+		port: String,
+		reason: String,
+	},
+	TriggerSend {
+		node: String,
+		reason: String,
+	},
 }
 
 impl std::fmt::Display for FixtureError {
@@ -30,6 +46,19 @@ impl std::fmt::Display for FixtureError {
 			FixtureError::Execute(e) => write!(f, "execute failed: {e}"),
 			FixtureError::TestIo(e) => write!(f, "test file io failed: {e}"),
 			FixtureError::TestParse { path, error } => write!(f, "test file parse failed: {}: {error}", path.display()),
+			FixtureError::TriggerValue {
+				path,
+				trigger,
+				port,
+				reason,
+			} => {
+				write!(
+					f,
+					"trigger value parse failed: {} trigger#{trigger} port={port}: {reason}",
+					path.display()
+				)
+			}
+			FixtureError::TriggerSend { node, reason } => write!(f, "trigger send failed: node={node}: {reason}"),
 		}
 	}
 }
@@ -72,7 +101,32 @@ pub struct FixtureTestResult {
 #[derive(Debug, Deserialize)]
 struct FixtureTestFile {
 	#[serde(default)]
+	triggers: Vec<FixtureTriggerSpec>,
+	#[serde(default)]
 	tests: Vec<FixtureTestCase>,
+}
+
+struct ParsedFixtureTestFile {
+	path: PathBuf,
+	parsed: FixtureTestFile,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureTriggerSpec {
+	node: String,
+	#[serde(default = "default_trigger_exec")]
+	exec: Vec<String>,
+	#[serde(default)]
+	delay_ms: u64,
+	#[serde(default)]
+	overrides: Vec<FixtureTriggerOverride>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureTriggerOverride {
+	port: String,
+	ty: SocketType,
+	value: toml::Value,
 }
 
 #[derive(Debug, Deserialize)]
@@ -116,13 +170,87 @@ pub async fn load_and_execute_once(root: &Path) -> Result<ProgramRun, FixtureErr
 pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, FixtureError> {
 	let mut fixture = load_fixture_program(root)?;
 	let node_count = fixture.program.node_ids().count();
-	let mut ctx = ExecCtx::default();
-	let run = fixture.program.execute(&mut ctx).await.map_err(FixtureError::Execute)?;
+	let declared_tests = read_declared_tests(root)?;
+	let (run, ctx) = run_fixture_program(&mut fixture.program, &declared_tests).await?;
 	let mut report = make_report(root, node_count, run, ctx);
-	report.tests = run_declared_tests(root, &report)?;
+	report.tests = evaluate_declared_tests(&declared_tests, &report);
 	report.failed_tests = report.tests.iter().filter(|t| !t.ok).count();
 	report.ok = report.failed_tests == 0;
 	Ok(report)
+}
+
+async fn run_fixture_program(
+	program: &mut FlowgraphProgram,
+	declared_tests: &[ParsedFixtureTestFile],
+) -> Result<(ProgramRun, ExecCtx), FixtureError> {
+	let trigger_events = build_trigger_events(declared_tests)?;
+	let mut ctx = ExecCtx::default();
+	if trigger_events.is_empty() {
+		let run = program.execute(&mut ctx).await.map_err(FixtureError::Execute)?;
+		return Ok((run, ctx));
+	}
+
+	let total_delay_ms = trigger_events
+		.iter()
+		.fold(0_u64, |sum, trigger| sum.saturating_add(trigger.delay_ms));
+	let shutdown = tokio::time::sleep(Duration::from_millis(total_delay_ms.saturating_add(150)));
+	let (handle, rx) = create_trigger_bus();
+	let sender = handle.clone();
+	let trigger_task = tokio::spawn(async move {
+		for trigger in trigger_events {
+			if trigger.delay_ms > 0 {
+				tokio::time::sleep(Duration::from_millis(trigger.delay_ms)).await;
+			}
+			sender.send(trigger.event).map_err(|e| FixtureError::TriggerSend {
+				node: trigger.node,
+				reason: e.to_string(),
+			})?;
+		}
+		Ok::<(), FixtureError>(())
+	});
+
+	let run = program
+		.run_forever_with_bus(&mut ctx, handle, rx, shutdown, None)
+		.await
+		.map_err(FixtureError::Execute)?;
+	trigger_task.await.map_err(|e| FixtureError::TriggerSend {
+		node: "<trigger-task>".into(),
+		reason: e.to_string(),
+	})??;
+	Ok((run, ctx))
+}
+
+struct FixtureTriggerEvent {
+	node: String,
+	delay_ms: u64,
+	event: TriggerEvent,
+}
+
+fn build_trigger_events(declared_tests: &[ParsedFixtureTestFile]) -> Result<Vec<FixtureTriggerEvent>, FixtureError> {
+	let mut events = Vec::new();
+	for file in declared_tests {
+		for (index, trigger) in file.parsed.triggers.iter().enumerate() {
+			let mut event = TriggerEvent::new(&trigger.node);
+			for exec in &trigger.exec {
+				event = event.with_exec(exec);
+			}
+			for override_value in &trigger.overrides {
+				let value = from_toml_value(&override_value.ty, &override_value.value).map_err(|e| FixtureError::TriggerValue {
+					path: file.path.clone(),
+					trigger: index,
+					port: override_value.port.clone(),
+					reason: e.to_string(),
+				})?;
+				event = event.with_override(&override_value.port, value);
+			}
+			events.push(FixtureTriggerEvent {
+				node: trigger.node.clone(),
+				delay_ms: trigger.delay_ms,
+				event,
+			});
+		}
+	}
+	Ok(events)
 }
 
 fn make_report(root: &Path, node_count: usize, run: ProgramRun, ctx: ExecCtx) -> FixtureRunReport {
@@ -177,16 +305,28 @@ fn discover_test_files(root: &Path) -> Result<Vec<PathBuf>, FixtureError> {
 	Ok(out)
 }
 
-fn run_declared_tests(root: &Path, report: &FixtureRunReport) -> Result<Vec<FixtureTestResult>, FixtureError> {
+fn read_declared_tests(root: &Path) -> Result<Vec<ParsedFixtureTestFile>, FixtureError> {
 	let mut results = Vec::new();
 	for path in discover_test_files(root)? {
 		let raw = std::fs::read_to_string(&path).map_err(FixtureError::TestIo)?;
 		let parsed: FixtureTestFile = toml::from_str(&raw).map_err(|error| FixtureError::TestParse { path: path.clone(), error })?;
-		for (index, case) in parsed.tests.iter().enumerate() {
-			results.push(evaluate_test_case(&path, index, case, report));
-		}
+		results.push(ParsedFixtureTestFile { path, parsed });
 	}
 	Ok(results)
+}
+
+fn evaluate_declared_tests(declared_tests: &[ParsedFixtureTestFile], report: &FixtureRunReport) -> Vec<FixtureTestResult> {
+	let mut results = Vec::new();
+	for file in declared_tests {
+		for (index, case) in file.parsed.tests.iter().enumerate() {
+			results.push(evaluate_test_case(&file.path, index, case, report));
+		}
+	}
+	results
+}
+
+fn default_trigger_exec() -> Vec<String> {
+	vec!["__trigger__".into()]
 }
 
 fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report: &FixtureRunReport) -> FixtureTestResult {
@@ -303,6 +443,15 @@ mod tests {
 		let report = run_fixture_once_report(&dir).await.expect("report");
 		assert!(report.ok, "report: {:?}", report.tests);
 		assert!(!report.tests.is_empty());
+		assert_eq!(report.failed_tests, 0);
+	}
+
+	#[tokio::test]
+	async fn twitch_echo_declared_trigger_test_passes() {
+		let dir = example_dir("twitch-echo");
+		let report = run_fixture_once_report(&dir).await.expect("report");
+		assert!(report.ok, "report: {:?}", report.tests);
+		assert_eq!(report.trace, vec!["log: hello fixture"]);
 		assert_eq!(report.failed_tests, 0);
 	}
 

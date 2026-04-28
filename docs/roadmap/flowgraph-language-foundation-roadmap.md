@@ -178,6 +178,27 @@ value = "expected"
 失敗時は CLI が non-zero exit し、JSON 出力では `tests[]` / `failed_tests` に結果を載せる。
 trigger sequence、mock capability、近似比較や部分一致などの高度な assertion は次段で追加する。
 
+### LF-3c fixture trigger sequence ✅
+
+`*.flowgraph.test.toml` の `[[triggers]]` で、`run_forever_with_bus` に渡す外部 trigger sequence を宣言できる。
+これにより、HTTP / Twitch / Voice などの実ブリッジを起動せずに ingress 型 Flowgraph の exec 経路を検証する。
+
+```toml
+[[triggers]]
+node = "main::in"
+exec = ["__trigger__"] # 省略時は ["__trigger__"]
+delay_ms = 0
+
+[[triggers.overrides]]
+port = "__content__"
+ty = "string"
+value = "hello fixture"
+```
+
+初期版は trigger を順に投入し、全 trigger の合計遅延 + 短い余白で shutdown する。
+`flowgraph.example/twitch-echo` はこの形式で `ingress.twitch -> util.log` を fixture 化済み。
+mock capability と trigger history の詳細レポートは次段で追加する。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。

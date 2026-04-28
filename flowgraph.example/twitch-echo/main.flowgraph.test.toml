@@ -1,0 +1,31 @@
+[[triggers]]
+node = "main::in"
+
+[[triggers.overrides]]
+port = "__content__"
+ty = "string"
+value = "hello fixture"
+
+[[triggers.overrides]]
+port = "__source_actor__"
+ty = "string"
+value = "fixture-user"
+
+[[triggers.overrides]]
+port = "__source_kind__"
+ty = "string"
+value = "fixture"
+
+[[tests]]
+name = "twitch ingress trigger"
+
+[tests.expect]
+node_count = 2
+trace_count = 1
+trace = ["log: hello fixture"]
+
+[[tests.expect.stored_values]]
+node = "main::in"
+port = "content"
+ty = "string"
+value = "hello fixture"
