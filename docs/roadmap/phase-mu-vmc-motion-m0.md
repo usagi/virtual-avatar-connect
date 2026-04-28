@@ -25,7 +25,7 @@
 
 ## 3. ランタイム挙動
 
-- 起動: `lib.rs::run` が `State` 生成・Flowgraph bridges 初期化の **直後**に [`MotionHandles::spawn_all`](../../src/motion/mod.rs) を呼ぶ。
+- 起動: `app_core::boot` が `State` 生成・Flowgraph bridges 初期化の **直後**に [`MotionHandles::spawn_all`](../../src/motion/mod.rs) を呼ぶ。
 - 各エントリは **独立した** `tokio::spawn` タスク。`tokio::net::UdpSocket::bind` → `recv_from` ループ。
 - 停止: `tokio::select!` で `ShutdownBroker::wait`（実体は `crates/vac-core/src/shutdown.rs`）と `recv_from` を待ち合わせる。停止要求後はループを抜けてソケットを drop。
 - 終了 cleanup: `run()` の shutdown フェーズで [`MotionHandles::finish_all`](../../src/motion/mod.rs)（残タスクの `abort` + `await`）。

@@ -79,7 +79,7 @@ impl BridgeCatalog {
 
 /// ζ-3: Flowgraph 実行中に走っている bridge ワーカーたちをまとめた lifecycle 管理用ハンドル。
 ///
-/// - 初回起動時: `lib.rs::run` が [`spawn_all_from_state`] を呼び、戻りを `State` に格納する。
+/// - 初回起動時: `app_core::boot` が [`spawn_all_from_state`] を呼び、戻りを `State` に格納する。
 /// - reload 時: [`web_interface::control::flowgraph::reload_runtime`] が旧 handles を取り出して
 ///   [`BridgeHandles::finish_all`] で停止 → 新 runtime 上で再 spawn → 入れ替え、という流れ。
 ///

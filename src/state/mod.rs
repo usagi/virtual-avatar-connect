@@ -207,7 +207,7 @@ pub struct State {
 
 	/// ζ-3: Flowgraph bridges (twitch / twitch_eventsub / voice / channel_subscribe) のライフサイクル束。
 	///
-	/// 初回起動は `lib.rs::run` が [`crate::bridges::spawn_all_from_state`] で populate する。
+	/// 初回起動は `app_core::boot` が [`crate::bridges::spawn_all_from_state`] で populate する。
 	/// flowgraph reload 時は `web_interface::control::flowgraph::reload_runtime` が旧ハンドルを取り出して
 	/// [`crate::bridges::BridgeHandles::finish_all`] で停止し、新 runtime 上で再 spawn して差し替える。
 	///
@@ -223,8 +223,8 @@ pub struct State {
 	/// Phase ε-1: 統合シャットダウンブローカー。
 	///
 	/// Ctrl+C / `POST /api/v1/control/shutdown` / 致命的エラー の全てをここに集約する。
-	/// 登録タイミングは `lib.rs::run()` 冒頭で `ShutdownBroker::new()` を生成し、
-	/// `State::new()` の引数として受け取る。
+	/// 登録タイミングは `app_core::boot` で `ShutdownBroker::new()` を生成し、
+	/// Ctrl+C listener と `State::new()` に同じ broker を渡す。
 	pub shutdown: Arc<ShutdownBroker>,
 
 	/// RM-5: `apply_runtime_mode_transition_full` が Managed App I/O 等を実行している間 true。

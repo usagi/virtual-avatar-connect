@@ -7,7 +7,7 @@
 //! `STATUS_CONTROL_C_EXIT (0xc000013a)` になるなど、終了ログが汚れる問題があった。
 //!
 //! 本 API は `State.shutdown`（[`crate::shutdown::ShutdownBroker`]）に `ControlApi` reason で
-//! 停止要求を投げるだけの薄いラッパー。broker 受信後の停止手順は `lib.rs::run()` 末尾の
+//! 停止要求を投げるだけの薄いラッパー。broker 受信後の停止手順は `AppCore::run()` 末尾の
 //! cleanup フローに統一されており、ここでは「要求を出して 202 で返す」だけで十分。
 //!
 //! ### restart との違い
