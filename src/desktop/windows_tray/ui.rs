@@ -41,7 +41,7 @@ fn setup_tray(app: &mut tauri::App, shutdown: Arc<ShutdownBroker>) -> tauri::Res
 		.show_menu_on_left_click(false)
 		.on_menu_event(move |app, event| match event.id().as_ref() {
 			MENU_OPEN_GUI => show_gui(app),
-			MENU_QUIT => shutdown.trigger(ShutdownReason::Desktop),
+			MENU_QUIT => request_desktop_shutdown(&shutdown),
 			_ => {}
 		})
 		.on_tray_icon_event(|tray, event| {
@@ -54,6 +54,11 @@ fn setup_tray(app: &mut tauri::App, shutdown: Arc<ShutdownBroker>) -> tauri::Res
 		})
 		.build(app)?;
 	Ok(())
+}
+
+fn request_desktop_shutdown(shutdown: &ShutdownBroker) {
+	log::info!("《Desktop》 tray menu から終了を要求しました。");
+	shutdown.trigger(ShutdownReason::Desktop);
 }
 
 fn setup_main_window(app: &mut tauri::App, gui_url: String) -> anyhow::Result<WebviewWindow> {
