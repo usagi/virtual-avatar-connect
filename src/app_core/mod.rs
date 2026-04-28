@@ -44,6 +44,14 @@ impl AppCore {
 		AppCoreRunResult { serve, cleanup }
 	}
 
+	pub(crate) fn runtime_handle(&self) -> AppCoreRuntimeHandle {
+		let address = server::normalize_loopback_address(self.conf.get_web_ui_address());
+		AppCoreRuntimeHandle {
+			gui_url: format!("http://{address}/gui/"),
+			shutdown: self.shutdown.clone(),
+		}
+	}
+
 	async fn serve(&self) -> Result<()> {
 		server::run_services(
 			self.conf.clone(),
@@ -57,18 +65,14 @@ impl AppCore {
 		.await
 	}
 
-	pub(crate) fn shutdown_broker(&self) -> Arc<shutdown::ShutdownBroker> {
-		self.shutdown.clone()
-	}
-
-	pub(crate) fn gui_url(&self) -> String {
-		let address = server::normalize_loopback_address(self.conf.get_web_ui_address());
-		format!("http://{address}/gui/")
-	}
-
 	async fn cleanup(self) -> Result<()> {
 		cleanup::cleanup(self).await
 	}
+}
+
+pub(crate) struct AppCoreRuntimeHandle {
+	pub(crate) gui_url: String,
+	pub(crate) shutdown: Arc<shutdown::ShutdownBroker>,
 }
 
 pub(crate) struct AppCoreRunResult {

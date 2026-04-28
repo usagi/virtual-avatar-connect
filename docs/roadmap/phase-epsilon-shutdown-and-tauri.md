@@ -145,7 +145,7 @@ pub async fn run() -> Result<()> {
 - `cargo features`: `tauri = ["dep:tauri"]` を default off に。
 - Windows では `#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]` を付けて、リリースビルド時はコンソールを出さない。dev ビルドでは付けないので開発中は従来通りログが流れる。
 - Tauri window の初期 URL は `http://127.0.0.1:<actix port>`。既存の GUI 静的配信（`gui_dist_path`）をそのまま見せる。
-- `on_window_event(CloseRequested)`: `api.prevent_close()` で 1 段止めて `shutdown.trigger(Tauri)` → `cleanup().await` 待ち → `app.exit(0)`。
+- `on_window_event(CloseRequested)`: `api.prevent_close()` で 1 段止めて runtime handle の `shutdown.trigger(Tauri)` を呼ぶ。cleanup は runtime task 側の `core.run()` に閉じ、完了後に `app.exit(0)` へ進める。
 
 ### 3.4 System Tray（ε-2c, オプション）
 

@@ -69,9 +69,8 @@ pub(crate) struct AppCore {
 
 impl AppCore {
     pub(crate) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<Self>;
+    pub(crate) fn runtime_handle(&self) -> AppCoreRuntimeHandle;
     pub(crate) async fn run(self) -> AppCoreRunResult;
-    pub(crate) fn shutdown_broker(&self) -> Arc<ShutdownBroker>;
-    pub(crate) fn gui_url(&self) -> String;
 }
 ```
 

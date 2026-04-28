@@ -29,8 +29,9 @@ mod windows_tray {
 			.map_err(anyhow::Error::from)?);
 
 		let core = runtime.block_on(crate::bootstrap::boot_app_core_with_standard_bootstrap())?;
-		let gui_url = core.gui_url();
-		let shutdown = core.shutdown_broker();
+		let core_handle = core.runtime_handle();
+		let gui_url = core_handle.gui_url;
+		let shutdown = core_handle.shutdown;
 		let runtime_for_after_run = runtime.clone();
 		let shutdown_for_setup = shutdown.clone();
 		let shutdown_for_serve = shutdown.clone();
