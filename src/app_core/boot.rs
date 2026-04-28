@@ -1,8 +1,11 @@
 use super::AppCoreParts;
 use crate::conf::Conf;
-use crate::state::SharedState;
-use crate::{ai, bridges, flowgraph, managed_app, motion, processor, shutdown, web_interface, Result, SharedAudioSink};
-use std::sync::Arc;
+use crate::{motion, shutdown, web_interface, Result, SharedAudioSink};
+use flowgraph_io::prepare_flowgraph_io;
+use services::{spawn_ai_services, spawn_managed_app_monitor};
+
+mod flowgraph_io;
+mod services;
 
 pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppCoreParts> {
 	let shutdown = shutdown::ShutdownBroker::new();
@@ -33,78 +36,6 @@ pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppC
 		flowgraph_web_input_endpoints: flowgraph_io.web_input_endpoints,
 		flowgraph_trigger: flowgraph_io.trigger,
 	})
-}
-
-struct FlowgraphIo {
-	ingress_handles: processor::ingress::IngressHandles,
-	web_input_registry: Arc<web_interface::web_input::WebInputRegistry>,
-	web_input_endpoints: Arc<Vec<bridges::web_input::FlowgraphWebInputEndpoint>>,
-	trigger: Arc<Option<flowgraph::node::TriggerHandle>>,
-}
-
-async fn prepare_flowgraph_io(conf: &Conf, state: &SharedState) -> Result<FlowgraphIo> {
-	let (flowgraph_bridges_catalog, flowgraph_trigger, channel_datum_tx) = {
-		let s = state.read().await;
-		let fg = s.flowgraph.read().await;
-		let tx = s.channel_datum_tx.clone();
-		if let Some(rt) = fg.as_ref() {
-			(bridges::collect_all(&rt.node_meta), rt.trigger(), tx)
-		} else {
-			(bridges::BridgeCatalog::default(), None, tx)
-		}
-	};
-
-	let v2_eventsub_skip_broadcasters = {
-		let username_fallback = conf.twitch.as_ref().map(|t| t.username.clone()).unwrap_or_default();
-		bridges::twitch_eventsub::v1_skip_broadcaster_logins(&flowgraph_bridges_catalog.twitch_eventsub, &username_fallback)
-	};
-
-	let (ingress_handles, web_input_registry) = processor::ingress::prepare(conf, state.clone(), &v2_eventsub_skip_broadcasters).await?;
-
-	let initial_bridges = bridges::spawn_all_from_state(state, &channel_datum_tx).await;
-	let web_input_endpoints = Arc::new(initial_bridges.web_input_snapshot.clone());
-	{
-		let s = state.read().await;
-		let mut slot = s.bridge_handles.lock().await;
-		*slot = initial_bridges;
-	}
-
-	Ok(FlowgraphIo {
-		ingress_handles,
-		web_input_registry,
-		web_input_endpoints,
-		trigger: Arc::new(flowgraph_trigger),
-	})
-}
-
-async fn spawn_ai_services(conf: &Conf, state: &SharedState) -> Result<Vec<tokio::task::JoinHandle<()>>> {
-	let ai_tx = state.read().await.ai_observation_tx.clone();
-	let twitch_eventsub_for_ai = conf.twitch.as_ref().and_then(|t| t.eventsub.as_ref()).map(|e| Arc::new(e.clone()));
-	let twitch_moderator_for_ai = conf.twitch.as_ref().and_then(|t| t.moderator.as_ref()).map(|m| Arc::new(m.clone()));
-	let twitch_default_broadcaster_login = conf.twitch.as_ref().map(|t| {
-		t.eventsub
-			.as_ref()
-			.and_then(|e| e.broadcaster_login.clone())
-			.unwrap_or_else(|| t.username.clone())
-	});
-	Ok(ai::spawn_all(
-		&conf.ai,
-		state.clone(),
-		ai_tx,
-		twitch_eventsub_for_ai,
-		twitch_moderator_for_ai,
-		twitch_default_broadcaster_login,
-	)
-	.await?)
-}
-
-async fn spawn_managed_app_monitor(state: &SharedState, shutdown: Arc<shutdown::ShutdownBroker>) {
-	let s = state.read().await;
-	let registry = s.managed_apps.clone();
-	let event_tx = s.control_event_tx.clone();
-	tokio::spawn(async move {
-		managed_app::run_monitor(registry, event_tx, shutdown).await;
-	});
 }
 
 fn log_control_api_policy(control_api_runtime: &web_interface::control::ControlApiRuntime) {
