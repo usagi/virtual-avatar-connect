@@ -4,15 +4,16 @@ use crate::{bridges, managed_app, Result};
 
 pub(super) async fn cleanup(parts: AppCoreParts) -> Result<()> {
 	let state = parts.state.clone();
+	let tasks = parts.tasks;
 
 	stop_managed_apps(&state).await;
 
-	parts.motion_handles.finish_all().await;
+	tasks.motion_handles.finish_all().await;
 
 	finish_bridge_handles(&state).await;
 	stop_libretranslate(&state).await;
-	abort_ingress_handles(parts.ingress_handles);
-	abort_ai_handles(parts.ai_handles);
+	abort_ingress_handles(tasks.ingress_handles);
+	abort_ai_handles(tasks.ai_handles);
 
 	log::info!("《Shutdown》 cleanup 完了。プロセスを終了します。");
 	Ok(())

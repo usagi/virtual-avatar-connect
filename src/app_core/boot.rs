@@ -1,3 +1,4 @@
+use super::types::{AppCoreServices, AppCoreTasks};
 use super::AppCoreParts;
 use crate::conf::Conf;
 use crate::{motion, shutdown, web_interface, Result, SharedAudioSink};
@@ -28,13 +29,17 @@ pub(super) async fn boot(conf: Conf, audio_sink: SharedAudioSink) -> Result<AppC
 		conf,
 		state,
 		shutdown,
-		ai_handles,
-		ingress_handles: flowgraph_io.ingress_handles,
-		motion_handles,
-		web_input_registry: flowgraph_io.web_input_registry,
-		control_api_runtime,
-		flowgraph_web_input_endpoints: flowgraph_io.web_input_endpoints,
-		flowgraph_trigger: flowgraph_io.trigger,
+		tasks: AppCoreTasks {
+			ai_handles,
+			ingress_handles: flowgraph_io.ingress_handles,
+			motion_handles,
+		},
+		services: AppCoreServices {
+			web_input_registry: flowgraph_io.web_input_registry,
+			control_api_runtime,
+			flowgraph_web_input_endpoints: flowgraph_io.web_input_endpoints,
+			flowgraph_trigger: flowgraph_io.trigger,
+		},
 	})
 }
 

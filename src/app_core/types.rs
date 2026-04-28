@@ -8,9 +8,17 @@ pub(crate) struct AppCoreParts {
 	pub(super) conf: Conf,
 	pub(super) state: SharedState,
 	pub(super) shutdown: Arc<shutdown::ShutdownBroker>,
+	pub(super) tasks: AppCoreTasks,
+	pub(super) services: AppCoreServices,
+}
+
+pub(crate) struct AppCoreTasks {
 	pub(super) ai_handles: Vec<tokio::task::JoinHandle<()>>,
 	pub(super) ingress_handles: processor::ingress::IngressHandles,
 	pub(super) motion_handles: motion::MotionHandles,
+}
+
+pub(crate) struct AppCoreServices {
 	pub(super) web_input_registry: Arc<web_interface::web_input::WebInputRegistry>,
 	pub(super) control_api_runtime: web_interface::control::ControlApiRuntime,
 	pub(super) flowgraph_web_input_endpoints: Arc<Vec<bridges::web_input::FlowgraphWebInputEndpoint>>,
