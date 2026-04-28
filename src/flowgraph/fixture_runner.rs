@@ -91,4 +91,11 @@ mod tests {
 		let ok = load_fixture_program(&dir).expect("load");
 		let _ = ok.program;
 	}
+
+	#[tokio::test]
+	async fn system_monitor_example_loads() {
+		let dir = example_dir("system-monitor");
+		let ok = load_fixture_program(&dir).expect("load");
+		let _ = ok.program;
+	}
 }

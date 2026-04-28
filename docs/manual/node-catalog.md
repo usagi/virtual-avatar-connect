@@ -179,6 +179,11 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.string.len`](#flowgraph-string-len) — String Length
   - [`flowgraph.string.replace`](#flowgraph-string-replace) — String Replace
   - [`flowgraph.string.split`](#flowgraph-string-split) — String Split
+- **system**
+  - [`flowgraph.system.cpu_usage`](#flowgraph-system-cpu-usage) — System: CPU Usage
+  - [`flowgraph.system.load_avg`](#flowgraph-system-load-avg) — System: Load Average
+  - [`flowgraph.system.memory`](#flowgraph-system-memory) — System: Memory
+  - [`flowgraph.system.process_list`](#flowgraph-system-process-list) — System: Process List
 - **table**
   - [`flowgraph.table.from_json`](#flowgraph-table-from-json) — Table From JSON
   - [`flowgraph.table.load_tsv`](#flowgraph-table-load-tsv) — Table Load TSV
@@ -2307,6 +2312,72 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `parts` | `list<string>` |  |
+
+## system
+
+### `flowgraph.system.cpu_usage`
+
+**System: CPU Usage** — sysinfo で全体 CPU 使用率と logical CPU ごとの使用率を取得する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `usage_percent` | `float` |  |
+| `core_count` | `int` |  |
+| `per_cpu` | `json` |  |
+
+### `flowgraph.system.load_avg`
+
+**System: Load Average** — OS の load average を取得する。未対応OSでは sysinfo の値をそのまま返す。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `one` | `float` |  |
+| `five` | `float` |  |
+| `fifteen` | `float` |  |
+
+### `flowgraph.system.memory`
+
+**System: Memory** — sysinfo で RAM / swap の使用量を byte 単位で取得する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `mem_used` | `int` |  |
+| `mem_total` | `int` |  |
+| `mem_available` | `int` |  |
+| `mem_usage_percent` | `float` |  |
+| `swap_used` | `int` |  |
+| `swap_total` | `int` |  |
+
+### `flowgraph.system.process_list`
+
+**System: Process List** — sysinfo で process 一覧を JSON 配列として取得する。name_filter と limit で絞り込める。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `name_filter` | `string` | `""` |  |
+| `limit` | `int` | `100` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `exec_out` | `exec` (out) |  |
+| `count` | `int` |  |
+| `processes` | `json` |  |
 
 ## table
 

@@ -285,6 +285,12 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_pure(Arc::new(nodes::json_ops::JsonGetNode));
 	r.register_effectful(Arc::new(nodes::http::HttpRequestNode));
 
+	// --- system ---
+	r.register_effectful(Arc::new(nodes::system::SystemCpuUsageNode));
+	r.register_effectful(Arc::new(nodes::system::SystemMemoryNode));
+	r.register_effectful(Arc::new(nodes::system::SystemLoadAvgNode));
+	r.register_effectful(Arc::new(nodes::system::SystemProcessListNode));
+
 	// --- collection ---
 	r.register_pure(Arc::new(nodes::collection::ListLenNode));
 	r.register_pure(Arc::new(nodes::collection::ListGetNode));
@@ -429,6 +435,10 @@ mod tests {
 			"flowgraph.json.stringify",
 			"flowgraph.json.get",
 			"flowgraph.http.request",
+			"flowgraph.system.cpu_usage",
+			"flowgraph.system.memory",
+			"flowgraph.system.load_avg",
+			"flowgraph.system.process_list",
 			"flowgraph.list.len",
 			"flowgraph.list.get",
 			"flowgraph.list.is_empty",

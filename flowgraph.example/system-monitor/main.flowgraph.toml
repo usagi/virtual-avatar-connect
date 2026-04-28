@@ -1,0 +1,122 @@
+# Phase sigma:
+# Web input をきっかけに system metrics を取得する例。
+#
+# 常駐VACが「負荷が高いので配信向け連携を絞る」「作業モードでは軽い監視だけ動かす」
+# といった判断を Flowgraph 側へ寄せるための最小サンプル。
+
+[meta]
+title = "system monitor demo"
+description = "Web Input Ingress -> System Memory / CPU / Process List"
+tags = ["example", "system", "metrics", "resident-app", "flowgraph"]
+
+[[nodes]]
+id = "metrics_in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 160]
+properties.path = "/input/system-monitor"
+properties.method = "POST"
+properties.body_format = "plain"
+properties.fixed_channel = "system_monitor_demo"
+
+[[nodes]]
+id = "memory"
+feature = "flowgraph.system.memory"
+position = [360, 80]
+
+[[nodes]]
+id = "cpu"
+feature = "flowgraph.system.cpu_usage"
+position = [360, 260]
+
+[[nodes]]
+id = "process_limit"
+feature = "flowgraph.literal.int"
+position = [360, 500]
+properties.value = 10
+
+[[nodes]]
+id = "processes"
+feature = "flowgraph.system.process_list"
+position = [620, 430]
+
+[[nodes]]
+id = "memory_to_string"
+feature = "flowgraph.convert.float_to_string"
+position = [700, 80]
+
+[[nodes]]
+id = "cpu_to_string"
+feature = "flowgraph.convert.float_to_string"
+position = [700, 260]
+
+[[nodes]]
+id = "process_count_to_string"
+feature = "flowgraph.convert.int_to_string"
+position = [700, 430]
+
+[[nodes]]
+id = "log_memory"
+feature = "flowgraph.util.log"
+position = [980, 80]
+
+[[nodes]]
+id = "log_cpu"
+feature = "flowgraph.util.log"
+position = [980, 260]
+
+[[nodes]]
+id = "log_process_count"
+feature = "flowgraph.util.log"
+position = [980, 430]
+
+[[edges]]
+from = "metrics_in:exec_out"
+to = "memory:exec_in"
+
+[[edges]]
+from = "metrics_in:exec_out"
+to = "cpu:exec_in"
+
+[[edges]]
+from = "metrics_in:exec_out"
+to = "processes:exec_in"
+
+[[edges]]
+from = "process_limit:value"
+to = "processes:limit"
+
+[[edges]]
+from = "memory:exec_out"
+to = "log_memory:exec_in"
+
+[[edges]]
+from = "memory:mem_usage_percent"
+to = "memory_to_string:value"
+
+[[edges]]
+from = "memory_to_string:result"
+to = "log_memory:value"
+
+[[edges]]
+from = "cpu:exec_out"
+to = "log_cpu:exec_in"
+
+[[edges]]
+from = "cpu:usage_percent"
+to = "cpu_to_string:value"
+
+[[edges]]
+from = "cpu_to_string:result"
+to = "log_cpu:value"
+
+[[edges]]
+from = "processes:exec_out"
+to = "log_process_count:exec_in"
+
+[[edges]]
+from = "processes:count"
+to = "process_count_to_string:value"
+
+[[edges]]
+from = "process_count_to_string:result"
+to = "log_process_count:value"

@@ -86,6 +86,7 @@ pub mod screenshot;
 pub mod signal_util;
 pub mod state;
 pub mod string_ops;
+pub mod system;
 pub mod table_ops;
 pub mod timer_interval;
 pub mod translate_gas;
