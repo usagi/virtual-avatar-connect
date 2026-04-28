@@ -258,7 +258,8 @@ Flowgraph から OSC（Open Sound Control）を使ってアバターアプリ・
 - [x] `flowgraph.http.request`（GET/POST/PUT/DELETE/PATCH、headers / JSON body / timeout / status / body / retry_count）
 - [x] `flowgraph.obs.*`（`obs.request` / `obs.set_current_program_scene` / `obs.get_current_program_scene` / `obs.set_scene_item_enabled` / record start-stop / stream start-stop / studio mode transition）
 - [x] `flowgraph.system.*`（`sysinfo` crate、`system.cpu_usage` / `system.memory` / `system.load_avg` / `system.process_list`。GPU は NVML 依存で後回し）
-- [ ] `flowgraph.twitch.*` 拡張（ユーザ要求分）: `raid_start` / `raid_cancel` / `ad_run`（1 分広告）/ `chat_settings_update`（subscribers_only / followers_only / emote_only / slow / unique）/ `prediction_create` / `prediction_end` / `poll_create` / `poll_end` / `shield_mode_update`（防御モード）/ `stream_marker_create`（説明付き対応）/ `clip_create` / `channel_info_update` / `goals_get` / `chat_clear` / チャット履歴リフレッシュ
+- [x] `flowgraph.twitch.*` 拡張（Phase σ first slice）: `raid_start` / `raid_cancel` / `ad_run` / `chat_settings_update`（emote / subscriber / follower / slow / unique ほか）/ `prediction_create` / `prediction_end` / `poll_create` / `poll_end` / `shield_mode_update` / `stream_marker_create` / `clip_create` / `channel_info_update` / `goals_get` / `chat_clear`。`flowgraph.example/twitch-stream-tools` 追加。
+- follow-up: チャット履歴リフレッシュは Twitch Helix の単発 mutation ではなく VAC 側の chat bridge / channel_data 再同期の設計対象として別タスク化する。
 - open question: ユーザ要求の「RAID を 1 時間停止する」は Twitch 側に 1:1 の Helix エンドポイントが無く、`blocked_terms` 運用か独自 state で "incoming raid 遮断" を表現する必要あり → phase doc 内で TBD として扱う
 
 ### Phase τ — Process / Window 制御 (TBD)

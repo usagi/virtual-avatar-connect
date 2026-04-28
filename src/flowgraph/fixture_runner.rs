@@ -98,4 +98,11 @@ mod tests {
 		let ok = load_fixture_program(&dir).expect("load");
 		let _ = ok.program;
 	}
+
+	#[tokio::test]
+	async fn twitch_stream_tools_example_loads() {
+		let dir = example_dir("twitch-stream-tools");
+		let ok = load_fixture_program(&dir).expect("load");
+		let _ = ok.program;
+	}
 }

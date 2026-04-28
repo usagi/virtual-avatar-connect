@@ -202,9 +202,23 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 - **tts**
   - [`flowgraph.tts.speak`](#flowgraph-tts-speak) — TTS: Speak
 - **twitch**
+  - [`flowgraph.twitch.ad_run`](#flowgraph-twitch-ad-run) — Twitch: Run Ad
   - [`flowgraph.twitch.ban`](#flowgraph-twitch-ban) — Twitch: Ban User
+  - [`flowgraph.twitch.channel_info_update`](#flowgraph-twitch-channel-info-update) — Twitch: Update Channel Info
+  - [`flowgraph.twitch.chat_clear`](#flowgraph-twitch-chat-clear) — Twitch: Clear Chat
   - [`flowgraph.twitch.chat_send`](#flowgraph-twitch-chat-send) — Twitch: Chat Send
+  - [`flowgraph.twitch.chat_settings_update`](#flowgraph-twitch-chat-settings-update) — Twitch: Update Chat Settings
+  - [`flowgraph.twitch.clip_create`](#flowgraph-twitch-clip-create) — Twitch: Create Clip
   - [`flowgraph.twitch.get_token`](#flowgraph-twitch-get-token) — Twitch: Get Token
+  - [`flowgraph.twitch.goals_get`](#flowgraph-twitch-goals-get) — Twitch: Get Goals
+  - [`flowgraph.twitch.poll_create`](#flowgraph-twitch-poll-create) — Twitch: Create Poll
+  - [`flowgraph.twitch.poll_end`](#flowgraph-twitch-poll-end) — Twitch: End Poll
+  - [`flowgraph.twitch.prediction_create`](#flowgraph-twitch-prediction-create) — Twitch: Create Prediction
+  - [`flowgraph.twitch.prediction_end`](#flowgraph-twitch-prediction-end) — Twitch: End Prediction
+  - [`flowgraph.twitch.raid_cancel`](#flowgraph-twitch-raid-cancel) — Twitch: Cancel Raid
+  - [`flowgraph.twitch.raid_start`](#flowgraph-twitch-raid-start) — Twitch: Start Raid
+  - [`flowgraph.twitch.shield_mode_update`](#flowgraph-twitch-shield-mode-update) — Twitch: Update Shield Mode
+  - [`flowgraph.twitch.stream_marker_create`](#flowgraph-twitch-stream-marker-create) — Twitch: Create Stream Marker
   - [`flowgraph.twitch.timeout`](#flowgraph-twitch-timeout) — Twitch: Timeout User
   - [`flowgraph.twitch.user_id_by_login`](#flowgraph-twitch-user-id-by-login) — Twitch: User ID by Login
   - [`flowgraph.twitch.validate_token`](#flowgraph-twitch-validate-token) — Twitch: Validate Token
@@ -2666,6 +2680,26 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ## twitch
 
+### `flowgraph.twitch.ad_run`
+
+**Twitch: Run Ad** — Helix POST /channels/commercial で広告を実行する。length_seconds は通常 30/60/90/120/150/180。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+| `length_seconds` | `int` | `60` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
 ### `flowgraph.twitch.ban`
 
 **Twitch: Ban User** — Helix POST /moderation/bans（永久 ban）。`duration` なしで送る。timeout は `twitch.timeout` ノードを使うこと
@@ -2686,6 +2720,50 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_success` | `exec` (out) |  |
 | `on_error` | `exec` (out) |  |
 | `end_time` | `string` |  |
+| `error` | `string` |  |
+
+### `flowgraph.twitch.channel_info_update`
+
+**Twitch: Update Channel Info** — Helix PATCH /channels で配信タイトル、カテゴリ、言語、タグを更新する。空入力は送信しない。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+| `game_id` | `string` | `""` |  |
+| `title` | `string` | `""` |  |
+| `broadcaster_language` | `string` | `""` |  |
+| `tags` | `list<string>` | `[]` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.twitch.chat_clear`
+
+**Twitch: Clear Chat** — Helix DELETE /moderation/chat でチャット全体または指定messageを削除する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+| `moderator_id` | `string` | — |  |
+| `message_id` | `string` | `""` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
 | `error` | `string` |  |
 
 ### `flowgraph.twitch.chat_send`
@@ -2712,6 +2790,57 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `sent_text` | `string` |  |
 | `error` | `string` |  |
 
+### `flowgraph.twitch.chat_settings_update`
+
+**Twitch: Update Chat Settings** — Helix PATCH /chat/settings で emote/subscriber/follower/slow/unique chat などの設定を更新する。接続された入力だけ送信する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+| `moderator_id` | `string` | — |  |
+| `emote_mode` | `bool` | — |  |
+| `subscriber_mode` | `bool` | — |  |
+| `unique_chat_mode` | `bool` | — |  |
+| `follower_mode` | `bool` | — |  |
+| `follower_mode_duration` | `int` | — |  |
+| `slow_mode` | `bool` | — |  |
+| `slow_mode_wait_time` | `int` | — |  |
+| `non_moderator_chat_delay` | `bool` | — |  |
+| `non_moderator_chat_delay_duration` | `int` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.twitch.clip_create`
+
+**Twitch: Create Clip** — Helix POST /clips で現在の配信からclip作成を開始する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+| `has_delay` | `bool` | `false` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+| `clip_id` | `string` |  |
+| `edit_url` | `string` |  |
+
 ### `flowgraph.twitch.get_token`
 
 **Twitch: Get Token** — conf.twitch で定義された token_key から保存済み OAuth トークンを取り出し、on_success / on_failure で分岐する
@@ -2728,6 +2857,198 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `access_token` | `string` |  |
 | `client_id` | `string` |  |
 | `error` | `string` |  |
+
+### `flowgraph.twitch.goals_get`
+
+**Twitch: Get Goals** — Helix GET /goals でチャンネルのcreator goals一覧を取得する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+| `goals` | `json` |  |
+
+### `flowgraph.twitch.poll_create`
+
+**Twitch: Create Poll** — Helix POST /polls でpollを作成する。choices は文字列配列または {title} 配列。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+| `title` | `string` | — |  |
+| `choices` | `json` | — |  |
+| `duration_seconds` | `int` | `60` |  |
+| `channel_points_voting_enabled` | `bool` | `false` |  |
+| `channel_points_per_vote` | `int` | `0` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+| `poll_id` | `string` |  |
+
+### `flowgraph.twitch.poll_end`
+
+**Twitch: End Poll** — Helix PATCH /polls でpollを終了する。status は TERMINATED または ARCHIVED。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+| `poll_id` | `string` | — |  |
+| `status` | `string` | `"TERMINATED"` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.twitch.prediction_create`
+
+**Twitch: Create Prediction** — Helix POST /predictions でChannel Points predictionを作成する。outcomes は文字列配列または {title} 配列。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+| `title` | `string` | — |  |
+| `outcomes` | `json` | — |  |
+| `prediction_window_seconds` | `int` | `120` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+| `prediction_id` | `string` |  |
+
+### `flowgraph.twitch.prediction_end`
+
+**Twitch: End Prediction** — Helix PATCH /predictions でpredictionを LOCKED / RESOLVED / CANCELED にする。RESOLVED は winning_outcome_id 必須。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+| `prediction_id` | `string` | — |  |
+| `status` | `string` | `"CANCELED"` |  |
+| `winning_outcome_id` | `string` | `""` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.twitch.raid_cancel`
+
+**Twitch: Cancel Raid** — Helix DELETE /raids で保留中の raid をキャンセルする。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.twitch.raid_start`
+
+**Twitch: Start Raid** — Helix POST /raids で raid を開始する。実際のraidはTwitch側の90秒カウントダウン後に行われる。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+| `to_broadcaster_id` | `string` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.twitch.shield_mode_update`
+
+**Twitch: Update Shield Mode** — Helix PUT /moderation/shield_mode で Shield Mode を有効化/無効化する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+| `moderator_id` | `string` | — |  |
+| `is_active` | `bool` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+
+### `flowgraph.twitch.stream_marker_create`
+
+**Twitch: Create Stream Marker** — Helix POST /streams/markers で配信マーカーを追加する。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `exec_in` | `exec` (in) | — |  |
+| `broadcaster_id` | `string` | — |  |
+| `access_token` | `string` | — |  |
+| `client_id` | `string` | — |  |
+| `endpoint` | `string` | `""` |  |
+| `description` | `string` | `""` |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `on_success` | `exec` (out) |  |
+| `on_error` | `exec` (out) |  |
+| `response` | `json` |  |
+| `error` | `string` |  |
+| `marker_id` | `string` |  |
 
 ### `flowgraph.twitch.timeout`
 

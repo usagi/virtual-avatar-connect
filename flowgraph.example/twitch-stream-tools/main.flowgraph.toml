@@ -1,0 +1,170 @@
+# Phase sigma:
+# Twitch Helix action nodes のロード確認用サンプル。
+#
+# 実行時は `access_token` / `client_id` / `broadcaster_id` / `moderator_id` を
+# 実際の値へ差し替える。実運用では `flowgraph.twitch.get_token` と
+# `flowgraph.twitch.user_id_by_login` で解決する構成が望ましい。
+
+[meta]
+title = "twitch stream tools demo"
+description = "Web Input Ingress -> Twitch stream marker / clip / chat settings"
+tags = ["example", "twitch", "helix", "streaming", "flowgraph"]
+
+[[nodes]]
+id = "tool_in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 160]
+properties.path = "/input/twitch-stream-tools"
+properties.method = "POST"
+properties.body_format = "plain"
+properties.fixed_channel = "twitch_stream_tools_demo"
+
+[[nodes]]
+id = "access_token"
+feature = "flowgraph.literal.string"
+position = [80, 360]
+properties.value = "replace-with-token"
+
+[[nodes]]
+id = "client_id"
+feature = "flowgraph.literal.string"
+position = [80, 440]
+properties.value = "replace-with-client-id"
+
+[[nodes]]
+id = "broadcaster_id"
+feature = "flowgraph.literal.string"
+position = [80, 520]
+properties.value = "replace-with-broadcaster-id"
+
+[[nodes]]
+id = "moderator_id"
+feature = "flowgraph.literal.string"
+position = [80, 600]
+properties.value = "replace-with-moderator-id"
+
+[[nodes]]
+id = "marker_description"
+feature = "flowgraph.literal.string"
+position = [360, 360]
+properties.value = "VAC marker"
+
+[[nodes]]
+id = "marker"
+feature = "flowgraph.twitch.stream_marker_create"
+position = [640, 80]
+
+[[nodes]]
+id = "clip"
+feature = "flowgraph.twitch.clip_create"
+position = [640, 260]
+
+[[nodes]]
+id = "emote_on"
+feature = "flowgraph.literal.bool"
+position = [360, 560]
+properties.value = true
+
+[[nodes]]
+id = "chat_settings"
+feature = "flowgraph.twitch.chat_settings_update"
+position = [640, 500]
+
+[[nodes]]
+id = "log_marker_error"
+feature = "flowgraph.util.log"
+position = [920, 160]
+
+[[nodes]]
+id = "log_clip_error"
+feature = "flowgraph.util.log"
+position = [920, 340]
+
+[[nodes]]
+id = "log_settings_error"
+feature = "flowgraph.util.log"
+position = [920, 580]
+
+[[edges]]
+from = "tool_in:exec_out"
+to = "marker:exec_in"
+
+[[edges]]
+from = "tool_in:exec_out"
+to = "clip:exec_in"
+
+[[edges]]
+from = "tool_in:exec_out"
+to = "chat_settings:exec_in"
+
+[[edges]]
+from = "access_token:value"
+to = "marker:access_token"
+
+[[edges]]
+from = "access_token:value"
+to = "clip:access_token"
+
+[[edges]]
+from = "access_token:value"
+to = "chat_settings:access_token"
+
+[[edges]]
+from = "client_id:value"
+to = "marker:client_id"
+
+[[edges]]
+from = "client_id:value"
+to = "clip:client_id"
+
+[[edges]]
+from = "client_id:value"
+to = "chat_settings:client_id"
+
+[[edges]]
+from = "broadcaster_id:value"
+to = "marker:broadcaster_id"
+
+[[edges]]
+from = "broadcaster_id:value"
+to = "clip:broadcaster_id"
+
+[[edges]]
+from = "broadcaster_id:value"
+to = "chat_settings:broadcaster_id"
+
+[[edges]]
+from = "moderator_id:value"
+to = "chat_settings:moderator_id"
+
+[[edges]]
+from = "marker_description:value"
+to = "marker:description"
+
+[[edges]]
+from = "emote_on:value"
+to = "chat_settings:emote_mode"
+
+[[edges]]
+from = "marker:on_error"
+to = "log_marker_error:exec_in"
+
+[[edges]]
+from = "marker:error"
+to = "log_marker_error:value"
+
+[[edges]]
+from = "clip:on_error"
+to = "log_clip_error:exec_in"
+
+[[edges]]
+from = "clip:error"
+to = "log_clip_error:value"
+
+[[edges]]
+from = "chat_settings:on_error"
+to = "log_settings_error:exec_in"
+
+[[edges]]
+from = "chat_settings:error"
+to = "log_settings_error:value"

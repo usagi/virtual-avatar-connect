@@ -391,6 +391,20 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_effectful(Arc::new(nodes::twitch::ChatSendNode));
 	r.register_effectful(Arc::new(nodes::twitch::BanNode));
 	r.register_effectful(Arc::new(nodes::twitch::TimeoutNode));
+	r.register_effectful(Arc::new(nodes::twitch::AdRunNode));
+	r.register_effectful(Arc::new(nodes::twitch::RaidStartNode));
+	r.register_effectful(Arc::new(nodes::twitch::RaidCancelNode));
+	r.register_effectful(Arc::new(nodes::twitch::StreamMarkerCreateNode));
+	r.register_effectful(Arc::new(nodes::twitch::ClipCreateNode));
+	r.register_effectful(Arc::new(nodes::twitch::ChannelInfoUpdateNode));
+	r.register_effectful(Arc::new(nodes::twitch::ChatSettingsUpdateNode));
+	r.register_effectful(Arc::new(nodes::twitch::ChatClearNode));
+	r.register_effectful(Arc::new(nodes::twitch::ShieldModeUpdateNode));
+	r.register_effectful(Arc::new(nodes::twitch::PollCreateNode));
+	r.register_effectful(Arc::new(nodes::twitch::PollEndNode));
+	r.register_effectful(Arc::new(nodes::twitch::PredictionCreateNode));
+	r.register_effectful(Arc::new(nodes::twitch::PredictionEndNode));
+	r.register_effectful(Arc::new(nodes::twitch::GoalsGetNode));
 
 	// δ-9 Part C: channel.emit (Flowgraph → State.channel_data 終端)
 	r.register_effectful(Arc::new(nodes::channel::ChannelEmitNode));
@@ -479,6 +493,20 @@ mod tests {
 			"flowgraph.twitch.user_id_by_login",
 			"flowgraph.twitch.ban",
 			"flowgraph.twitch.timeout",
+			"flowgraph.twitch.ad_run",
+			"flowgraph.twitch.raid_start",
+			"flowgraph.twitch.raid_cancel",
+			"flowgraph.twitch.stream_marker_create",
+			"flowgraph.twitch.clip_create",
+			"flowgraph.twitch.channel_info_update",
+			"flowgraph.twitch.chat_settings_update",
+			"flowgraph.twitch.chat_clear",
+			"flowgraph.twitch.shield_mode_update",
+			"flowgraph.twitch.poll_create",
+			"flowgraph.twitch.poll_end",
+			"flowgraph.twitch.prediction_create",
+			"flowgraph.twitch.prediction_end",
+			"flowgraph.twitch.goals_get",
 			"flowgraph.translate.gas",
 			"flowgraph.translate.libre",
 			"flowgraph.ingress.web_input",
