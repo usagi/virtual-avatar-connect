@@ -9,6 +9,7 @@ v2 GUI を常駐ランタイムの管制卓と Flowgraph Studio へ再設計す�
 常駐 VAC が外部データ源・OS 通知・OBS テンプレート出力を扱う次期機能波は [`roadmap/resident-io-roadmap.md`](roadmap/resident-io-roadmap.md) を参照。
 Flowgraph の乱数・分布・データ構造・アルゴリズム標準ライブラリー計画は [`roadmap/flowgraph-stdlib-roadmap.md`](roadmap/flowgraph-stdlib-roadmap.md) を参照。
 VAC 専用 Dictionary を Glossary へ改名し、Dictionary を汎用 key-value 型に譲る計画は [`roadmap/glossary-rename-roadmap.md`](roadmap/glossary-rename-roadmap.md) を参照。
+Flowgraph の言語基盤（Schema / Capability / Testing など）の計画は [`roadmap/flowgraph-language-foundation-roadmap.md`](roadmap/flowgraph-language-foundation-roadmap.md) を参照。
 
 ---
 
@@ -353,6 +354,24 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 - [ ] GRN-4 GUI rename。Dictionary Editor 系コンポーネント・表示・テストを Glossary に揃える。
 - [ ] GRN-5 examples / tests / migration。sample / E2E / manual / migration note を更新する。
 - [ ] GRN-6 Dictionary as generic key-value。Glossary 移行後に汎用 `dictionary<K,V>` / `flowgraph.dictionary.*` を設計する。
+
+### Flowgraph Language Foundation Roadmap（計画中）
+
+Flowgraph を汎用プログラミング言語へ近づけるための基礎整備。詳細: [`roadmap/flowgraph-language-foundation-roadmap.md`](roadmap/flowgraph-language-foundation-roadmap.md)
+
+優先:
+
+- [ ] LF-1 Schema / Contract。`record` / `table schema` / node signature / library signature を統一する。
+- [ ] LF-2 Capability / Effect。file / network / db / notification / OBS / Twitch などの権限と effect kind を明示する。
+- [ ] LF-3 Testing / Debugger。graph fixture test、mock capability、trace、watch、trigger history を整える。
+
+計画として保持:
+
+- [ ] LF-4 Module / Package System。manifest / lockfile / semver / dependency resolution。
+- [ ] LF-5 Generic / Type Parameter。`list<T>` / `dictionary<K,V>` / `result<T>` の型束縛。
+- [ ] LF-6 Error Model。`result<T>` / `on_error` / fatal diagnostics / retry policy の統一。
+- [ ] LF-7 Persistence / State Model。state 寿命、reload、profile scope、snapshot / migration。
+- [ ] LF-8 Documentation Generation。signature / schema から manual と GUI catalog を生成する。
 
 ### Phase ν+（TBD）: E2E 拡張
 

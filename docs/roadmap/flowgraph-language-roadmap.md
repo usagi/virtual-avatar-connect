@@ -16,6 +16,9 @@ VAC はすでに、単なる配信補助ツールではなく **常駐型デー�
 4. `json` 逃げを減らし、第一級型を増やす
 5. エラー・状態・権限・デバッグをランタイム機能として揃える
 
+このうち、次期基礎整備としては Schema / Contract、Capability / Effect、Testing / Debugger を優先する。
+詳細は [`flowgraph-language-foundation-roadmap.md`](flowgraph-language-foundation-roadmap.md) に集約する。
+
 ---
 
 ## 1. 現状の到達点
@@ -294,6 +297,48 @@ GUI editor はあるが、runtime debugger としてはまだ弱い。
 - show data pull tree
 - show effect boundary
 - export trace bundle
+
+### 4.8 Schema / Contract Gap
+
+`record`, `table schema`, node signature, library signature がまだ別々の文脈で扱われている。
+汎用言語化には、これらを統一する契約システムが必要。
+
+必要な機能:
+
+- named record schema
+- table row schema
+- node signature metadata
+- library signature generation / validation
+- schema compatibility / migration rule
+- GUI form generation from schema
+
+詳細計画: [`flowgraph-language-foundation-roadmap.md`](flowgraph-language-foundation-roadmap.md) LF-1。
+
+### 4.9 Capability / Effect Gap
+
+Pure / Stateful / Effectful の大分類だけでは、file / network / db / OBS / Twitch などの危険度を GUI と loader が十分に説明できない。
+
+必要な機能:
+
+- effect kind metadata
+- graph-level required capability summary
+- library-level capability contract
+- Runtime Mode と capability policy の接続
+- GUI 上の危険操作表示
+
+詳細計画: [`flowgraph-language-foundation-roadmap.md`](flowgraph-language-foundation-roadmap.md) LF-2。
+
+### 4.10 Remaining Language Foundation Gaps
+
+以下は計画に保持するが、詳細設計は必要になった段階で起こす。
+
+- Module / Package System
+- Generic / Type Parameter
+- Error Model
+- Persistence / State Model
+- Documentation Generation
+
+詳細計画: [`flowgraph-language-foundation-roadmap.md`](flowgraph-language-foundation-roadmap.md) LF-4 以降。
 
 ---
 
