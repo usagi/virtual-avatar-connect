@@ -118,6 +118,17 @@ public reader の実用確認後に着手する。OAuth / token storage / scope 
 - `bytes` / `binary` 型の確定後に実装する
 - schema-less のまま入れると診断が弱いため、最初は JSON value と対応する範囲に限定する
 
+### RI-10 SQLite3 operations
+
+local DB を Flowgraph から扱うための外部 I/O。標準ライブラリーの `Table` / `record` / `result<T>` と接続する。
+
+- Node candidates: `flowgraph.db.sqlite.open`, `flowgraph.db.sqlite.query`, `flowgraph.db.sqlite.execute`
+- 初期実装は read-only query を優先する
+- query result は `Table` として出す
+- write / transaction / migration は `file_write` より強い capability として分ける
+- SQL injection 対策として parameter binding を必須にする
+- long-running query は timeout / cancellation を持つ
+
 ## 3. Toast / Notification の整理
 
 GUI 内 Toast と OS desktop notification は別物として扱う。
@@ -142,3 +153,4 @@ Flowgraph の汎用言語化を進めるため、この機能波のノードは�
 - **標準ライブラリー**: `flowgraph.file.*`, `flowgraph.convert.*`, `flowgraph.table.draw`, `flowgraph.constants.*`
 - **VAC API ライブラリー**: `flowgraph.notify.desktop`, `flowgraph.obs.template.*`, Twitch / OBS / Runtime Mode 連携
 - **外部サービスライブラリー**: `flowgraph.table.load_google_sheet_public`, future authenticated Google Sheets
+- **外部 I/O ライブラリー**: `flowgraph.db.sqlite.*`, RSS / WebSub など

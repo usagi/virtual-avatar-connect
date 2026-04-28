@@ -7,6 +7,7 @@ VAC Flowgraph を常駐型汎用データフロー処理エンジン、および
 VAC 常駐化に伴う配信・日常・仕事・睡眠などの動作状態切替計画は [`roadmap/runtime-mode-roadmap.md`](roadmap/runtime-mode-roadmap.md) を参照。
 v2 GUI を常駐ランタイムの管制卓と Flowgraph Studio へ再設計する計画は [`roadmap/gui-redesign-roadmap.md`](roadmap/gui-redesign-roadmap.md) を参照。
 常駐 VAC が外部データ源・OS 通知・OBS テンプレート出力を扱う次期機能波は [`roadmap/resident-io-roadmap.md`](roadmap/resident-io-roadmap.md) を参照。
+Flowgraph の乱数・分布・データ構造・アルゴリズム標準ライブラリー計画は [`roadmap/flowgraph-stdlib-roadmap.md`](roadmap/flowgraph-stdlib-roadmap.md) を参照。
 
 ---
 
@@ -326,6 +327,18 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 - [ ] RI-7 physical constants。標準ライブラリー寄りの低リスク pure node / constants provider として追加する。
 - [ ] RI-8 authenticated Google Sheets。OAuth / token storage / scope 設計が必要なため、public reader の実用確認後に着手する。
 - [ ] RI-9 MsgPack support。Binary / JSON 変換の延長として、保存・通信で必要になった時点で追加する。
+- [ ] RI-10 SQLite3 operations。local DB を `Table` / `record` と接続する。初期は read-only query を優先し、write / transaction / migration は capability を分ける。
+
+### Flowgraph Standard Library Roadmap（計画中）
+
+汎用言語化のため、乱数・分布・応用データ構造・アルゴリズムを段階追加する。
+詳細: [`roadmap/flowgraph-stdlib-roadmap.md`](roadmap/flowgraph-stdlib-roadmap.md)
+
+- [ ] SL-1 PRNG foundation。LCG / PCG / xoshiro / Philox / ChaCha / SplitMix64 を seedable に扱う。
+- [ ] SL-2 Distribution library。一様、正規、指数、ポアソン、カテゴリ、ディリクレなどを PRNG に接続する。
+- [ ] SL-3 Sequence / buffer data structures。ring buffer、deque、sliding window、reservoir sampling を提供する。
+- [ ] SL-4 Sort / search algorithms。stable sort、bucket sort、top-k、binary search、skip list index を提供する。
+- [ ] SL-5 Indexed collections。ordered map、bucket index、hash index、priority queue を Table / record と接続する。
 
 ### Phase ν+（TBD）: E2E 拡張
 

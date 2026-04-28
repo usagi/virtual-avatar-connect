@@ -171,8 +171,11 @@ API が無ければ `DelayNode` と同じ経路で対応する。
 - `flowgraph.file.watch`: ファイル更新監視 ingress。debounce / recursive / event kind を扱う。
 - `flowgraph.file.read_*` / `flowgraph.file.write_*`: Binary / String / JSON / TOML / RON の読み書き。
 - `flowgraph.convert.*`: JSON / TOML / RON / MsgPack 変換。
+- `flowgraph.db.sqlite.*`: SQLite3 の read-only query から始める local DB I/O。
 - `flowgraph.web.rss_fetch`: RSS / Atom を polling し、JSON と `Table` に正規化する。
 - `flowgraph.notify.desktop`: OS の desktop notification / Toast を出す。Runtime Mode の通知 policy に従う。
 - `flowgraph.constants.physics`: 物理定数を pure output として提供する。
+- `flowgraph.random.*`: PRNG と分布 sampling。
+- `flowgraph.collection.*`: ring buffer / deque / index / priority queue。
 
 ---
