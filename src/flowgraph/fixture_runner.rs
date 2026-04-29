@@ -1377,6 +1377,55 @@ mod tests {
 		}
 	}
 
+	#[test]
+	fn discover_fixture_roots_finds_nested_test_dirs() {
+		let root = make_temp_dir("fixture-roots");
+		std::fs::create_dir_all(root.join("a")).unwrap();
+		std::fs::create_dir_all(root.join("nested").join("b")).unwrap();
+		std::fs::write(root.join("a").join("main.flowgraph.test.toml"), "").unwrap();
+		std::fs::write(root.join("nested").join("b").join("case.flowgraph.test.toml"), "").unwrap();
+		std::fs::write(root.join("nested").join("ignore.txt"), "").unwrap();
+
+		let roots = discover_fixture_roots(&root).unwrap();
+		let labels: Vec<String> = roots
+			.iter()
+			.map(|path| path.strip_prefix(&root).unwrap().display().to_string().replace('\\', "/"))
+			.collect();
+
+		assert_eq!(labels, vec!["a", "nested/b"]);
+		let _ = std::fs::remove_dir_all(root);
+	}
+
+	#[test]
+	fn discover_fixture_roots_stops_at_fixture_dir() {
+		let root = make_temp_dir("fixture-root-stop");
+		std::fs::create_dir_all(root.join("fixture").join("child")).unwrap();
+		std::fs::write(root.join("fixture").join("main.flowgraph.test.toml"), "").unwrap();
+		std::fs::write(root.join("fixture").join("child").join("nested.flowgraph.test.toml"), "").unwrap();
+
+		let roots = discover_fixture_roots(&root).unwrap();
+		let labels: Vec<String> = roots
+			.iter()
+			.map(|path| path.strip_prefix(&root).unwrap().display().to_string().replace('\\', "/"))
+			.collect();
+
+		assert_eq!(labels, vec!["fixture"]);
+		let _ = std::fs::remove_dir_all(root);
+	}
+
+	fn make_temp_dir(label: &str) -> PathBuf {
+		let path = std::env::temp_dir().join(format!(
+			"vac-{label}-{}-{}",
+			std::process::id(),
+			std::time::SystemTime::now()
+				.duration_since(std::time::UNIX_EPOCH)
+				.unwrap()
+				.as_nanos()
+		));
+		std::fs::create_dir_all(&path).unwrap();
+		path
+	}
+
 	#[tokio::test]
 	async fn osc_udp_ingress_example_loads() {
 		let dir = example_dir("osc-udp-ingress");
