@@ -170,6 +170,20 @@ impl SocketValueRepr {
 					m.iter().map(|(k, v)| (k.clone(), SocketValueRepr::from_value(v).0)).collect();
 				serde_json::Value::Object(obj)
 			}
+			SocketValue::Result(result) => {
+				let mut obj = serde_json::Map::new();
+				obj.insert("ok".into(), serde_json::Value::Bool(result.ok));
+				if let Some(value) = result.value.as_ref() {
+					obj.insert("value".into(), SocketValueRepr::from_value(value).0);
+				}
+				if let Some(error) = result.error.as_ref() {
+					obj.insert("error".into(), serde_json::Value::String(error.clone()));
+				}
+				if let Some(code) = result.code.as_ref() {
+					obj.insert("code".into(), serde_json::Value::String(code.clone()));
+				}
+				serde_json::Value::Object(obj)
+			}
 			SocketValue::Table(t) => t.to_json_array(),
 			SocketValue::Quantity(q) => quantity_to_json(q),
 			// Phase π: DateTime は RFC3339 (Z suffix) 文字列として wire に載せる。
@@ -206,6 +220,16 @@ pub(crate) fn json_to_socket_value(ty: &SocketType, v: &serde_json::Value) -> Op
 				out.insert(k.clone(), json_to_socket_value(inner, v)?);
 			}
 			Some(SocketValue::Map(out))
+		}
+		(SocketType::Result(inner), J::Object(obj)) => {
+			let ok = obj.get("ok")?.as_bool()?;
+			let value = match obj.get("value") {
+				Some(value) => Some(Box::new(json_to_socket_value(inner, value)?)),
+				None => None,
+			};
+			let error = obj.get("error").and_then(|v| v.as_str()).map(str::to_string);
+			let code = obj.get("code").and_then(|v| v.as_str()).map(str::to_string);
+			Some(SocketValue::Result(crate::flowgraph::socket::FlowResult { ok, value, error, code }))
 		}
 		(SocketType::Table, J::Array(arr)) => crate::flowgraph::table::Table::from_json_array(arr, None)
 			.ok()
@@ -997,6 +1021,22 @@ mod tests {
 		assert_eq!(
 			SocketValueRepr(serde_json::json!("not base64!")).to_socket_value(&SocketType::Bytes),
 			None
+		);
+	}
+
+	#[test]
+	fn socket_value_repr_result_round_trip() {
+		let value = SocketValue::Result(crate::flowgraph::socket::FlowResult::ok(SocketValue::Int(42)).with_code("ok.number"));
+		let repr = SocketValueRepr::from_value(&value);
+		assert_eq!(repr.0, serde_json::json!({ "ok": true, "value": 42, "code": "ok.number" }));
+		assert_eq!(repr.to_socket_value(&SocketType::Result(Box::new(SocketType::Int))), Some(value));
+
+		let err = SocketValueRepr(serde_json::json!({ "ok": false, "error": "boom", "code": "unit.error" }))
+			.to_socket_value(&SocketType::Result(Box::new(SocketType::String)))
+			.unwrap();
+		assert_eq!(
+			err,
+			SocketValue::Result(crate::flowgraph::socket::FlowResult::err("boom").with_code("unit.error"))
 		);
 	}
 

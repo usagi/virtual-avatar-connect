@@ -33,6 +33,20 @@ fn sv_to_json(v: &SocketValue) -> JsonValue {
 		SocketValue::Json(j) => j.clone(),
 		SocketValue::List(xs) => JsonValue::Array(xs.iter().map(sv_to_json).collect()),
 		SocketValue::Map(m) => JsonValue::Object(m.iter().map(|(k, v)| (k.clone(), sv_to_json(v))).collect()),
+		SocketValue::Result(result) => {
+			let mut obj = serde_json::Map::new();
+			obj.insert("ok".into(), JsonValue::Bool(result.ok));
+			if let Some(value) = result.value.as_ref() {
+				obj.insert("value".into(), sv_to_json(value));
+			}
+			if let Some(error) = result.error.as_ref() {
+				obj.insert("error".into(), JsonValue::String(error.clone()));
+			}
+			if let Some(code) = result.code.as_ref() {
+				obj.insert("code".into(), JsonValue::String(code.clone()));
+			}
+			JsonValue::Object(obj)
+		}
 		SocketValue::Table(t) => t.to_json_array(),
 		// Phase ξ §6.4: table 化境界は value のみ（pass-through）。
 		SocketValue::Quantity(q) => serde_json::Number::from_f64(q.value)

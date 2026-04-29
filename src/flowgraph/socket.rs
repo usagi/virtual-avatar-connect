@@ -30,6 +30,9 @@ pub enum SocketType {
 	Json,
 	List(Box<SocketType>),
 	Map(Box<SocketType>),
+	/// recoverable error を第一級値として運ぶ型（LF-6a）。
+	/// Wire 表現は `{ ok, value?, error?, code? }` の JSON object。
+	Result(Box<SocketType>),
 	Exec,
 	/// 汎用表形式データ（`Table = Columns × Rows`、η フェーズ追加）。
 	/// 辞書、scene registry、credential store、Twitch user list 等の汎用プリミティブ。
@@ -66,6 +69,7 @@ impl SocketType {
 			SocketType::Json => Some(SocketValue::Json(serde_json::Value::Null)),
 			SocketType::List(_) => Some(SocketValue::List(Vec::new())),
 			SocketType::Map(_) => Some(SocketValue::Map(BTreeMap::new())),
+			SocketType::Result(_) => Some(SocketValue::Result(FlowResult::err(""))),
 			SocketType::Exec => None,
 			SocketType::Table => Some(SocketValue::Table(Table::empty())),
 			SocketType::Quantity => Some(SocketValue::Quantity(Quantity::dimensionless(0.0))),
@@ -80,7 +84,7 @@ impl SocketType {
 	/// 型表記文字列をパース。
 	///
 	/// - 原始型: `"bool" / "int" / "float" / "string" / "json" / "exec"`
-	/// - `"list<T>"` / `"map<T>"` / `"map<string, T>"`（後者互換記法）
+	/// - `"list<T>"` / `"map<T>"` / `"map<string, T>"`（後者互換記法）/ `"result<T>"`
 	pub fn parse(s: &str) -> Result<Self, TypeParseError> {
 		parse_type(s.trim())
 	}
@@ -114,6 +118,7 @@ impl SocketType {
 			(Json, MotionFrame) | (MotionFrame, Json) => true,
 			(List(a), List(b)) => a.compatible_with(b),
 			(Map(a), Map(b)) => a.compatible_with(b),
+			(Result(a), Result(b)) => a.compatible_with(b),
 			(a, b) => a == b,
 		}
 	}
@@ -177,6 +182,10 @@ pub fn coerce_to_type(value: SocketValue, target: &SocketType) -> Result<SocketV
 			}
 			Ok(SocketValue::Map(out))
 		}
+		(SocketValue::Result(result), SocketType::Result(inner)) => {
+			let result = result.coerce_value_to(inner).map_err(CoerceError::ResultValueError)?;
+			Ok(SocketValue::Result(result))
+		}
 		(SocketValue::Json(j), SocketType::MotionFrame) => serde_json::from_value(j.clone())
 			.map(SocketValue::MotionFrame)
 			.map_err(|e| CoerceError::MotionFrameFromJsonError { reason: e.to_string() }),
@@ -201,6 +210,8 @@ pub enum CoerceError {
 	DateTimeParseError { input: String, reason: String },
 	#[error("JSON → motion_frame 変換失敗: {reason}")]
 	MotionFrameFromJsonError { reason: String },
+	#[error("result<T> value 変換失敗: {0}")]
+	ResultValueError(Box<CoerceError>),
 }
 
 impl fmt::Display for SocketType {
@@ -214,6 +225,7 @@ impl fmt::Display for SocketType {
 			SocketType::Json => f.write_str("json"),
 			SocketType::List(inner) => write!(f, "list<{inner}>"),
 			SocketType::Map(inner) => write!(f, "map<{inner}>"),
+			SocketType::Result(inner) => write!(f, "result<{inner}>"),
 			SocketType::Exec => f.write_str("exec"),
 			SocketType::Table => f.write_str("table"),
 			SocketType::Quantity => f.write_str("quantity"),
@@ -256,6 +268,8 @@ pub enum TypeParseError {
 	EmptyMapInner(String),
 	#[error("map の key 型は string のみ許容: '{0}'")]
 	InvalidMapKey(String),
+	#[error("result<T> の value 型が空: '{0}'")]
+	EmptyResultInner(String),
 }
 
 fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
@@ -307,6 +321,13 @@ fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
 		// "map<T>" 短縮記法
 		return Ok(SocketType::Map(Box::new(parse_type(inner)?)));
 	}
+	if let Some(inner) = strip_generic(s, "result")? {
+		let inner = inner.trim();
+		if inner.is_empty() {
+			return Err(TypeParseError::EmptyResultInner(s.to_string()));
+		}
+		return Ok(SocketType::Result(Box::new(parse_type(inner)?)));
+	}
 	Err(TypeParseError::UnknownPrimitive(s.to_string()))
 }
 
@@ -341,6 +362,62 @@ fn find_top_level_comma(s: &str) -> Option<usize> {
 // SocketValue
 // ---------------------------------------------------------------------
 
+/// recoverable error を値として運ぶ `result<T>` のランタイム表現（LF-6a）。
+#[derive(Debug, Clone, PartialEq)]
+pub struct FlowResult {
+	pub ok: bool,
+	pub value: Option<Box<SocketValue>>,
+	pub error: Option<String>,
+	pub code: Option<String>,
+}
+
+impl FlowResult {
+	pub fn ok(value: SocketValue) -> Self {
+		Self {
+			ok: true,
+			value: Some(Box::new(value)),
+			error: None,
+			code: None,
+		}
+	}
+
+	pub fn err(error: impl Into<String>) -> Self {
+		Self {
+			ok: false,
+			value: None,
+			error: Some(error.into()),
+			code: None,
+		}
+	}
+
+	pub fn with_code(mut self, code: impl Into<String>) -> Self {
+		self.code = Some(code.into());
+		self
+	}
+
+	fn value_type(&self) -> Option<SocketType> {
+		self.value.as_ref().map(|v| v.type_of())
+	}
+
+	fn value_matches(&self, inner: &SocketType) -> bool {
+		match self.value.as_ref() {
+			Some(value) => value.matches(inner),
+			None => true,
+		}
+	}
+
+	fn coerce_value_to(self, inner: &SocketType) -> Result<Self, Box<CoerceError>> {
+		let Some(value) = self.value else {
+			return Ok(self);
+		};
+		let value = coerce_to_type(*value, inner).map_err(Box::new)?;
+		Ok(Self {
+			value: Some(Box::new(value)),
+			..self
+		})
+	}
+}
+
 /// VAC Flowgraph のランタイム値。暗黙変換なし。
 #[derive(Debug, Clone, PartialEq)]
 pub enum SocketValue {
@@ -354,6 +431,8 @@ pub enum SocketValue {
 	List(Vec<SocketValue>),
 	/// key は常に String（spec §2.1）。
 	Map(BTreeMap<String, SocketValue>),
+	/// `result<T>` の値。`ok=false` の場合、`value` は通常 `None`。
+	Result(FlowResult),
 	/// 汎用表形式データ（η フェーズ追加）。Arc 共有 + COW mutation。
 	Table(Table),
 	/// 単位次元付き数値（Phase ξ）。`dimensionless` は `Float` と数値的に等価だが、
@@ -386,6 +465,7 @@ impl SocketValue {
 				let inner = m.values().next().map(|v| v.type_of()).unwrap_or(SocketType::Json);
 				SocketType::Map(Box::new(inner))
 			}
+			SocketValue::Result(result) => SocketType::Result(Box::new(result.value_type().unwrap_or(SocketType::Json))),
 			SocketValue::Table(_) => SocketType::Table,
 			SocketValue::Quantity(_) => SocketType::Quantity,
 			SocketValue::DateTime(_) => SocketType::DateTime,
@@ -465,6 +545,15 @@ impl SocketValue {
 			}),
 		}
 	}
+	pub fn as_result(&self) -> Result<&FlowResult, ValueCastError> {
+		match self {
+			SocketValue::Result(v) => Ok(v),
+			_ => Err(ValueCastError::Mismatch {
+				expected: "result",
+				actual: self.type_of(),
+			}),
+		}
+	}
 	pub fn as_table(&self) -> Result<&Table, ValueCastError> {
 		match self {
 			SocketValue::Table(t) => Ok(t),
@@ -519,6 +608,7 @@ impl SocketValue {
 			| (SocketValue::MotionFrame(_), SocketType::MotionFrame) => true,
 			(SocketValue::List(xs), SocketType::List(inner)) => xs.iter().all(|v| v.matches(inner)),
 			(SocketValue::Map(m), SocketType::Map(inner)) => m.values().all(|v| v.matches(inner)),
+			(SocketValue::Result(result), SocketType::Result(inner)) => result.value_matches(inner),
 			_ => false,
 		}
 	}
@@ -568,6 +658,7 @@ pub fn from_toml_value(expected: &SocketType, v: &toml::Value) -> Result<SocketV
 			}
 			Ok(SocketValue::Map(out))
 		}
+		(SocketType::Result(inner), toml::Value::Table(tbl)) => result_from_toml_table(inner, tbl).map(SocketValue::Result),
 		(SocketType::Quantity, toml::Value::Float(f)) => Ok(SocketValue::Quantity(Quantity::dimensionless(*f))),
 		(SocketType::Quantity, toml::Value::Integer(i)) => Ok(SocketValue::Quantity(Quantity::dimensionless(*i as f64))),
 		(SocketType::Quantity, toml::Value::String(s)) => {
@@ -616,6 +707,37 @@ pub fn from_toml_value(expected: &SocketType, v: &toml::Value) -> Result<SocketV
 			expected: expected.to_string(),
 			actual: format!("{actual:?}"),
 		}),
+	}
+}
+
+fn result_from_toml_table(inner: &SocketType, tbl: &toml::map::Map<String, toml::Value>) -> Result<FlowResult, FromTomlError> {
+	let ok = match tbl.get("ok") {
+		Some(toml::Value::Boolean(b)) => *b,
+		Some(actual) => {
+			return Err(FromTomlError::Mismatch {
+				expected: "result.ok bool".into(),
+				actual: format!("{actual:?}"),
+			})
+		}
+		None => false,
+	};
+	let value = match tbl.get("value") {
+		Some(value) => Some(Box::new(from_toml_value(inner, value)?)),
+		None => None,
+	};
+	let error = optional_toml_string(tbl, "error")?;
+	let code = optional_toml_string(tbl, "code")?;
+	Ok(FlowResult { ok, value, error, code })
+}
+
+fn optional_toml_string(tbl: &toml::map::Map<String, toml::Value>, key: &str) -> Result<Option<String>, FromTomlError> {
+	match tbl.get(key) {
+		Some(toml::Value::String(s)) => Ok(Some(s.clone())),
+		Some(actual) => Err(FromTomlError::Mismatch {
+			expected: format!("result.{key} string"),
+			actual: format!("{actual:?}"),
+		}),
+		None => Ok(None),
 	}
 }
 
@@ -801,6 +923,10 @@ mod tests {
 			SocketType::parse("list<map<string>>").unwrap(),
 			SocketType::List(Box::new(SocketType::Map(Box::new(SocketType::String))))
 		);
+		assert_eq!(
+			SocketType::parse("result<list<string>>").unwrap(),
+			SocketType::Result(Box::new(SocketType::List(Box::new(SocketType::String))))
+		);
 	}
 
 	#[test]
@@ -815,6 +941,7 @@ mod tests {
 	fn parse_rejects_unknown() {
 		assert!(matches!(SocketType::parse("unknown"), Err(TypeParseError::UnknownPrimitive(_))));
 		assert!(matches!(SocketType::parse("list<>"), Err(TypeParseError::EmptyListInner(_))));
+		assert!(matches!(SocketType::parse("result<>"), Err(TypeParseError::EmptyResultInner(_))));
 	}
 
 	#[test]
@@ -852,6 +979,10 @@ mod tests {
 		let v = SocketValue::List(vec![SocketValue::String("a".into())]);
 		assert!(v.matches(&SocketType::List(Box::new(SocketType::String))));
 		assert!(!v.matches(&SocketType::List(Box::new(SocketType::Int))));
+
+		let result = SocketValue::Result(FlowResult::ok(SocketValue::String("ok".into())));
+		assert!(result.matches(&SocketType::Result(Box::new(SocketType::String))));
+		assert!(!result.matches(&SocketType::Result(Box::new(SocketType::Int))));
 	}
 
 	#[test]
@@ -887,6 +1018,49 @@ mod tests {
 		assert_eq!(s, "\"map<json>\"");
 		let back: SocketType = serde_json::from_str(&s).unwrap();
 		assert_eq!(back, t);
+	}
+
+	#[test]
+	fn result_type_roundtrip_and_default() {
+		let ty = SocketType::Result(Box::new(SocketType::String));
+		assert_eq!(ty.to_string(), "result<string>");
+		assert_eq!(SocketType::parse("result<string>").unwrap(), ty);
+		assert_eq!(serde_json::to_string(&ty).unwrap(), "\"result<string>\"");
+		let default = ty.default_value().unwrap();
+		assert_eq!(default.type_of(), SocketType::Result(Box::new(SocketType::Json)));
+		assert!(default.matches(&ty));
+	}
+
+	#[test]
+	fn result_toml_roundtrip() {
+		let parsed: toml::Table = toml::from_str(
+			r#"
+ok = true
+value = "hello"
+code = "unit.test"
+"#,
+		)
+		.unwrap();
+		let out = from_toml_value(&SocketType::Result(Box::new(SocketType::String)), &toml::Value::Table(parsed)).unwrap();
+		assert_eq!(
+			out,
+			SocketValue::Result(FlowResult {
+				ok: true,
+				value: Some(Box::new(SocketValue::String("hello".into()))),
+				error: None,
+				code: Some("unit.test".into()),
+			})
+		);
+	}
+
+	#[test]
+	fn coerce_result_inner_value() {
+		let value = SocketValue::Result(FlowResult::ok(SocketValue::Float(3.0)));
+		let out = coerce_to_type(value, &SocketType::Result(Box::new(SocketType::Quantity))).unwrap();
+		let SocketValue::Result(result) = out else {
+			panic!("expected result")
+		};
+		assert!(result.value.unwrap().matches(&SocketType::Quantity));
 	}
 
 	// ---------------------------------------------------------------------

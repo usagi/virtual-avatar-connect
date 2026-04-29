@@ -233,6 +233,20 @@ fn socket_value_to_json(v: &SocketValue) -> serde_json::Value {
 			let obj: serde_json::Map<String, serde_json::Value> = m.iter().map(|(k, v)| (k.clone(), socket_value_to_json(v))).collect();
 			serde_json::Value::Object(obj)
 		}
+		SocketValue::Result(result) => {
+			let mut obj = serde_json::Map::new();
+			obj.insert("ok".into(), serde_json::Value::Bool(result.ok));
+			if let Some(value) = result.value.as_ref() {
+				obj.insert("value".into(), socket_value_to_json(value));
+			}
+			if let Some(error) = result.error.as_ref() {
+				obj.insert("error".into(), serde_json::Value::String(error.clone()));
+			}
+			if let Some(code) = result.code.as_ref() {
+				obj.insert("code".into(), serde_json::Value::String(code.clone()));
+			}
+			serde_json::Value::Object(obj)
+		}
 		SocketValue::Table(t) => t.to_json_array(),
 		// Phase ξ §6.4: 外部 JSON 境界では value のみ（pass-through）。
 		// unit を維持したい場合は `flowgraph.unit.to_json` を使う。
