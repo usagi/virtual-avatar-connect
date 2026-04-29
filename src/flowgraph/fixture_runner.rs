@@ -31,6 +31,9 @@ pub enum FixtureError {
 		path: PathBuf,
 		error: toml::de::Error,
 	},
+	NoFixtureTestFiles {
+		root: PathBuf,
+	},
 	TriggerValue {
 		path: PathBuf,
 		trigger: usize,
@@ -50,6 +53,9 @@ impl std::fmt::Display for FixtureError {
 			FixtureError::Execute(e) => write!(f, "execute failed: {e}"),
 			FixtureError::TestIo(e) => write!(f, "test file io failed: {e}"),
 			FixtureError::TestParse { path, error } => write!(f, "test file parse failed: {}: {error}", path.display()),
+			FixtureError::NoFixtureTestFiles { root } => {
+				write!(f, "no *.flowgraph.test.toml files found: {}", root.display())
+			}
 			FixtureError::TriggerValue {
 				path,
 				trigger,
@@ -340,6 +346,9 @@ pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, Fi
 
 pub async fn run_fixture_suite_report(root: &Path) -> Result<FixtureSuiteReport, FixtureError> {
 	let fixture_roots = discover_fixture_roots(root)?;
+	if fixture_roots.is_empty() {
+		return Err(FixtureError::NoFixtureTestFiles { root: root.to_path_buf() });
+	}
 	let mut reports = Vec::new();
 	let mut errors = Vec::new();
 	for fixture_root in fixture_roots {
@@ -651,6 +660,9 @@ fn read_declared_tests(root: &Path) -> Result<Vec<ParsedFixtureTestFile>, Fixtur
 		let raw = std::fs::read_to_string(&path).map_err(FixtureError::TestIo)?;
 		let parsed: FixtureTestFile = toml::from_str(&raw).map_err(|error| FixtureError::TestParse { path: path.clone(), error })?;
 		results.push(ParsedFixtureTestFile { path, parsed });
+	}
+	if results.is_empty() {
+		return Err(FixtureError::NoFixtureTestFiles { root: root.to_path_buf() });
 	}
 	Ok(results)
 }
@@ -1410,6 +1422,27 @@ mod tests {
 			.collect();
 
 		assert_eq!(labels, vec!["fixture"]);
+		let _ = std::fs::remove_dir_all(root);
+	}
+
+	#[test]
+	fn read_declared_tests_rejects_dir_without_test_files() {
+		let root = make_temp_dir("fixture-no-tests");
+		let error = match read_declared_tests(&root) {
+			Ok(_) => panic!("expected missing fixture test file error"),
+			Err(error) => error,
+		};
+
+		assert!(error.to_string().contains("no *.flowgraph.test.toml files found"));
+		let _ = std::fs::remove_dir_all(root);
+	}
+
+	#[tokio::test]
+	async fn fixture_suite_rejects_root_without_fixtures() {
+		let root = make_temp_dir("fixture-suite-empty");
+		let error = run_fixture_suite_report(&root).await.unwrap_err();
+
+		assert!(error.to_string().contains("no *.flowgraph.test.toml files found"));
 		let _ = std::fs::remove_dir_all(root);
 	}
 

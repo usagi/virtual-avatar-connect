@@ -9,6 +9,7 @@ OpenAI / Twitch / OBS / TTS などの実サービスを叩かず、`flowgraph.ex
 ## 単体 fixture の実行
 
 `--flowgraph-test-dir` には、`*.flowgraph.test.toml` を含むディレクトリを指定します。
+テスト定義が 1 件も見つからない場合は、誤ったディレクトリを成功扱いしないため失敗します。
 
 ```powershell
 cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-dir flowgraph.example/table-write-tsv-mock
@@ -24,6 +25,7 @@ cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-dir flowgraph.exa
 
 `--flowgraph-test-root` は、指定 root 以下から `*.flowgraph.test.toml` を含む fixture ディレクトリを探索してまとめて実行します。
 fixture ディレクトリを見つけたらそこで探索を止めるため、fixture 内部の補助ファイルは別 fixture として扱われません。
+fixture が 1 件も見つからない root は失敗扱いです。
 
 ```powershell
 cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-root flowgraph.example
