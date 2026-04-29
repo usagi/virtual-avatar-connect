@@ -264,6 +264,8 @@ struct FixtureExpect {
 	trigger_count: Option<usize>,
 	trace_count: Option<usize>,
 	trace: Option<Vec<String>>,
+	#[serde(default)]
+	trace_contains: Vec<String>,
 	effect_count: Option<usize>,
 	#[serde(default)]
 	trigger_history: Vec<FixtureExpectedTriggerHistory>,
@@ -766,6 +768,11 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 			failures.push(format!("trace: expected {expected:?}, actual {:?}", report.trace));
 		}
 	}
+	for expected in &case.expect.trace_contains {
+		if !report.trace.iter().any(|line| line.contains(expected)) {
+			failures.push(format!("trace_contains: missing {:?}", expected));
+		}
+	}
 	for expected in &case.expect.trigger_history {
 		match report.trigger_history.iter().find(|actual| actual.node == expected.node) {
 			Some(actual) => assert_trigger_history(&mut failures, expected, actual),
@@ -1189,6 +1196,43 @@ mod tests {
 			.iter()
 			.any(|f| f.contains("value: expected \"expected\", actual \"actual\"")));
 		assert!(result.failures.iter().any(|f| f == "stored_value missing:value: missing"));
+	}
+
+	#[test]
+	fn trace_contains_assertion_passes() {
+		let mut report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		report.trace = vec!["alpha: ready".into(), "beta: done".into()];
+		report.trace_count = report.trace.len();
+		let case = FixtureTestCase {
+			name: Some("trace".into()),
+			expect: FixtureExpect {
+				trace_contains: vec!["alpha".into(), "done".into()],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(result.ok, "{:?}", result.failures);
+	}
+
+	#[test]
+	fn trace_contains_assertion_reports_missing() {
+		let mut report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		report.trace = vec!["alpha: ready".into()];
+		report.trace_count = report.trace.len();
+		let case = FixtureTestCase {
+			name: Some("trace".into()),
+			expect: FixtureExpect {
+				trace_contains: vec!["missing".into()],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(!result.ok);
+		assert_eq!(result.failures, vec!["trace_contains: missing \"missing\""]);
 	}
 
 	#[test]

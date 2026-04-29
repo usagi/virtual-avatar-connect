@@ -20,6 +20,7 @@ trace = [
   "file.read mock: fixture.tsv -> node main::load",
   "log: read_to_string fixture.tsv: fixture missing file",
 ]
+trace_contains = ["fixture missing file"]
 
 [[tests.expect.exec_count]]
 node = "main::log_success"

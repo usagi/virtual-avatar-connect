@@ -371,6 +371,12 @@ trace = []
 `*.flowgraph.test.toml` が存在しても `[test]` / `[[tests]]` が 1 件もない場合は失敗扱いにした。
 ファイルだけ置かれていて assertion が空の fixture を成功扱いすると、回帰テストとしては静かな空振りになるため。
 
+### LF-3n trace contains assertion ✅
+
+`[test.expect]` / `[tests.expect]` に `trace_contains = ["..."]` を追加した。
+`trace = [...]` は完全一致、`trace_contains` は各文字列が trace のどこかに含まれていることだけを検証する。
+診断文字列全体を固定したくないが、重要な分岐や error fragment は確認したい fixture に使う。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。

@@ -83,6 +83,7 @@ trace = [
   "ingress -> transform",
   "transform -> out",
 ]
+trace_contains = ["transform"]
 
 [[tests.expect.exec_count]]
 node = "out"
