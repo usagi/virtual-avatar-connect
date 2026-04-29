@@ -486,6 +486,12 @@ WASM は Flowgraph の主表現ではなく、module / package system の実行�
 `bytes` wire 表現と同じ base64 文字列を明示変換できるため、VMC ingress や将来の file / HTTP / audio boundary から段階的に `bytes` port へ移行できる。
 失敗可能な decode は現行の `json.parse` と同じく PureNode のエラー halt とし、第一級 `result<T>` への移行は LF-6 で扱う。
 
+### LF-5c VMC parse bytes boundary ✅
+
+`flowgraph.motion.vmc_parse` に `payload: bytes` 入力を追加した。
+既存の `payload_b64: string` は互換用に残し、`payload` が非空なら bytes を優先、空なら従来通り Base64 を decode する。
+これにより、既存の VMC examples を壊さず、`bytes.from_base64 -> motion.vmc_parse` や将来の binary ingress から `motion_frame` へ直接つなぐ足場ができた。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。

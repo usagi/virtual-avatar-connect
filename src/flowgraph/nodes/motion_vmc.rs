@@ -3,7 +3,8 @@
 //! `json` ポートとのエッジはランタイムで [`crate::flowgraph::socket::coerce_to_type`] により往復可能
 //! （`byte_len` / `osc_messages` の JSON オブジェクト形状）。
 //!
-//! `flowgraph.ingress.vmc_udp` の `__content__`（Base64）をそのまま `payload_b64` に渡す想定。
+//! `flowgraph.ingress.vmc_udp` の `__content__`（Base64）をそのまま `payload_b64` に渡す既存経路と、
+//! LF-5 の `bytes` payload を `payload` に渡す経路の両方を受け付ける。
 
 use crate::flowgraph::node::{
 	get_optional_float, get_optional_string, get_required_motion_frame, get_required_string, ExecFireSet, InputMap, NodeDescriptor,
@@ -23,10 +24,13 @@ impl NodeDescriptor for VmcParseNode {
 			title: "Motion: VMC OSC Parse".into(),
 			category: "motion".into(),
 			description: Some(
-				"Base64 された UDP ペイロードを OSC として解釈し、[`MotionFrame`]（`motion_frame`）を出力。`json` へ接続時は自動変換"
+				"UDP ペイロードを OSC として解釈し、[`MotionFrame`]（`motion_frame`）を出力。`payload` bytes が非空なら優先し、空なら互換用 `payload_b64` を読む。`json` へ接続時は自動変換"
 					.into(),
 			),
-			inputs: vec![PortSpec::input("payload_b64", "Payload (Base64)", SocketType::String)],
+			inputs: vec![
+				PortSpec::input("payload", "Payload", SocketType::Bytes).with_default(SocketValue::Bytes(Vec::new())),
+				PortSpec::input("payload_b64", "Payload (Base64)", SocketType::String),
+			],
 			outputs: vec![PortSpec::output("frame", "Frame", SocketType::MotionFrame)],
 			properties: vec![],
 		}
@@ -42,10 +46,22 @@ impl PureNode for VmcParseNode {
 		inputs: &InputMap,
 		_fired: &ExecFireSet,
 	) -> Result<NodeOutput, NodeExecError> {
-		let b64 = get_required_string(inputs, "payload_b64")?;
-		let raw = STANDARD
-			.decode(b64.trim())
-			.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("payload_b64 decode: {e}")))?;
+		let raw = match inputs.get("payload") {
+			Some(SocketValue::Bytes(bytes)) if !bytes.is_empty() => bytes.clone(),
+			Some(SocketValue::Bytes(_)) | None => {
+				let b64 = get_required_string(inputs, "payload_b64")?;
+				STANDARD
+					.decode(b64.trim())
+					.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("payload_b64 decode: {e}")))?
+			}
+			Some(v) => {
+				return Err(NodeExecError::TypeMismatch {
+					port: "payload".into(),
+					expected: SocketType::Bytes,
+					actual: v.type_of(),
+				});
+			}
+		};
 		let frame = parse_vmc_payload(&raw).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
 		Ok(NodeOutput::new().set_data("frame", SocketValue::MotionFrame(frame)))
 	}
@@ -177,6 +193,30 @@ mod tests {
 		let b64 = STANDARD.encode(&bytes);
 		let mut inputs = InputMap::new();
 		inputs.insert("payload_b64".into(), SocketValue::String(b64));
+		let out = VmcParseNode
+			.compute(&PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.await
+			.unwrap();
+		let f = out.data.get("frame").unwrap().as_motion_frame().unwrap();
+		assert_eq!(f.byte_len, bytes.len());
+		assert!(f.osc_messages.len() >= 1);
+	}
+
+	#[tokio::test]
+	async fn parses_fixture_bytes_payload() {
+		use rosc::encoder;
+		use rosc::{OscMessage, OscPacket, OscType};
+		let pkt = OscPacket::Message(OscMessage {
+			addr: "/V/Blend/Proxy".into(),
+			args: vec![OscType::Float(1.0)],
+		});
+		let bytes = encoder::encode(&pkt).unwrap();
+		let mut inputs = InputMap::new();
+		inputs.insert("payload".into(), SocketValue::Bytes(bytes.clone()));
+		inputs.insert(
+			"payload_b64".into(),
+			SocketValue::String("invalid fallback should not be used".into()),
+		);
 		let out = VmcParseNode
 			.compute(&PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await

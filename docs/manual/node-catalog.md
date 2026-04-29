@@ -2037,10 +2037,11 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ### `flowgraph.motion.vmc_parse`
 
-**Motion: VMC OSC Parse** — Base64 された UDP ペイロードを OSC として解釈し、[`MotionFrame`]（`motion_frame`）を出力。`json` へ接続時は自動変換
+**Motion: VMC OSC Parse** — UDP ペイロードを OSC として解釈し、[`MotionFrame`]（`motion_frame`）を出力。`payload` bytes が非空なら優先し、空なら互換用 `payload_b64` を読む。`json` へ接続時は自動変換
 
 | Input | Type | Default | Note |
 |---|---|---|---|
+| `payload` | `bytes` | `""` |  |
 | `payload_b64` | `string` | — |  |
 
 | Output | Type | Note |
