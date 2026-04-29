@@ -304,6 +304,21 @@ JSON 出力は `FixtureSuiteReport` として、`fixture_count` / `failed_fixtur
 各 fixture の report は単体 `--flowgraph-test-dir` と同じ `FixtureRunReport`。
 これにより、CI やローカル回帰確認で fixture 群をまとめて検証できる。
 
+### LF-3i fixture runner manual ✅
+
+Flowgraph fixture runner の開発者向け手順を `docs/manual/tutorials/flowgraph-fixtures.md` に追加した。
+manual では次を正本として扱う。
+
+- 単体 fixture: `--flowgraph-test-dir`
+- suite 実行: `--flowgraph-test-root`
+- JSON 出力: `--flowgraph-test-json`
+- mock IO: `[[mocks.http]]` / `[[mocks.file_read]]` / `[[mocks.file_write]]`
+- recorded effects: `http` / `file_read` / `file_write`
+- assertion: `effect_count` と `[[tests.expect.*]]`
+
+GUI E2E は画面と Control API の往復、Flowgraph fixture は Flowgraph runtime / language の回帰を見る層として分担する。
+CI 化は引き続き optional とし、まずローカルで `--flowgraph-test-root flowgraph.example` を回す運用を標準とする。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。
