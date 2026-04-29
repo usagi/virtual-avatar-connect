@@ -364,7 +364,8 @@ GUI は mode を常時表示し、ユーザーが明示的に切り替えられ�
 - schedule / hotkey transition
 - transition guard
 - notification policy
-- capability policy
+- capability policy preview ✅
+- capability policy hard enforcement
 
 ---
 
