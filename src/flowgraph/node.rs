@@ -583,6 +583,22 @@ pub struct RecordedEffect {
 }
 
 impl RecordedEffect {
+	pub fn file_read(node: impl Into<String>, path: impl Into<String>, contents: Option<String>, error: Option<String>) -> Self {
+		Self {
+			kind: "file_read".into(),
+			node: node.into(),
+			method: None,
+			url: None,
+			path: Some(path.into()),
+			status: None,
+			bytes: contents.as_ref().map(|s| s.as_bytes().len() as i64),
+			contents,
+			request_body: None,
+			response_body: None,
+			error,
+		}
+	}
+
 	pub fn file_write(
 		node: impl Into<String>,
 		path: impl Into<String>,

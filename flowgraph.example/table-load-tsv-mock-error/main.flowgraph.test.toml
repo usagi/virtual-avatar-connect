@@ -15,6 +15,7 @@ node_count = 6
 mock_count = 1
 trigger_count = 1
 trace_count = 2
+effect_count = 1
 trace = [
   "file.read mock: fixture.tsv -> node main::load",
   "log: read_to_string fixture.tsv: fixture missing file",
@@ -39,3 +40,8 @@ node = "main::load"
 port = "error"
 ty = "string"
 value = "read_to_string fixture.tsv: fixture missing file"
+
+[[tests.expect.file_reads]]
+node = "main::load"
+path = "fixture.tsv"
+error = "fixture missing file"

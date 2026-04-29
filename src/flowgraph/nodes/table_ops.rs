@@ -181,8 +181,20 @@ impl EffectfulNode for TableLoadTsvNode {
 		{
 			ctx.log(format!("file.read mock: {path} -> node {}", ctx.node_id));
 			if let Some(error) = mock.error {
+				ctx.record_effect(RecordedEffect::file_read(
+					ctx.node_id.clone(),
+					path.clone(),
+					None,
+					Some(error.clone()),
+				));
 				return Ok(err_output_load(format!("read_to_string {path}: {error}")));
 			}
+			ctx.record_effect(RecordedEffect::file_read(
+				ctx.node_id.clone(),
+				path.clone(),
+				Some(mock.contents.clone()),
+				None,
+			));
 			mock.contents
 		} else {
 			match tokio::fs::read_to_string(&path).await {
@@ -277,13 +289,7 @@ impl EffectfulNode for TableWriteTsvNode {
 				));
 				return Ok(err_output_write(format!("write {path}: {error}")));
 			}
-			ctx.record_effect(RecordedEffect::file_write(
-				ctx.node_id.clone(),
-				path.clone(),
-				len,
-				serialized,
-				None,
-			));
+			ctx.record_effect(RecordedEffect::file_write(ctx.node_id.clone(), path.clone(), len, serialized, None));
 			return Ok(NodeOutput::new()
 				.set_data("bytes_written", SocketValue::Int(len))
 				.set_data("error", SocketValue::String(String::new()))

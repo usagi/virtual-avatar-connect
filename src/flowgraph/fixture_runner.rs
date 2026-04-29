@@ -236,6 +236,8 @@ struct FixtureExpect {
 	#[serde(default)]
 	stored_values: Vec<FixtureExpectedValue>,
 	#[serde(default)]
+	file_reads: Vec<FixtureExpectedFileRead>,
+	#[serde(default)]
 	file_writes: Vec<FixtureExpectedFileWrite>,
 	#[serde(default)]
 	http_requests: Vec<FixtureExpectedHttpRequest>,
@@ -254,6 +256,18 @@ struct FixtureExpectedValue {
 	#[serde(default)]
 	ty: Option<String>,
 	value: toml::Value,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureExpectedFileRead {
+	node: String,
+	path: String,
+	#[serde(default)]
+	bytes: Option<i64>,
+	#[serde(default)]
+	contents: Option<String>,
+	#[serde(default)]
+	error: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -659,6 +673,37 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 			None => failures.push(format!("stored_value {}:{}: missing", expected.node, expected.port)),
 		}
 	}
+	for expected in &case.expect.file_reads {
+		match report.recorded_effects.iter().find(|actual| {
+			actual.kind == "file_read" && actual.node == expected.node && actual.path.as_deref() == Some(expected.path.as_str())
+		}) {
+			Some(actual) => {
+				if let Some(expected_bytes) = expected.bytes {
+					if actual.bytes != Some(expected_bytes) {
+						failures.push(format!(
+							"file_read {}:{} bytes: expected {}, actual {:?}",
+							expected.node, expected.path, expected_bytes, actual.bytes
+						));
+					}
+				}
+				if let Some(expected_contents) = &expected.contents {
+					if actual.contents.as_deref() != Some(expected_contents.as_str()) {
+						failures.push(format!(
+							"file_read {}:{} contents: expected {:?}, actual {:?}",
+							expected.node, expected.path, expected_contents, actual.contents
+						));
+					}
+				}
+				if actual.error != expected.error {
+					failures.push(format!(
+						"file_read {}:{} error: expected {:?}, actual {:?}",
+						expected.node, expected.path, expected.error, actual.error
+					));
+				}
+			}
+			None => failures.push(format!("file_read {}:{}: missing", expected.node, expected.path)),
+		}
+	}
 	for expected in &case.expect.file_writes {
 		match report.recorded_effects.iter().find(|actual| {
 			actual.kind == "file_write" && actual.node == expected.node && actual.path.as_deref() == Some(expected.path.as_str())
@@ -930,6 +975,95 @@ mod tests {
 			.iter()
 			.any(|f| f.contains("value: expected \"expected\", actual \"actual\"")));
 		assert!(result.failures.iter().any(|f| f == "stored_value missing:value: missing"));
+	}
+
+	#[test]
+	fn file_read_assertion_passes() {
+		let mut report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		report.effect_count = 1;
+		report.recorded_effects.push(FixtureRecordedEffect {
+			kind: "file_read".into(),
+			node: "load".into(),
+			method: None,
+			url: None,
+			path: Some("input.tsv".into()),
+			status: None,
+			bytes: Some(8),
+			contents: Some("a\tb\n1\t2\n".into()),
+			request_body: None,
+			response_body: None,
+			error: None,
+		});
+		let case = FixtureTestCase {
+			name: Some("read".into()),
+			expect: FixtureExpect {
+				effect_count: Some(1),
+				file_reads: vec![FixtureExpectedFileRead {
+					node: "load".into(),
+					path: "input.tsv".into(),
+					bytes: Some(8),
+					contents: Some("a\tb\n1\t2\n".into()),
+					error: None,
+				}],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(result.ok, "{:?}", result.failures);
+	}
+
+	#[test]
+	fn file_read_assertion_reports_missing_and_mismatch() {
+		let mut report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		report.effect_count = 1;
+		report.recorded_effects.push(FixtureRecordedEffect {
+			kind: "file_read".into(),
+			node: "load".into(),
+			method: None,
+			url: None,
+			path: Some("input.tsv".into()),
+			status: None,
+			bytes: Some(8),
+			contents: Some("actual".into()),
+			request_body: None,
+			response_body: None,
+			error: Some("missing".into()),
+		});
+		let case = FixtureTestCase {
+			name: Some("read".into()),
+			expect: FixtureExpect {
+				effect_count: Some(2),
+				file_reads: vec![
+					FixtureExpectedFileRead {
+						node: "load".into(),
+						path: "input.tsv".into(),
+						bytes: Some(9),
+						contents: Some("expected".into()),
+						error: None,
+					},
+					FixtureExpectedFileRead {
+						node: "missing".into(),
+						path: "missing.tsv".into(),
+						bytes: None,
+						contents: None,
+						error: None,
+					},
+				],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(!result.ok);
+		assert_eq!(result.failures.len(), 5);
+		assert!(result.failures.iter().any(|f| f.contains("effect_count: expected 2")));
+		assert!(result.failures.iter().any(|f| f.contains("bytes: expected 9")));
+		assert!(result.failures.iter().any(|f| f.contains("contents: expected")));
+		assert!(result.failures.iter().any(|f| f.contains("error: expected None")));
+		assert!(result.failures.iter().any(|f| f == "file_read missing:missing.tsv: missing"));
 	}
 
 	#[test]

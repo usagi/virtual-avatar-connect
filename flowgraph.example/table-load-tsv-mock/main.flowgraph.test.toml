@@ -19,6 +19,7 @@ node_count = 4
 mock_count = 1
 trigger_count = 1
 trace_count = 1
+effect_count = 1
 trace = [
   "file.read mock: fixture.tsv -> node main::load",
 ]
@@ -32,3 +33,13 @@ node = "main::load"
 port = "row_count"
 ty = "int"
 value = 2
+
+[[tests.expect.file_reads]]
+node = "main::load"
+path = "fixture.tsv"
+bytes = 36
+contents = """
+source	replacement
+hello	hi
+vac	VAC
+"""
