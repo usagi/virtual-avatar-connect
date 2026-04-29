@@ -55,7 +55,9 @@ impl Args {
 						println!("Flowgraph fixture {status}: {}", report.root);
 						println!("  nodes: {}", report.node_count);
 						println!("  generation: {}", report.generation);
+						println!("  mocks: {}", report.mock_count);
 						println!("  trace: {} line(s)", report.trace_count);
+						println!("  effects: {}", report.effect_count);
 						println!("  stored_values: {}", report.stored_values.len());
 						println!("  cache: {} hit(s), {} miss(es)", report.cache_hits, report.cache_misses);
 						if !report.tests.is_empty() {
@@ -104,6 +106,11 @@ impl Args {
 						let status = if report.ok { "OK" } else { "FAILED" };
 						println!("Flowgraph fixture suite {status}: {}", report.root);
 						println!("  fixtures: {} total / {} failed", report.fixture_count, report.failed_fixtures);
+						let total_tests: usize = report.reports.iter().map(|fixture| fixture.tests.len()).sum();
+						let failed_tests: usize = report.reports.iter().map(|fixture| fixture.failed_tests).sum();
+						let total_effects: usize = report.reports.iter().map(|fixture| fixture.effect_count).sum();
+						println!("  tests: {} total / {} failed", total_tests, failed_tests);
+						println!("  effects: {}", total_effects);
 						for fixture in &report.reports {
 							if !fixture.ok {
 								println!("    FAIL {}", fixture.root);
