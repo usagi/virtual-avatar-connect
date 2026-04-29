@@ -1070,6 +1070,7 @@ export type FlowgraphCapabilitySummary = {
  node_count: number;
  effectful_node_count: number;
  capabilities: string[];
+ capability_counts: Record<string, number>;
  nodes: FlowgraphCapabilityNode[];
 };
 

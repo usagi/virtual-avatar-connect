@@ -36,8 +36,12 @@
 
  const diags = $derived(flowgraphStore.diagnostics?.diagnostics ?? []);
  const capabilitySummary = $derived(flowgraphStore.diagnostics?.capability_summary);
- const capabilityLabels = $derived(
-  capabilitySummary?.capabilities.map((capability) => capabilityLabel(capability)) ?? [],
+ const capabilityCounts = $derived(
+  Object.entries(capabilitySummary?.capability_counts ?? {}).map(([capability, count]) => ({
+   capability,
+   count,
+   label: capabilityLabel(capability),
+  })),
  );
 </script>
 
@@ -48,10 +52,12 @@
     <span class="font-mono text-[0.7rem] opacity-70">
      nodes {capabilitySummary.node_count} / effects {capabilitySummary.effectful_node_count}
     </span>
-    {#if capabilityLabels.length > 0}
+    {#if capabilityCounts.length > 0}
      <span class="opacity-50">capabilities</span>
-     {#each capabilityLabels as label}
-      <span class="rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem]">{label}</span>
+     {#each capabilityCounts as item (item.capability)}
+      <span class="rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem]">
+       {item.label} {item.count}
+      </span>
      {/each}
     {:else}
      <span class="opacity-50">capabilities none</span>

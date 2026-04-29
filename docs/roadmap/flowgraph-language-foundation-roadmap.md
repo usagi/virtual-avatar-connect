@@ -113,6 +113,11 @@ Node Palette と Flowgraph Node Card に `effect_class` と capability summary �
   "node_count": 8,
   "effectful_node_count": 3,
   "capabilities": ["file_read", "file_write", "network"],
+  "capability_counts": {
+    "file_read": 1,
+    "file_write": 1,
+    "network": 1
+  },
   "nodes": [
     {
       "node": "main::load",

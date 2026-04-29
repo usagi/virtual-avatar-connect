@@ -195,6 +195,7 @@ pub struct GraphCapabilitySummary {
 	pub node_count: usize,
 	pub effectful_node_count: usize,
 	pub capabilities: Vec<String>,
+	pub capability_counts: BTreeMap<String, usize>,
 	pub nodes: Vec<GraphCapabilityNode>,
 }
 
@@ -235,10 +236,17 @@ impl GraphCapabilitySummary {
 		}
 
 		nodes.sort_by(|a, b| a.node.cmp(&b.node));
+		let capability_counts = nodes.iter().fold(BTreeMap::new(), |mut out, node| {
+			for cap in &node.capabilities {
+				*out.entry(cap.clone()).or_insert(0) += 1;
+			}
+			out
+		});
 		Self {
 			node_count: node_meta.len(),
 			effectful_node_count,
 			capabilities: capabilities.into_iter().collect(),
+			capability_counts,
 			nodes,
 		}
 	}
