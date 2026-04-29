@@ -274,6 +274,8 @@ struct FixtureExpect {
 	#[serde(default)]
 	stored_values: Vec<FixtureExpectedValue>,
 	#[serde(default)]
+	stored_value_paths: Vec<FixtureExpectedValuePath>,
+	#[serde(default)]
 	file_reads: Vec<FixtureExpectedFileRead>,
 	#[serde(default)]
 	file_writes: Vec<FixtureExpectedFileWrite>,
@@ -312,6 +314,14 @@ struct FixtureExpectedValue {
 	port: String,
 	#[serde(default)]
 	ty: Option<String>,
+	value: toml::Value,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureExpectedValuePath {
+	node: String,
+	port: String,
+	pointer: String,
 	value: toml::Value,
 }
 
@@ -822,6 +832,34 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 			None => failures.push(format!("stored_value {}:{}: missing", expected.node, expected.port)),
 		}
 	}
+	for expected in &case.expect.stored_value_paths {
+		match report
+			.stored_values
+			.iter()
+			.find(|actual| actual.node == expected.node && actual.port == expected.port)
+		{
+			Some(actual) => match actual.value.pointer(&expected.pointer) {
+				Some(actual_value) => {
+					let expected_value = toml_value_to_json(&expected.value);
+					if actual_value != &expected_value {
+						failures.push(format!(
+							"stored_value_path {}:{} {} value: expected {}, actual {}",
+							expected.node,
+							expected.port,
+							expected.pointer,
+							compact_json(&expected_value),
+							compact_json(actual_value)
+						));
+					}
+				}
+				None => failures.push(format!(
+					"stored_value_path {}:{} {}: missing",
+					expected.node, expected.port, expected.pointer
+				)),
+			},
+			None => failures.push(format!("stored_value {}:{}: missing", expected.node, expected.port)),
+		}
+	}
 	for expected in &case.expect.file_reads {
 		match find_recorded_path_effect(report, "file_read", &expected.node, &expected.path) {
 			Some(actual) => assert_file_effect(
@@ -1195,6 +1233,72 @@ mod tests {
 			.failures
 			.iter()
 			.any(|f| f.contains("value: expected \"expected\", actual \"actual\"")));
+		assert!(result.failures.iter().any(|f| f == "stored_value missing:value: missing"));
+	}
+
+	#[test]
+	fn stored_value_path_assertion_passes() {
+		let report = report_with_stored_value("n", "out", "json", serde_json::json!({"items": [{"name": "amiya"}]}));
+		let case = FixtureTestCase {
+			name: Some("stored path".into()),
+			expect: FixtureExpect {
+				stored_value_paths: vec![FixtureExpectedValuePath {
+					node: "n".into(),
+					port: "out".into(),
+					pointer: "/items/0/name".into(),
+					value: toml::Value::String("amiya".into()),
+				}],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(result.ok, "{:?}", result.failures);
+	}
+
+	#[test]
+	fn stored_value_path_assertion_reports_missing_and_mismatch() {
+		let report = report_with_stored_value("n", "out", "json", serde_json::json!({"items": [{"name": "actual"}]}));
+		let case = FixtureTestCase {
+			name: Some("stored path".into()),
+			expect: FixtureExpect {
+				stored_value_paths: vec![
+					FixtureExpectedValuePath {
+						node: "n".into(),
+						port: "out".into(),
+						pointer: "/items/0/name".into(),
+						value: toml::Value::String("expected".into()),
+					},
+					FixtureExpectedValuePath {
+						node: "n".into(),
+						port: "out".into(),
+						pointer: "/items/1/name".into(),
+						value: toml::Value::String("missing".into()),
+					},
+					FixtureExpectedValuePath {
+						node: "missing".into(),
+						port: "value".into(),
+						pointer: "/x".into(),
+						value: toml::Value::Integer(1),
+					},
+				],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(!result.ok);
+		assert_eq!(result.failures.len(), 3);
+		assert!(result
+			.failures
+			.iter()
+			.any(|f| f.contains("stored_value_path n:out /items/0/name value")));
+		assert!(result
+			.failures
+			.iter()
+			.any(|f| f == "stored_value_path n:out /items/1/name: missing"));
 		assert!(result.failures.iter().any(|f| f == "stored_value missing:value: missing"));
 	}
 

@@ -93,6 +93,12 @@ count = 1
 node = "result"
 port = "value"
 value = "expected"
+
+[[tests.expect.stored_value_paths]]
+node = "result"
+port = "json"
+pointer = "/items/0/name"
+value = "amiya"
 ```
 
 投入した trigger は `trigger_history[]` として記録され、node / exec / delay / override を検証できます。

@@ -377,6 +377,21 @@ trace = []
 `trace = [...]` は完全一致、`trace_contains` は各文字列が trace のどこかに含まれていることだけを検証する。
 診断文字列全体を固定したくないが、重要な分岐や error fragment は確認したい fixture に使う。
 
+### LF-3o stored value JSON pointer assertions ✅
+
+`[[tests.expect.stored_value_paths]]` を追加した。
+stored value 全体ではなく、JSON Pointer で指定した断片だけを検証できる。
+
+```toml
+[[tests.expect.stored_value_paths]]
+node = "main::load"
+port = "table"
+pointer = "/0/source"
+value = "hello"
+```
+
+Table / JSON の出力全体を固定すると fixture が重くなるため、重要なセルや field だけを pin する用途に使う。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。
