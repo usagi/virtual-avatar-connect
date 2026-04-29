@@ -338,6 +338,17 @@ value = "hello fixture"
 `flowgraph.example/twitch-echo` は、投入した ingress trigger の node / exec / override を構造化 assertion で検証する。
 これにより、ingress 系 fixture でも trace 文字列への依存を減らし、fixture input の形そのものを regression test できる。
 
+### LF-3k suite summary fields ✅
+
+`FixtureSuiteReport` に suite 直下の集計値を追加した。
+
+- `test_count`
+- `failed_tests`
+- `trigger_count`
+- `effect_count`
+
+通常出力と JSON 出力の要約を揃え、CI やスクリプトが `reports[]` 全体を走査しなくても、suite 全体の規模と失敗数を読めるようにする。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。

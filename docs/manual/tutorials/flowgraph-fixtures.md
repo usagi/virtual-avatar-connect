@@ -32,6 +32,7 @@ cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-root flowgraph.ex
 ```
 
 JSON 出力では suite 全体の成否、fixture 件数、失敗件数、各 fixture の report を返します。
+`test_count` / `failed_tests` / `trigger_count` / `effect_count` も suite 直下に出るため、CI やスクリプト側で全 report を走査せずに要約を読めます。
 
 ```powershell
 cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-root flowgraph.example --flowgraph-test-json

@@ -127,6 +127,10 @@ pub struct FixtureSuiteReport {
 	pub root: String,
 	pub fixture_count: usize,
 	pub failed_fixtures: usize,
+	pub test_count: usize,
+	pub failed_tests: usize,
+	pub trigger_count: usize,
+	pub effect_count: usize,
 	pub reports: Vec<FixtureRunReport>,
 	pub errors: Vec<FixtureSuiteError>,
 }
@@ -383,11 +387,19 @@ pub async fn run_fixture_suite_report(root: &Path) -> Result<FixtureSuiteReport,
 	}
 	let failed_reports = reports.iter().filter(|report| !report.ok).count();
 	let failed_fixtures = failed_reports + errors.len();
+	let test_count = reports.iter().map(|report| report.tests.len()).sum();
+	let failed_tests = reports.iter().map(|report| report.failed_tests).sum();
+	let trigger_count = reports.iter().map(|report| report.trigger_count).sum();
+	let effect_count = reports.iter().map(|report| report.effect_count).sum();
 	Ok(FixtureSuiteReport {
 		ok: failed_fixtures == 0,
 		root: root.display().to_string(),
 		fixture_count: reports.len() + errors.len(),
 		failed_fixtures,
+		test_count,
+		failed_tests,
+		trigger_count,
+		effect_count,
 		reports,
 		errors,
 	})
@@ -1060,6 +1072,10 @@ mod tests {
 		assert!(report.ok, "errors: {:?}", report.errors);
 		assert_eq!(report.fixture_count, 8);
 		assert_eq!(report.failed_fixtures, 0);
+		assert_eq!(report.test_count, 8);
+		assert_eq!(report.failed_tests, 0);
+		assert_eq!(report.trigger_count, 7);
+		assert_eq!(report.effect_count, 8);
 	}
 
 	#[tokio::test]
