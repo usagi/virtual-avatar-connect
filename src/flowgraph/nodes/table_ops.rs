@@ -247,7 +247,7 @@ impl NodeDescriptor for TableWriteTsvNode {
 impl EffectfulNode for TableWriteTsvNode {
 	async fn execute(
 		&self,
-		_ctx: &mut ExecCtx,
+		ctx: &mut ExecCtx,
 		_props: &InputMap,
 		inputs: &InputMap,
 		fired: &ExecFireSet,
@@ -260,6 +260,21 @@ impl EffectfulNode for TableWriteTsvNode {
 		let serialized = write_tsv_string(&table);
 		let bytes = serialized.as_bytes().to_vec();
 		let len = bytes.len() as i64;
+		if let Some(mock) = ctx
+			.effect_mocks
+			.as_ref()
+			.and_then(|mocks| mocks.file_write_response(&ctx.node_id))
+			.cloned()
+		{
+			ctx.log(format!("file.write mock: {path} ({len} bytes) -> node {}", ctx.node_id));
+			if let Some(error) = mock.error {
+				return Ok(err_output_write(format!("write {path}: {error}")));
+			}
+			return Ok(NodeOutput::new()
+				.set_data("bytes_written", SocketValue::Int(len))
+				.set_data("error", SocketValue::String(String::new()))
+				.fire_exec("on_success"));
+		}
 		let tmp = format!("{path}.tmp");
 		if let Err(e) = tokio::fs::write(&tmp, &bytes).await {
 			return Ok(err_output_write(format!("write tmp {tmp}: {e}")));

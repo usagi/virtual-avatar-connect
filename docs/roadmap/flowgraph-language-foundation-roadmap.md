@@ -243,6 +243,22 @@ hello	hi
 JSON 出力には HTTP mock と同じ `mock_count` / `mocks[]` として `kind = "file_read"` が載る。
 これにより、ファイル監視・辞書・Table 系ノードの regression test を実ファイル配置に依存させずに増やせる。
 
+### LF-3f fixture file write mock capability ✅
+
+`*.flowgraph.test.toml` の `[mocks]` で、ファイル書き込み I/O も node 単位に差し替えられる。
+初期版は `flowgraph.table.write_tsv` に限定し、実ファイルを書かずに `bytes_written` と success / error 分岐を検証する。
+
+```toml
+[mocks]
+
+[[mocks.file_write]]
+node = "main::write"
+```
+
+`flowgraph.example/table-write-tsv-mock` は `table.load_tsv -> table.write_tsv` を file read / write の両 mock で検証する。
+JSON 出力には `kind = "file_write"` として載る。
+書き込まれる本文の厳密 assert は、次段の recorded effects / effect log 設計で扱う。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。

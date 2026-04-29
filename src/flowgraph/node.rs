@@ -569,11 +569,12 @@ impl ExecCtx {
 pub struct EffectMocks {
 	pub http: HashMap<String, HttpMockResponse>,
 	pub file_read: HashMap<String, FileReadMockResponse>,
+	pub file_write: HashMap<String, FileWriteMockResponse>,
 }
 
 impl EffectMocks {
 	pub fn is_empty(&self) -> bool {
-		self.http.is_empty() && self.file_read.is_empty()
+		self.http.is_empty() && self.file_read.is_empty() && self.file_write.is_empty()
 	}
 
 	pub fn http_response(&self, node_id: &str) -> Option<&HttpMockResponse> {
@@ -582,6 +583,10 @@ impl EffectMocks {
 
 	pub fn file_read_response(&self, node_id: &str) -> Option<&FileReadMockResponse> {
 		self.file_read.get(node_id)
+	}
+
+	pub fn file_write_response(&self, node_id: &str) -> Option<&FileWriteMockResponse> {
+		self.file_write.get(node_id)
 	}
 }
 
@@ -596,6 +601,11 @@ pub struct HttpMockResponse {
 #[derive(Debug, Clone)]
 pub struct FileReadMockResponse {
 	pub contents: String,
+	pub error: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FileWriteMockResponse {
 	pub error: Option<String>,
 }
 

@@ -1,0 +1,67 @@
+# fixture file_read / file_write mock で TSV load -> write を検証する最小例。
+
+[meta]
+title = "table write tsv mock"
+description = "Fixture の file_read / file_write mock で flowgraph.table.write_tsv を実ファイルなしに検証する"
+tags = ["example", "table", "tsv", "fixture", "mock"]
+
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 140]
+properties.path = "/input/table-write-tsv-mock"
+properties.method = "POST"
+properties.body_format = "plain"
+properties.fixed_channel = "table_write_tsv_mock"
+
+[[nodes]]
+id = "read_path"
+feature = "flowgraph.literal.string"
+position = [320, 240]
+properties.value = "fixture.tsv"
+
+[[nodes]]
+id = "mode"
+feature = "flowgraph.literal.string"
+position = [320, 320]
+properties.value = "headerful"
+
+[[nodes]]
+id = "load"
+feature = "flowgraph.table.load_tsv"
+position = [560, 140]
+
+[[nodes]]
+id = "write_path"
+feature = "flowgraph.literal.string"
+position = [560, 320]
+properties.value = "out.tsv"
+
+[[nodes]]
+id = "write"
+feature = "flowgraph.table.write_tsv"
+position = [800, 140]
+
+[[edges]]
+from = "in:exec_out"
+to = "load:exec_in"
+
+[[edges]]
+from = "read_path:value"
+to = "load:path"
+
+[[edges]]
+from = "mode:value"
+to = "load:mode"
+
+[[edges]]
+from = "load:on_success"
+to = "write:exec_in"
+
+[[edges]]
+from = "load:table"
+to = "write:table"
+
+[[edges]]
+from = "write_path:value"
+to = "write:path"
