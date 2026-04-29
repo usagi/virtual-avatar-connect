@@ -1,6 +1,7 @@
 //! `flowgraph.ingress.vmc_udp` 用ブリッジ（Phase M1）。
 //!
-//! UDP データグラムを受信するたびに、ペイロードを **Base64** した文字列を `__content__` に載せ、
+//! UDP データグラムを受信するたびに、ペイロードを **Base64** した文字列を `__content__` に、
+//! 生バイト列を `__content_bytes__` に載せ、
 //! 送信元 `ip:port` を `__source_actor__`、`fixed_channel`（空なら `vmc_udp`）を `__source_kind__`、
 //! メタ JSON（`remote` / `byte_len` / `encoding`）を `__meta__` に載せた [`TriggerEvent`] を送る。
 
@@ -98,6 +99,7 @@ fn spawn_one(entry: FlowgraphVmcUdpIngress, trigger: TriggerHandle, shutdown: Ar
 							let ev = TriggerEvent::new(&node_id)
 								.with_exec("__trigger__")
 								.with_override("__content__", SocketValue::String(b64))
+								.with_override("__content_bytes__", SocketValue::Bytes(slice.to_vec()))
 								.with_override("__source_actor__", SocketValue::String(actor))
 								.with_override("__source_kind__", SocketValue::String(kind.clone()))
 								.with_override("__meta__", SocketValue::Json(meta));

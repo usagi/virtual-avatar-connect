@@ -896,7 +896,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ### `flowgraph.ingress.osc_udp`
 
-**OSC UDP Ingress** — 汎用 OSC（UDP データグラム）を受信し、ingress echo で下流へ流す。`content` は Base64。`__meta__.profile` は `osc_udp`。
+**OSC UDP Ingress** — 汎用 OSC（UDP データグラム）を受信し、ingress echo で下流へ流す。`content` は Base64、`content_bytes` は bytes。`__meta__.profile` は `osc_udp`。
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -905,6 +905,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `__source_actor__` | `string` | `""` |  |
 | `__source_kind__` | `string` | `""` |  |
 | `__meta__` | `json` | `null` |  |
+| `__content_bytes__` | `bytes` | `""` |  |
 
 | Output | Type | Note |
 |---|---|---|
@@ -913,6 +914,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `source_actor` | `string` |  |
 | `source_kind` | `string` |  |
 | `meta` | `json` |  |
+| `content_bytes` | `bytes` |  |
 
 | Property | Type | Default | Required | Note |
 |---|---|---|---|---|
@@ -984,7 +986,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 ### `flowgraph.ingress.vmc_udp`
 
-**VMC UDP Ingress** — VMC 互換の生 UDP を受信し、各データグラムを ingress echo で下流へ流す。`content` は Base64 文字列。
+**VMC UDP Ingress** — VMC 互換の生 UDP を受信し、各データグラムを ingress echo で下流へ流す。`content` は Base64 文字列、`content_bytes` は bytes。
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -993,6 +995,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `__source_actor__` | `string` | `""` |  |
 | `__source_kind__` | `string` | `""` |  |
 | `__meta__` | `json` | `null` |  |
+| `__content_bytes__` | `bytes` | `""` |  |
 
 | Output | Type | Note |
 |---|---|---|
@@ -1001,6 +1004,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `source_actor` | `string` |  |
 | `source_kind` | `string` |  |
 | `meta` | `json` |  |
+| `content_bytes` | `bytes` |  |
 
 | Property | Type | Default | Required | Note |
 |---|---|---|---|---|

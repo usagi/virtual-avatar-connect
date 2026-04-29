@@ -492,6 +492,12 @@ WASM は Flowgraph の主表現ではなく、module / package system の実行�
 既存の `payload_b64: string` は互換用に残し、`payload` が非空なら bytes を優先、空なら従来通り Base64 を decode する。
 これにより、既存の VMC examples を壊さず、`bytes.from_base64 -> motion.vmc_parse` や将来の binary ingress から `motion_frame` へ直接つなぐ足場ができた。
 
+### LF-5d binary UDP ingress bytes output ✅
+
+`flowgraph.ingress.vmc_udp` / `flowgraph.ingress.osc_udp` に `content_bytes: bytes` 出力を追加した。
+既存の `content: string` は Base64 互換出力として残し、bridge は `__content__` と `__content_bytes__` の両方を投入する。
+これにより既存グラフはそのまま動き、binary-aware graph は Base64 round-trip を挟まず `content_bytes -> motion.vmc_parse.payload` へ接続できる。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。

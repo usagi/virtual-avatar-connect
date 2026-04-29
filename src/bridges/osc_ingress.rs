@@ -1,7 +1,7 @@
 //! `flowgraph.ingress.osc_udp` 用ブリッジ（汎用 OSC / 任意 UDP ペイロードの入口）。
 //!
 //! VMC 専用の [`super::vmc_ingress`] と **ノード・メタを分離**する（`__meta__` に `profile: "osc_udp"` を載せ、
-//! `__source_kind__` 既定は `osc_udp`）。ペイロードの Base64 運搬は VMC と同型だが、意味論は汎用 OSC 向け。
+//! `__source_kind__` 既定は `osc_udp`）。ペイロードは Base64 string と bytes の両方で運搬するが、意味論は汎用 OSC 向け。
 
 use crate::flowgraph::loader::LoadedNodeMeta;
 use crate::flowgraph::node::{TriggerEvent, TriggerHandle};
@@ -98,6 +98,7 @@ fn spawn_one(entry: FlowgraphOscUdpIngress, trigger: TriggerHandle, shutdown: Ar
 							let ev = TriggerEvent::new(&node_id)
 								.with_exec("__trigger__")
 								.with_override("__content__", SocketValue::String(b64))
+								.with_override("__content_bytes__", SocketValue::Bytes(slice.to_vec()))
 								.with_override("__source_actor__", SocketValue::String(actor))
 								.with_override("__source_kind__", SocketValue::String(kind.clone()))
 								.with_override("__meta__", SocketValue::Json(meta));

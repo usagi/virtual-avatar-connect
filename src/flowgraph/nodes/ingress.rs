@@ -43,6 +43,14 @@ fn ingress_inputs() -> Vec<PortSpec> {
 	]
 }
 
+fn binary_ingress_inputs() -> Vec<PortSpec> {
+	let mut inputs = ingress_inputs();
+	inputs.push(
+		PortSpec::input("__content_bytes__", "(internal) content bytes", SocketType::Bytes).with_default(SocketValue::Bytes(Vec::new())),
+	);
+	inputs
+}
+
 fn ingress_outputs() -> Vec<PortSpec> {
 	vec![
 		PortSpec::exec_output("exec_out", "Exec Out"),
@@ -51,6 +59,12 @@ fn ingress_outputs() -> Vec<PortSpec> {
 		PortSpec::output("source_kind", "Source Kind", SocketType::String),
 		PortSpec::output("meta", "Meta", SocketType::Json),
 	]
+}
+
+fn binary_ingress_outputs() -> Vec<PortSpec> {
+	let mut outputs = ingress_outputs();
+	outputs.push(PortSpec::output("content_bytes", "Content Bytes", SocketType::Bytes));
+	outputs
 }
 
 async fn ingress_compute(inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
@@ -70,6 +84,16 @@ async fn ingress_compute(inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<
 		.set_data("source_kind", kind)
 		.set_data("meta", meta)
 		.fire_exec("exec_out"))
+}
+
+async fn binary_ingress_compute(inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	let mut out = ingress_compute(inputs, fired_exec).await?;
+	if !fired_exec.contains("__trigger__") {
+		return Ok(out);
+	}
+	let content_bytes = inputs.get("__content_bytes__").cloned().unwrap_or(SocketValue::Bytes(Vec::new()));
+	out = out.set_data("content_bytes", content_bytes);
+	Ok(out)
 }
 
 // ---------------------------------------------------------------------
@@ -113,7 +137,13 @@ impl NodeDescriptor for WebInputIngressNode {
 
 #[async_trait]
 impl PureNode for WebInputIngressNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_props: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		ingress_compute(inputs, fired_exec).await
 	}
 }
@@ -165,7 +195,13 @@ impl NodeDescriptor for VoiceIngressNode {
 
 #[async_trait]
 impl PureNode for VoiceIngressNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_props: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		ingress_compute(inputs, fired_exec).await
 	}
 }
@@ -229,7 +265,13 @@ impl NodeDescriptor for TwitchIngressNode {
 
 #[async_trait]
 impl PureNode for TwitchIngressNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_props: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		ingress_compute(inputs, fired_exec).await
 	}
 }
@@ -358,7 +400,13 @@ async fn twitch_eventsub_compute(inputs: &InputMap, fired_exec: &ExecFireSet) ->
 
 #[async_trait]
 impl PureNode for TwitchEventsubIngressNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_props: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		twitch_eventsub_compute(inputs, fired_exec).await
 	}
 }
@@ -483,7 +531,13 @@ async fn channel_subscribe_compute(inputs: &InputMap, fired_exec: &ExecFireSet) 
 
 #[async_trait]
 impl PureNode for ChannelSubscribeIngressNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_props: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		channel_subscribe_compute(inputs, fired_exec).await
 	}
 }
@@ -494,6 +548,7 @@ impl PureNode for ChannelSubscribeIngressNode {
 //
 // VMC 互換の **生 UDP** を [`crate::bridges::vmc_ingress`] が受信し、各データグラムごとに
 // `TriggerEvent` を投入する。`content` にはペイロードの **Base64**（`__content__` 経由で echo）、
+// `content_bytes` には同じペイロードの `bytes` を流す。
 // `meta` に `remote` / `byte_len` / `encoding` を載せる。
 
 pub struct VmcUdpIngressNode;
@@ -504,9 +559,9 @@ impl NodeDescriptor for VmcUdpIngressNode {
 			feature: "flowgraph.ingress.vmc_udp".into(),
 			title: "VMC UDP Ingress".into(),
 			category: "ingress".into(),
-			description: Some("VMC 互換の生 UDP を受信し、各データグラムを ingress echo で下流へ流す。`content` は Base64 文字列。".into()),
-			inputs: ingress_inputs(),
-			outputs: ingress_outputs(),
+			description: Some("VMC 互換の生 UDP を受信し、各データグラムを ingress echo で下流へ流す。`content` は Base64 文字列、`content_bytes` は bytes。".into()),
+			inputs: binary_ingress_inputs(),
+			outputs: binary_ingress_outputs(),
 			properties: vec![
 				PropertySpec::new("bind", "Bind", SocketType::String, SocketValue::String(String::new()))
 					.description("受信 UDP の \"host:port\"（例 \"0.0.0.0:39539\"）。空のときブリッジは起動しない。"),
@@ -524,8 +579,14 @@ impl NodeDescriptor for VmcUdpIngressNode {
 
 #[async_trait]
 impl PureNode for VmcUdpIngressNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
-		ingress_compute(inputs, fired_exec).await
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_props: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
+		binary_ingress_compute(inputs, fired_exec).await
 	}
 }
 
@@ -545,10 +606,10 @@ impl NodeDescriptor for OscUdpIngressNode {
 			title: "OSC UDP Ingress".into(),
 			category: "ingress".into(),
 			description: Some(
-				"汎用 OSC（UDP データグラム）を受信し、ingress echo で下流へ流す。`content` は Base64。`__meta__.profile` は `osc_udp`。".into(),
+				"汎用 OSC（UDP データグラム）を受信し、ingress echo で下流へ流す。`content` は Base64、`content_bytes` は bytes。`__meta__.profile` は `osc_udp`。".into(),
 			),
-			inputs: ingress_inputs(),
-			outputs: ingress_outputs(),
+			inputs: binary_ingress_inputs(),
+			outputs: binary_ingress_outputs(),
 			properties: vec![
 				PropertySpec::new("bind", "Bind", SocketType::String, SocketValue::String(String::new()))
 					.description("受信 UDP の \"host:port\"。空のときブリッジは起動しない。"),
@@ -566,8 +627,14 @@ impl NodeDescriptor for OscUdpIngressNode {
 
 #[async_trait]
 impl PureNode for OscUdpIngressNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
-		ingress_compute(inputs, fired_exec).await
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_props: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
+		binary_ingress_compute(inputs, fired_exec).await
 	}
 }
 
@@ -657,7 +724,15 @@ mod tests {
 	#[tokio::test]
 	async fn ingress_without_trigger_is_noop() {
 		let node = VoiceIngressNode;
-		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
+		let out = node
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&InputMap::new(),
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		assert!(out.fired_exec.is_empty());
 		assert!(out.data.is_empty());
 	}
@@ -699,7 +774,15 @@ mod tests {
 	#[tokio::test]
 	async fn channel_subscribe_without_trigger_is_noop() {
 		let node = ChannelSubscribeIngressNode;
-		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
+		let out = node
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&InputMap::new(),
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		assert!(out.fired_exec.is_empty());
 		assert!(out.data.is_empty());
 	}
@@ -735,5 +818,21 @@ mod tests {
 
 		assert_eq!(ctx.trace.len(), 1);
 		assert!(ctx.trace[0].contains("QUJD"), "trace: {:?}", ctx.trace);
+	}
+
+	#[tokio::test]
+	async fn vmc_udp_ingress_echoes_content_bytes() {
+		let mut inputs = InputMap::new();
+		inputs.insert("__content__".into(), SocketValue::String("QUJD".into()));
+		inputs.insert("__content_bytes__".into(), SocketValue::Bytes(vec![65, 66, 67]));
+		inputs.insert("__source_kind__".into(), SocketValue::String("vmc_udp".into()));
+		let mut fired = ExecFireSet::new();
+		fired.insert("__trigger__");
+		let out = VmcUdpIngressNode
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fired)
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("content"), Some(&SocketValue::String("QUJD".into())));
+		assert_eq!(out.data.get("content_bytes"), Some(&SocketValue::Bytes(vec![65, 66, 67])));
 	}
 }
