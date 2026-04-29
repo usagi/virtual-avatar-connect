@@ -860,6 +860,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `body` | `string` |  |
 | `json` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ## ingress
 
