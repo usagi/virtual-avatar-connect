@@ -124,8 +124,10 @@ impl Args {
 						println!("  fixtures: {} total / {} failed", report.fixture_count, report.failed_fixtures);
 						let total_tests: usize = report.reports.iter().map(|fixture| fixture.tests.len()).sum();
 						let failed_tests: usize = report.reports.iter().map(|fixture| fixture.failed_tests).sum();
+						let total_triggers: usize = report.reports.iter().map(|fixture| fixture.trigger_count).sum();
 						let total_effects: usize = report.reports.iter().map(|fixture| fixture.effect_count).sum();
 						println!("  tests: {} total / {} failed", total_tests, failed_tests);
+						println!("  triggers: {}", total_triggers);
 						println!("  effects: {}", total_effects);
 						for fixture in &report.reports {
 							if !fixture.ok {
