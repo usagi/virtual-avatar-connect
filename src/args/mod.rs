@@ -67,6 +67,10 @@ pub struct Args {
 	#[arg(long)]
 	pub flowgraph_test_dir: Option<String>,
 
+	/// 指定 root 配下の `*.flowgraph.test.toml` を持つ Flowgraph fixture をまとめて実行して終了します。
+	#[arg(long)]
+	pub flowgraph_test_root: Option<String>,
+
 	/// `--flowgraph-test-dir` の結果を JSON で出力します。
 	#[arg(long)]
 	pub flowgraph_test_json: bool,

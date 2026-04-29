@@ -115,6 +115,22 @@ pub struct FixtureRunReport {
 	pub failed_tests: usize,
 }
 
+#[derive(Debug, Serialize)]
+pub struct FixtureSuiteReport {
+	pub ok: bool,
+	pub root: String,
+	pub fixture_count: usize,
+	pub failed_fixtures: usize,
+	pub reports: Vec<FixtureRunReport>,
+	pub errors: Vec<FixtureSuiteError>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FixtureSuiteError {
+	pub root: String,
+	pub error: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct FixtureTriggerHistory {
 	pub node: String,
@@ -320,6 +336,31 @@ pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, Fi
 	report.failed_tests = report.tests.iter().filter(|t| !t.ok).count();
 	report.ok = report.failed_tests == 0;
 	Ok(report)
+}
+
+pub async fn run_fixture_suite_report(root: &Path) -> Result<FixtureSuiteReport, FixtureError> {
+	let fixture_roots = discover_fixture_roots(root)?;
+	let mut reports = Vec::new();
+	let mut errors = Vec::new();
+	for fixture_root in fixture_roots {
+		match run_fixture_once_report(&fixture_root).await {
+			Ok(report) => reports.push(report),
+			Err(error) => errors.push(FixtureSuiteError {
+				root: fixture_root.display().to_string(),
+				error: error.to_string(),
+			}),
+		}
+	}
+	let failed_reports = reports.iter().filter(|report| !report.ok).count();
+	let failed_fixtures = failed_reports + errors.len();
+	Ok(FixtureSuiteReport {
+		ok: failed_fixtures == 0,
+		root: root.display().to_string(),
+		fixture_count: reports.len() + errors.len(),
+		failed_fixtures,
+		reports,
+		errors,
+	})
 }
 
 async fn run_fixture_program(
@@ -568,6 +609,40 @@ fn discover_test_files(root: &Path) -> Result<Vec<PathBuf>, FixtureError> {
 	}
 	out.sort();
 	Ok(out)
+}
+
+fn discover_fixture_roots(root: &Path) -> Result<Vec<PathBuf>, FixtureError> {
+	let mut out = Vec::new();
+	discover_fixture_roots_inner(root, &mut out)?;
+	out.sort();
+	Ok(out)
+}
+
+fn discover_fixture_roots_inner(root: &Path, out: &mut Vec<PathBuf>) -> Result<(), FixtureError> {
+	let entries = std::fs::read_dir(root).map_err(FixtureError::TestIo)?;
+	let mut children = Vec::new();
+	let mut has_test_file = false;
+	for entry in entries {
+		let entry = entry.map_err(FixtureError::TestIo)?;
+		let path = entry.path();
+		let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
+			continue;
+		};
+		if path.is_file() && name.ends_with(".flowgraph.test.toml") {
+			has_test_file = true;
+		} else if path.is_dir() && !matches!(name, ".git" | "target" | "node_modules") {
+			children.push(path);
+		}
+	}
+	if has_test_file {
+		out.push(root.to_path_buf());
+		return Ok(());
+	}
+	children.sort();
+	for child in children {
+		discover_fixture_roots_inner(&child, out)?;
+	}
+	Ok(())
 }
 
 fn read_declared_tests(root: &Path) -> Result<Vec<ParsedFixtureTestFile>, FixtureError> {
@@ -890,6 +965,15 @@ mod tests {
 		assert!(report.ok, "report: {:?}", report.tests);
 		assert!(report.trace.iter().any(|line| line.contains("fixture network down")));
 		assert_eq!(report.failed_tests, 0);
+	}
+
+	#[tokio::test]
+	async fn example_fixture_suite_passes() {
+		let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("flowgraph.example");
+		let report = run_fixture_suite_report(&dir).await.expect("report");
+		assert!(report.ok, "errors: {:?}", report.errors);
+		assert_eq!(report.fixture_count, 8);
+		assert_eq!(report.failed_fixtures, 0);
 	}
 
 	#[tokio::test]

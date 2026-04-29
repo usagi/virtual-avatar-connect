@@ -291,6 +291,19 @@ File read / write:
 `[tests.expect]` では `effect_count` に加えて、kind 別に `[[tests.expect.http_requests]]` / `[[tests.expect.file_reads]]` / `[[tests.expect.file_writes]]` を使う。
 これにより trace string の目視依存を減らし、外部 I/O 境界を構造化して regression test できる。
 
+### LF-3h fixture suite runner ✅
+
+`--flowgraph-test-root` で、指定 root 配下の `*.flowgraph.test.toml` を持つ Flowgraph fixture ディレクトリを列挙して一括実行できる。
+
+```powershell
+cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-root flowgraph.example
+cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-root flowgraph.example --flowgraph-test-json
+```
+
+JSON 出力は `FixtureSuiteReport` として、`fixture_count` / `failed_fixtures` / `reports[]` / `errors[]` を返す。
+各 fixture の report は単体 `--flowgraph-test-dir` と同じ `FixtureRunReport`。
+これにより、CI やローカル回帰確認で fixture 群をまとめて検証できる。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。

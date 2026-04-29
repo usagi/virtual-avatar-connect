@@ -59,7 +59,11 @@ impl Args {
 						println!("  stored_values: {}", report.stored_values.len());
 						println!("  cache: {} hit(s), {} miss(es)", report.cache_hits, report.cache_misses);
 						if !report.tests.is_empty() {
-							println!("  tests: {} passed / {} failed", report.tests.len() - report.failed_tests, report.failed_tests);
+							println!(
+								"  tests: {} passed / {} failed",
+								report.tests.len() - report.failed_tests,
+								report.failed_tests
+							);
 							for test in &report.tests {
 								if !test.ok {
 									println!("    FAIL {} :: {}", test.file, test.name);
@@ -84,6 +88,53 @@ impl Args {
 						);
 					} else {
 						log::error!("Flowgraph fixture 失敗: {e}");
+					}
+					std::process::exit(1);
+				}
+			}
+		}
+
+		if let Some(root_dir) = &self.flowgraph_test_root {
+			let root = std::path::PathBuf::from(root_dir);
+			match crate::flowgraph::fixture_runner::run_fixture_suite_report(&root).await {
+				Ok(report) => {
+					if self.flowgraph_test_json {
+						println!("{}", serde_json::to_string_pretty(&report)?);
+					} else {
+						let status = if report.ok { "OK" } else { "FAILED" };
+						println!("Flowgraph fixture suite {status}: {}", report.root);
+						println!("  fixtures: {} total / {} failed", report.fixture_count, report.failed_fixtures);
+						for fixture in &report.reports {
+							if !fixture.ok {
+								println!("    FAIL {}", fixture.root);
+								for test in &fixture.tests {
+									if !test.ok {
+										println!("      {} :: {}", test.file, test.name);
+										for failure in &test.failures {
+											println!("        - {failure}");
+										}
+									}
+								}
+							}
+						}
+						for error in &report.errors {
+							println!("    ERROR {}: {}", error.root, error.error);
+						}
+					}
+					std::process::exit(if report.ok { 0 } else { 1 });
+				}
+				Err(e) => {
+					if self.flowgraph_test_json {
+						println!(
+							"{}",
+							serde_json::to_string_pretty(&serde_json::json!({
+								"ok": false,
+								"root": root.display().to_string(),
+								"error": e.to_string(),
+							}))?
+						);
+					} else {
+						log::error!("Flowgraph fixture suite 失敗: {e}");
 					}
 					std::process::exit(1);
 				}
