@@ -4,9 +4,10 @@
   *
   * - `flowgraphStore.diagnostics?.diagnostics` を severity 別に色分けして表示。
   * - 行クリックで該当ファイルを `store.openFile` で開き、該当ノードを選択する（可能なら）。
-  */
+ */
  import { flowgraphStore } from '../flowgraphStore.svelte';
  import type { FlowgraphDiagnostic, FlowgraphSeverity } from '../types';
+ import { capabilityLabel } from './effectMetadata';
 
  async function onJump(d: FlowgraphDiagnostic) {
   if (!d.file) return;
@@ -34,9 +35,30 @@
  }
 
  const diags = $derived(flowgraphStore.diagnostics?.diagnostics ?? []);
+ const capabilitySummary = $derived(flowgraphStore.diagnostics?.capability_summary);
+ const capabilityLabels = $derived(
+  capabilitySummary?.capabilities.map((capability) => capabilityLabel(capability)) ?? [],
+ );
 </script>
 
 <div class="h-full">
+ {#if capabilitySummary}
+  <div class="border-b border-surface-300-700 px-2 py-1.5 text-xs">
+   <div class="flex flex-wrap items-center gap-2">
+    <span class="font-mono text-[0.7rem] opacity-70">
+     nodes {capabilitySummary.node_count} / effects {capabilitySummary.effectful_node_count}
+    </span>
+    {#if capabilityLabels.length > 0}
+     <span class="opacity-50">capabilities</span>
+     {#each capabilityLabels as label}
+      <span class="rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem]">{label}</span>
+     {/each}
+    {:else}
+     <span class="opacity-50">capabilities none</span>
+    {/if}
+   </div>
+  </div>
+ {/if}
  {#if diags.length === 0}
   <div class="p-2 text-xs opacity-60">診断なし</div>
  {:else}
