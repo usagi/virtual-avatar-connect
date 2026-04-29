@@ -571,9 +571,14 @@ impl ExecCtx {
 pub struct RecordedEffect {
 	pub kind: String,
 	pub node: String,
+	pub method: Option<String>,
+	pub url: Option<String>,
 	pub path: Option<String>,
+	pub status: Option<i64>,
 	pub bytes: Option<i64>,
 	pub contents: Option<String>,
+	pub request_body: Option<JsonValue>,
+	pub response_body: Option<String>,
 	pub error: Option<String>,
 }
 
@@ -588,9 +593,38 @@ impl RecordedEffect {
 		Self {
 			kind: "file_write".into(),
 			node: node.into(),
+			method: None,
+			url: None,
 			path: Some(path.into()),
+			status: None,
 			bytes: Some(bytes),
 			contents: Some(contents.into()),
+			request_body: None,
+			response_body: None,
+			error,
+		}
+	}
+
+	pub fn http_request(
+		node: impl Into<String>,
+		method: impl Into<String>,
+		url: impl Into<String>,
+		request_body: JsonValue,
+		status: Option<i64>,
+		response_body: Option<String>,
+		error: Option<String>,
+	) -> Self {
+		Self {
+			kind: "http".into(),
+			node: node.into(),
+			method: Some(method.into()),
+			url: Some(url.into()),
+			path: None,
+			status,
+			bytes: None,
+			contents: None,
+			request_body: Some(request_body),
+			response_body,
 			error,
 		}
 	}

@@ -81,9 +81,14 @@ pub struct FixtureTraceValue {
 pub struct FixtureRecordedEffect {
 	pub kind: String,
 	pub node: String,
+	pub method: Option<String>,
+	pub url: Option<String>,
 	pub path: Option<String>,
+	pub status: Option<i64>,
 	pub bytes: Option<i64>,
 	pub contents: Option<String>,
+	pub request_body: Option<serde_json::Value>,
+	pub response_body: Option<String>,
 	pub error: Option<String>,
 }
 
@@ -482,9 +487,14 @@ fn make_report(
 		.map(|effect| FixtureRecordedEffect {
 			kind: effect.kind.clone(),
 			node: effect.node.clone(),
+			method: effect.method.clone(),
+			url: effect.url.clone(),
 			path: effect.path.clone(),
+			status: effect.status,
 			bytes: effect.bytes,
 			contents: effect.contents.clone(),
+			request_body: effect.request_body.clone(),
+			response_body: effect.response_body.clone(),
 			error: effect.error.clone(),
 		})
 		.collect();
@@ -866,9 +876,14 @@ mod tests {
 		report.recorded_effects.push(FixtureRecordedEffect {
 			kind: "file_write".into(),
 			node: "write".into(),
+			method: None,
+			url: None,
 			path: Some("out.tsv".into()),
+			status: None,
 			bytes: Some(12),
 			contents: Some("a\tb\n1\t2\n".into()),
+			request_body: None,
+			response_body: None,
 			error: None,
 		});
 		let case = FixtureTestCase {
@@ -898,9 +913,14 @@ mod tests {
 		report.recorded_effects.push(FixtureRecordedEffect {
 			kind: "file_write".into(),
 			node: "write".into(),
+			method: None,
+			url: None,
 			path: Some("out.tsv".into()),
+			status: None,
 			bytes: Some(12),
 			contents: Some("actual".into()),
+			request_body: None,
+			response_body: None,
 			error: Some("disk full".into()),
 		});
 		let case = FixtureTestCase {

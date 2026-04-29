@@ -25,6 +25,7 @@ node_count = 8
 mock_count = 1
 trigger_count = 1
 trace_count = 3
+effect_count = 1
 trace = [
   "http.request mock: POST http://127.0.0.1:8787/webhook -> node main::http_request",
   "http.request: POST http://127.0.0.1:8787/webhook error: fixture network down",

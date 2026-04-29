@@ -4,7 +4,7 @@
 
 use crate::flowgraph::node::{
 	get_optional_int, get_optional_string, get_required_json, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap,
-	NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
+	NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec, RecordedEffect,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
@@ -93,12 +93,34 @@ impl EffectfulNode for HttpRequestNode {
 		{
 			ctx.log(format!("http.request mock: {} {} -> node {}", spec.method, spec.url, ctx.node_id));
 			match mock.error {
-				Some(error) => Err(error),
-				None => Ok(HttpResponseData {
-					status: mock.status,
-					body_text: mock.body_text,
-					body_json: mock.body_json,
-				}),
+				Some(error) => {
+					ctx.record_effect(RecordedEffect::http_request(
+						ctx.node_id.clone(),
+						spec.method.clone(),
+						spec.url.clone(),
+						spec.body.clone(),
+						None,
+						None,
+						Some(error.clone()),
+					));
+					Err(error)
+				}
+				None => {
+					ctx.record_effect(RecordedEffect::http_request(
+						ctx.node_id.clone(),
+						spec.method.clone(),
+						spec.url.clone(),
+						spec.body.clone(),
+						Some(mock.status),
+						Some(mock.body_text.clone()),
+						None,
+					));
+					Ok(HttpResponseData {
+						status: mock.status,
+						body_text: mock.body_text,
+						body_json: mock.body_json,
+					})
+				}
 			}
 		} else {
 			execute_http_request(spec.clone()).await
