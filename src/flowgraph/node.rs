@@ -773,7 +773,7 @@ pub trait NodeDescriptor: Send + Sync {
 	/// からの外部トリガ発火を許可するかの opt-in フラグ。既定 `false`。
 	///
 	/// `NodeSpec` には持たせず trait 側に置くことで、既存の `NodeSpec { ... }` リテラル
-	/// （各 describe() 実装）を触らずに dictionary.learn / dictionary.forget 等だけを
+	/// （各 describe() 実装）を触らずに glossary.learn / glossary.forget 等だけを
 	/// opt-in にできる設計。
 	///
 	/// セキュリティ判定の source of truth は `NodeRegistry::is_control_triggerable()`（trait 経由）。

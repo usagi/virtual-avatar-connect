@@ -67,14 +67,14 @@ bearer_token = "e2e-fixture-token"
 
 # -------------------------------------------------------------------------
 # φ-1/φ-4: Table catalog — needed by
-#   §3.3 dictionary-editor-409-merge (future)
+#   §3.3 glossary-editor-409-merge (future)
 #   §3.4 live-quick-add-learn-undo  (current)
 # -------------------------------------------------------------------------
 
 [[control_api.tables]]
 key = "sample_dict"
 path = "gui/tests/e2e/fixtures/dictionary/sample.dict.tsv"
-label = "ν Sample Dictionary"
+label = "ν Sample Glossary"
 role = "glossary"
 editable = true
 quick_add = { node_id = "sample::learn", forget_node_id = "sample::forget" }

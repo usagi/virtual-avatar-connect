@@ -419,15 +419,11 @@ pub fn default_registry() -> NodeRegistry {
 	r.register_effectful(Arc::new(nodes::table_ops::TableLoadTsvNode));
 	r.register_effectful(Arc::new(nodes::table_ops::TableWriteTsvNode));
 
-	// --- glossary (η-3 / GRN: formerly dictionary.*) ---
+	// --- glossary (η-3 / GRN) ---
 	r.register_stateful(Arc::new(nodes::dictionary::DictionaryReplaceNode));
 	r.register_stateful(Arc::new(nodes::dictionary::DictionaryMatchNode));
 	r.register_pure(Arc::new(nodes::dictionary::DictionaryLearnNode));
 	r.register_pure(Arc::new(nodes::dictionary::DictionaryForgetNode));
-	r.register_alias("flowgraph.dictionary.replace", "flowgraph.glossary.replace");
-	r.register_alias("flowgraph.dictionary.match", "flowgraph.glossary.match");
-	r.register_alias("flowgraph.dictionary.learn", "flowgraph.glossary.learn");
-	r.register_alias("flowgraph.dictionary.forget", "flowgraph.glossary.forget");
 
 	// --- ingress (δ-3d, δ-9 Part E) ---
 	r.register_pure(Arc::new(nodes::ingress::WebInputIngressNode));
@@ -729,12 +725,13 @@ mod tests {
 	}
 
 	#[test]
-	fn effect_class_resolves_aliases() {
+	fn effect_class_resolves_registered_features() {
 		let r = registry();
 		assert_eq!(r.effect_class("flowgraph.literal.string"), Some("pure"));
 		assert_eq!(r.effect_class("flowgraph.state.int_counter"), Some("stateful"));
 		assert_eq!(r.effect_class("flowgraph.util.log"), Some("effectful"));
-		assert_eq!(r.effect_class("flowgraph.dictionary.learn"), Some("pure"));
+		assert_eq!(r.effect_class("flowgraph.glossary.learn"), Some("pure"));
+		assert_eq!(r.effect_class("flowgraph.dictionary.learn"), None);
 		assert_eq!(r.effect_class("flowgraph.does.not.exist"), None);
 	}
 }

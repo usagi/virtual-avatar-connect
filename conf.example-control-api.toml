@@ -76,11 +76,11 @@ require_token_for_loopback = false
 require_token_for_non_loopback = true
 
 # =========================================================================
-# Dictionary / Table の GUI 編集 allow-list （Phase φ 以降）
+# Glossary / Table の GUI 編集 allow-list （Phase φ 以降）
 # =========================================================================
 #
 # ■ 目的
-#   - GUI の **Dictionary Editor Pane** / **Live Quick-Add Widget** から、
+#   - GUI の **Glossary Editor Pane** / **Live Quick-Add Widget** から、
 #     指定した TSV ファイルだけを安全に読み書きする。
 #   - allow-list に載っていないファイルは Control API が 404 で隠蔽する
 #     （任意パスをブラウザ経由で読み書きされる事故の防止）。
@@ -97,34 +97,34 @@ require_token_for_non_loopback = true
 #     例: `flowgraph/chat-echo/main.flowgraph.toml` 内の id=`learn` は
 #     `"chat-echo/main::learn"`（拡張子 `.flowgraph.toml` は抜く）。
 #   - 現状 `control_triggerable = true` を opt-in しているのは
-#     `flowgraph.dictionary.learn` / `flowgraph.dictionary.forget` のみ。
+#     `flowgraph.glossary.learn` / `flowgraph.glossary.forget` のみ。
 #     それ以外の feature に向けて trigger を打つと 400 で拒否される。
 #
-# 以下 3 例: (1) 基本の辞書タブ (2) read-only 辞書 (3) 辞書以外の generic table
+# 以下 3 例: (1) 基本の用語集タブ (2) read-only 用語集 (3) 用語集以外の generic table
 # =========================================================================
 
 # (1) 読み書き可・Quick-Add 有効（推奨構成）
 # [[control_api.tables]]
 # key      = "chat_dict"                            # 必須。URL / localStorage キー
 # path     = "dictionary.chat.dict.tsv"             # 必須。cwd 相対 or 絶対パス
-# label    = "Chat 辞書"                            # 任意。既定は key
-# role     = "dictionary"                           # "dictionary" を入れると Editor の tab に並ぶ
+# label    = "Chat 用語集"                          # 任意。既定は key
+# role     = "glossary"                             # "glossary" を入れると Editor の tab に並ぶ
 # editable = true                                   # 既定 true。false で mutation API は 403 固定
 #
 # [control_api.tables.quick_add]
-# node_id        = "chat-echo/main::learn"          # 必須。dictionary.learn ノードの fq ID
+# node_id        = "chat-echo/main::learn"          # 必須。glossary.learn ノードの fq ID
 # kind           = "literal"                        # "literal" | "regex"（既定 literal）
 # forget_node_id = "chat-echo/main::forget"         # 任意。Undo 用。未指定なら [Undo] が自動 disabled
 
-# (2) 読み取り専用（seed 辞書を見せるだけで触らせない）
+# (2) 読み取り専用（seed 用語集を見せるだけで触らせない）
 # [[control_api.tables]]
 # key      = "arknights_seed"
 # path     = "dictionary.arknights.seed.tsv"
-# label    = "Arknights 固定辞書 (RO)"
-# role     = "dictionary"
+# label    = "Arknights 固定用語集 (RO)"
+# role     = "glossary"
 # editable = false   # POST/PUT/PATCH/DELETE はすべて 403
 
-# (3) 辞書以外の汎用 Table（role 未指定なので Dictionary Editor の tab には出ない）
+# (3) 用語集以外の汎用 Table（role 未指定なので Glossary Editor の tab には出ない）
 # [[control_api.tables]]
 # key      = "scene_registry"
 # path     = "scene.registry.tsv"

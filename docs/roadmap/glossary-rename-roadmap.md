@@ -1,6 +1,6 @@
 # Glossary Rename Roadmap
 
-> Status: GRN-1〜GRN-5 完了。`flowgraph.glossary.*` と `role = "glossary"` を正規名とし、旧 `flowgraph.dictionary.*` / `role = "dictionary"` は互換 alias として残す。GRN-6 は汎用 `Dictionary` 設計に送る。
+> Status: GRN-1〜GRN-5 完了。`flowgraph.glossary.*` と `role = "glossary"` を正規名とし、v2 破壊変更フェーズ中に旧 `flowgraph.dictionary.*` / `role = "dictionary"` の互換 alias は撤去済み。GRN-6 は汎用 `Dictionary` 設計に送る。
 
 現行 VAC 専用の `Dictionary` 機能を `Glossary` へ改名し、`Dictionary` を将来の汎用 key-value / map 型に譲るための破壊変更計画。
 目的は、データ構造の `Dictionary` と Iterator / Ranges 操作の `.map` を共存させ、Flowgraph の言語感を長期的に濁らせないこと。
@@ -29,19 +29,18 @@
 
 ### すぐには変えないもの
 
-- `.dict.tsv` ファイル拡張子は互換 alias として当面残す
+- `.dict.tsv` ファイル拡張子は既存データ名として当面残す
 - 既存 `dictionary.*.txt` / `dictionary.*.dict.tsv` は migration 対象として読む
 - 内部ソースファイル名は段階移行可。初回 PR で一気に rename できるなら行う
 
 ## 3. 互換方針
 
-v2 中は破壊変更を許容するが、ユーザーの既存サンプルを壊しすぎないため alias を置く。
+v2 中は破壊変更を許容するため、Flowgraph feature 名と Control Table role の旧 alias は撤去する。
 
-- `flowgraph.dictionary.*` は deprecated alias として 1 段階残す
-- alias 使用時は load diagnostics に warning を出す
-- `role = "dictionary"` は `role = "glossary"` と同等に扱い、GUI では glossary と表示する
-- manual は `glossary` を正、`dictionary` を旧称として扱う
-- 互換削除タイミングは v2 安定化後に判断する
+- `flowgraph.dictionary.*` は解決しない。既存 Flowgraph は `flowgraph.glossary.*` へ移す
+- `role = "dictionary"` は Glossary Editor の対象外。`role = "glossary"` へ移す
+- manual は `glossary` を正、`dictionary` は汎用 key-value データ構造として予約する
+- `.dict.tsv` など既存ファイル名はデータ移行コストが大きいため別判断とする
 
 ## 4. 実装順序
 
@@ -49,20 +48,20 @@ v2 中は破壊変更を許容するが、ユーザーの既存サンプルを�
 
 計画と用語を固定する。`Dictionary` は汎用 key-value、`Glossary` は VAC 専用語彙表として定義する。
 
-### GRN-2 flowgraph node alias ✅
+### GRN-2 flowgraph node rename ✅
 
-`flowgraph.glossary.*` を正規 feature 名として追加し、既存 `flowgraph.dictionary.*` は deprecated alias にする。
+`flowgraph.glossary.*` を正規 feature 名として追加し、v2 破壊変更フェーズ中に既存 `flowgraph.dictionary.*` alias は撤去する。
 
-- registry は両方を受け付ける
+- registry は `flowgraph.glossary.*` のみ受け付ける
 - catalog は `glossary.*` だけを通常表示する
-- alias は diagnostics で旧称 warning
+- 旧 `flowgraph.dictionary.*` は未登録 feature として loader error にする
 
 ### GRN-3 control API / config role ✅
 
 Control API table catalog の role を `glossary` に移行する。
 
 - `role = "glossary"` を正とする
-- `role = "dictionary"` は互換 alias
+- `role = "dictionary"` は Glossary Editor の対象外
 - Quick-Add node id の説明を `glossary.learn` / `glossary.forget` に更新する
 
 ### GRN-4 GUI rename ✅

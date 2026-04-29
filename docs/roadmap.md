@@ -48,13 +48,13 @@ Flowgraph の言語基盤（Schema / Capability / Testing など）の計画は 
 - [x] η-6 feat(gui): Table ポート視覚区別
 - 仕様書: [`roadmap/phase-eta-dictionary-unification.md`](roadmap/phase-eta-dictionary-unification.md)
 
-### Phase φ — Control API + Dictionary Editor + Live Quick-Add
+### Phase φ — Control API + Glossary Editor + Live Quick-Add
 
 - [x] φ-0 docs: Control API / Table CRUD / Trigger 仕様書
 - [x] φ-1 feat(web_interface/control): Table CRUD API 実装
 - [x] φ-2 feat(web_interface/control): Flowgraph Trigger API 実装
 - [x] φ-3a feat(gui): `types.ts` / `api.ts` に Control Table / Trigger 型追加
-- [x] φ-3b feat(gui): Dictionary Table / DictionaryEditorPane 骨格
+- [x] φ-3b feat(gui): Glossary Table / DictionaryEditorPane 骨格
 - [x] φ-3c feat(gui): DictionaryEntryForm（11 カラム編集モーダル）
 - [x] φ-3d feat(gui): DictionaryConflictDialog（3-way merge）
 - [x] φ-3e feat(gui): LiveTab 統合
@@ -107,12 +107,12 @@ Playwright による E2E テスト基盤を `gui/` 配下に閉じ込めて導�
 
 ---
 
-### Phase ν-β — Flowgraph Canvas + Dictionary Editor E2E
+### Phase ν-β — Flowgraph Canvas + Glossary Editor E2E
 
-ν-2 から分離した後続フェーズ。Dictionary Editor の 409 race condition、Flowgraph Canvas の編集 → Ctrl+S 往復、engine 側の Table default coerce 失敗 (`MissingRequiredInput`) の 3 点を一気に着地させた。最終的に `gui/tests/e2e/` は **5 specs / 1 worker / ~9 s** で全通し、fixture flowgraph は `table.from_json` 補助ノードを外して `in/log/learn/forget` の 4 ノード最小構成に戻せた（§6.4 の追補条件が全部成立）。
+ν-2 から分離した後続フェーズ。Glossary Editor の 409 race condition、Flowgraph Canvas の編集 → Ctrl+S 往復、engine 側の Table default coerce 失敗 (`MissingRequiredInput`) の 3 点を一気に着地させた。最終的に `gui/tests/e2e/` は **5 specs / 1 worker / ~9 s** で全通し、fixture flowgraph は `table.from_json` 補助ノードを外して `in/log/learn/forget` の 4 ノード最小構成に戻せた（§6.4 の追補条件が全部成立）。
 
 - [x] ν-β-3 fix(flowgraph/table): `Table::from_json_array(&[], None) → Table::empty()` で空 Table default の coerce 経路を通す + `PortSpec::with_default` の round-trip test + fixture から `dict_src` 削除
-- [x] ν-β-1 test(gui): §3.3 `dictionary-editor-409-merge.spec.ts`（PATCH 409 → `DictionaryConflictDialog` 3-way merge → 自分の編集を強制 → cleanup）
+- [x] ν-β-1 test(gui): §3.3 glossary editor 409 merge spec（PATCH 409 → conflict dialog 3-way merge → 自分の編集を強制 → cleanup）
 - [x] ν-β-2 test(gui): §3.2 `flowgraph-canvas-basic.spec.ts`（Palette click-add → dirty badge → Ctrl+S → PUT 200 → clean、edge drag / beforeunload は ν-β+ に送る）
 - 仕様書: [`roadmap/phase-nu-gui-e2e-playwright.md`](roadmap/phase-nu-gui-e2e-playwright.md) §3.2〜§3.3 および §6.4
 
@@ -350,9 +350,9 @@ Phase χ / ψ-α を経てなお残る将来フェーズ候補:
 詳細: [`roadmap/glossary-rename-roadmap.md`](roadmap/glossary-rename-roadmap.md)
 
 - [x] GRN-1 docs / terminology。`Glossary` / `Dictionary` / `.map` の意味を固定する。
-- [x] GRN-2 flowgraph node alias。`flowgraph.glossary.*` を正規名にし、`flowgraph.dictionary.*` は deprecated alias にする。
-- [x] GRN-3 control API / config role。`role = "glossary"` を正にし、`role = "dictionary"` は互換 alias にする。
-- [x] GRN-4 GUI rename。Dictionary Editor 系表示・テストを Glossary に揃える。
+- [x] GRN-2 flowgraph node rename。`flowgraph.glossary.*` を正規名にし、`flowgraph.dictionary.*` の deprecated alias は v2 破壊変更フェーズ中に撤去済み。
+- [x] GRN-3 control API / config role。`role = "glossary"` を正にし、`role = "dictionary"` の互換 alias は v2 破壊変更フェーズ中に撤去済み。
+- [x] GRN-4 GUI rename。Glossary Editor 系表示・テストを Glossary に揃える。
 - [x] GRN-5 examples / tests / migration。sample / E2E / manual / migration note を更新する。
 - [ ] GRN-6 Dictionary as generic key-value。Glossary 移行後に汎用 `dictionary<K,V>` / `flowgraph.dictionary.*` を設計する。
 

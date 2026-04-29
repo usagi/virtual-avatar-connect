@@ -13,11 +13,11 @@
 # v2 では次の 3 ノードに一対一対応する:
 #   flowgraph.command.match       /prefix 付きコマンドを分岐
 #   flowgraph.regex.replace       rules = List<Json{pattern, replacement}> で逐次置換
-#   flowgraph.dictionary.replace  dictionary = List<Json{from, to}> で単純置換
-#   flowgraph.dictionary.command  「学習(X:=Y)」「忘却(X)」等をパースして辞書更新
+#   flowgraph.glossary.replace    dictionary = Table で用語置換
+#   flowgraph.glossary.match      「学習(X:=Y)」「忘却(X)」等のコマンド語彙を判定
 #
 # 対応する Flowgraph サンプル:
-#   flowgraph.example/chat-filters/   ← ingress → dictionary.replace → tts.speak
+#   flowgraph.example/chat-filters/   ← ingress → glossary.replace → tts.speak
 # =========================================================================
 
 
@@ -38,12 +38,12 @@
 # -------------------------------------------------------------------------
 #
 #  v1: channel_from="user" → Modify(writable_dictionary_file=...) → channel_to="tts"
-#  v2: ingress.web_input   → dictionary.replace(dictionary=...)    → tts.speak
+#  v2: ingress.web_input   → glossary.replace(dictionary=...)      → tts.speak
 #
 #  v1: channel_from="system" → Command(prefix="/", response_mod=...) → channel_to="ai"
 #  v2: ingress → command.match(prefix="/") → on_command → ... / on_other → ...
 #
 #  v1: Twitch → DictionaryCommand → Modify(writable)
-#  v2: ingress.twitch → dictionary.command → (辞書更新) / on_parsed exec → 下流通知
+#  v2: ingress.twitch → glossary.match → glossary.learn / .forget → 下流通知
 #
 # 具体的な配線例は `flowgraph.example/chat-filters/` を参照。

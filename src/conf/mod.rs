@@ -650,7 +650,7 @@ pub struct ControlApiConf {
 	/// Phase φ-1: Table CRUD API (`/api/v1/control/table/*`) から編集を許可する TSV ファイルの allow-list。
 	///
 	/// 登録されていないファイルは API からは **存在しないもの**として扱う（404）。
-	/// GUI の Dictionary Editor Pane / Live Quick-Add はここに並んだものだけをカタログ表示する。
+	/// GUI の Glossary Editor Pane / Live Quick-Add はここに並んだものだけをカタログ表示する。
 	#[serde(default)]
 	pub tables: Vec<ControlTableEntry>,
 }
@@ -670,7 +670,7 @@ pub struct ControlTableEntry {
 	/// GUI カタログ表示用ラベル。省略時は `key` を表示。
 	#[serde(default)]
 	pub label: Option<String>,
-	/// 役割ヒント（`"dictionary"` | `"generic"` など）。GUI の skin 切替用。
+	/// 役割ヒント（`"glossary"` | `"generic"` など）。GUI の skin 切替用。
 	#[serde(default)]
 	pub role: Option<String>,
 	/// GUI からの編集許可。`false` なら全 mutation API で 403。
@@ -684,16 +684,16 @@ pub struct ControlTableEntry {
 /// Phase φ-1/φ-4: Quick-Add ウィジェットの対応先ノード指定。
 ///
 /// 実際の trigger は φ-2 (`POST /control/flowgraph/.../trigger/{node_id}`) で行う。
-/// `forget_node_id` は φ-4 の Undo 機能で `dictionary.forget` ノードを指すために導入。
+/// `forget_node_id` は φ-4 の Undo 機能で `glossary.forget` ノードを指すために導入。
 /// 未指定時は Undo ボタンを GUI から無効化する。
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ControlTableQuickAdd {
-	/// 対象 `dictionary.learn` ノードの fq ID（例 `"main::learn"`）。
+	/// 対象 `glossary.learn` ノードの fq ID（例 `"main::learn"`）。
 	pub node_id: String,
 	/// 既定の `kind`（`"literal"` | `"regex"`）。
 	#[serde(default)]
 	pub kind: Option<String>,
-	/// Phase φ-4: 対応する `dictionary.forget` ノードの fq ID。
+	/// Phase φ-4: 対応する `glossary.forget` ノードの fq ID。
 	/// 未設定なら履歴 [Undo] を無効化する（一方向 learn 運用）。
 	#[serde(default)]
 	pub forget_node_id: Option<String>,

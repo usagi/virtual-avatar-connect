@@ -416,9 +416,8 @@ mod tests {
 		let r = registry();
 		assert!(r.is_control_triggerable("flowgraph.glossary.learn"));
 		assert!(r.is_control_triggerable("flowgraph.glossary.forget"));
-		// 旧名は互換 alias として発火可能。
-		assert!(r.is_control_triggerable("flowgraph.dictionary.learn"));
-		assert!(r.is_control_triggerable("flowgraph.dictionary.forget"));
+		assert!(!r.is_control_triggerable("flowgraph.dictionary.learn"));
+		assert!(!r.is_control_triggerable("flowgraph.dictionary.forget"));
 		// 既定はオプトインされていないはず。
 		assert!(!r.is_control_triggerable("flowgraph.literal.string"));
 		assert!(!r.is_control_triggerable("flowgraph.util.log"));
@@ -455,7 +454,7 @@ mod tests {
 			);
 		}
 
-		// 典型的な non-opt-in: literal / log / tts / dictionary.replace
+		// 典型的な non-opt-in: literal / log / tts / glossary.replace
 		for f in [
 			"flowgraph.literal.string",
 			"flowgraph.util.log",

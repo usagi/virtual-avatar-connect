@@ -1279,7 +1279,7 @@ export type ControlTableQuickAdd = {
 	/** 既定の `kind`（`"literal"` | `"regex"` | 省略）。 */
 	kind?: string | null;
 	/**
-	 * Phase φ-4: `dictionary.forget` ノードの fq ID。履歴の [Undo] 用。
+    * Phase φ-4: `glossary.forget` ノードの fq ID。履歴の [Undo] 用。
 	 * 未設定なら GUI 側で Undo 不可として扱う。
 	 */
 	forget_node_id?: string | null;
@@ -1292,7 +1292,7 @@ export type TableCatalogItem = {
 	/** ディスク上の実パス（表示用）。 */
 	path: string;
 	label?: string | null;
-	/** `"dictionary"` | `"scene-registry"` | `"generic"` | 自由文字列。 */
+   /** `"glossary"` | `"scene-registry"` | `"generic"` | 自由文字列。 */
 	role?: string | null;
 	editable: boolean;
 	quick_add?: ControlTableQuickAdd | null;

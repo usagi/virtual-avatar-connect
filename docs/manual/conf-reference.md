@@ -106,7 +106,7 @@ GUI のカタログにも出ません。
 key      = "chat_dict"                            # 必須。URL / localStorage のキー
 path     = "dictionary.chat.dict.tsv"             # 必須。cwd 相対 or 絶対パス
 label    = "Chat 用語集"                          # 任意。GUI 表示名。省略時は key
-role     = "glossary"                             # 任意。"glossary" | "generic" など（旧 "dictionary" も互換）
+role     = "glossary"                             # 任意。"glossary" | "generic" など
 editable = true                                   # 任意。false で read-only（全 mutation が 403）
 
 [control_api.tables.quick_add]
@@ -120,7 +120,7 @@ forget_node_id = "chat-echo/main::forget"         # 任意。Undo に使う glos
 | `key` | string | — | 必須。URL (`/api/v1/control/table/{key}`) と GUI 内の識別子 |
 | `path` | string | — | 必須。TSV の実パス。親ディレクトリは atomic rename 用に自動生成 |
 | `label` | string | `key` | GUI タブに表示するラベル |
-| `role` | string | `null` | `"glossary"` を指定した Table だけが Glossary Editor のタブに並ぶ。旧 `"dictionary"` も互換 alias |
+| `role` | string | `null` | `"glossary"` を指定した Table だけが Glossary Editor のタブに並ぶ |
 | `editable` | bool | `true` | `false` で書き込み系 API を 403 に固定。閲覧のみ許可したい時に使う |
 | `quick_add.node_id` | string | — | Live Quick-Add で発火する `flowgraph.glossary.learn` ノードの fq ID |
 | `quick_add.kind` | string | `"literal"` | 既定 kind。GUI で上書き可能 |

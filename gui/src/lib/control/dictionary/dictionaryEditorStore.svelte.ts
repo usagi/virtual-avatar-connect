@@ -30,12 +30,11 @@ export type DictionaryEditorPhase =
 
 /**
  * `role` が "glossary" かどうかを判定。
- * 旧 `dictionary` role は互換 alias として受け付ける。
  * 未指定 / null の場合は「汎用 Table」として Glossary Editor からは除外する。
  */
 export function isDictionaryRole(item: TableCatalogItem): boolean {
 	const role = (item.role ?? '').toLowerCase();
-	return role === 'glossary' || role === 'dictionary';
+	return role === 'glossary';
 }
 
 function extractMessage(e: unknown): string {
@@ -50,7 +49,7 @@ function extractMessage(e: unknown): string {
 class DictionaryEditorStore {
 	phase: DictionaryEditorPhase = $state({ kind: 'idle' });
 	catalog: TableCatalogItem[] = $state([]);
-	/** Glossary Editor Pane から見えるべき Table のみ（role=="glossary" / 旧 "dictionary"）。 */
+	/** Glossary Editor Pane から見えるべき Table のみ（role=="glossary"）。 */
 	dictionaryTables: TableCatalogItem[] = $state([]);
 	currentKey: string | null = $state(null);
 	currentTable: TableFileDto | null = $state(null);
