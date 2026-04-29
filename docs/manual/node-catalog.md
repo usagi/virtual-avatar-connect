@@ -8,10 +8,14 @@ VAC v2 Flowgraph の組み込みノード一覧。**本ファイルは自動生�
 $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ```
 
-> 型の表記: `bool` / `int` / `float` / `string` / `json` / `list<T>` / `map<T>` / `exec`
+> 型の表記: `bool` / `int` / `float` / `string` / `bytes` / `json` / `list<T>` / `map<T>` / `exec`
 
 ## Index
 
+- **bytes**
+  - [`flowgraph.bytes.from_base64`](#flowgraph-bytes-from-base64) — Bytes From Base64
+  - [`flowgraph.bytes.len`](#flowgraph-bytes-len) — Bytes Length
+  - [`flowgraph.bytes.to_base64`](#flowgraph-bytes-to-base64) — Bytes To Base64
 - **channel**
   - [`flowgraph.channel.emit`](#flowgraph-channel-emit) — Channel Emit
 - **command**
@@ -290,6 +294,44 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.window.pseudo_fullscreen_exit`](#flowgraph-window-pseudo-fullscreen-exit) — Window: Pseudo Fullscreen Exit
   - [`flowgraph.window.resize`](#flowgraph-window-resize) — Window: Resize
   - [`flowgraph.window.restore`](#flowgraph-window-restore) — Window: Restore
+
+## bytes
+
+### `flowgraph.bytes.from_base64`
+
+**Bytes From Base64** — Base64 string を bytes にデコードする。失敗時はエラー halt。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `text` | `string` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `bytes` | `bytes` |  |
+
+### `flowgraph.bytes.len`
+
+**Bytes Length** — bytes の byte length を返す。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `bytes` | `bytes` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `len` | `int` |  |
+
+### `flowgraph.bytes.to_base64`
+
+**Bytes To Base64** — bytes を Base64 string にエンコードする。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `bytes` | `bytes` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `text` | `string` |  |
 
 ## channel
 

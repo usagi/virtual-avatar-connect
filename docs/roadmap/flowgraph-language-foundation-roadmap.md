@@ -480,6 +480,12 @@ WASM は Flowgraph の主表現ではなく、module / package system の実行�
 `bytes` は JSON / TOML wire では base64 文字列として表現し、`SocketValueRepr` と `from_toml_value` で round-trip できる。
 現段階では標準ノードの port 置換は行わず、HTTP / file / audio / OSC などのバイナリ payload を `json` や `string` から安全に切り離すための型語彙だけを先に固める。
 
+### LF-5b bytes base64 utility nodes ✅
+
+`flowgraph.bytes.from_base64` / `flowgraph.bytes.to_base64` / `flowgraph.bytes.len` を追加した。
+`bytes` wire 表現と同じ base64 文字列を明示変換できるため、VMC ingress や将来の file / HTTP / audio boundary から段階的に `bytes` port へ移行できる。
+失敗可能な decode は現行の `json.parse` と同じく PureNode のエラー halt とし、第一級 `result<T>` への移行は LF-6 で扱う。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。

@@ -394,6 +394,12 @@ pub fn get_required_string(inputs: &InputMap, key: &str) -> Result<String, NodeE
 		.map_err(|_| type_err(key, SocketType::String, v.type_of()))
 }
 
+/// LF-5: Bytes 入力取得。バイナリ payload を扱う変換・I/O ノードで使用。
+pub fn get_required_bytes<'a>(inputs: &'a InputMap, key: &str) -> Result<&'a [u8], NodeExecError> {
+	let v = inputs.get(key).ok_or_else(|| NodeExecError::MissingRequiredInput(key.into()))?;
+	v.as_bytes().map_err(|_| type_err(key, SocketType::Bytes, v.type_of()))
+}
+
 /// Phase π-5: DateTime 入力取得。`flowgraph.datetime.*` ノードで使用。
 pub fn get_required_datetime(inputs: &InputMap, key: &str) -> Result<crate::datetime::DateTime, NodeExecError> {
 	let v = inputs.get(key).ok_or_else(|| NodeExecError::MissingRequiredInput(key.into()))?;

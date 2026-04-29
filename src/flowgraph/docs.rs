@@ -33,7 +33,7 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 	out.push_str("```powershell\n");
 	out.push_str("$env:BLESS_NODE_CATALOG=\"1\"; cargo test --lib node_catalog_md_up_to_date\n");
 	out.push_str("```\n\n");
-	out.push_str("> 型の表記: `bool` / `int` / `float` / `string` / `json` / `list<T>` / `map<T>` / `exec`\n\n");
+	out.push_str("> 型の表記: `bool` / `int` / `float` / `string` / `bytes` / `json` / `list<T>` / `map<T>` / `exec`\n\n");
 
 	// Index
 	out.push_str("## Index\n\n");

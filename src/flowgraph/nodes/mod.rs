@@ -52,7 +52,11 @@
 //! - `ingress.channel_subscribe`: V1 ChannelDatum → Flowgraph 入口。`State.channel_datum_tx` を bridges 経由で
 //!   subscribe し、`TriggerEvent` として graph に投入する。`channel.emit` と対称。
 //! - `ingress.vmc_udp` (Phase M1): 生 UDP → Base64 `content` + `TriggerEvent`。ブリッジは `bridges::vmc_ingress`。
+//!
+//! LF-5:
+//! - `bytes_ops`: bytes.from_base64 / bytes.to_base64 / bytes.len。first-class `bytes` の最小ユーティリティ。
 
+pub mod bytes_ops;
 pub mod channel;
 pub mod collection;
 pub mod command;
