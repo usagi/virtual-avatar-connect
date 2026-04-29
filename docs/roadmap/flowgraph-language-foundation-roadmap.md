@@ -264,6 +264,33 @@ JSON 出力には `kind = "file_write"` として載る。
 mock write は `recorded_effects[]` に path / bytes / contents / error を残す。
 `[tests.expect]` では `effect_count` と `[[tests.expect.file_writes]]` で、書き込まれる本文まで厳密に検証できる。
 
+### LF-3g recorded effects schema ✅
+
+fixture report の `recorded_effects[]` は、mock された外部 I/O を後から検証するための共通 effect log として扱う。
+
+共通フィールド:
+
+- `kind`: `http` / `file_read` / `file_write`
+- `node`: node fq id
+- `error`: mock error。success 時は `null`
+
+HTTP:
+
+- `method`
+- `url`
+- `request_body`
+- `status`
+- `response_body`
+
+File read / write:
+
+- `path`
+- `bytes`
+- `contents`
+
+`[tests.expect]` では `effect_count` に加えて、kind 別に `[[tests.expect.http_requests]]` / `[[tests.expect.file_reads]]` / `[[tests.expect.file_writes]]` を使う。
+これにより trace string の目視依存を減らし、外部 I/O 境界を構造化して regression test できる。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。
