@@ -319,6 +319,25 @@ manual では次を正本として扱う。
 GUI E2E は画面と Control API の往復、Flowgraph fixture は Flowgraph runtime / language の回帰を見る層として分担する。
 CI 化は引き続き optional とし、まずローカルで `--flowgraph-test-root flowgraph.example` を回す運用を標準とする。
 
+### LF-3j trigger history assertions ✅
+
+fixture report の `trigger_history[]` を `[[tests.expect.trigger_history]]` で検証できるようにした。
+
+```toml
+[[tests.expect.trigger_history]]
+node = "main::in"
+exec = ["__trigger__"]
+delay_ms = 0
+
+[[tests.expect.trigger_history.overrides]]
+port = "__content__"
+ty = "string"
+value = "hello fixture"
+```
+
+`flowgraph.example/twitch-echo` は、投入した ingress trigger の node / exec / override を構造化 assertion で検証する。
+これにより、ingress 系 fixture でも trace 文字列への依存を減らし、fixture input の形そのものを regression test できる。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。

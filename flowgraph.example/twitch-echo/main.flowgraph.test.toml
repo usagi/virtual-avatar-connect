@@ -25,6 +25,21 @@ trigger_count = 1
 trace_count = 1
 trace = ["log: hello fixture"]
 
+[[tests.expect.trigger_history]]
+node = "main::in"
+exec = ["__trigger__"]
+delay_ms = 0
+
+[[tests.expect.trigger_history.overrides]]
+port = "__content__"
+ty = "string"
+value = "hello fixture"
+
+[[tests.expect.trigger_history.overrides]]
+port = "__source_actor__"
+ty = "string"
+value = "fixture-user"
+
 [[tests.expect.stored_values]]
 node = "main::in"
 port = "content"

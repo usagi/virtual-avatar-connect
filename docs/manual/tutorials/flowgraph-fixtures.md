@@ -84,6 +84,20 @@ port = "value"
 value = "expected"
 ```
 
+投入した trigger は `trigger_history[]` として記録され、node / exec / delay / override を検証できます。
+
+```toml
+[[tests.expect.trigger_history]]
+node = "ingress"
+exec = ["__trigger__"]
+delay_ms = 0
+
+[[tests.expect.trigger_history.overrides]]
+port = "text"
+ty = "string"
+value = "hello"
+```
+
 ## mock IO
 
 fixture runner は現時点で HTTP、ファイル読み込み、ファイル書き込みを mock できます。

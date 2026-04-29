@@ -254,6 +254,8 @@ struct FixtureExpect {
 	trace: Option<Vec<String>>,
 	effect_count: Option<usize>,
 	#[serde(default)]
+	trigger_history: Vec<FixtureExpectedTriggerHistory>,
+	#[serde(default)]
 	exec_count: Vec<FixtureExpectedCount>,
 	#[serde(default)]
 	stored_values: Vec<FixtureExpectedValue>,
@@ -263,6 +265,25 @@ struct FixtureExpect {
 	file_writes: Vec<FixtureExpectedFileWrite>,
 	#[serde(default)]
 	http_requests: Vec<FixtureExpectedHttpRequest>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureExpectedTriggerHistory {
+	node: String,
+	#[serde(default)]
+	exec: Option<Vec<String>>,
+	#[serde(default)]
+	delay_ms: Option<u64>,
+	#[serde(default)]
+	overrides: Vec<FixtureExpectedTriggerOverride>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureExpectedTriggerOverride {
+	port: String,
+	#[serde(default)]
+	ty: Option<String>,
+	value: toml::Value,
 }
 
 #[derive(Debug, Deserialize)]
@@ -717,6 +738,12 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 			failures.push(format!("trace: expected {expected:?}, actual {:?}", report.trace));
 		}
 	}
+	for expected in &case.expect.trigger_history {
+		match report.trigger_history.iter().find(|actual| actual.node == expected.node) {
+			Some(actual) => assert_trigger_history(&mut failures, expected, actual),
+			None => failures.push(format!("trigger_history {}: missing", expected.node)),
+		}
+	}
 	for expected in &case.expect.exec_count {
 		let actual = report
 			.exec_count
@@ -851,6 +878,53 @@ fn assert_file_effect(
 			"{kind} {node}:{path} error: expected {:?}, actual {:?}",
 			expected_error, actual.error
 		));
+	}
+}
+
+fn assert_trigger_history(failures: &mut Vec<String>, expected: &FixtureExpectedTriggerHistory, actual: &FixtureTriggerHistory) {
+	if let Some(expected_exec) = &expected.exec {
+		if &actual.exec != expected_exec {
+			failures.push(format!(
+				"trigger_history {} exec: expected {:?}, actual {:?}",
+				expected.node, expected_exec, actual.exec
+			));
+		}
+	}
+	if let Some(expected_delay_ms) = expected.delay_ms {
+		if actual.delay_ms != expected_delay_ms {
+			failures.push(format!(
+				"trigger_history {} delay_ms: expected {}, actual {}",
+				expected.node, expected_delay_ms, actual.delay_ms
+			));
+		}
+	}
+	for expected_override in &expected.overrides {
+		match actual.overrides.iter().find(|actual| actual.port == expected_override.port) {
+			Some(actual_override) => {
+				if let Some(expected_ty) = &expected_override.ty {
+					if &actual_override.ty != expected_ty {
+						failures.push(format!(
+							"trigger_history {} override {} type: expected {}, actual {}",
+							expected.node, expected_override.port, expected_ty, actual_override.ty
+						));
+					}
+				}
+				let expected_value = toml_value_to_json(&expected_override.value);
+				if actual_override.value != expected_value {
+					failures.push(format!(
+						"trigger_history {} override {} value: expected {}, actual {}",
+						expected.node,
+						expected_override.port,
+						compact_json(&expected_value),
+						compact_json(&actual_override.value)
+					));
+				}
+			}
+			None => failures.push(format!(
+				"trigger_history {} override {}: missing",
+				expected.node, expected_override.port
+			)),
+		}
 	}
 }
 
@@ -1083,6 +1157,101 @@ mod tests {
 			.iter()
 			.any(|f| f.contains("value: expected \"expected\", actual \"actual\"")));
 		assert!(result.failures.iter().any(|f| f == "stored_value missing:value: missing"));
+	}
+
+	#[test]
+	fn trigger_history_assertion_passes() {
+		let mut report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		report.trigger_count = 1;
+		report.trigger_history.push(FixtureTriggerHistory {
+			node: "in".into(),
+			exec: vec!["__trigger__".into()],
+			delay_ms: 10,
+			overrides: vec![FixtureTriggerHistoryOverride {
+				port: "text".into(),
+				ty: "string".into(),
+				value: serde_json::json!("hello"),
+			}],
+		});
+		let case = FixtureTestCase {
+			name: Some("trigger".into()),
+			expect: FixtureExpect {
+				trigger_count: Some(1),
+				trigger_history: vec![FixtureExpectedTriggerHistory {
+					node: "in".into(),
+					exec: Some(vec!["__trigger__".into()]),
+					delay_ms: Some(10),
+					overrides: vec![FixtureExpectedTriggerOverride {
+						port: "text".into(),
+						ty: Some("string".into()),
+						value: toml::Value::String("hello".into()),
+					}],
+				}],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(result.ok, "{:?}", result.failures);
+	}
+
+	#[test]
+	fn trigger_history_assertion_reports_missing_and_mismatch() {
+		let mut report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		report.trigger_count = 1;
+		report.trigger_history.push(FixtureTriggerHistory {
+			node: "in".into(),
+			exec: vec!["custom".into()],
+			delay_ms: 10,
+			overrides: vec![FixtureTriggerHistoryOverride {
+				port: "text".into(),
+				ty: "string".into(),
+				value: serde_json::json!("actual"),
+			}],
+		});
+		let case = FixtureTestCase {
+			name: Some("trigger".into()),
+			expect: FixtureExpect {
+				trigger_history: vec![
+					FixtureExpectedTriggerHistory {
+						node: "in".into(),
+						exec: Some(vec!["__trigger__".into()]),
+						delay_ms: Some(20),
+						overrides: vec![
+							FixtureExpectedTriggerOverride {
+								port: "text".into(),
+								ty: Some("int".into()),
+								value: toml::Value::String("expected".into()),
+							},
+							FixtureExpectedTriggerOverride {
+								port: "missing".into(),
+								ty: None,
+								value: toml::Value::Integer(1),
+							},
+						],
+					},
+					FixtureExpectedTriggerHistory {
+						node: "missing".into(),
+						exec: None,
+						delay_ms: None,
+						overrides: Vec::new(),
+					},
+				],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(!result.ok);
+		assert_eq!(result.failures.len(), 6);
+		assert!(result.failures.iter().any(|f| f.contains("trigger_history in exec")));
+		assert!(result.failures.iter().any(|f| f.contains("trigger_history in delay_ms")));
+		assert!(result.failures.iter().any(|f| f.contains("trigger_history in override text type")));
+		assert!(result.failures.iter().any(|f| f.contains("trigger_history in override text value")));
+		assert!(result.failures.iter().any(|f| f == "trigger_history in override missing: missing"));
+		assert!(result.failures.iter().any(|f| f == "trigger_history missing: missing"));
 	}
 
 	#[test]
