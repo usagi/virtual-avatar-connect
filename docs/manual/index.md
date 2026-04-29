@@ -35,6 +35,7 @@ v2 では「チャンネル名で繋ぐ v1 プロセッサー列」から **Flow
 - [voice-input](./tutorials/voice-input.md)：Vosk / Whisper 認識 → TTS echo
 - [dictionary-editor-and-quick-add](./tutorials/dictionary-editor-and-quick-add.md)：GUI から TSV 用語集を直接編集する / Live Quick-Add で `glossary.learn` を即発火する（Phase φ / GRN）
 - [gui-e2e](./tutorials/gui-e2e.md)：Playwright で GUI の回帰テストを実行する / fixture 構成と失敗時の切り分け（Phase ν）
+- [flowgraph-fixtures](./tutorials/flowgraph-fixtures.md)：CLI から Flowgraph fixture を実行し、mock IO と recorded effects で言語コアを検証する
 
 ---
 
