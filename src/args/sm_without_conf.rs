@@ -44,6 +44,22 @@ impl Args {
 			}
 		}
 
+		if self.flowgraph_test_dir.is_some() && self.flowgraph_test_root.is_some() {
+			let message = "--flowgraph-test-dir と --flowgraph-test-root は同時に指定できません。";
+			if self.flowgraph_test_json {
+				println!(
+					"{}",
+					serde_json::to_string_pretty(&serde_json::json!({
+						"ok": false,
+						"error": message,
+					}))?
+				);
+			} else {
+				log::error!("{message}");
+			}
+			std::process::exit(1);
+		}
+
 		if let Some(dir) = &self.flowgraph_test_dir {
 			let root = std::path::PathBuf::from(dir);
 			match crate::flowgraph::fixture_runner::run_fixture_once_report(&root).await {

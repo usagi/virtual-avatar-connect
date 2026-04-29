@@ -71,7 +71,7 @@ pub struct Args {
 	#[arg(long)]
 	pub flowgraph_test_root: Option<String>,
 
-	/// `--flowgraph-test-dir` の結果を JSON で出力します。
+	/// `--flowgraph-test-dir` / `--flowgraph-test-root` の結果を JSON で出力します。
 	#[arg(long)]
 	pub flowgraph_test_json: bool,
 }
