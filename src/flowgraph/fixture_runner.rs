@@ -674,64 +674,32 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 		}
 	}
 	for expected in &case.expect.file_reads {
-		match report.recorded_effects.iter().find(|actual| {
-			actual.kind == "file_read" && actual.node == expected.node && actual.path.as_deref() == Some(expected.path.as_str())
-		}) {
-			Some(actual) => {
-				if let Some(expected_bytes) = expected.bytes {
-					if actual.bytes != Some(expected_bytes) {
-						failures.push(format!(
-							"file_read {}:{} bytes: expected {}, actual {:?}",
-							expected.node, expected.path, expected_bytes, actual.bytes
-						));
-					}
-				}
-				if let Some(expected_contents) = &expected.contents {
-					if actual.contents.as_deref() != Some(expected_contents.as_str()) {
-						failures.push(format!(
-							"file_read {}:{} contents: expected {:?}, actual {:?}",
-							expected.node, expected.path, expected_contents, actual.contents
-						));
-					}
-				}
-				if actual.error != expected.error {
-					failures.push(format!(
-						"file_read {}:{} error: expected {:?}, actual {:?}",
-						expected.node, expected.path, expected.error, actual.error
-					));
-				}
-			}
+		match find_recorded_path_effect(report, "file_read", &expected.node, &expected.path) {
+			Some(actual) => assert_file_effect(
+				&mut failures,
+				"file_read",
+				&expected.node,
+				&expected.path,
+				actual,
+				expected.bytes,
+				expected.contents.as_deref(),
+				expected.error.as_deref(),
+			),
 			None => failures.push(format!("file_read {}:{}: missing", expected.node, expected.path)),
 		}
 	}
 	for expected in &case.expect.file_writes {
-		match report.recorded_effects.iter().find(|actual| {
-			actual.kind == "file_write" && actual.node == expected.node && actual.path.as_deref() == Some(expected.path.as_str())
-		}) {
-			Some(actual) => {
-				if let Some(expected_bytes) = expected.bytes {
-					if actual.bytes != Some(expected_bytes) {
-						failures.push(format!(
-							"file_write {}:{} bytes: expected {}, actual {:?}",
-							expected.node, expected.path, expected_bytes, actual.bytes
-						));
-					}
-				}
-				if let Some(expected_contents) = &expected.contents {
-					if actual.contents.as_deref() != Some(expected_contents.as_str()) {
-						failures.push(format!(
-							"file_write {}:{} contents: expected {:?}, actual {:?}",
-							expected.node, expected.path, expected_contents, actual.contents
-						));
-					}
-				}
-				if actual.error != expected.error {
-					failures.push(format!(
-						"file_write {}:{} error: expected {:?}, actual {:?}",
-						expected.node, expected.path, expected.error, actual.error
-					));
-				}
-			}
+		match find_recorded_path_effect(report, "file_write", &expected.node, &expected.path) {
+			Some(actual) => assert_file_effect(
+				&mut failures,
+				"file_write",
+				&expected.node,
+				&expected.path,
+				actual,
+				expected.bytes,
+				expected.contents.as_deref(),
+				expected.error.as_deref(),
+			),
 			None => failures.push(format!("file_write {}:{}: missing", expected.node, expected.path)),
 		}
 	}
@@ -786,6 +754,47 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 		name: case.name.clone().unwrap_or_else(|| format!("test#{index}")),
 		ok: failures.is_empty(),
 		failures,
+	}
+}
+
+fn find_recorded_path_effect<'a>(report: &'a FixtureRunReport, kind: &str, node: &str, path: &str) -> Option<&'a FixtureRecordedEffect> {
+	report
+		.recorded_effects
+		.iter()
+		.find(|actual| actual.kind == kind && actual.node == node && actual.path.as_deref() == Some(path))
+}
+
+fn assert_file_effect(
+	failures: &mut Vec<String>,
+	kind: &str,
+	node: &str,
+	path: &str,
+	actual: &FixtureRecordedEffect,
+	expected_bytes: Option<i64>,
+	expected_contents: Option<&str>,
+	expected_error: Option<&str>,
+) {
+	if let Some(expected_bytes) = expected_bytes {
+		if actual.bytes != Some(expected_bytes) {
+			failures.push(format!(
+				"{kind} {node}:{path} bytes: expected {expected_bytes}, actual {:?}",
+				actual.bytes
+			));
+		}
+	}
+	if let Some(expected_contents) = expected_contents {
+		if actual.contents.as_deref() != Some(expected_contents) {
+			failures.push(format!(
+				"{kind} {node}:{path} contents: expected {:?}, actual {:?}",
+				expected_contents, actual.contents
+			));
+		}
+	}
+	if actual.error.as_deref() != expected_error {
+		failures.push(format!(
+			"{kind} {node}:{path} error: expected {:?}, actual {:?}",
+			expected_error, actual.error
+		));
 	}
 }
 
