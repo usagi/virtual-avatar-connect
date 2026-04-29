@@ -45,6 +45,7 @@ cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-root flowgraph.ex
 fixture ディレクトリには、通常の `*.flowgraph.toml` とテスト定義 `*.flowgraph.test.toml` を置きます。
 runner は指定ディレクトリ内の Flowgraph をまとめてロードするため、テスト定義側に対象 Flowgraph ファイル名は書きません。
 テスト定義の最小構成は次の形です。
+`[test]` / `[[tests]]` が 1 件もないテスト定義ファイルは失敗扱いです。
 
 ```toml
 [test]

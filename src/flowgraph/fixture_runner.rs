@@ -34,6 +34,9 @@ pub enum FixtureError {
 	NoFixtureTestFiles {
 		root: PathBuf,
 	},
+	NoFixtureTestCases {
+		path: PathBuf,
+	},
 	TriggerValue {
 		path: PathBuf,
 		trigger: usize,
@@ -55,6 +58,9 @@ impl std::fmt::Display for FixtureError {
 			FixtureError::TestParse { path, error } => write!(f, "test file parse failed: {}: {error}", path.display()),
 			FixtureError::NoFixtureTestFiles { root } => {
 				write!(f, "no *.flowgraph.test.toml files found: {}", root.display())
+			}
+			FixtureError::NoFixtureTestCases { path } => {
+				write!(f, "no [test] or [[tests]] cases found: {}", path.display())
 			}
 			FixtureError::TriggerValue {
 				path,
@@ -694,6 +700,9 @@ fn read_declared_tests(root: &Path) -> Result<Vec<ParsedFixtureTestFile>, Fixtur
 	for path in discover_test_files(root)? {
 		let raw = std::fs::read_to_string(&path).map_err(FixtureError::TestIo)?;
 		let parsed: FixtureTestFile = toml::from_str(&raw).map_err(|error| FixtureError::TestParse { path: path.clone(), error })?;
+		if parsed.test.is_none() && parsed.tests.is_empty() {
+			return Err(FixtureError::NoFixtureTestCases { path });
+		}
 		results.push(ParsedFixtureTestFile { path, parsed });
 	}
 	if results.is_empty() {
@@ -1626,6 +1635,19 @@ mod tests {
 		};
 
 		assert!(error.to_string().contains("no *.flowgraph.test.toml files found"));
+		let _ = std::fs::remove_dir_all(root);
+	}
+
+	#[test]
+	fn read_declared_tests_rejects_file_without_test_cases() {
+		let root = make_temp_dir("fixture-no-cases");
+		std::fs::write(root.join("main.flowgraph.test.toml"), "[mocks]\n").unwrap();
+		let error = match read_declared_tests(&root) {
+			Ok(_) => panic!("expected missing fixture test case error"),
+			Err(error) => error,
+		};
+
+		assert!(error.to_string().contains("no [test] or [[tests]] cases found"));
 		let _ = std::fs::remove_dir_all(root);
 	}
 

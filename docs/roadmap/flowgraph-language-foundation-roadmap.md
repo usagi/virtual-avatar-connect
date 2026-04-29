@@ -366,6 +366,11 @@ trace = []
 複数ケースは引き続き `[[tests]]` を使う。
 `flowgraph.example/lambda-demo` は `[test]` 形式へ移行し、単純な fixture の記述量を減らした。
 
+### LF-3m empty fixture test guard ✅
+
+`*.flowgraph.test.toml` が存在しても `[test]` / `[[tests]]` が 1 件もない場合は失敗扱いにした。
+ファイルだけ置かれていて assertion が空の fixture を成功扱いすると、回帰テストとしては静かな空振りになるため。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。
