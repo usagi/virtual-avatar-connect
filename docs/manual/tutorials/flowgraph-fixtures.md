@@ -16,6 +16,7 @@ cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-dir flowgraph.exa
 ```
 
 機械処理や差分確認には JSON 出力を使います。
+通常出力でも `capabilities` 行に `file_read=1` のような集計が出ます。
 
 ```powershell
 cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-dir flowgraph.example/table-write-tsv-mock --flowgraph-test-json

@@ -71,6 +71,10 @@ impl Args {
 						println!("Flowgraph fixture {status}: {}", report.root);
 						println!("  nodes: {}", report.node_count);
 						println!("  generation: {}", report.generation);
+						println!(
+							"  capabilities: {}",
+							format_capability_counts(&report.capability_summary.capability_counts)
+						);
 						println!("  mocks: {}", report.mock_count);
 						println!("  trace: {} line(s)", report.trace_count);
 						println!("  effects: {}", report.effect_count);
@@ -125,6 +129,7 @@ impl Args {
 						println!("  tests: {} total / {} failed", report.test_count, report.failed_tests);
 						println!("  triggers: {}", report.trigger_count);
 						println!("  effects: {}", report.effect_count);
+						println!("  capabilities: {}", format_suite_capability_counts(&report.reports));
 						for fixture in &report.reports {
 							if !fixture.ok {
 								println!("    FAIL {}", fixture.root);
@@ -164,4 +169,25 @@ impl Args {
 
 		Ok(())
 	}
+}
+
+fn format_suite_capability_counts(reports: &[crate::flowgraph::fixture_runner::FixtureRunReport]) -> String {
+	let mut counts = std::collections::BTreeMap::new();
+	for report in reports {
+		for (capability, count) in &report.capability_summary.capability_counts {
+			*counts.entry(capability.clone()).or_insert(0) += count;
+		}
+	}
+	format_capability_counts(&counts)
+}
+
+fn format_capability_counts(counts: &std::collections::BTreeMap<String, usize>) -> String {
+	if counts.is_empty() {
+		return "none".into();
+	}
+	counts
+		.iter()
+		.map(|(capability, count)| format!("{capability}={count}"))
+		.collect::<Vec<_>>()
+		.join(", ")
 }
