@@ -71,6 +71,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.json.get`](#flowgraph-json-get) — JSON Get
   - [`flowgraph.json.parse`](#flowgraph-json-parse) — JSON Parse
   - [`flowgraph.json.stringify`](#flowgraph-json-stringify) — JSON Stringify
+  - [`flowgraph.json.try_parse`](#flowgraph-json-try-parse) — JSON Try Parse
 - **library**
   - [`flowgraph.library.input`](#flowgraph-library-input) — Library Input
   - [`flowgraph.library.output`](#flowgraph-library-output) — Library Output
@@ -1108,6 +1109,21 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `text` | `string` |  |
+
+### `flowgraph.json.try_parse`
+
+**JSON Try Parse** — String を JSON にパースし、失敗を result<json> として返す。
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `text` | `string` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `ok` | `bool` |  |
+| `value` | `json` |  |
+| `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ## library
 

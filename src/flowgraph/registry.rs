@@ -377,6 +377,7 @@ pub fn default_registry() -> NodeRegistry {
 
 	// --- json_ops ---
 	r.register_pure(Arc::new(nodes::json_ops::JsonParseNode));
+	r.register_pure(Arc::new(nodes::json_ops::JsonTryParseNode));
 	r.register_pure(Arc::new(nodes::json_ops::JsonStringifyNode));
 	r.register_pure(Arc::new(nodes::json_ops::JsonGetNode));
 
