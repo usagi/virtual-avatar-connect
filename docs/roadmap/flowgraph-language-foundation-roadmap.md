@@ -349,6 +349,23 @@ value = "hello fixture"
 
 通常出力と JSON 出力の要約を揃え、CI やスクリプトが `reports[]` 全体を走査しなくても、suite 全体の規模と失敗数を読めるようにする。
 
+### LF-3l single `[test]` fixture shorthand ✅
+
+単一 test case の fixture では `[[tests]]` ではなく `[test]` を使えるようにした。
+
+```toml
+[test]
+name = "one-shot smoke"
+
+[test.expect]
+node_count = 3
+trace_count = 0
+trace = []
+```
+
+複数ケースは引き続き `[[tests]]` を使う。
+`flowgraph.example/lambda-demo` は `[test]` 形式へ移行し、単純な fixture の記述量を減らした。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。

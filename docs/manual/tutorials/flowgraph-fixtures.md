@@ -47,7 +47,10 @@ runner は指定ディレクトリ内の Flowgraph をまとめてロードす�
 テスト定義の最小構成は次の形です。
 
 ```toml
-[tests.expect]
+[test]
+name = "single smoke"
+
+[test.expect]
 node_count = 2
 trigger_count = 1
 trace_count = 2
@@ -61,9 +64,14 @@ port = "text"
 value = "hello"
 ```
 
+単一ケースは `[test]`、複数ケースは従来通り `[[tests]]` を使います。
+
 `[tests.expect]` には実行結果の件数や trace を書けます。
 
 ```toml
+[[tests]]
+name = "main path"
+
 [tests.expect]
 node_count = 3
 mock_count = 1

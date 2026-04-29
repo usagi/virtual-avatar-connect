@@ -177,6 +177,8 @@ struct FixtureTestFile {
 	#[serde(default)]
 	triggers: Vec<FixtureTriggerSpec>,
 	#[serde(default)]
+	test: Option<FixtureTestCase>,
+	#[serde(default)]
 	tests: Vec<FixtureTestCase>,
 }
 
@@ -703,7 +705,12 @@ fn read_declared_tests(root: &Path) -> Result<Vec<ParsedFixtureTestFile>, Fixtur
 fn evaluate_declared_tests(declared_tests: &[ParsedFixtureTestFile], report: &FixtureRunReport) -> Vec<FixtureTestResult> {
 	let mut results = Vec::new();
 	for file in declared_tests {
-		for (index, case) in file.parsed.tests.iter().enumerate() {
+		let mut cases = Vec::new();
+		if let Some(case) = &file.parsed.test {
+			cases.push(case);
+		}
+		cases.extend(file.parsed.tests.iter());
+		for (index, case) in cases.into_iter().enumerate() {
 			results.push(evaluate_test_case(&file.path, index, case, report));
 		}
 	}
