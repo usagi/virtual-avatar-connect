@@ -79,6 +79,7 @@ pub fn spawn_program(
 	let join = tokio::spawn(async move {
 		let mut ctx = ExecCtx {
 			trace: Vec::new(),
+			recorded_effects: Vec::new(),
 			trigger: Some(trigger_for_ctx.clone()),
 			trigger_gate: None,
 			node_id: String::new(),

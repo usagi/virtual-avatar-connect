@@ -546,6 +546,7 @@ impl NodeOutput {
 #[derive(Debug, Default)]
 pub struct ExecCtx {
 	pub trace: Vec<String>,
+	pub recorded_effects: Vec<RecordedEffect>,
 	pub trigger: Option<TriggerHandle>,
 	/// RM-3: 指定時、exec 経路（trigger / ソース / exec 連鎖）で非活性ノードは `fire_node` が即 return。
 	pub trigger_gate: Option<std::sync::Arc<crate::flowgraph::activation::TriggerGate>>,
@@ -558,6 +559,40 @@ pub struct ExecCtx {
 impl ExecCtx {
 	pub fn log(&mut self, s: impl Into<String>) {
 		self.trace.push(s.into());
+	}
+
+	pub fn record_effect(&mut self, effect: RecordedEffect) {
+		self.recorded_effects.push(effect);
+	}
+}
+
+/// Fixture / debugger が観測する mock 副作用の記録。
+#[derive(Debug, Clone)]
+pub struct RecordedEffect {
+	pub kind: String,
+	pub node: String,
+	pub path: Option<String>,
+	pub bytes: Option<i64>,
+	pub contents: Option<String>,
+	pub error: Option<String>,
+}
+
+impl RecordedEffect {
+	pub fn file_write(
+		node: impl Into<String>,
+		path: impl Into<String>,
+		bytes: i64,
+		contents: impl Into<String>,
+		error: Option<String>,
+	) -> Self {
+		Self {
+			kind: "file_write".into(),
+			node: node.into(),
+			path: Some(path.into()),
+			bytes: Some(bytes),
+			contents: Some(contents.into()),
+			error,
+		}
 	}
 }
 

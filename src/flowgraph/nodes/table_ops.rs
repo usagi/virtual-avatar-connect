@@ -11,7 +11,7 @@
 
 use crate::flowgraph::node::{
 	get_optional_string, get_required_list, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor,
-	NodeExecError, NodeOutput, NodeSpec, PortSpec, PureNode,
+	NodeExecError, NodeOutput, NodeSpec, PortSpec, PureNode, RecordedEffect,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use crate::flowgraph::table::{ColumnSpec, Row, Table, TableSchema};
@@ -268,8 +268,22 @@ impl EffectfulNode for TableWriteTsvNode {
 		{
 			ctx.log(format!("file.write mock: {path} ({len} bytes) -> node {}", ctx.node_id));
 			if let Some(error) = mock.error {
+				ctx.record_effect(RecordedEffect::file_write(
+					ctx.node_id.clone(),
+					path.clone(),
+					len,
+					serialized,
+					Some(error.clone()),
+				));
 				return Ok(err_output_write(format!("write {path}: {error}")));
 			}
+			ctx.record_effect(RecordedEffect::file_write(
+				ctx.node_id.clone(),
+				path.clone(),
+				len,
+				serialized,
+				None,
+			));
 			return Ok(NodeOutput::new()
 				.set_data("bytes_written", SocketValue::Int(len))
 				.set_data("error", SocketValue::String(String::new()))

@@ -78,6 +78,16 @@ pub struct FixtureTraceValue {
 }
 
 #[derive(Debug, Serialize)]
+pub struct FixtureRecordedEffect {
+	pub kind: String,
+	pub node: String,
+	pub path: Option<String>,
+	pub bytes: Option<i64>,
+	pub contents: Option<String>,
+	pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct FixtureRunReport {
 	pub ok: bool,
 	pub root: String,
@@ -89,6 +99,8 @@ pub struct FixtureRunReport {
 	pub trigger_history: Vec<FixtureTriggerHistory>,
 	pub trace: Vec<String>,
 	pub trace_count: usize,
+	pub effect_count: usize,
+	pub recorded_effects: Vec<FixtureRecordedEffect>,
 	pub stored_values: Vec<FixtureTraceValue>,
 	pub exec_count: Vec<(String, usize)>,
 	pub pure_evaluations: Vec<(String, usize)>,
@@ -213,10 +225,13 @@ struct FixtureExpect {
 	trigger_count: Option<usize>,
 	trace_count: Option<usize>,
 	trace: Option<Vec<String>>,
+	effect_count: Option<usize>,
 	#[serde(default)]
 	exec_count: Vec<FixtureExpectedCount>,
 	#[serde(default)]
 	stored_values: Vec<FixtureExpectedValue>,
+	#[serde(default)]
+	file_writes: Vec<FixtureExpectedFileWrite>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -232,6 +247,18 @@ struct FixtureExpectedValue {
 	#[serde(default)]
 	ty: Option<String>,
 	value: toml::Value,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureExpectedFileWrite {
+	node: String,
+	path: String,
+	#[serde(default)]
+	bytes: Option<i64>,
+	#[serde(default)]
+	contents: Option<String>,
+	#[serde(default)]
+	error: Option<String>,
 }
 
 /// `flowgraph_dir` をロードする。診断付き失敗は [`FixtureError::Load`]。
@@ -449,6 +476,20 @@ fn make_report(
 	let mut pure_evaluations: Vec<(String, usize)> = run.pure_evaluations.into_iter().collect();
 	pure_evaluations.sort_by(|a, b| a.0.cmp(&b.0));
 
+	let mut recorded_effects: Vec<FixtureRecordedEffect> = ctx
+		.recorded_effects
+		.iter()
+		.map(|effect| FixtureRecordedEffect {
+			kind: effect.kind.clone(),
+			node: effect.node.clone(),
+			path: effect.path.clone(),
+			bytes: effect.bytes,
+			contents: effect.contents.clone(),
+			error: effect.error.clone(),
+		})
+		.collect();
+	recorded_effects.sort_by(|a, b| (&a.kind, &a.node, &a.path).cmp(&(&b.kind, &b.node, &b.path)));
+
 	FixtureRunReport {
 		ok: true,
 		root: root.display().to_string(),
@@ -460,6 +501,8 @@ fn make_report(
 		trigger_history,
 		trace_count: ctx.trace.len(),
 		trace: ctx.trace,
+		effect_count: recorded_effects.len(),
+		recorded_effects,
 		stored_values,
 		exec_count,
 		pure_evaluations,
@@ -536,6 +579,11 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 			failures.push(format!("trace_count: expected {expected}, actual {}", report.trace_count));
 		}
 	}
+	if let Some(expected) = case.expect.effect_count {
+		if report.effect_count != expected {
+			failures.push(format!("effect_count: expected {expected}, actual {}", report.effect_count));
+		}
+	}
 	if let Some(expected) = &case.expect.trace {
 		if &report.trace != expected {
 			failures.push(format!("trace: expected {expected:?}, actual {:?}", report.trace));
@@ -582,6 +630,37 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 				}
 			}
 			None => failures.push(format!("stored_value {}:{}: missing", expected.node, expected.port)),
+		}
+	}
+	for expected in &case.expect.file_writes {
+		match report.recorded_effects.iter().find(|actual| {
+			actual.kind == "file_write" && actual.node == expected.node && actual.path.as_deref() == Some(expected.path.as_str())
+		}) {
+			Some(actual) => {
+				if let Some(expected_bytes) = expected.bytes {
+					if actual.bytes != Some(expected_bytes) {
+						failures.push(format!(
+							"file_write {}:{} bytes: expected {}, actual {:?}",
+							expected.node, expected.path, expected_bytes, actual.bytes
+						));
+					}
+				}
+				if let Some(expected_contents) = &expected.contents {
+					if actual.contents.as_deref() != Some(expected_contents.as_str()) {
+						failures.push(format!(
+							"file_write {}:{} contents: expected {:?}, actual {:?}",
+							expected.node, expected.path, expected_contents, actual.contents
+						));
+					}
+				}
+				if actual.error != expected.error {
+					failures.push(format!(
+						"file_write {}:{} error: expected {:?}, actual {:?}",
+						expected.node, expected.path, expected.error, actual.error
+					));
+				}
+			}
+			None => failures.push(format!("file_write {}:{}: missing", expected.node, expected.path)),
 		}
 	}
 	FixtureTestResult {
@@ -792,6 +871,8 @@ mod tests {
 			trigger_history: Vec::new(),
 			trace: Vec::new(),
 			trace_count: 0,
+			effect_count: 0,
+			recorded_effects: Vec::new(),
 			stored_values: vec![FixtureTraceValue {
 				node: node.into(),
 				port: port.into(),
