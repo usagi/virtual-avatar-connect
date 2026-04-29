@@ -704,45 +704,8 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 		}
 	}
 	for expected in &case.expect.http_requests {
-		match report.recorded_effects.iter().find(|actual| {
-			actual.kind == "http"
-				&& actual.node == expected.node
-				&& actual.method.as_deref() == Some(expected.method.as_str())
-				&& actual.url.as_deref() == Some(expected.url.as_str())
-		}) {
-			Some(actual) => {
-				if actual.status != expected.status {
-					failures.push(format!(
-						"http_request {}:{} {} status: expected {:?}, actual {:?}",
-						expected.node, expected.method, expected.url, expected.status, actual.status
-					));
-				}
-				if let Some(expected_body) = &expected.request_body {
-					let expected_json = toml_value_to_json(expected_body);
-					if actual.request_body.as_ref() != Some(&expected_json) {
-						failures.push(format!(
-							"http_request {}:{} {} request_body: expected {}, actual {:?}",
-							expected.node,
-							expected.method,
-							expected.url,
-							compact_json(&expected_json),
-							actual.request_body
-						));
-					}
-				}
-				if actual.response_body != expected.response_body {
-					failures.push(format!(
-						"http_request {}:{} {} response_body: expected {:?}, actual {:?}",
-						expected.node, expected.method, expected.url, expected.response_body, actual.response_body
-					));
-				}
-				if actual.error != expected.error {
-					failures.push(format!(
-						"http_request {}:{} {} error: expected {:?}, actual {:?}",
-						expected.node, expected.method, expected.url, expected.error, actual.error
-					));
-				}
-			}
+		match find_recorded_http_effect(report, &expected.node, &expected.method, &expected.url) {
+			Some(actual) => assert_http_effect(&mut failures, expected, actual),
 			None => failures.push(format!(
 				"http_request {}:{} {}: missing",
 				expected.node, expected.method, expected.url
@@ -762,6 +725,12 @@ fn find_recorded_path_effect<'a>(report: &'a FixtureRunReport, kind: &str, node:
 		.recorded_effects
 		.iter()
 		.find(|actual| actual.kind == kind && actual.node == node && actual.path.as_deref() == Some(path))
+}
+
+fn find_recorded_http_effect<'a>(report: &'a FixtureRunReport, node: &str, method: &str, url: &str) -> Option<&'a FixtureRecordedEffect> {
+	report.recorded_effects.iter().find(|actual| {
+		actual.kind == "http" && actual.node == node && actual.method.as_deref() == Some(method) && actual.url.as_deref() == Some(url)
+	})
 }
 
 fn assert_file_effect(
@@ -794,6 +763,40 @@ fn assert_file_effect(
 		failures.push(format!(
 			"{kind} {node}:{path} error: expected {:?}, actual {:?}",
 			expected_error, actual.error
+		));
+	}
+}
+
+fn assert_http_effect(failures: &mut Vec<String>, expected: &FixtureExpectedHttpRequest, actual: &FixtureRecordedEffect) {
+	if actual.status != expected.status {
+		failures.push(format!(
+			"http_request {}:{} {} status: expected {:?}, actual {:?}",
+			expected.node, expected.method, expected.url, expected.status, actual.status
+		));
+	}
+	if let Some(expected_body) = &expected.request_body {
+		let expected_json = toml_value_to_json(expected_body);
+		if actual.request_body.as_ref() != Some(&expected_json) {
+			failures.push(format!(
+				"http_request {}:{} {} request_body: expected {}, actual {:?}",
+				expected.node,
+				expected.method,
+				expected.url,
+				compact_json(&expected_json),
+				actual.request_body
+			));
+		}
+	}
+	if actual.response_body != expected.response_body {
+		failures.push(format!(
+			"http_request {}:{} {} response_body: expected {:?}, actual {:?}",
+			expected.node, expected.method, expected.url, expected.response_body, actual.response_body
+		));
+	}
+	if actual.error != expected.error {
+		failures.push(format!(
+			"http_request {}:{} {} error: expected {:?}, actual {:?}",
+			expected.node, expected.method, expected.url, expected.error, actual.error
 		));
 	}
 }
