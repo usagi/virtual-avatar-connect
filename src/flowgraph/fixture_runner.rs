@@ -713,6 +713,16 @@ mod tests {
 		assert_eq!(report.failed_tests, 0);
 	}
 
+	#[tokio::test]
+	async fn table_write_tsv_mock_error_declared_test_passes() {
+		let dir = example_dir("table-write-tsv-mock-error");
+		let report = run_fixture_once_report(&dir).await.expect("report");
+		assert!(report.ok, "report: {:?}", report.tests);
+		assert_eq!(report.mock_count, 2);
+		assert!(report.trace.iter().any(|line| line.contains("fixture disk full")));
+		assert_eq!(report.failed_tests, 0);
+	}
+
 	#[test]
 	fn stored_value_assertion_passes() {
 		let report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));

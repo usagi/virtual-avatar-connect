@@ -1,0 +1,89 @@
+# fixture file_write mock の error 分岐を検証する最小例。
+
+[meta]
+title = "table write tsv mock error"
+description = "Fixture の file_write mock error で flowgraph.table.write_tsv の on_error 分岐を検証する"
+tags = ["example", "table", "tsv", "fixture", "mock", "error"]
+
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 140]
+properties.path = "/input/table-write-tsv-mock-error"
+properties.method = "POST"
+properties.body_format = "plain"
+properties.fixed_channel = "table_write_tsv_mock_error"
+
+[[nodes]]
+id = "read_path"
+feature = "flowgraph.literal.string"
+position = [320, 240]
+properties.value = "fixture.tsv"
+
+[[nodes]]
+id = "mode"
+feature = "flowgraph.literal.string"
+position = [320, 320]
+properties.value = "headerful"
+
+[[nodes]]
+id = "load"
+feature = "flowgraph.table.load_tsv"
+position = [560, 140]
+
+[[nodes]]
+id = "write_path"
+feature = "flowgraph.literal.string"
+position = [560, 320]
+properties.value = "out.tsv"
+
+[[nodes]]
+id = "write"
+feature = "flowgraph.table.write_tsv"
+position = [800, 140]
+
+[[nodes]]
+id = "log_success"
+feature = "flowgraph.util.log"
+position = [1040, 120]
+
+[[nodes]]
+id = "log_error"
+feature = "flowgraph.util.log"
+position = [1040, 260]
+
+[[edges]]
+from = "in:exec_out"
+to = "load:exec_in"
+
+[[edges]]
+from = "read_path:value"
+to = "load:path"
+
+[[edges]]
+from = "mode:value"
+to = "load:mode"
+
+[[edges]]
+from = "load:on_success"
+to = "write:exec_in"
+
+[[edges]]
+from = "load:table"
+to = "write:table"
+
+[[edges]]
+from = "write_path:value"
+to = "write:path"
+
+[[edges]]
+from = "write:on_success"
+to = "log_success:exec_in"
+
+[[edges]]
+from = "write:on_error"
+to = "log_error:exec_in"
+
+[[edges]]
+from = "write:error"
+to = "log_error:value"

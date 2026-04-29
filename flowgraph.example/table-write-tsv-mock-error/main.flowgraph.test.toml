@@ -1,0 +1,50 @@
+[mocks]
+
+[[mocks.file_read]]
+node = "main::load"
+contents = """
+source	replacement
+hello	hi
+vac	VAC
+"""
+
+[[mocks.file_write]]
+node = "main::write"
+error = "fixture disk full"
+
+[[triggers]]
+node = "main::in"
+
+[[tests]]
+name = "table write tsv file mock error"
+
+[tests.expect]
+node_count = 8
+mock_count = 2
+trigger_count = 1
+trace_count = 3
+trace = [
+  "file.read mock: fixture.tsv -> node main::load",
+  "file.write mock: out.tsv (36 bytes) -> node main::write",
+  "log: write out.tsv: fixture disk full",
+]
+
+[[tests.expect.exec_count]]
+node = "main::log_success"
+count = 0
+
+[[tests.expect.exec_count]]
+node = "main::log_error"
+count = 1
+
+[[tests.expect.stored_values]]
+node = "main::write"
+port = "bytes_written"
+ty = "int"
+value = 0
+
+[[tests.expect.stored_values]]
+node = "main::write"
+port = "error"
+ty = "string"
+value = "write out.tsv: fixture disk full"

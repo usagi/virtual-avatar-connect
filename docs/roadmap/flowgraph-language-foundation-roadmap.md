@@ -256,6 +256,7 @@ node = "main::write"
 ```
 
 `flowgraph.example/table-write-tsv-mock` は `table.load_tsv -> table.write_tsv` を file read / write の両 mock で検証する。
+`flowgraph.example/table-write-tsv-mock-error` は mock error による `on_error` 分岐と stored error を検証する。
 JSON 出力には `kind = "file_write"` として載る。
 書き込まれる本文の厳密 assert は、次段の recorded effects / effect log 設計で扱う。
 
