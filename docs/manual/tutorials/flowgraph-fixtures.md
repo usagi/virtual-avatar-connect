@@ -40,11 +40,10 @@ cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-root flowgraph.ex
 ## fixture ファイル構成
 
 fixture ディレクトリには、通常の `*.flowgraph.toml` とテスト定義 `*.flowgraph.test.toml` を置きます。
+runner は指定ディレクトリ内の Flowgraph をまとめてロードするため、テスト定義側に対象 Flowgraph ファイル名は書きません。
 テスト定義の最小構成は次の形です。
 
 ```toml
-flowgraph = "example.flowgraph.toml"
-
 [tests.expect]
 node_count = 2
 trigger_count = 1
