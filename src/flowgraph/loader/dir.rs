@@ -455,6 +455,17 @@ mod tests {
 		// multi-file サンプル
 		assert!(report.node_meta.contains_key("chat-echo/main::in"));
 		assert!(report.node_meta.contains_key("chat-echo/tts::speaker"));
+		assert_eq!(report.capability_summary.node_count, report.node_meta.len());
+		assert!(report.capability_summary.effectful_node_count > 0);
+		for cap in ["network", "file_read", "file_write", "trace_write"] {
+			assert!(
+				report.capability_summary.capabilities.iter().any(|actual| actual == cap),
+				"capability_summary に {cap} が含まれていない: {:?}",
+				report.capability_summary
+			);
+		}
+		let counts = report.capability_summary.counts_by_capability();
+		assert!(counts.get("trace_write").copied().unwrap_or_default() > 0);
 	}
 
 	#[test]

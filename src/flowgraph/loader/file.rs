@@ -539,10 +539,13 @@ impl BuildContext {
 			LoadError::new(ds)
 		})?;
 
+		let capability_summary = crate::flowgraph::loader::diagnostic::GraphCapabilitySummary::from_node_meta(reg, &node_meta);
+
 		Ok(LoadReport {
 			program,
 			diagnostics,
 			node_meta,
+			capability_summary,
 			file_activation,
 		})
 	}

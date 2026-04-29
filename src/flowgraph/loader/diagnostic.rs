@@ -3,6 +3,7 @@
 //! GUI / Control API 向けに JSON serializable。
 
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -172,6 +173,8 @@ pub struct LoadReport {
 	pub diagnostics: Vec<Diagnostic>,
 	/// 解決済みノード（`fq_name` → 定義元ファイル / feature）。GUI / debug 用メタ情報。
 	pub node_meta: std::collections::HashMap<String, LoadedNodeMeta>,
+	/// LF-2: graph 全体が要求する capability の集計。policy enforcement ではなく read-only metadata。
+	pub capability_summary: GraphCapabilitySummary,
 	/// RM-3: 各 `.flowgraph.toml` の fq → `[meta]` の mode 系メタ（省略時は既定）。
 	pub file_activation: std::collections::HashMap<String, FlowgraphFileActivationMeta>,
 }
@@ -180,9 +183,74 @@ impl std::fmt::Debug for LoadReport {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.debug_struct("LoadReport")
 			.field("nodes", &self.node_meta.keys().collect::<Vec<_>>())
+			.field("capability_summary", &self.capability_summary)
 			.field("file_activation", &self.file_activation.keys().collect::<Vec<_>>())
 			.field("diagnostics", &self.diagnostics)
 			.finish()
+	}
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct GraphCapabilitySummary {
+	pub node_count: usize,
+	pub effectful_node_count: usize,
+	pub capabilities: Vec<String>,
+	pub nodes: Vec<GraphCapabilityNode>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct GraphCapabilityNode {
+	pub node: String,
+	pub feature: String,
+	pub effect_class: String,
+	pub capabilities: Vec<String>,
+}
+
+impl GraphCapabilitySummary {
+	pub fn from_node_meta(
+		reg: &crate::flowgraph::registry::NodeRegistry,
+		node_meta: &std::collections::HashMap<String, LoadedNodeMeta>,
+	) -> Self {
+		let mut nodes = Vec::new();
+		let mut capabilities = BTreeSet::new();
+		let mut effectful_node_count = 0;
+
+		for (node, meta) in node_meta {
+			let effect_class = reg.effect_class(&meta.feature).unwrap_or("unknown").to_string();
+			if effect_class == "effectful" {
+				effectful_node_count += 1;
+			}
+			let node_caps: Vec<String> = reg.capabilities(&meta.feature).into_iter().map(str::to_string).collect();
+			for cap in &node_caps {
+				capabilities.insert(cap.clone());
+			}
+			if !node_caps.is_empty() || effect_class != "pure" {
+				nodes.push(GraphCapabilityNode {
+					node: node.clone(),
+					feature: meta.feature.clone(),
+					effect_class,
+					capabilities: node_caps,
+				});
+			}
+		}
+
+		nodes.sort_by(|a, b| a.node.cmp(&b.node));
+		Self {
+			node_count: node_meta.len(),
+			effectful_node_count,
+			capabilities: capabilities.into_iter().collect(),
+			nodes,
+		}
+	}
+
+	pub fn counts_by_capability(&self) -> BTreeMap<&str, usize> {
+		let mut out = BTreeMap::new();
+		for node in &self.nodes {
+			for cap in &node.capabilities {
+				*out.entry(cap.as_str()).or_insert(0) += 1;
+			}
+		}
+		out
 	}
 }
 

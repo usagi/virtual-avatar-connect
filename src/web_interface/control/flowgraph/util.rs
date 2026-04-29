@@ -144,58 +144,6 @@ pub(crate) fn enrich_contract_json(v: &mut serde_json::Value) {
 	);
 }
 
-fn infer_capabilities(feature: &str, category: &str, effect_class: &str) -> Vec<&'static str> {
-	if effect_class != "effectful" {
-		return Vec::new();
-	}
-	let mut caps = Vec::new();
-	let mut add = |cap: &'static str| {
-		if !caps.contains(&cap) {
-			caps.push(cap);
-		}
-	};
-
-	if feature == "flowgraph.table.load_tsv" {
-		add("file_read");
-	}
-	if feature == "flowgraph.table.write_tsv" {
-		add("file_write");
-	}
-	if feature.starts_with("flowgraph.http.") || feature.starts_with("flowgraph.translate.") {
-		add("network");
-	}
-	if feature.starts_with("flowgraph.obs.") {
-		add("network");
-		add("obs_control");
-	}
-	if feature.starts_with("flowgraph.twitch.") {
-		add("network");
-		add("twitch_api");
-	}
-	if feature == "flowgraph.twitch.get_token" {
-		add("credential_access");
-	}
-	if feature.starts_with("flowgraph.osc.") || feature.starts_with("flowgraph.vmc.") || feature.starts_with("flowgraph.vrchat.") {
-		add("network");
-	}
-	if feature.starts_with("flowgraph.process.") {
-		add("process_control");
-	}
-	if feature.starts_with("flowgraph.window.") {
-		add("window_control");
-	}
-	if feature.starts_with("flowgraph.screenshot.") || feature.starts_with("flowgraph.ocr.") {
-		add("desktop_capture");
-	}
-	if feature.starts_with("flowgraph.tts.") {
-		add("audio_output");
-	}
-	if category == "log" || feature == "flowgraph.util.log" {
-		add("trace_write");
-	}
-	caps
-}
-
 /// LF-2: catalog JSON に副作用クラスと capability summary を注入する。
 ///
 /// まだ policy enforcement は行わない。GUI 表示、graph summary、mock capability 設計のための
@@ -207,7 +155,7 @@ pub(crate) fn enrich_effect_metadata_json(reg: &crate::flowgraph::registry::Node
 	let feature = obj.get("feature").and_then(|f| f.as_str()).unwrap_or("");
 	let category = obj.get("category").and_then(|c| c.as_str()).unwrap_or("");
 	let effect_class = reg.effect_class(feature).unwrap_or("unknown");
-	let caps = infer_capabilities(feature, category, effect_class);
+	let caps = crate::flowgraph::registry::infer_capabilities(feature, category, effect_class);
 	obj.insert("effect_class".to_string(), serde_json::Value::String(effect_class.to_string()));
 	obj.insert(
 		"capabilities".to_string(),
@@ -540,12 +488,17 @@ mod tests {
 		assert_eq!(contract["summary"]["has_exec_output"].as_bool(), Some(true));
 
 		let inputs = contract["inputs"].as_array().expect("inputs contract");
-		let dictionary = inputs.iter().find(|p| p["name"].as_str() == Some("dictionary")).expect("dictionary input");
+		let dictionary = inputs
+			.iter()
+			.find(|p| p["name"].as_str() == Some("dictionary"))
+			.expect("dictionary input");
 		assert_eq!(dictionary["type"].as_str(), Some("table"));
 		assert_eq!(dictionary["optional"].as_bool(), Some(true));
 
 		let outputs = contract["outputs"].as_array().expect("outputs contract");
-		assert!(outputs.iter().any(|p| p["name"].as_str() == Some("updated_dictionary") && p["type"].as_str() == Some("table")));
+		assert!(outputs
+			.iter()
+			.any(|p| p["name"].as_str() == Some("updated_dictionary") && p["type"].as_str() == Some("table")));
 	}
 
 	#[test]
@@ -570,8 +523,14 @@ mod tests {
 		assert_eq!(specs["flowgraph.literal.string"]["effect_class"].as_str(), Some("pure"));
 		assert_eq!(specs["flowgraph.glossary.match"]["effect_class"].as_str(), Some("stateful"));
 		assert_eq!(specs["flowgraph.table.write_tsv"]["effect_class"].as_str(), Some("effectful"));
-		assert!(specs["flowgraph.table.write_tsv"]["capabilities"].as_array().unwrap().contains(&serde_json::json!("file_write")));
-		assert!(specs["flowgraph.twitch.chat_send"]["capabilities"].as_array().unwrap().contains(&serde_json::json!("twitch_api")));
+		assert!(specs["flowgraph.table.write_tsv"]["capabilities"]
+			.as_array()
+			.unwrap()
+			.contains(&serde_json::json!("file_write")));
+		assert!(specs["flowgraph.twitch.chat_send"]["capabilities"]
+			.as_array()
+			.unwrap()
+			.contains(&serde_json::json!("twitch_api")));
 		assert!(specs["flowgraph.obs.set_current_program_scene"]["capabilities"]
 			.as_array()
 			.unwrap()

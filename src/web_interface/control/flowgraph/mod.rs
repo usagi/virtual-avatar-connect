@@ -32,8 +32,8 @@ use crate::flowgraph::registry::registry;
 use crate::SharedState;
 
 use util::{
-	enrich_node_catalog_spec_json, ensure_within_root, err_json, flowgraph_dir, fq_to_file_path, make_backup,
-	root_relative, spawn_os_opener,
+	enrich_node_catalog_spec_json, ensure_within_root, err_json, flowgraph_dir, fq_to_file_path, make_backup, root_relative,
+	spawn_os_opener,
 };
 
 // ============================================================================
@@ -287,6 +287,8 @@ pub struct DiagnosticsResponse {
 	pub ok: bool,
 	pub diagnostics: Vec<Diagnostic>,
 	pub node_meta: std::collections::HashMap<String, crate::flowgraph::loader::LoadedNodeMeta>,
+	/// LF-2: graph 全体が要求する capability summary。
+	pub capability_summary: crate::flowgraph::loader::GraphCapabilitySummary,
 	/// RM-3: 各 flowgraph ファイルの mode 用メタ（`[meta].mode_groups` / `default_enabled`）。
 	pub file_activation: std::collections::HashMap<String, crate::flowgraph::FlowgraphFileActivationMeta>,
 	/// RM-3: exec が抑止されているノード ID。
@@ -304,16 +306,13 @@ pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 			"conf.flowgraph_dir が未設定です",
 		);
 	};
-	let inactive_exec_nodes = rt
-		.trigger_gate
-		.as_ref()
-		.map(|g| g.inactive_node_ids())
-		.unwrap_or_default();
+	let inactive_exec_nodes = rt.trigger_gate.as_ref().map(|g| g.inactive_node_ids()).unwrap_or_default();
 	HttpResponse::Ok().json(DiagnosticsResponse {
 		root_dir: rt.root_dir.display().to_string().replace('\\', "/"),
 		ok: rt.ok,
 		diagnostics: rt.diagnostics.clone(),
 		node_meta: rt.node_meta.clone(),
+		capability_summary: rt.capability_summary.clone(),
 		file_activation: rt.file_activation.clone(),
 		inactive_exec_nodes,
 	})

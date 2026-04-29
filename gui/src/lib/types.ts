@@ -1059,12 +1059,27 @@ export type FlowgraphLoadedNodeMeta = {
  position?: [number, number] | null;
 };
 
+export type FlowgraphCapabilityNode = {
+ node: string;
+ feature: string;
+ effect_class: string;
+ capabilities: string[];
+};
+
+export type FlowgraphCapabilitySummary = {
+ node_count: number;
+ effectful_node_count: number;
+ capabilities: string[];
+ nodes: FlowgraphCapabilityNode[];
+};
+
 export type FlowgraphDiagnosticsResponse = {
  root_dir: string;
  ok: boolean;
  diagnostics: FlowgraphDiagnostic[];
  /** `fq_name` → 定義元メタ。 */
  node_meta: Record<string, FlowgraphLoadedNodeMeta>;
+ capability_summary: FlowgraphCapabilitySummary;
 };
 
 export type FlowgraphCreateFileRequest = {

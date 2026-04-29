@@ -103,6 +103,30 @@ Node Palette と Flowgraph Node Card に `effect_class` と capability summary �
 ユーザーは node を追加する前後で、Pure / Stateful / Effectful と外部 I/O の種別を確認できる。
 これは hard permission UI ではなく、LF-2a metadata の可視化である。
 
+### LF-2c graph capability summary ✅
+
+`LoadReport` に graph 全体の `capability_summary` を追加した。
+各 node の feature / effect_class / capabilities を集約し、graph が要求する capability 群を read-only metadata として得られるようにする。
+
+```json
+{
+  "node_count": 8,
+  "effectful_node_count": 3,
+  "capabilities": ["file_read", "file_write", "network"],
+  "nodes": [
+    {
+      "node": "main::load",
+      "feature": "flowgraph.table.load_tsv",
+      "effect_class": "effectful",
+      "capabilities": ["file_read"]
+    }
+  ]
+}
+```
+
+`GET /flowgraph/diagnostics` でも同じ summary を返す。
+現時点では policy enforcement ではなく、GUI 表示、Runtime Mode / Capability policy preview、fixture mock 設計のための足場。
+
 ## 4. LF-3 Testing / Debugger
 
 Flowgraph を「プログラム」として扱うための検証と観測。

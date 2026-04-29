@@ -14,8 +14,8 @@
 //! - アプリ終了時は `shutdown()` でワーカーを停止。
 
 use crate::flowgraph::activation::{mode_group_orphan_diagnostics, TriggerGate};
+use crate::flowgraph::loader::{Diagnostic, FlowgraphFileActivationMeta, GraphCapabilitySummary, LoadedNodeMeta, Severity};
 use crate::flowgraph::node::PureEvalHost;
-use crate::flowgraph::loader::{Diagnostic, FlowgraphFileActivationMeta, LoadedNodeMeta, Severity};
 use crate::flowgraph::node::TriggerHandle;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -52,6 +52,8 @@ pub struct FlowgraphRuntime {
 	pub ok: bool,
 	pub diagnostics: Vec<Diagnostic>,
 	pub node_meta: HashMap<String, LoadedNodeMeta>,
+	/// LF-2: graph 全体の capability summary。GUI と policy preview 用の read-only metadata。
+	pub capability_summary: GraphCapabilitySummary,
 	/// RM-3: 各 flowgraph ファイル fq → mode 用メタ（`GET /flowgraph/diagnostics` 等で参照）。
 	pub file_activation: HashMap<String, FlowgraphFileActivationMeta>,
 	/// RM-3: exec 抑止ゲート（ワーカーと共有）。未 spawn 時は `None`。
@@ -68,6 +70,7 @@ impl Clone for FlowgraphRuntime {
 			ok: self.ok,
 			diagnostics: self.diagnostics.clone(),
 			node_meta: self.node_meta.clone(),
+			capability_summary: self.capability_summary.clone(),
 			file_activation: self.file_activation.clone(),
 			trigger_gate: self.trigger_gate.clone(),
 			handle: self.handle.clone(),
@@ -107,6 +110,7 @@ impl FlowgraphRuntime {
 						format!("flowgraph_dir '{}' はディレクトリではありません", root_dir.display()),
 					)],
 					node_meta: HashMap::new(),
+					capability_summary: GraphCapabilitySummary::default(),
 					file_activation: HashMap::new(),
 					trigger_gate: None,
 					handle: None,
@@ -120,7 +124,9 @@ impl FlowgraphRuntime {
 					program,
 					diagnostics,
 					node_meta,
+					capability_summary,
 					file_activation,
+					..
 				} = report;
 				let has_nodes = !node_meta.is_empty();
 				let rt = Self {
@@ -128,6 +134,7 @@ impl FlowgraphRuntime {
 					ok: true,
 					diagnostics,
 					node_meta,
+					capability_summary,
 					file_activation,
 					trigger_gate: None,
 					handle: None,
@@ -140,6 +147,7 @@ impl FlowgraphRuntime {
 					ok: false,
 					diagnostics,
 					node_meta: HashMap::new(),
+					capability_summary: GraphCapabilitySummary::default(),
 					file_activation: HashMap::new(),
 					trigger_gate: None,
 					handle: None,
@@ -182,13 +190,8 @@ impl FlowgraphRuntime {
 				runtime_mode: runtime_mode_id,
 				default_runtime_mode: conf.and_then(|c| c.default_runtime_mode.clone()),
 			};
-			let (trigger, shutdown_tx, join) = crate::flowgraph::spawn::spawn_program(
-				program,
-				state_weak,
-				audio_sink,
-				gate.clone(),
-				pure_host,
-			);
+			let (trigger, shutdown_tx, join) =
+				crate::flowgraph::spawn::spawn_program(program, state_weak, audio_sink, gate.clone(), pure_host);
 			rt.trigger_gate = gate;
 			rt.handle = Some(Arc::new(RuntimeHandle {
 				trigger,
@@ -205,6 +208,7 @@ impl FlowgraphRuntime {
 			ok: true,
 			diagnostics: Vec::new(),
 			node_meta: HashMap::new(),
+			capability_summary: GraphCapabilitySummary::default(),
 			file_activation: HashMap::new(),
 			trigger_gate: None,
 			handle: None,

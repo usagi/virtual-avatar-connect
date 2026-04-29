@@ -133,6 +133,18 @@ impl NodeRegistry {
 		self.map.get(self.resolve_feature(feature)).map(|n| n.effect_class())
 	}
 
+	/// LF-2: feature が要求する capability 群を返す。
+	///
+	/// 現状は built-in feature 名と category から推論する read-only metadata。
+	/// policy enforcement ではなく、GUI 表示、graph summary、fixture mock 設計のための基礎情報として扱う。
+	pub fn capabilities(&self, feature: &str) -> Vec<&'static str> {
+		let Some(spec) = self.spec(feature) else {
+			return Vec::new();
+		};
+		let effect_class = self.effect_class(feature).unwrap_or("unknown");
+		infer_capabilities(&spec.feature, &spec.category, effect_class)
+	}
+
 	/// 登録済み feature から **新しい** `NodeImpl` を作る（Stateful は state slot を新規確保）。
 	pub fn make_impl(&self, feature: &str) -> Option<NodeImpl> {
 		self.map.get(self.resolve_feature(feature)).map(|n| n.make_impl())
@@ -149,6 +161,58 @@ impl NodeRegistry {
 	pub fn all_specs(&self) -> Vec<NodeSpec> {
 		self.features().into_iter().filter_map(|f| self.spec(&f)).collect()
 	}
+}
+
+pub fn infer_capabilities(feature: &str, category: &str, effect_class: &str) -> Vec<&'static str> {
+	if effect_class != "effectful" {
+		return Vec::new();
+	}
+	let mut caps = Vec::new();
+	let mut add = |cap: &'static str| {
+		if !caps.contains(&cap) {
+			caps.push(cap);
+		}
+	};
+
+	if feature == "flowgraph.table.load_tsv" {
+		add("file_read");
+	}
+	if feature == "flowgraph.table.write_tsv" {
+		add("file_write");
+	}
+	if feature.starts_with("flowgraph.http.") || feature.starts_with("flowgraph.translate.") {
+		add("network");
+	}
+	if feature.starts_with("flowgraph.obs.") {
+		add("network");
+		add("obs_control");
+	}
+	if feature.starts_with("flowgraph.twitch.") {
+		add("network");
+		add("twitch_api");
+	}
+	if feature == "flowgraph.twitch.get_token" {
+		add("credential_access");
+	}
+	if feature.starts_with("flowgraph.osc.") || feature.starts_with("flowgraph.vmc.") || feature.starts_with("flowgraph.vrchat.") {
+		add("network");
+	}
+	if feature.starts_with("flowgraph.process.") {
+		add("process_control");
+	}
+	if feature.starts_with("flowgraph.window.") {
+		add("window_control");
+	}
+	if feature.starts_with("flowgraph.screenshot.") || feature.starts_with("flowgraph.ocr.") {
+		add("desktop_capture");
+	}
+	if feature.starts_with("flowgraph.tts.") {
+		add("audio_output");
+	}
+	if category == "log" || feature == "flowgraph.util.log" {
+		add("trace_write");
+	}
+	caps
 }
 
 /// δ-5 時点の組み込みノード一式を登録したレジストリを返す。
