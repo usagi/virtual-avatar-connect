@@ -162,7 +162,7 @@ impl NodeDescriptor for TableLoadTsvNode {
 impl EffectfulNode for TableLoadTsvNode {
 	async fn execute(
 		&self,
-		_ctx: &mut ExecCtx,
+		ctx: &mut ExecCtx,
 		_props: &InputMap,
 		inputs: &InputMap,
 		fired: &ExecFireSet,
@@ -173,10 +173,23 @@ impl EffectfulNode for TableLoadTsvNode {
 		let path = get_required_string(inputs, "path")?;
 		let mode = get_optional_string(inputs, "mode", "auto")?;
 
-		let contents = match tokio::fs::read_to_string(&path).await {
-			Ok(s) => s,
-			Err(e) => {
-				return Ok(err_output_load(format!("read_to_string {path}: {e}")));
+		let contents = if let Some(mock) = ctx
+			.effect_mocks
+			.as_ref()
+			.and_then(|mocks| mocks.file_read_response(&ctx.node_id))
+			.cloned()
+		{
+			ctx.log(format!("file.read mock: {path} -> node {}", ctx.node_id));
+			if let Some(error) = mock.error {
+				return Ok(err_output_load(format!("read_to_string {path}: {error}")));
+			}
+			mock.contents
+		} else {
+			match tokio::fs::read_to_string(&path).await {
+				Ok(s) => s,
+				Err(e) => {
+					return Ok(err_output_load(format!("read_to_string {path}: {e}")));
+				}
 			}
 		};
 		match parse_tsv_with_mode(&contents, &mode) {

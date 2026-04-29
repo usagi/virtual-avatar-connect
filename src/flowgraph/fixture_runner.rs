@@ -5,7 +5,7 @@
 //! **ロード＋純粋グラフのスモーク**向け。
 
 use crate::flowgraph::engine::create_trigger_bus;
-use crate::flowgraph::node::{EffectMocks, ExecCtx, HttpMockResponse, SocketValueRepr, TriggerEvent};
+use crate::flowgraph::node::{EffectMocks, ExecCtx, FileReadMockResponse, HttpMockResponse, SocketValueRepr, TriggerEvent};
 use crate::flowgraph::socket::{from_toml_value, SocketType};
 use crate::flowgraph::{load_flowgraph_dir, FlowgraphProgram, LoadError, NodeExecError, ProgramRun};
 use serde::{Deserialize, Serialize};
@@ -162,6 +162,8 @@ struct FixtureTriggerOverride {
 struct FixtureMockSpec {
 	#[serde(default)]
 	http: Vec<FixtureHttpMockSpec>,
+	#[serde(default)]
+	file_read: Vec<FixtureFileReadMockSpec>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -173,6 +175,15 @@ struct FixtureHttpMockSpec {
 	body: String,
 	#[serde(default)]
 	json: Option<toml::Value>,
+	#[serde(default)]
+	error: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureFileReadMockSpec {
+	node: String,
+	#[serde(default)]
+	contents: String,
 	#[serde(default)]
 	error: Option<String>,
 }
@@ -286,6 +297,7 @@ async fn run_fixture_program(
 
 fn build_effect_mocks(declared_tests: &[ParsedFixtureTestFile]) -> EffectMocks {
 	let mut http = HashMap::new();
+	let mut file_read = HashMap::new();
 	for file in declared_tests {
 		for mock in &file.parsed.mocks.http {
 			let body_json = mock
@@ -303,8 +315,17 @@ fn build_effect_mocks(declared_tests: &[ParsedFixtureTestFile]) -> EffectMocks {
 				},
 			);
 		}
+		for mock in &file.parsed.mocks.file_read {
+			file_read.insert(
+				mock.node.clone(),
+				FileReadMockResponse {
+					contents: mock.contents.clone(),
+					error: mock.error.clone(),
+				},
+			);
+		}
 	}
-	EffectMocks { http }
+	EffectMocks { http, file_read }
 }
 
 fn summarize_effect_mocks(effect_mocks: &EffectMocks) -> Vec<FixtureMockSummary> {
@@ -316,6 +337,10 @@ fn summarize_effect_mocks(effect_mocks: &EffectMocks) -> Vec<FixtureMockSummary>
 			node: node.clone(),
 		})
 		.collect();
+	out.extend(effect_mocks.file_read.keys().map(|node| FixtureMockSummary {
+		kind: "file_read".into(),
+		node: node.clone(),
+	}));
 	out.sort_by(|a, b| (&a.kind, &a.node).cmp(&(&b.kind, &b.node)));
 	out
 }
@@ -632,6 +657,16 @@ mod tests {
 		let report = run_fixture_once_report(&dir).await.expect("report");
 		assert!(report.ok, "report: {:?}", report.tests);
 		assert!(report.trace.iter().any(|line| line.contains("fixture network down")));
+		assert_eq!(report.failed_tests, 0);
+	}
+
+	#[tokio::test]
+	async fn table_load_tsv_mock_declared_test_passes() {
+		let dir = example_dir("table-load-tsv-mock");
+		let report = run_fixture_once_report(&dir).await.expect("report");
+		assert!(report.ok, "report: {:?}", report.tests);
+		assert_eq!(report.mock_count, 1);
+		assert!(report.trace.iter().any(|line| line.contains("file.read mock: fixture.tsv")));
 		assert_eq!(report.failed_tests, 0);
 	}
 

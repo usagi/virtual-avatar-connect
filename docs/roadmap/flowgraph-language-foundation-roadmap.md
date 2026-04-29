@@ -222,6 +222,26 @@ JSON 出力には `mock_count` と `mocks[]` を載せ、`[tests.expect]` でも
 分岐確認には `[[tests.expect.exec_count]]` も使い、想定外の branch が発火していないことを検証する。
 今後は file / db / obs / twitch などへ同じ `[mocks.<capability>]` 形式で広げる。
 
+### LF-3e fixture file read mock capability ✅
+
+`*.flowgraph.test.toml` の `[mocks]` で、ファイル読み取り I/O も node 単位に差し替えられる。
+初期版は `flowgraph.table.load_tsv` の TSV 読み取りに限定し、fixture 内で TSV 本文または読み取り error を宣言する。
+
+```toml
+[mocks]
+
+[[mocks.file_read]]
+node = "main::load"
+contents = """
+source	replacement
+hello	hi
+"""
+```
+
+`flowgraph.example/table-load-tsv-mock` は `ingress.web_input -> table.load_tsv` を実ファイルなしで検証する最小 fixture。
+JSON 出力には HTTP mock と同じ `mock_count` / `mocks[]` として `kind = "file_read"` が載る。
+これにより、ファイル監視・辞書・Table 系ノードの regression test を実ファイル配置に依存させずに増やせる。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。

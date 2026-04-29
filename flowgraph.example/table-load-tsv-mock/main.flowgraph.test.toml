@@ -1,0 +1,34 @@
+[mocks]
+
+[[mocks.file_read]]
+node = "main::load"
+contents = """
+source	replacement
+hello	hi
+vac	VAC
+"""
+
+[[triggers]]
+node = "main::in"
+
+[[tests]]
+name = "table load tsv file mock"
+
+[tests.expect]
+node_count = 4
+mock_count = 1
+trigger_count = 1
+trace_count = 1
+trace = [
+  "file.read mock: fixture.tsv -> node main::load",
+]
+
+[[tests.expect.exec_count]]
+node = "main::load"
+count = 1
+
+[[tests.expect.stored_values]]
+node = "main::load"
+port = "row_count"
+ty = "int"
+value = 2
