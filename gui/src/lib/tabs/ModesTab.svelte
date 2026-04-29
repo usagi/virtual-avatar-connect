@@ -2,10 +2,12 @@
  import { onMount } from 'svelte';
  import { api } from '../api';
  import {
-  buildDisplayModes,
-  formatControlApiError,
-  joinList,
-  managedDirectiveRows,
+ buildDisplayModes,
+  capabilityPolicyRows,
+  capabilityPolicyWarnings,
+ formatControlApiError,
+ joinList,
+ managedDirectiveRows,
  } from '../control/runtimeModes';
  import {
   type ModeTransitionPlan,
@@ -32,25 +34,8 @@
 
  const selectedMode = $derived(displayModes.find((m) => m.id === selectedModeId) ?? displayModes[0]);
  const managedDesiredRows = $derived(managedDirectiveRows(transitionPlan));
- const capabilityPolicyRows = $derived.by(() => {
-  if (!transitionPlan) return [];
-  return [
-   { label: 'Allow', values: transitionPlan.target_capability_policy.allow },
-   { label: 'Deny', values: transitionPlan.target_capability_policy.deny },
-  ].filter((row) => row.values.length > 0);
- });
- const capabilityWarnings = $derived.by(() => {
-  if (!transitionPlan) return [];
-  const denied = transitionPlan.capability_denied_by_target.map((capability) => ({
-   kind: 'deny',
-   label: capabilityLabel(capability),
-  }));
-  const unlisted = transitionPlan.capability_unlisted_by_target.map((capability) => ({
-   kind: 'allow',
-   label: capabilityLabel(capability),
-  }));
-  return [...denied, ...unlisted];
- });
+ const capabilityPolicyPreviewRows = $derived(capabilityPolicyRows(transitionPlan));
+ const capabilityWarnings = $derived(capabilityPolicyWarnings(transitionPlan));
  const selectedCanTransit = $derived(selectedMode?.configured === true);
  const isCurrentSelected = $derived(selectedMode?.id === currentModeId);
  const transitionPercent = $derived.by(() => {
@@ -298,9 +283,9 @@
     {#if transitionPlan}
      <div>
       <div class="mb-1 text-xs font-semibold opacity-70">Capability policy preview</div>
-      {#if capabilityPolicyRows.length > 0}
+      {#if capabilityPolicyPreviewRows.length > 0}
        <dl class="grid grid-cols-[64px_minmax(0,1fr)] gap-x-2 gap-y-1 text-xs">
-        {#each capabilityPolicyRows as row (row.label)}
+        {#each capabilityPolicyPreviewRows as row (row.label)}
          <dt class="opacity-60">{row.label}</dt>
          <dd class="truncate font-mono">
           {row.values.map((capability) => capabilityLabel(capability)).join(', ')}
@@ -312,9 +297,9 @@
       {/if}
       {#if capabilityWarnings.length > 0}
        <div class="mt-2 grid gap-1">
-        {#each capabilityWarnings as warning (warning.kind + warning.label)}
+        {#each capabilityWarnings as warning (warning.kind + warning.capability)}
          <div class="rounded border border-warning-500/50 px-2 py-1 text-xs text-warning-700-300">
-          {warning.kind === 'deny' ? 'Deny と衝突' : 'Allow 外'}: {warning.label}
+          {warning.kind === 'deny' ? 'Deny と衝突' : 'Allow 外'}: {capabilityLabel(warning.capability)}
          </div>
         {/each}
        </div>
