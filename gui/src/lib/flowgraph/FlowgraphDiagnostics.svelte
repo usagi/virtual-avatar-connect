@@ -43,6 +43,7 @@
    label: capabilityLabel(capability),
   })),
  );
+ const capabilityNodes = $derived(capabilitySummary?.nodes ?? []);
 </script>
 
 <div class="h-full">
@@ -63,6 +64,27 @@
      <span class="opacity-50">capabilities none</span>
     {/if}
    </div>
+   {#if capabilityNodes.length > 0}
+    <details class="mt-1">
+     <summary class="cursor-pointer select-none text-[0.65rem] opacity-60">
+      capability nodes {capabilityNodes.length}
+     </summary>
+     <div class="mt-1 grid gap-1">
+      {#each capabilityNodes as node (node.node)}
+       <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(6rem,auto)] items-center gap-2 text-[0.65rem]">
+        <span class="truncate font-mono" title={node.node}>{node.node}</span>
+        <span class="truncate font-mono opacity-70" title={node.feature}>{node.feature}</span>
+        <span
+         class="truncate text-right opacity-70"
+         title={node.capabilities.map((capability) => capabilityLabel(capability)).join(', ') || node.effect_class}
+        >
+         {node.capabilities.map((capability) => capabilityLabel(capability)).join(', ') || node.effect_class}
+        </span>
+       </div>
+      {/each}
+     </div>
+    </details>
+   {/if}
   </div>
  {/if}
  {#if diags.length === 0}
