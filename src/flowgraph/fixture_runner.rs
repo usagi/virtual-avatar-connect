@@ -237,6 +237,8 @@ struct FixtureExpect {
 	stored_values: Vec<FixtureExpectedValue>,
 	#[serde(default)]
 	file_writes: Vec<FixtureExpectedFileWrite>,
+	#[serde(default)]
+	http_requests: Vec<FixtureExpectedHttpRequest>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -262,6 +264,21 @@ struct FixtureExpectedFileWrite {
 	bytes: Option<i64>,
 	#[serde(default)]
 	contents: Option<String>,
+	#[serde(default)]
+	error: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureExpectedHttpRequest {
+	node: String,
+	method: String,
+	url: String,
+	#[serde(default)]
+	status: Option<i64>,
+	#[serde(default)]
+	request_body: Option<toml::Value>,
+	#[serde(default)]
+	response_body: Option<String>,
 	#[serde(default)]
 	error: Option<String>,
 }
@@ -673,6 +690,52 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 			None => failures.push(format!("file_write {}:{}: missing", expected.node, expected.path)),
 		}
 	}
+	for expected in &case.expect.http_requests {
+		match report.recorded_effects.iter().find(|actual| {
+			actual.kind == "http"
+				&& actual.node == expected.node
+				&& actual.method.as_deref() == Some(expected.method.as_str())
+				&& actual.url.as_deref() == Some(expected.url.as_str())
+		}) {
+			Some(actual) => {
+				if actual.status != expected.status {
+					failures.push(format!(
+						"http_request {}:{} {} status: expected {:?}, actual {:?}",
+						expected.node, expected.method, expected.url, expected.status, actual.status
+					));
+				}
+				if let Some(expected_body) = &expected.request_body {
+					let expected_json = toml_value_to_json(expected_body);
+					if actual.request_body.as_ref() != Some(&expected_json) {
+						failures.push(format!(
+							"http_request {}:{} {} request_body: expected {}, actual {:?}",
+							expected.node,
+							expected.method,
+							expected.url,
+							compact_json(&expected_json),
+							actual.request_body
+						));
+					}
+				}
+				if actual.response_body != expected.response_body {
+					failures.push(format!(
+						"http_request {}:{} {} response_body: expected {:?}, actual {:?}",
+						expected.node, expected.method, expected.url, expected.response_body, actual.response_body
+					));
+				}
+				if actual.error != expected.error {
+					failures.push(format!(
+						"http_request {}:{} {} error: expected {:?}, actual {:?}",
+						expected.node, expected.method, expected.url, expected.error, actual.error
+					));
+				}
+			}
+			None => failures.push(format!(
+				"http_request {}:{} {}: missing",
+				expected.node, expected.method, expected.url
+			)),
+		}
+	}
 	FixtureTestResult {
 		file: path.file_name().and_then(|s| s.to_str()).unwrap_or("").to_string(),
 		name: case.name.clone().unwrap_or_else(|| format!("test#{index}")),
@@ -956,6 +1019,103 @@ mod tests {
 		assert!(result.failures.iter().any(|f| f.contains("contents: expected")));
 		assert!(result.failures.iter().any(|f| f.contains("error: expected None")));
 		assert!(result.failures.iter().any(|f| f == "file_write missing:missing.tsv: missing"));
+	}
+
+	#[test]
+	fn http_request_assertion_passes() {
+		let mut report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		report.effect_count = 1;
+		report.recorded_effects.push(FixtureRecordedEffect {
+			kind: "http".into(),
+			node: "http".into(),
+			method: Some("POST".into()),
+			url: Some("http://localhost/test".into()),
+			path: None,
+			status: Some(202),
+			bytes: None,
+			contents: None,
+			request_body: Some(serde_json::json!({"a": 1})),
+			response_body: Some("{\"ok\":true}".into()),
+			error: None,
+		});
+		let case = FixtureTestCase {
+			name: Some("http".into()),
+			expect: FixtureExpect {
+				http_requests: vec![FixtureExpectedHttpRequest {
+					node: "http".into(),
+					method: "POST".into(),
+					url: "http://localhost/test".into(),
+					status: Some(202),
+					request_body: Some(toml::Value::Table([("a".into(), toml::Value::Integer(1))].into_iter().collect())),
+					response_body: Some("{\"ok\":true}".into()),
+					error: None,
+				}],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(result.ok, "{:?}", result.failures);
+	}
+
+	#[test]
+	fn http_request_assertion_reports_missing_and_mismatch() {
+		let mut report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		report.recorded_effects.push(FixtureRecordedEffect {
+			kind: "http".into(),
+			node: "http".into(),
+			method: Some("POST".into()),
+			url: Some("http://localhost/test".into()),
+			path: None,
+			status: Some(500),
+			bytes: None,
+			contents: None,
+			request_body: Some(serde_json::json!({"actual": true})),
+			response_body: Some("actual".into()),
+			error: Some("boom".into()),
+		});
+		let case = FixtureTestCase {
+			name: Some("http".into()),
+			expect: FixtureExpect {
+				http_requests: vec![
+					FixtureExpectedHttpRequest {
+						node: "http".into(),
+						method: "POST".into(),
+						url: "http://localhost/test".into(),
+						status: Some(200),
+						request_body: Some(toml::Value::Table(
+							[("expected".into(), toml::Value::Boolean(true))].into_iter().collect(),
+						)),
+						response_body: Some("expected".into()),
+						error: None,
+					},
+					FixtureExpectedHttpRequest {
+						node: "missing".into(),
+						method: "GET".into(),
+						url: "http://localhost/missing".into(),
+						status: None,
+						request_body: None,
+						response_body: None,
+						error: None,
+					},
+				],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(!result.ok);
+		assert_eq!(result.failures.len(), 5);
+		assert!(result.failures.iter().any(|f| f.contains("status: expected Some(200)")));
+		assert!(result.failures.iter().any(|f| f.contains("request_body: expected")));
+		assert!(result.failures.iter().any(|f| f.contains("response_body: expected")));
+		assert!(result.failures.iter().any(|f| f.contains("error: expected None")));
+		assert!(result
+			.failures
+			.iter()
+			.any(|f| f == "http_request missing:GET http://localhost/missing: missing"));
 	}
 
 	fn report_with_stored_value(node: &str, port: &str, ty: &str, value: serde_json::Value) -> FixtureRunReport {

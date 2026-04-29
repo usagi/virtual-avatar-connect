@@ -47,3 +47,11 @@ node = "main::http_request"
 port = "status"
 ty = "int"
 value = 202
+
+[[tests.expect.http_requests]]
+node = "main::http_request"
+method = "POST"
+url = "http://127.0.0.1:8787/webhook"
+status = 202
+request_body = { source = "VAC", event = "web_input" }
+response_body = '{"accepted":true,"fixture":"http"}'

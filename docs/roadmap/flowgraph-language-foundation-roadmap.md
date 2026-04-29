@@ -221,6 +221,7 @@ JSON 出力には `mock_count` と `mocks[]` を載せ、`[tests.expect]` でも
 `ingress.web_input -> http.request -> util.log` の両分岐を fixture 化済み。
 分岐確認には `[[tests.expect.exec_count]]` も使い、想定外の branch が発火していないことを検証する。
 mock HTTP は `recorded_effects[]` に method / url / request_body / status / response_body / error を残す。
+`[tests.expect]` では `[[tests.expect.http_requests]]` で HTTP request / response 形状を検証できる。
 今後は db / obs / twitch などへ同じ `[mocks.<capability>]` 形式で広げる。
 
 ### LF-3e fixture file read mock capability ✅

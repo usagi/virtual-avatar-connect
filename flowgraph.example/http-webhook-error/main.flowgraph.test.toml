@@ -51,3 +51,10 @@ node = "main::http_request"
 port = "error"
 ty = "string"
 value = "fixture network down"
+
+[[tests.expect.http_requests]]
+node = "main::http_request"
+method = "POST"
+url = "http://127.0.0.1:8787/webhook"
+request_body = { source = "VAC", event = "web_input" }
+error = "fixture network down"
