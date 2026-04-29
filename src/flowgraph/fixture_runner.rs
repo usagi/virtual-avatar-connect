@@ -859,6 +859,85 @@ mod tests {
 		assert!(result.failures.iter().any(|f| f == "stored_value missing:value: missing"));
 	}
 
+	#[test]
+	fn file_write_assertion_passes() {
+		let mut report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		report.effect_count = 1;
+		report.recorded_effects.push(FixtureRecordedEffect {
+			kind: "file_write".into(),
+			node: "write".into(),
+			path: Some("out.tsv".into()),
+			bytes: Some(12),
+			contents: Some("a\tb\n1\t2\n".into()),
+			error: None,
+		});
+		let case = FixtureTestCase {
+			name: Some("write".into()),
+			expect: FixtureExpect {
+				effect_count: Some(1),
+				file_writes: vec![FixtureExpectedFileWrite {
+					node: "write".into(),
+					path: "out.tsv".into(),
+					bytes: Some(12),
+					contents: Some("a\tb\n1\t2\n".into()),
+					error: None,
+				}],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(result.ok, "{:?}", result.failures);
+	}
+
+	#[test]
+	fn file_write_assertion_reports_missing_and_mismatch() {
+		let mut report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		report.effect_count = 1;
+		report.recorded_effects.push(FixtureRecordedEffect {
+			kind: "file_write".into(),
+			node: "write".into(),
+			path: Some("out.tsv".into()),
+			bytes: Some(12),
+			contents: Some("actual".into()),
+			error: Some("disk full".into()),
+		});
+		let case = FixtureTestCase {
+			name: Some("write".into()),
+			expect: FixtureExpect {
+				effect_count: Some(2),
+				file_writes: vec![
+					FixtureExpectedFileWrite {
+						node: "write".into(),
+						path: "out.tsv".into(),
+						bytes: Some(13),
+						contents: Some("expected".into()),
+						error: None,
+					},
+					FixtureExpectedFileWrite {
+						node: "missing".into(),
+						path: "missing.tsv".into(),
+						bytes: None,
+						contents: None,
+						error: None,
+					},
+				],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(!result.ok);
+		assert_eq!(result.failures.len(), 5);
+		assert!(result.failures.iter().any(|f| f.contains("effect_count: expected 2")));
+		assert!(result.failures.iter().any(|f| f.contains("bytes: expected 13")));
+		assert!(result.failures.iter().any(|f| f.contains("contents: expected")));
+		assert!(result.failures.iter().any(|f| f.contains("error: expected None")));
+		assert!(result.failures.iter().any(|f| f == "file_write missing:missing.tsv: missing"));
+	}
+
 	fn report_with_stored_value(node: &str, port: &str, ty: &str, value: serde_json::Value) -> FixtureRunReport {
 		FixtureRunReport {
 			ok: true,
