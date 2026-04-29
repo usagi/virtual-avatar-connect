@@ -1,0 +1,40 @@
+[mocks]
+
+[[mocks.http]]
+node = "main::http_request"
+status = 202
+body = '{"accepted":true,"fixture":"http"}'
+json = { accepted = true, fixture = "http" }
+
+[[triggers]]
+node = "main::webhook_in"
+
+[[triggers.overrides]]
+port = "__content__"
+ty = "string"
+value = "fixture webhook"
+
+[[triggers.overrides]]
+port = "__source_kind__"
+ty = "string"
+value = "fixture"
+
+[[tests]]
+name = "http request mock"
+
+[tests.expect]
+node_count = 8
+mock_count = 1
+trigger_count = 1
+trace_count = 3
+trace = [
+  "http.request mock: POST http://127.0.0.1:8787/webhook -> node main::http_request",
+  "http.request: POST http://127.0.0.1:8787/webhook -> 202",
+  "log: {\"accepted\":true,\"fixture\":\"http\"}",
+]
+
+[[tests.expect.stored_values]]
+node = "main::http_request"
+port = "status"
+ty = "int"
+value = 202

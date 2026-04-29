@@ -85,7 +85,25 @@ impl EffectfulNode for HttpRequestNode {
 			retry_count: get_optional_int(inputs, "retry_count", 0)?,
 			retry_delay_ms: get_optional_int(inputs, "retry_delay_ms", 250)?,
 		};
-		match execute_http_request(spec.clone()).await {
+		let response = if let Some(mock) = ctx
+			.effect_mocks
+			.as_ref()
+			.and_then(|mocks| mocks.http_response(&ctx.node_id))
+			.cloned()
+		{
+			ctx.log(format!("http.request mock: {} {} -> node {}", spec.method, spec.url, ctx.node_id));
+			match mock.error {
+				Some(error) => Err(error),
+				None => Ok(HttpResponseData {
+					status: mock.status,
+					body_text: mock.body_text,
+					body_json: mock.body_json,
+				}),
+			}
+		} else {
+			execute_http_request(spec.clone()).await
+		};
+		match response {
 			Ok(resp) => {
 				ctx.log(format!("http.request: {} {} -> {}", spec.method, spec.url, resp.status));
 				let ok = (200..=299).contains(&resp.status);

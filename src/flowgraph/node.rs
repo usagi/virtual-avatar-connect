@@ -21,6 +21,7 @@ use crate::flowgraph::quantity::{parse_unit, Quantity};
 use crate::flowgraph::socket::{parse_quantity_string, SocketType, SocketValue};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -551,12 +552,40 @@ pub struct ExecCtx {
 	pub node_id: String,
 	pub audio_sink: Option<crate::SharedAudioSink>,
 	pub state_handle: Option<std::sync::Weak<tokio::sync::RwLock<crate::state::State>>>,
+	pub effect_mocks: Option<Arc<EffectMocks>>,
 }
 
 impl ExecCtx {
 	pub fn log(&mut self, s: impl Into<String>) {
 		self.trace.push(s.into());
 	}
+}
+
+/// Fixture / debugger 用の副作用差し替え表。
+///
+/// 本番 runtime は `None` のまま動く。テスト時だけ node fq id を key にして、
+/// 外部 I/O の代わりに決定論的な mock response を返す。
+#[derive(Debug, Default, Clone)]
+pub struct EffectMocks {
+	pub http: HashMap<String, HttpMockResponse>,
+}
+
+impl EffectMocks {
+	pub fn is_empty(&self) -> bool {
+		self.http.is_empty()
+	}
+
+	pub fn http_response(&self, node_id: &str) -> Option<&HttpMockResponse> {
+		self.http.get(node_id)
+	}
+}
+
+#[derive(Debug, Clone)]
+pub struct HttpMockResponse {
+	pub status: i64,
+	pub body_text: String,
+	pub body_json: JsonValue,
+	pub error: Option<String>,
 }
 
 /// StatefulNode 用の限定的な実行文脈。`ExecCtx` と違い I/O リソースには触れない。
@@ -666,10 +695,7 @@ pub struct PureEvalHost {
 impl PureEvalHost {
 	/// 現在の Runtime Mode 文字列。未設定は `default_runtime_mode` または空。
 	pub fn effective_runtime_mode_id(&self) -> String {
-		let from_slot = self
-			.runtime_mode
-			.as_ref()
-			.and_then(|a| a.read().ok().and_then(|g| g.clone()));
+		let from_slot = self.runtime_mode.as_ref().and_then(|a| a.read().ok().and_then(|g| g.clone()));
 		if let Some(s) = from_slot {
 			return s;
 		}

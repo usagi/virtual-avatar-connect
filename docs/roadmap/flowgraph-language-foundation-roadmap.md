@@ -201,6 +201,25 @@ JSON 出力には `trigger_count` と `trigger_history[]` を載せ、投入し�
 `[tests.expect]` では `trigger_count` も検証できる。
 mock capability と、GUI 側の trigger history 表示は次段で追加する。
 
+### LF-3d fixture HTTP mock capability ✅
+
+`*.flowgraph.test.toml` の `[mocks]` で、HTTP request ノードの外部 I/O を node 単位に差し替えられる。
+初期版は `flowgraph.http.request` の response / error mock に限定し、実ネットワークを叩かずに webhook / REST 連携グラフを検証する。
+
+```toml
+[mocks]
+
+[[mocks.http]]
+node = "main::http_request"
+status = 202
+body = '{"accepted":true}'
+json = { accepted = true }
+```
+
+JSON 出力には `mock_count` と `mocks[]` を載せ、`[tests.expect]` でも `mock_count` を検証できる。
+`flowgraph.example/http-webhook` はこの形式で `ingress.web_input -> http.request -> util.log` を fixture 化済み。
+今後は file / db / obs / twitch などへ同じ `[mocks.<capability>]` 形式で広げる。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。

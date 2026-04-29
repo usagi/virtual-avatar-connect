@@ -5,11 +5,13 @@
 //! **ロード＋純粋グラフのスモーク**向け。
 
 use crate::flowgraph::engine::create_trigger_bus;
-use crate::flowgraph::node::{ExecCtx, SocketValueRepr, TriggerEvent};
+use crate::flowgraph::node::{EffectMocks, ExecCtx, HttpMockResponse, SocketValueRepr, TriggerEvent};
 use crate::flowgraph::socket::{from_toml_value, SocketType};
 use crate::flowgraph::{load_flowgraph_dir, FlowgraphProgram, LoadError, NodeExecError, ProgramRun};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Duration;
 
 /// ロードに成功したときの結果。
@@ -79,6 +81,8 @@ pub struct FixtureRunReport {
 	pub root: String,
 	pub generation: u64,
 	pub node_count: usize,
+	pub mock_count: usize,
+	pub mocks: Vec<FixtureMockSummary>,
 	pub trigger_count: usize,
 	pub trigger_history: Vec<FixtureTriggerHistory>,
 	pub trace: Vec<String>,
@@ -107,6 +111,12 @@ pub struct FixtureTriggerHistoryOverride {
 	pub value: serde_json::Value,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct FixtureMockSummary {
+	pub kind: String,
+	pub node: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct FixtureTestResult {
 	pub file: String,
@@ -117,6 +127,8 @@ pub struct FixtureTestResult {
 
 #[derive(Debug, Deserialize)]
 struct FixtureTestFile {
+	#[serde(default)]
+	mocks: FixtureMockSpec,
 	#[serde(default)]
 	triggers: Vec<FixtureTriggerSpec>,
 	#[serde(default)]
@@ -146,6 +158,25 @@ struct FixtureTriggerOverride {
 	value: toml::Value,
 }
 
+#[derive(Debug, Default, Deserialize)]
+struct FixtureMockSpec {
+	#[serde(default)]
+	http: Vec<FixtureHttpMockSpec>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureHttpMockSpec {
+	node: String,
+	#[serde(default = "default_http_mock_status")]
+	status: i64,
+	#[serde(default)]
+	body: String,
+	#[serde(default)]
+	json: Option<toml::Value>,
+	#[serde(default)]
+	error: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 struct FixtureTestCase {
 	name: Option<String>,
@@ -156,6 +187,7 @@ struct FixtureTestCase {
 #[derive(Debug, Default, Deserialize)]
 struct FixtureExpect {
 	node_count: Option<usize>,
+	mock_count: Option<usize>,
 	trigger_count: Option<usize>,
 	trace_count: Option<usize>,
 	trace: Option<Vec<String>>,
@@ -189,8 +221,8 @@ pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, Fi
 	let mut fixture = load_fixture_program(root)?;
 	let node_count = fixture.program.node_ids().count();
 	let declared_tests = read_declared_tests(root)?;
-	let (run, ctx, trigger_history) = run_fixture_program(&mut fixture.program, &declared_tests).await?;
-	let mut report = make_report(root, node_count, run, ctx, trigger_history);
+	let (run, ctx, mock_summaries, trigger_history) = run_fixture_program(&mut fixture.program, &declared_tests).await?;
+	let mut report = make_report(root, node_count, run, ctx, mock_summaries, trigger_history);
 	report.tests = evaluate_declared_tests(&declared_tests, &report);
 	report.failed_tests = report.tests.iter().filter(|t| !t.ok).count();
 	report.ok = report.failed_tests == 0;
@@ -200,13 +232,18 @@ pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, Fi
 async fn run_fixture_program(
 	program: &mut FlowgraphProgram,
 	declared_tests: &[ParsedFixtureTestFile],
-) -> Result<(ProgramRun, ExecCtx, Vec<FixtureTriggerHistory>), FixtureError> {
+) -> Result<(ProgramRun, ExecCtx, Vec<FixtureMockSummary>, Vec<FixtureTriggerHistory>), FixtureError> {
 	let trigger_events = build_trigger_events(declared_tests)?;
 	let trigger_history = trigger_events.iter().map(|trigger| trigger.history.clone()).collect();
 	let mut ctx = ExecCtx::default();
+	let effect_mocks = build_effect_mocks(declared_tests);
+	let mock_summaries = summarize_effect_mocks(&effect_mocks);
+	if !effect_mocks.is_empty() {
+		ctx.effect_mocks = Some(Arc::new(effect_mocks));
+	}
 	if trigger_events.is_empty() {
 		let run = program.execute(&mut ctx).await.map_err(FixtureError::Execute)?;
-		return Ok((run, ctx, trigger_history));
+		return Ok((run, ctx, mock_summaries, trigger_history));
 	}
 
 	let total_delay_ms = trigger_events
@@ -236,7 +273,43 @@ async fn run_fixture_program(
 		node: "<trigger-task>".into(),
 		reason: e.to_string(),
 	})??;
-	Ok((run, ctx, trigger_history))
+	Ok((run, ctx, mock_summaries, trigger_history))
+}
+
+fn build_effect_mocks(declared_tests: &[ParsedFixtureTestFile]) -> EffectMocks {
+	let mut http = HashMap::new();
+	for file in declared_tests {
+		for mock in &file.parsed.mocks.http {
+			let body_json = mock
+				.json
+				.as_ref()
+				.map(toml_value_to_json)
+				.unwrap_or_else(|| serde_json::from_str(&mock.body).unwrap_or(serde_json::Value::Null));
+			http.insert(
+				mock.node.clone(),
+				HttpMockResponse {
+					status: mock.status,
+					body_text: mock.body.clone(),
+					body_json,
+					error: mock.error.clone(),
+				},
+			);
+		}
+	}
+	EffectMocks { http }
+}
+
+fn summarize_effect_mocks(effect_mocks: &EffectMocks) -> Vec<FixtureMockSummary> {
+	let mut out: Vec<FixtureMockSummary> = effect_mocks
+		.http
+		.keys()
+		.map(|node| FixtureMockSummary {
+			kind: "http".into(),
+			node: node.clone(),
+		})
+		.collect();
+	out.sort_by(|a, b| (&a.kind, &a.node).cmp(&(&b.kind, &b.node)));
+	out
 }
 
 struct FixtureTriggerEvent {
@@ -299,6 +372,7 @@ fn make_report(
 	node_count: usize,
 	run: ProgramRun,
 	ctx: ExecCtx,
+	mocks: Vec<FixtureMockSummary>,
 	trigger_history: Vec<FixtureTriggerHistory>,
 ) -> FixtureRunReport {
 	let mut stored_values: Vec<FixtureTraceValue> = run
@@ -324,6 +398,8 @@ fn make_report(
 		root: root.display().to_string(),
 		generation: run.generation,
 		node_count,
+		mock_count: mocks.len(),
+		mocks,
 		trigger_count: trigger_history.len(),
 		trigger_history,
 		trace_count: ctx.trace.len(),
@@ -378,11 +454,20 @@ fn default_trigger_exec() -> Vec<String> {
 	vec!["__trigger__".into()]
 }
 
+fn default_http_mock_status() -> i64 {
+	200
+}
+
 fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report: &FixtureRunReport) -> FixtureTestResult {
 	let mut failures = Vec::new();
 	if let Some(expected) = case.expect.node_count {
 		if report.node_count != expected {
 			failures.push(format!("node_count: expected {expected}, actual {}", report.node_count));
+		}
+	}
+	if let Some(expected) = case.expect.mock_count {
+		if report.mock_count != expected {
+			failures.push(format!("mock_count: expected {expected}, actual {}", report.mock_count));
 		}
 	}
 	if let Some(expected) = case.expect.trigger_count {
@@ -509,6 +594,16 @@ mod tests {
 		assert_eq!(report.failed_tests, 0);
 	}
 
+	#[tokio::test]
+	async fn http_webhook_declared_mock_test_passes() {
+		let dir = example_dir("http-webhook");
+		let report = run_fixture_once_report(&dir).await.expect("report");
+		assert!(report.ok, "report: {:?}", report.tests);
+		assert_eq!(report.mock_count, 1);
+		assert!(report.trace.iter().any(|line| line.contains("http.request mock: POST")));
+		assert_eq!(report.failed_tests, 0);
+	}
+
 	#[test]
 	fn stored_value_assertion_passes() {
 		let report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
@@ -572,6 +667,8 @@ mod tests {
 			root: "test".into(),
 			generation: 1,
 			node_count: 1,
+			mock_count: 0,
+			mocks: Vec::new(),
 			trigger_count: 0,
 			trigger_history: Vec::new(),
 			trace: Vec::new(),

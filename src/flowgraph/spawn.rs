@@ -84,6 +84,7 @@ pub fn spawn_program(
 			node_id: String::new(),
 			audio_sink,
 			state_handle: Some(state),
+			effect_mocks: None,
 		};
 		let shutdown = async move {
 			let _ = shutdown_rx.recv().await;
