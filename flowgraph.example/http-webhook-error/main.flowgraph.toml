@@ -1,0 +1,93 @@
+# Phase sigma:
+# Web input を外部 webhook / ローカル補助サービスへ中継する HTTP request の例。
+#
+# この例はロード確認用。実行時は `target_url` を実在する endpoint に差し替える。
+
+[meta]
+title = "http webhook error demo"
+description = "Web Input Ingress -> HTTP Request error mock -> Log"
+tags = ["example", "http", "webhook", "external-api", "flowgraph"]
+
+[[nodes]]
+id = "webhook_in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 140]
+properties.path = "/input/http-webhook-error"
+properties.method = "POST"
+properties.body_format = "plain"
+properties.fixed_channel = "http_webhook_error_demo"
+
+[[nodes]]
+id = "method"
+feature = "flowgraph.literal.string"
+position = [320, 320]
+properties.value = "POST"
+
+[[nodes]]
+id = "target_url"
+feature = "flowgraph.literal.string"
+position = [320, 400]
+properties.value = "http://127.0.0.1:8787/webhook"
+
+[[nodes]]
+id = "headers"
+feature = "flowgraph.literal.json"
+position = [320, 480]
+properties.value = { content-type = "application/json", x-vac-source = "flowgraph.example.http-webhook" }
+
+[[nodes]]
+id = "body"
+feature = "flowgraph.literal.json"
+position = [560, 400]
+properties.value = { source = "VAC", event = "web_input" }
+
+[[nodes]]
+id = "http_request"
+feature = "flowgraph.http.request"
+position = [800, 140]
+
+[[nodes]]
+id = "log_response"
+feature = "flowgraph.util.log"
+position = [1040, 120]
+
+[[nodes]]
+id = "log_error"
+feature = "flowgraph.util.log"
+position = [1040, 260]
+
+[[edges]]
+from = "webhook_in:exec_out"
+to = "http_request:exec_in"
+
+[[edges]]
+from = "method:value"
+to = "http_request:method"
+
+[[edges]]
+from = "target_url:value"
+to = "http_request:url"
+
+[[edges]]
+from = "headers:value"
+to = "http_request:headers"
+
+[[edges]]
+from = "body:value"
+to = "http_request:body"
+
+[[edges]]
+from = "http_request:on_success"
+to = "log_response:exec_in"
+
+[[edges]]
+from = "http_request:body"
+to = "log_response:value"
+
+[[edges]]
+from = "http_request:on_error"
+to = "log_error:exec_in"
+
+[[edges]]
+from = "http_request:error"
+to = "log_error:value"

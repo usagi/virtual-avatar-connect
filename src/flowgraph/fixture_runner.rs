@@ -192,7 +192,15 @@ struct FixtureExpect {
 	trace_count: Option<usize>,
 	trace: Option<Vec<String>>,
 	#[serde(default)]
+	exec_count: Vec<FixtureExpectedCount>,
+	#[serde(default)]
 	stored_values: Vec<FixtureExpectedValue>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureExpectedCount {
+	node: String,
+	count: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -485,6 +493,20 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 			failures.push(format!("trace: expected {expected:?}, actual {:?}", report.trace));
 		}
 	}
+	for expected in &case.expect.exec_count {
+		let actual = report
+			.exec_count
+			.iter()
+			.find(|(node, _)| node == &expected.node)
+			.map(|(_, count)| *count)
+			.unwrap_or(0);
+		if actual != expected.count {
+			failures.push(format!(
+				"exec_count {}: expected {}, actual {}",
+				expected.node, expected.count, actual
+			));
+		}
+	}
 	for expected in &case.expect.stored_values {
 		match report
 			.stored_values
@@ -601,6 +623,15 @@ mod tests {
 		assert!(report.ok, "report: {:?}", report.tests);
 		assert_eq!(report.mock_count, 1);
 		assert!(report.trace.iter().any(|line| line.contains("http.request mock: POST")));
+		assert_eq!(report.failed_tests, 0);
+	}
+
+	#[tokio::test]
+	async fn http_webhook_error_declared_mock_test_passes() {
+		let dir = example_dir("http-webhook-error");
+		let report = run_fixture_once_report(&dir).await.expect("report");
+		assert!(report.ok, "report: {:?}", report.tests);
+		assert!(report.trace.iter().any(|line| line.contains("fixture network down")));
 		assert_eq!(report.failed_tests, 0);
 	}
 

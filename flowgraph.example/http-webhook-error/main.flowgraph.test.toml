@@ -2,9 +2,7 @@
 
 [[mocks.http]]
 node = "main::http_request"
-status = 202
-body = '{"accepted":true,"fixture":"http"}'
-json = { accepted = true, fixture = "http" }
+error = "fixture network down"
 
 [[triggers]]
 node = "main::webhook_in"
@@ -20,7 +18,7 @@ ty = "string"
 value = "fixture"
 
 [[tests]]
-name = "http request mock"
+name = "http request error mock"
 
 [tests.expect]
 node_count = 8
@@ -29,20 +27,26 @@ trigger_count = 1
 trace_count = 3
 trace = [
   "http.request mock: POST http://127.0.0.1:8787/webhook -> node main::http_request",
-  "http.request: POST http://127.0.0.1:8787/webhook -> 202",
-  "log: {\"accepted\":true,\"fixture\":\"http\"}",
+  "http.request: POST http://127.0.0.1:8787/webhook error: fixture network down",
+  "log: fixture network down",
 ]
 
 [[tests.expect.exec_count]]
 node = "main::log_response"
-count = 1
+count = 0
 
 [[tests.expect.exec_count]]
 node = "main::log_error"
-count = 0
+count = 1
 
 [[tests.expect.stored_values]]
 node = "main::http_request"
-port = "status"
-ty = "int"
-value = 202
+port = "ok"
+ty = "bool"
+value = false
+
+[[tests.expect.stored_values]]
+node = "main::http_request"
+port = "error"
+ty = "string"
+value = "fixture network down"

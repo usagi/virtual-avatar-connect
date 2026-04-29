@@ -217,7 +217,9 @@ json = { accepted = true }
 ```
 
 JSON 出力には `mock_count` と `mocks[]` を載せ、`[tests.expect]` でも `mock_count` を検証できる。
-`flowgraph.example/http-webhook` はこの形式で `ingress.web_input -> http.request -> util.log` を fixture 化済み。
+`flowgraph.example/http-webhook` は success mock、`flowgraph.example/http-webhook-error` は error mock として、
+`ingress.web_input -> http.request -> util.log` の両分岐を fixture 化済み。
+分岐確認には `[[tests.expect.exec_count]]` も使い、想定外の branch が発火していないことを検証する。
 今後は file / db / obs / twitch などへ同じ `[mocks.<capability>]` 形式で広げる。
 
 ## 5. 追加計画項目
