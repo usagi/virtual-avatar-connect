@@ -226,6 +226,8 @@ GUI で自然に扱えることを重視する。ただし source format は手�
 すべてを一気に入れない。最初に `result` / `bytes` / `record` を基礎型として導入する。
 `toml` は JSON と同じ構造化データの別表現として扱い、Flowgraph source format / conf / file I/O との親和性が高い場合に第一級型へ昇格させる。
 
+`bytes` は LF-5a で第一級 socket type として追加済み。wire 表現は base64 文字列に固定し、標準ノードへの適用は HTTP / file / audio / OSC などの boundary ごとに後続で進める。
+
 ### 4.4 Error Gap
 
 現状は以下が混在する。

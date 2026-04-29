@@ -15,6 +15,7 @@ use crate::flowgraph::node::{
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
+use base64::Engine as _;
 use serde_json::Value as JsonValue;
 use std::any::Any;
 
@@ -315,6 +316,7 @@ fn socket_value_to_json(v: &SocketValue) -> JsonValue {
 		SocketValue::Int(i) => JsonValue::Number((*i).into()),
 		SocketValue::Float(f) => serde_json::Number::from_f64(*f).map(JsonValue::Number).unwrap_or(JsonValue::Null),
 		SocketValue::String(s) => JsonValue::String(s.clone()),
+		SocketValue::Bytes(bytes) => JsonValue::String(base64::engine::general_purpose::STANDARD.encode(bytes)),
 		SocketValue::Json(j) => j.clone(),
 		SocketValue::List(xs) => JsonValue::Array(xs.iter().map(socket_value_to_json).collect()),
 		SocketValue::Map(m) => JsonValue::Object(m.iter().map(|(k, v)| (k.clone(), socket_value_to_json(v))).collect()),

@@ -9,6 +9,7 @@ use crate::datetime::DateTime;
 use crate::flowgraph::quantity::{parse_unit, Quantity, Unit};
 use crate::flowgraph::table::Table;
 use crate::motion::MotionFrame;
+use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -24,6 +25,8 @@ pub enum SocketType {
 	Int,
 	Float,
 	String,
+	/// バイナリ payload（LF-5a）。JSON / TOML wire では base64 文字列として表現する。
+	Bytes,
 	Json,
 	List(Box<SocketType>),
 	Map(Box<SocketType>),
@@ -59,6 +62,7 @@ impl SocketType {
 			SocketType::Int => Some(SocketValue::Int(0)),
 			SocketType::Float => Some(SocketValue::Float(0.0)),
 			SocketType::String => Some(SocketValue::String(String::new())),
+			SocketType::Bytes => Some(SocketValue::Bytes(Vec::new())),
 			SocketType::Json => Some(SocketValue::Json(serde_json::Value::Null)),
 			SocketType::List(_) => Some(SocketValue::List(Vec::new())),
 			SocketType::Map(_) => Some(SocketValue::Map(BTreeMap::new())),
@@ -175,9 +179,7 @@ pub fn coerce_to_type(value: SocketValue, target: &SocketType) -> Result<SocketV
 		}
 		(SocketValue::Json(j), SocketType::MotionFrame) => serde_json::from_value(j.clone())
 			.map(SocketValue::MotionFrame)
-			.map_err(|e| CoerceError::MotionFrameFromJsonError {
-				reason: e.to_string(),
-			}),
+			.map_err(|e| CoerceError::MotionFrameFromJsonError { reason: e.to_string() }),
 		(SocketValue::MotionFrame(m), SocketType::Json) => Ok(SocketValue::Json(m.to_json_value())),
 		// 既に一致しているならそのまま
 		(v, t) if v.matches(t) => Ok(v),
@@ -208,6 +210,7 @@ impl fmt::Display for SocketType {
 			SocketType::Int => f.write_str("int"),
 			SocketType::Float => f.write_str("float"),
 			SocketType::String => f.write_str("string"),
+			SocketType::Bytes => f.write_str("bytes"),
 			SocketType::Json => f.write_str("json"),
 			SocketType::List(inner) => write!(f, "list<{inner}>"),
 			SocketType::Map(inner) => write!(f, "map<{inner}>"),
@@ -265,6 +268,7 @@ fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
 		"int" => return Ok(SocketType::Int),
 		"float" => return Ok(SocketType::Float),
 		"string" => return Ok(SocketType::String),
+		"bytes" => return Ok(SocketType::Bytes),
 		"json" => return Ok(SocketType::Json),
 		"exec" => return Ok(SocketType::Exec),
 		"table" => return Ok(SocketType::Table),
@@ -344,6 +348,8 @@ pub enum SocketValue {
 	Int(i64),
 	Float(f64),
 	String(String),
+	/// Binary payload。JSON/TOML 表現では base64 string に畳む。
+	Bytes(Vec<u8>),
 	Json(serde_json::Value),
 	List(Vec<SocketValue>),
 	/// key は常に String（spec §2.1）。
@@ -370,6 +376,7 @@ impl SocketValue {
 			SocketValue::Int(_) => SocketType::Int,
 			SocketValue::Float(_) => SocketType::Float,
 			SocketValue::String(_) => SocketType::String,
+			SocketValue::Bytes(_) => SocketType::Bytes,
 			SocketValue::Json(_) => SocketType::Json,
 			SocketValue::List(xs) => {
 				let inner = xs.first().map(|v| v.type_of()).unwrap_or(SocketType::Json);
@@ -418,6 +425,15 @@ impl SocketValue {
 			SocketValue::String(v) => Ok(v.as_str()),
 			_ => Err(ValueCastError::Mismatch {
 				expected: "string",
+				actual: self.type_of(),
+			}),
+		}
+	}
+	pub fn as_bytes(&self) -> Result<&[u8], ValueCastError> {
+		match self {
+			SocketValue::Bytes(v) => Ok(v.as_slice()),
+			_ => Err(ValueCastError::Mismatch {
+				expected: "bytes",
 				actual: self.type_of(),
 			}),
 		}
@@ -495,6 +511,7 @@ impl SocketValue {
 			| (SocketValue::Int(_), SocketType::Int)
 			| (SocketValue::Float(_), SocketType::Float)
 			| (SocketValue::String(_), SocketType::String)
+			| (SocketValue::Bytes(_), SocketType::Bytes)
 			| (SocketValue::Json(_), SocketType::Json)
 			| (SocketValue::Table(_), SocketType::Table)
 			| (SocketValue::Quantity(_), SocketType::Quantity)
@@ -526,14 +543,17 @@ pub fn from_toml_value(expected: &SocketType, v: &toml::Value) -> Result<SocketV
 		(SocketType::Float, toml::Value::Float(f)) => Ok(SocketValue::Float(*f)),
 		(SocketType::Float, toml::Value::Integer(i)) => Ok(SocketValue::Float(*i as f64)),
 		(SocketType::String, toml::Value::String(s)) => Ok(SocketValue::String(s.clone())),
+		(SocketType::Bytes, toml::Value::String(s)) => decode_base64_bytes(s).map(SocketValue::Bytes),
 		(SocketType::Json, any) => toml_to_json(any).map(SocketValue::Json),
 		(SocketType::MotionFrame, any) => {
 			let j = toml_to_json(any)?;
-			serde_json::from_value(j).map(SocketValue::MotionFrame).map_err(|e| FromTomlError::Mismatch {
-				expected: "motion_frame (byte_len + osc_messages JSON shape)".into(),
-				actual: format!("deserialize: {e}"),
-			})
-		},
+			serde_json::from_value(j)
+				.map(SocketValue::MotionFrame)
+				.map_err(|e| FromTomlError::Mismatch {
+					expected: "motion_frame (byte_len + osc_messages JSON shape)".into(),
+					actual: format!("deserialize: {e}"),
+				})
+		}
 		(SocketType::List(inner), toml::Value::Array(arr)) => {
 			let mut out = Vec::with_capacity(arr.len());
 			for elem in arr {
@@ -623,6 +643,15 @@ fn toml_to_json(v: &toml::Value) -> Result<serde_json::Value, FromTomlError> {
 			serde_json::Value::Object(out)
 		}
 	})
+}
+
+fn decode_base64_bytes(s: &str) -> Result<Vec<u8>, FromTomlError> {
+	base64::engine::general_purpose::STANDARD
+		.decode(s.trim())
+		.map_err(|e| FromTomlError::Mismatch {
+			expected: "bytes (base64 string)".into(),
+			actual: format!("base64 decode error: {e}"),
+		})
 }
 
 #[derive(Debug, Clone, Error)]
@@ -720,12 +749,24 @@ mod tests {
 		assert_eq!(SocketType::parse("int").unwrap(), SocketType::Int);
 		assert_eq!(SocketType::parse("float").unwrap(), SocketType::Float);
 		assert_eq!(SocketType::parse("string").unwrap(), SocketType::String);
+		assert_eq!(SocketType::parse("bytes").unwrap(), SocketType::Bytes);
 		assert_eq!(SocketType::parse("json").unwrap(), SocketType::Json);
 		assert_eq!(SocketType::parse("exec").unwrap(), SocketType::Exec);
 		assert_eq!(SocketType::parse("table").unwrap(), SocketType::Table);
 		let mf = SocketType::MotionFrame;
 		assert_eq!(mf.to_string(), "motion_frame");
 		assert_eq!(SocketType::parse("motion_frame").unwrap(), mf);
+	}
+
+	#[test]
+	fn bytes_type_roundtrip_and_default() {
+		let ty = SocketType::Bytes;
+		assert_eq!(ty.to_string(), "bytes");
+		assert_eq!(SocketType::parse("bytes").unwrap(), ty);
+		assert_eq!(serde_json::to_string(&ty).unwrap(), "\"bytes\"");
+		let back: SocketType = serde_json::from_str("\"bytes\"").unwrap();
+		assert_eq!(back, ty);
+		assert_eq!(ty.default_value(), Some(SocketValue::Bytes(Vec::new())));
 	}
 
 	#[test]
@@ -788,6 +829,7 @@ mod tests {
 	fn socket_value_type_of() {
 		assert_eq!(SocketValue::Bool(true).type_of(), SocketType::Bool);
 		assert_eq!(SocketValue::Int(1).type_of(), SocketType::Int);
+		assert_eq!(SocketValue::Bytes(vec![0, 1, 255]).type_of(), SocketType::Bytes);
 		let list = SocketValue::List(vec![SocketValue::String("a".into()), SocketValue::String("b".into())]);
 		assert_eq!(list.type_of(), SocketType::List(Box::new(SocketType::String)));
 	}
@@ -797,6 +839,7 @@ mod tests {
 		assert_eq!(SocketValue::Bool(true).as_bool().unwrap(), true);
 		assert_eq!(SocketValue::Int(42).as_i64().unwrap(), 42);
 		assert_eq!(SocketValue::String("hi".into()).as_str().unwrap(), "hi");
+		assert_eq!(SocketValue::Bytes(vec![1, 2, 3]).as_bytes().unwrap(), &[1, 2, 3]);
 	}
 
 	#[test]
@@ -816,6 +859,10 @@ mod tests {
 		let v = toml::Value::String("hello".into());
 		let out = from_toml_value(&SocketType::String, &v).unwrap();
 		assert_eq!(out, SocketValue::String("hello".into()));
+
+		let v = toml::Value::String("AAH/".into());
+		let out = from_toml_value(&SocketType::Bytes, &v).unwrap();
+		assert_eq!(out, SocketValue::Bytes(vec![0, 1, 255]));
 
 		let v = toml::Value::Array(vec![toml::Value::Integer(1), toml::Value::Integer(2), toml::Value::Integer(3)]);
 		let out = from_toml_value(&SocketType::List(Box::new(SocketType::Int)), &v).unwrap();

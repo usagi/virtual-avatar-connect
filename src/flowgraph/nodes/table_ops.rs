@@ -16,6 +16,7 @@ use crate::flowgraph::node::{
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use crate::flowgraph::table::{ColumnSpec, Row, Table, TableSchema};
 use async_trait::async_trait;
+use base64::Engine as _;
 use serde_json::Value as JsonValue;
 
 // ---------------------------------------------------------------------
@@ -28,6 +29,7 @@ fn sv_to_json(v: &SocketValue) -> JsonValue {
 		SocketValue::Int(i) => JsonValue::Number((*i).into()),
 		SocketValue::Float(f) => serde_json::Number::from_f64(*f).map(JsonValue::Number).unwrap_or(JsonValue::Null),
 		SocketValue::String(s) => JsonValue::String(s.clone()),
+		SocketValue::Bytes(bytes) => JsonValue::String(base64::engine::general_purpose::STANDARD.encode(bytes)),
 		SocketValue::Json(j) => j.clone(),
 		SocketValue::List(xs) => JsonValue::Array(xs.iter().map(sv_to_json).collect()),
 		SocketValue::Map(m) => JsonValue::Object(m.iter().map(|(k, v)| (k.clone(), sv_to_json(v))).collect()),
@@ -69,7 +71,13 @@ impl NodeDescriptor for TableFromJsonNode {
 
 #[async_trait]
 impl PureNode for TableFromJsonNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_props: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let list = get_required_list(inputs, "json")?;
 		let arr: Vec<JsonValue> = list.iter().map(sv_to_json).collect();
 		let table = Table::from_json_array(&arr, None).unwrap_or_else(|_| Table::empty());
@@ -114,7 +122,13 @@ fn get_required_table<'a>(inputs: &'a InputMap, key: &str) -> Result<&'a Table, 
 
 #[async_trait]
 impl PureNode for TableToJsonNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_props: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let table = get_required_table(inputs, "table")?;
 		let arr = match table.to_json_array() {
 			JsonValue::Array(a) => a,
@@ -577,13 +591,29 @@ mod tests {
 		]);
 		let mut inputs = InputMap::new();
 		inputs.insert("json".into(), src);
-		let out = node_to.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = node_to
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		let table_val = out.data.get("table").unwrap().clone();
 		assert_eq!(out.data.get("row_count"), Some(&SocketValue::Int(2)));
 
 		let mut inputs2 = InputMap::new();
 		inputs2.insert("table".into(), table_val);
-		let out2 = node_from.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs2, &ExecFireSet::new()).await.unwrap();
+		let out2 = node_from
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs2,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		if let Some(SocketValue::List(xs)) = out2.data.get("json") {
 			assert_eq!(xs.len(), 2);
 		} else {

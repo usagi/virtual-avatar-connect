@@ -10,6 +10,7 @@ use crate::flowgraph::node::{
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
+use base64::Engine as _;
 
 // ----- list.len -------------------------------------------------------------
 
@@ -29,7 +30,13 @@ impl NodeDescriptor for ListLenNode {
 }
 #[async_trait]
 impl PureNode for ListLenNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let xs = get_required_list(inputs, "items")?;
 		Ok(NodeOutput::new().set_data("len", SocketValue::Int(xs.len() as i64)))
 	}
@@ -56,7 +63,13 @@ impl NodeDescriptor for ListGetNode {
 }
 #[async_trait]
 impl PureNode for ListGetNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let xs = get_required_list(inputs, "items")?;
 		let idx = get_required_int(inputs, "index")?;
 		let v = if idx < 0 || idx as usize >= xs.len() {
@@ -89,7 +102,13 @@ impl NodeDescriptor for ListIsEmptyNode {
 }
 #[async_trait]
 impl PureNode for ListIsEmptyNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let xs = get_required_list(inputs, "items")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Bool(xs.is_empty())))
 	}
@@ -116,7 +135,13 @@ impl NodeDescriptor for MapGetNode {
 }
 #[async_trait]
 impl PureNode for MapGetNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let m = get_required_map(inputs, "m")?;
 		let k = get_required_string(inputs, "key")?;
 		let v = match m.get(&k) {
@@ -146,7 +171,13 @@ impl NodeDescriptor for MapKeysNode {
 }
 #[async_trait]
 impl PureNode for MapKeysNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let m = get_required_map(inputs, "m")?;
 		let keys: Vec<SocketValue> = m.keys().cloned().map(SocketValue::String).collect();
 		Ok(NodeOutput::new().set_data("keys", SocketValue::List(keys)))
@@ -174,7 +205,13 @@ impl NodeDescriptor for MapHasNode {
 }
 #[async_trait]
 impl PureNode for MapHasNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let m = get_required_map(inputs, "m")?;
 		let k = get_required_string(inputs, "key")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Bool(m.contains_key(&k))))
@@ -189,6 +226,7 @@ fn socket_value_to_json(v: &SocketValue) -> serde_json::Value {
 		SocketValue::Int(i) => serde_json::json!(i),
 		SocketValue::Float(f) => serde_json::json!(f),
 		SocketValue::String(s) => serde_json::json!(s),
+		SocketValue::Bytes(bytes) => serde_json::json!(base64::engine::general_purpose::STANDARD.encode(bytes)),
 		SocketValue::Json(j) => j.clone(),
 		SocketValue::List(xs) => serde_json::Value::Array(xs.iter().map(socket_value_to_json).collect()),
 		SocketValue::Map(m) => {
@@ -225,24 +263,53 @@ mod tests {
 	async fn list_ops() {
 		let items = json_list(vec![serde_json::json!(10), serde_json::json!(20), serde_json::json!(30)]);
 		let inputs: InputMap = [("items".into(), items.clone())].into_iter().collect();
-		let out = ListLenNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = ListLenNode
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		assert_eq!(out.data.get("len"), Some(&SocketValue::Int(3)));
 
 		let inputs: InputMap = [("items".into(), items.clone()), ("index".into(), SocketValue::Int(1))]
 			.into_iter()
 			.collect();
-		let out = ListGetNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = ListGetNode
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		assert_eq!(out.data.get("item"), Some(&SocketValue::Json(serde_json::json!(20))));
 
 		let inputs: InputMap = [("items".into(), items), ("index".into(), SocketValue::Int(99))]
 			.into_iter()
 			.collect();
-		let out = ListGetNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = ListGetNode
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		assert_eq!(out.data.get("item"), Some(&SocketValue::Json(serde_json::Value::Null)));
 
 		let inputs: InputMap = [("items".into(), json_list(vec![]))].into_iter().collect();
 		let out = ListIsEmptyNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
@@ -254,17 +321,41 @@ mod tests {
 		let inputs: InputMap = [("m".into(), m.clone()), ("key".into(), SocketValue::String("a".into()))]
 			.into_iter()
 			.collect();
-		let out = MapGetNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = MapGetNode
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		assert_eq!(out.data.get("value"), Some(&SocketValue::Json(serde_json::json!(1))));
 
 		let inputs: InputMap = [("m".into(), m.clone()), ("key".into(), SocketValue::String("missing".into()))]
 			.into_iter()
 			.collect();
-		let out = MapGetNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = MapGetNode
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		assert_eq!(out.data.get("value"), Some(&SocketValue::Json(serde_json::Value::Null)));
 
 		let inputs: InputMap = [("m".into(), m.clone())].into_iter().collect();
-		let out = MapKeysNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = MapKeysNode
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		assert_eq!(
 			out.data.get("keys"),
 			Some(&SocketValue::List(vec![
@@ -276,7 +367,15 @@ mod tests {
 		let inputs: InputMap = [("m".into(), m), ("key".into(), SocketValue::String("b".into()))]
 			.into_iter()
 			.collect();
-		let out = MapHasNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = MapHasNode
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
 	}
 }

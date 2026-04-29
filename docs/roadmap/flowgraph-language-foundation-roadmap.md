@@ -474,6 +474,12 @@ WASM は Flowgraph の主表現ではなく、module / package system の実行�
 `list<T>`, `dictionary<K,V>`, `result<T>`, future `collection<T>` を自然に扱うための型パラメータ。
 最初は GUI 上の型束縛と loader validation から始める。
 
+### LF-5a first-class `bytes` socket type ✅
+
+第一級型追加の最小足場として `SocketType::Bytes` / `SocketValue::Bytes` を追加した。
+`bytes` は JSON / TOML wire では base64 文字列として表現し、`SocketValueRepr` と `from_toml_value` で round-trip できる。
+現段階では標準ノードの port 置換は行わず、HTTP / file / audio / OSC などのバイナリ payload を `json` や `string` から安全に切り離すための型語彙だけを先に固める。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。

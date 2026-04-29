@@ -20,6 +20,7 @@
 use crate::flowgraph::quantity::{parse_unit, Quantity};
 use crate::flowgraph::socket::{parse_quantity_string, SocketType, SocketValue};
 use async_trait::async_trait;
+use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::any::Any;
@@ -158,6 +159,7 @@ impl SocketValueRepr {
 			SocketValue::Int(i) => serde_json::json!(i),
 			SocketValue::Float(f) => serde_json::json!(f),
 			SocketValue::String(s) => serde_json::json!(s),
+			SocketValue::Bytes(bytes) => serde_json::json!(base64::engine::general_purpose::STANDARD.encode(bytes)),
 			SocketValue::Json(v) => v.clone(),
 			SocketValue::List(xs) => {
 				let arr: Vec<serde_json::Value> = xs.iter().map(|e| SocketValueRepr::from_value(e).0).collect();
@@ -189,6 +191,7 @@ pub(crate) fn json_to_socket_value(ty: &SocketType, v: &serde_json::Value) -> Op
 		(SocketType::Int, J::Number(n)) => n.as_i64().map(SocketValue::Int),
 		(SocketType::Float, J::Number(n)) => n.as_f64().map(SocketValue::Float),
 		(SocketType::String, J::String(s)) => Some(SocketValue::String(s.clone())),
+		(SocketType::Bytes, J::String(s)) => base64::engine::general_purpose::STANDARD.decode(s).ok().map(SocketValue::Bytes),
 		(SocketType::Json, any) => Some(SocketValue::Json(any.clone())),
 		(SocketType::List(inner), J::Array(arr)) => {
 			let mut out = Vec::with_capacity(arr.len());
@@ -978,6 +981,17 @@ mod tests {
 		let out = NodeOutput::new().set_data("value", SocketValue::Int(42)).fire_exec("then");
 		assert_eq!(out.data.get("value"), Some(&SocketValue::Int(42)));
 		assert!(out.fired_exec.contains("then"));
+	}
+
+	#[test]
+	fn socket_value_repr_bytes_base64_round_trip() {
+		let repr = SocketValueRepr::from_value(&SocketValue::Bytes(vec![0, 1, 255]));
+		assert_eq!(repr.0, serde_json::json!("AAH/"));
+		assert_eq!(repr.to_socket_value(&SocketType::Bytes), Some(SocketValue::Bytes(vec![0, 1, 255])));
+		assert_eq!(
+			SocketValueRepr(serde_json::json!("not base64!")).to_socket_value(&SocketType::Bytes),
+			None
+		);
 	}
 
 	#[test]
