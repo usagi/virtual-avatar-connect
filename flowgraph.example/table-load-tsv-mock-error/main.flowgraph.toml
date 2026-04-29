@@ -1,0 +1,66 @@
+# fixture file_read mock の error 分岐を検証する最小例。
+
+[meta]
+title = "table load tsv mock error"
+description = "Fixture の file_read mock error で flowgraph.table.load_tsv の on_error 分岐を検証する"
+tags = ["example", "table", "tsv", "fixture", "mock", "error"]
+
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 140]
+properties.path = "/input/table-load-tsv-mock-error"
+properties.method = "POST"
+properties.body_format = "plain"
+properties.fixed_channel = "table_load_tsv_mock_error"
+
+[[nodes]]
+id = "path"
+feature = "flowgraph.literal.string"
+position = [320, 240]
+properties.value = "fixture.tsv"
+
+[[nodes]]
+id = "mode"
+feature = "flowgraph.literal.string"
+position = [320, 320]
+properties.value = "headerful"
+
+[[nodes]]
+id = "load"
+feature = "flowgraph.table.load_tsv"
+position = [560, 140]
+
+[[nodes]]
+id = "log_success"
+feature = "flowgraph.util.log"
+position = [800, 120]
+
+[[nodes]]
+id = "log_error"
+feature = "flowgraph.util.log"
+position = [800, 260]
+
+[[edges]]
+from = "in:exec_out"
+to = "load:exec_in"
+
+[[edges]]
+from = "path:value"
+to = "load:path"
+
+[[edges]]
+from = "mode:value"
+to = "load:mode"
+
+[[edges]]
+from = "load:on_success"
+to = "log_success:exec_in"
+
+[[edges]]
+from = "load:on_error"
+to = "log_error:exec_in"
+
+[[edges]]
+from = "load:error"
+to = "log_error:value"

@@ -239,6 +239,7 @@ hello	hi
 ```
 
 `flowgraph.example/table-load-tsv-mock` は `ingress.web_input -> table.load_tsv` を実ファイルなしで検証する最小 fixture。
+`flowgraph.example/table-load-tsv-mock-error` は mock error による `on_error` 分岐と stored error を検証する。
 JSON 出力には HTTP mock と同じ `mock_count` / `mocks[]` として `kind = "file_read"` が載る。
 これにより、ファイル監視・辞書・Table 系ノードの regression test を実ファイル配置に依存させずに増やせる。
 

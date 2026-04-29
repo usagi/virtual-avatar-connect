@@ -1,0 +1,41 @@
+[mocks]
+
+[[mocks.file_read]]
+node = "main::load"
+error = "fixture missing file"
+
+[[triggers]]
+node = "main::in"
+
+[[tests]]
+name = "table load tsv file mock error"
+
+[tests.expect]
+node_count = 6
+mock_count = 1
+trigger_count = 1
+trace_count = 2
+trace = [
+  "file.read mock: fixture.tsv -> node main::load",
+  "log: read_to_string fixture.tsv: fixture missing file",
+]
+
+[[tests.expect.exec_count]]
+node = "main::log_success"
+count = 0
+
+[[tests.expect.exec_count]]
+node = "main::log_error"
+count = 1
+
+[[tests.expect.stored_values]]
+node = "main::load"
+port = "row_count"
+ty = "int"
+value = 0
+
+[[tests.expect.stored_values]]
+node = "main::load"
+port = "error"
+ty = "string"
+value = "read_to_string fixture.tsv: fixture missing file"
