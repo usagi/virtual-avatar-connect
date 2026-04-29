@@ -5,6 +5,7 @@
 //! **ロード＋純粋グラフのスモーク**向け。
 
 use crate::flowgraph::engine::create_trigger_bus;
+use crate::flowgraph::loader::GraphCapabilitySummary;
 use crate::flowgraph::node::{
 	EffectMocks, ExecCtx, FileReadMockResponse, FileWriteMockResponse, HttpMockResponse, SocketValueRepr, TriggerEvent,
 };
@@ -19,6 +20,7 @@ use std::time::Duration;
 /// ロードに成功したときの結果。
 pub struct FixtureLoadOk {
 	pub program: FlowgraphProgram,
+	pub capability_summary: GraphCapabilitySummary,
 }
 
 /// ロード失敗、または（要求時）実行失敗。
@@ -110,6 +112,7 @@ pub struct FixtureRunReport {
 	pub root: String,
 	pub generation: u64,
 	pub node_count: usize,
+	pub capability_summary: GraphCapabilitySummary,
 	pub mock_count: usize,
 	pub mocks: Vec<FixtureMockSummary>,
 	pub trigger_count: usize,
@@ -367,7 +370,10 @@ struct FixtureExpectedHttpRequest {
 /// `flowgraph_dir` をロードする。診断付き失敗は [`FixtureError::Load`]。
 pub fn load_fixture_program(root: &Path) -> Result<FixtureLoadOk, FixtureError> {
 	let report = load_flowgraph_dir(root).map_err(FixtureError::Load)?;
-	Ok(FixtureLoadOk { program: report.program })
+	Ok(FixtureLoadOk {
+		program: report.program,
+		capability_summary: report.capability_summary,
+	})
 }
 
 /// ロード後に `execute` を 1 回試行する（headless `ExecCtx`）。
@@ -380,9 +386,10 @@ pub async fn load_and_execute_once(root: &Path) -> Result<ProgramRun, FixtureErr
 pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, FixtureError> {
 	let mut fixture = load_fixture_program(root)?;
 	let node_count = fixture.program.node_ids().count();
+	let capability_summary = fixture.capability_summary.clone();
 	let declared_tests = read_declared_tests(root)?;
 	let (run, ctx, mock_summaries, trigger_history) = run_fixture_program(&mut fixture.program, &declared_tests).await?;
-	let mut report = make_report(root, node_count, run, ctx, mock_summaries, trigger_history);
+	let mut report = make_report(root, node_count, capability_summary, run, ctx, mock_summaries, trigger_history);
 	report.tests = evaluate_declared_tests(&declared_tests, &report);
 	report.failed_tests = report.tests.iter().filter(|t| !t.ok).count();
 	report.ok = report.failed_tests == 0;
@@ -592,6 +599,7 @@ fn trigger_history_from_event(delay_ms: u64, event: &TriggerEvent) -> FixtureTri
 fn make_report(
 	root: &Path,
 	node_count: usize,
+	capability_summary: GraphCapabilitySummary,
 	run: ProgramRun,
 	ctx: ExecCtx,
 	mocks: Vec<FixtureMockSummary>,
@@ -639,6 +647,7 @@ fn make_report(
 		root: root.display().to_string(),
 		generation: run.generation,
 		node_count,
+		capability_summary,
 		mock_count: mocks.len(),
 		mocks,
 		trigger_count: trigger_history.len(),
@@ -1086,6 +1095,7 @@ mod tests {
 		assert!(report.ok);
 		assert!(report.generation > 0);
 		assert!(report.node_count > 0);
+		assert_eq!(report.capability_summary.node_count, report.node_count);
 		assert_eq!(report.trace_count, report.trace.len());
 	}
 
@@ -1715,6 +1725,7 @@ mod tests {
 			root: "test".into(),
 			generation: 1,
 			node_count: 1,
+			capability_summary: GraphCapabilitySummary::default(),
 			mock_count: 0,
 			mocks: Vec::new(),
 			trigger_count: 0,

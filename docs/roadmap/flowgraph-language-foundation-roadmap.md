@@ -421,6 +421,12 @@ value = "hello"
 
 Table / JSON の出力全体を固定すると fixture が重くなるため、重要なセルや field だけを pin する用途に使う。
 
+### LF-3p fixture report capability summary ✅
+
+`FixtureRunReport` に `capability_summary` を追加した。
+`LoadReport` と同じ graph capability summary を fixture JSON に載せ、テスト結果、mock I/O、recorded effects、required capability を同じ report で確認できるようにする。
+これにより、後続の capability policy preview と fixture mock 設計を接続しやすくする。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。
