@@ -132,6 +132,13 @@ Node Palette と Flowgraph Node Card に `effect_class` と capability summary �
 `GET /flowgraph/diagnostics` でも同じ summary を返す。
 現時点では policy enforcement ではなく、GUI 表示、Runtime Mode / Capability policy preview、fixture mock 設計のための足場。
 
+### LF-2d Runtime Mode capability policy preview ✅
+
+`[modes.<id>.capability_policy]` に `allow` / `deny` を追加した。
+`POST /modes/plan` と `POST /modes/transit` の `ModeTransitionPlan` は、ロード済み Flowgraph の `capability_summary.capabilities` と遷移先 mode の policy を突き合わせ、`capability_denied_by_target` / `capability_unlisted_by_target` を返す。
+GUI の Modes タブでも preview を表示する。
+現段階では hard deny ではなく、mode 設計と graph 設計のずれを見える化する read-only preview。
+
 ## 4. LF-3 Testing / Debugger
 
 Flowgraph を「プログラム」として扱うための検証と観測。

@@ -58,8 +58,12 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 | `flowgraph_groups.enable` | string 配列 | `[]` | 有効化したい Flowgraph グループ名 |
 | `flowgraph_groups.disable` | string 配列 | `[]` | 無効化したいグループ名（同一モード内で enable と重複不可） |
 | `managed_apps.start` / `stop` / `minimize` / `leave` | string 配列 | `[]` | `run_with` から解決される Managed App ID（明示 `id` または `run-with-<n>`） |
+| `capability_policy.allow` | string 配列 | `[]` | この mode で許可したい capability。空なら allow-list 未指定として扱う。初期実装では preview のみ |
+| `capability_policy.deny` | string 配列 | `[]` | この mode で抑止したい capability。`allow` との重複は validation error。初期実装では preview のみ |
 
-ロード時に `managed_apps.*` の各 ID が `run_with` と整合するか検証される。意味論・将来の Mode Manager との関係は [`../roadmap/runtime-mode-roadmap.md`](../roadmap/runtime-mode-roadmap.md) を参照。
+ロード時に `managed_apps.*` の各 ID が `run_with` と整合するか検証される。
+`capability_policy` は現時点では実行拒否ではなく、`/modes/plan` / `/modes/transit` の preview と GUI 表示で、ロード済み Flowgraph の required capability との衝突を確認するための metadata。
+意味論・将来の Mode Manager との関係は [`../roadmap/runtime-mode-roadmap.md`](../roadmap/runtime-mode-roadmap.md) を参照。
 
 ## 4. 永続化 / 添付
 
@@ -87,7 +91,7 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 - `GET /api/v1/control/modes` — 応答 `mode_ids: string[]`（`[modes.*]` のキー一覧）。
 - `GET /api/v1/control/modes/current` — 応答 `mode: string | null`（`null` は `default_runtime_mode` に従うことを意味する）。`managed_apps` は常に省略。
 - `PUT /api/v1/control/modes/current` — 本文 JSON `{"mode": "..."}` または `{"mode": null}`。既知の mode 以外は 400。成功時に Flowgraph exec ゲートを再計算し、変化があれば WebSocket `runtime_mode_changed` を送る。**非 noop** のときは `[modes.*].managed_apps` を適用し、操作ログを応答の `managed_apps`（任意）と WS `runtime_mode_managed_apps` で返す。別遷移が走っているときは **409** `transition_busy`。
-- `POST /api/v1/control/modes/plan` — 本文 `{"target": "..."}` または `{"target": null}`。遷移プレビュー（`ModeTransitionPlan`）。`modes` があるとき未知の `target` は 400。
+- `POST /api/v1/control/modes/plan` — 本文 `{"target": "..."}` または `{"target": null}`。遷移プレビュー（`ModeTransitionPlan`）。`modes` があるとき未知の `target` は 400。`capability_denied_by_target` / `capability_unlisted_by_target` は preview 専用で、現段階では実行拒否しない。
 - `POST /api/v1/control/modes/transit` — 本文 `{"mode": "...", "dry_run": false, "reason": "..."}`。`dry_run: true` のときは状態を変えず `plan` のみ返す。`dry_run: false` で `PUT .../current` と同様の適用＋応答に `plan` を含む。**非 noop** 時は `managed_apps` 配列を任意同梱。再入時は **409**。
 
 ### 5.1 `[[control_api.tables]]` — Glossary / 汎用 Table の GUI 編集許可リスト (Phase φ / GRN)

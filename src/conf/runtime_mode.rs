@@ -42,6 +42,16 @@ pub struct NotificationsModeOverlay {
 	pub level: Option<String>,
 }
 
+/// Runtime Mode ごとの capability policy 宣言。
+/// 初期実装では preview 用で、実行拒否には使わない。
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+pub struct CapabilityPolicyModeOverlay {
+	#[serde(default)]
+	pub allow: Vec<String>,
+	#[serde(default)]
+	pub deny: Vec<String>,
+}
+
 /// `[modes.<id>]` 1 ブロック。
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct RuntimeModeDefinition {
@@ -55,6 +65,8 @@ pub struct RuntimeModeDefinition {
 	pub ai: AiModeOverlay,
 	#[serde(default)]
 	pub notifications: NotificationsModeOverlay,
+	#[serde(default)]
+	pub capability_policy: CapabilityPolicyModeOverlay,
 }
 
 /// `run_with` の並びと同じ規則で Managed App ID を解決する（`managed_app::build_specs` と一致させる）。
@@ -97,10 +109,7 @@ pub(crate) fn validate_runtime_modes(conf: &Conf) -> Result<()> {
 	if conf.modes.is_empty() {
 		if let Some(d) = conf.default_runtime_mode.as_ref() {
 			if !d.trim().is_empty() {
-				bail!(
-					"`default_runtime_mode` が {:?} に設定されていますが、`modes` が空です。",
-					d
-				);
+				bail!("`default_runtime_mode` が {:?} に設定されていますが、`modes` が空です。", d);
 			}
 		}
 		return Ok(());
@@ -111,10 +120,9 @@ pub(crate) fn validate_runtime_modes(conf: &Conf) -> Result<()> {
 			bail!("`modes` に空のモード ID があります。");
 		}
 		non_empty_list_ids(&def.flowgraph_groups.enable, &format!("modes.{mode_id}.flowgraph_groups.enable"))?;
-		non_empty_list_ids(
-			&def.flowgraph_groups.disable,
-			&format!("modes.{mode_id}.flowgraph_groups.disable"),
-		)?;
+		non_empty_list_ids(&def.flowgraph_groups.disable, &format!("modes.{mode_id}.flowgraph_groups.disable"))?;
+		non_empty_list_ids(&def.capability_policy.allow, &format!("modes.{mode_id}.capability_policy.allow"))?;
+		non_empty_list_ids(&def.capability_policy.deny, &format!("modes.{mode_id}.capability_policy.deny"))?;
 
 		let enable: HashSet<&str> = def.flowgraph_groups.enable.iter().map(|s| s.as_str()).collect();
 		let disable: HashSet<&str> = def.flowgraph_groups.disable.iter().map(|s| s.as_str()).collect();
@@ -124,6 +132,16 @@ pub(crate) fn validate_runtime_modes(conf: &Conf) -> Result<()> {
 				"`modes.{0}` の flowgraph_groups で同一グループが enable と disable の両方に含まれています: {1:?}",
 				mode_id,
 				both
+			);
+		}
+		let capability_allow: HashSet<&str> = def.capability_policy.allow.iter().map(|s| s.as_str()).collect();
+		let capability_deny: HashSet<&str> = def.capability_policy.deny.iter().map(|s| s.as_str()).collect();
+		let both_capabilities: Vec<_> = capability_allow.intersection(&capability_deny).copied().collect();
+		if !both_capabilities.is_empty() {
+			bail!(
+				"`modes.{0}` の capability_policy で同一 capability が allow と deny の両方に含まれています: {1:?}",
+				mode_id,
+				both_capabilities
 			);
 		}
 
@@ -156,11 +174,7 @@ pub(crate) fn validate_runtime_modes(conf: &Conf) -> Result<()> {
 			bail!("`default_runtime_mode` が空文字列です。");
 		}
 		if !conf.modes.contains_key(d) {
-			bail!(
-				"`default_runtime_mode` が {:?} ですが、対応する `[modes.{}]` がありません。",
-				d,
-				d
-			);
+			bail!("`default_runtime_mode` が {:?} ですが、対応する `[modes.{}]` がありません。", d, d);
 		}
 	}
 
@@ -198,6 +212,13 @@ pub struct ModeTransitionPlan {
 	/// 遷移先モード定義に基づく Flowgraph グループ指定（定義が無ければ空）。
 	pub target_flowgraph_groups: FlowgraphGroupsModeSpec,
 	pub target_managed_apps: ManagedAppsModeDirective,
+	pub target_capability_policy: CapabilityPolicyModeOverlay,
+	/// 遷移先 mode の deny により、ロード済み Flowgraph の required capability と衝突するもの。
+	/// preview 専用で、現段階では実行拒否には使わない。
+	pub capability_denied_by_target: Vec<String>,
+	/// allow list が空でないとき、ロード済み Flowgraph が要求しているが allow に含まれていないもの。
+	/// preview 専用で、現段階では実行拒否には使わない。
+	pub capability_unlisted_by_target: Vec<String>,
 	/// 遷移元の enable 集合に無かったが、遷移先の enable に含まれるグループ名。
 	pub flowgraph_enable_added_vs_from: Vec<String>,
 	/// 遷移元の disable 集合に無かったが、遷移先の disable に含まれるグループ名。
@@ -217,16 +238,8 @@ pub fn build_mode_transition_plan(conf: &Conf, from_slot: Option<&str>, to_slot:
 	let to_effective_id = effective_runtime_mode_for_conf(conf, to_slot_norm.as_deref());
 	let noop = from_slot_norm == to_slot_norm && from_effective_id == to_effective_id;
 
-	let from_def = conf
-		.modes
-		.get(from_effective_id.as_str())
-		.cloned()
-		.unwrap_or_default();
-	let to_def = conf
-		.modes
-		.get(to_effective_id.as_str())
-		.cloned()
-		.unwrap_or_default();
+	let from_def = conf.modes.get(from_effective_id.as_str()).cloned().unwrap_or_default();
+	let to_def = conf.modes.get(to_effective_id.as_str()).cloned().unwrap_or_default();
 
 	let from_en: HashSet<_> = from_def.flowgraph_groups.enable.iter().cloned().collect();
 	let from_dis: HashSet<_> = from_def.flowgraph_groups.disable.iter().cloned().collect();
@@ -246,9 +259,33 @@ pub fn build_mode_transition_plan(conf: &Conf, from_slot: Option<&str>, to_slot:
 		noop,
 		target_flowgraph_groups: to_def.flowgraph_groups,
 		target_managed_apps: to_def.managed_apps,
+		target_capability_policy: to_def.capability_policy,
+		capability_denied_by_target: Vec::new(),
+		capability_unlisted_by_target: Vec::new(),
 		flowgraph_enable_added_vs_from,
 		flowgraph_disable_added_vs_from,
 	})
+}
+
+pub fn apply_capability_policy_preview(plan: &mut ModeTransitionPlan, required_capabilities: &[String]) {
+	let allow: HashSet<&str> = plan.target_capability_policy.allow.iter().map(|s| s.as_str()).collect();
+	let deny: HashSet<&str> = plan.target_capability_policy.deny.iter().map(|s| s.as_str()).collect();
+	let mut denied = Vec::new();
+	let mut unlisted = Vec::new();
+	for capability in required_capabilities {
+		let cap = capability.as_str();
+		if deny.contains(cap) {
+			denied.push(capability.clone());
+		} else if !allow.is_empty() && !allow.contains(cap) {
+			unlisted.push(capability.clone());
+		}
+	}
+	denied.sort();
+	denied.dedup();
+	unlisted.sort();
+	unlisted.dedup();
+	plan.capability_denied_by_target = denied;
+	plan.capability_unlisted_by_target = unlisted;
 }
 
 #[cfg(test)]
@@ -269,10 +306,15 @@ flowgraph_groups.enable = ["assistant", "streaming"]
 managed_apps.start = ["obs"]
 ai.enabled = true
 notifications.level = "stream_safe"
+capability_policy.allow = ["network", "obs_control"]
 "#;
 		let conf: Conf = toml::from_str(raw).expect("toml");
 		validate_runtime_modes(&conf).expect("valid");
 		assert_eq!(conf.modes.get("streaming").unwrap().display_name.as_deref(), Some("Streaming"));
+		assert_eq!(
+			conf.modes.get("streaming").unwrap().capability_policy.allow,
+			vec!["network".to_string(), "obs_control".to_string()]
+		);
 	}
 
 	#[test]
@@ -293,6 +335,17 @@ managed_apps.stop = ["ghost"]
 [modes.x]
 flowgraph_groups.enable = ["a", "b"]
 flowgraph_groups.disable = ["b"]
+"#;
+		let conf: Conf = toml::from_str(raw).unwrap();
+		assert!(validate_runtime_modes(&conf).is_err());
+	}
+
+	#[test]
+	fn rejects_capability_allow_deny_overlap() {
+		let raw = r#"
+[modes.x]
+capability_policy.allow = ["network"]
+capability_policy.deny = ["network"]
 "#;
 		let conf: Conf = toml::from_str(raw).unwrap();
 		assert!(validate_runtime_modes(&conf).is_err());
@@ -381,5 +434,23 @@ managed_apps.stop = ["app2"]
 		assert_eq!(p.to_effective_id, "b");
 		assert!(p.target_managed_apps.start.is_empty());
 		assert_eq!(p.target_managed_apps.stop, vec!["app2".to_string()]);
+	}
+
+	#[test]
+	fn capability_policy_preview_marks_denied_and_unlisted() {
+		let raw = r#"
+[modes.daily]
+capability_policy.allow = ["file_read"]
+capability_policy.deny = ["network"]
+"#;
+		let conf: Conf = toml::from_str(raw).unwrap();
+		validate_runtime_modes(&conf).unwrap();
+		let mut plan = build_mode_transition_plan(&conf, None, Some("daily")).unwrap();
+		apply_capability_policy_preview(
+			&mut plan,
+			&["file_read".to_string(), "network".to_string(), "file_write".to_string()],
+		);
+		assert_eq!(plan.capability_denied_by_target, vec!["network".to_string()]);
+		assert_eq!(plan.capability_unlisted_by_target, vec!["file_write".to_string()]);
 	}
 }

@@ -3,13 +3,13 @@ mod processor_conf;
 mod runtime_mode;
 
 pub use anyhow::{bail, Result};
-pub use runtime_mode::{
-	AiModeOverlay, build_mode_transition_plan, effective_runtime_mode_for_conf, FlowgraphGroupsModeSpec,
-	ManagedAppsModeDirective, ModeTransitionPlan, normalize_runtime_mode_slot, NotificationsModeOverlay,
-	RuntimeModeDefinition,
-};
 pub use motion::{MotionConf, VmcPassthroughSpec};
 pub use processor_conf::*;
+pub use runtime_mode::{
+	apply_capability_policy_preview, build_mode_transition_plan, effective_runtime_mode_for_conf, normalize_runtime_mode_slot,
+	AiModeOverlay, CapabilityPolicyModeOverlay, FlowgraphGroupsModeSpec, ManagedAppsModeDirective, ModeTransitionPlan,
+	NotificationsModeOverlay, RuntimeModeDefinition,
+};
 
 use crate::ai::AiConf;
 use crate::flowgraph::FlowgraphInstanceConfig;

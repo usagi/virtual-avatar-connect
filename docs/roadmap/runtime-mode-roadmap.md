@@ -122,6 +122,8 @@ flowgraph_groups.disable = ["streaming", "avatar"]
 managed_apps.stop = ["obs", "warudo", "tts"]
 ai.enabled = true
 notifications.level = "normal"
+capability_policy.allow = ["file_read", "network", "desktop_notification"]
+capability_policy.deny = ["obs_control", "process_control"]
 
 [modes.streaming]
 display_name = "Streaming"
@@ -129,6 +131,7 @@ flowgraph_groups.enable = ["assistant", "streaming", "avatar", "obs"]
 managed_apps.start = ["obs", "warudo", "tts"]
 ai.enabled = true
 notifications.level = "stream_safe"
+capability_policy.allow = ["file_read", "file_write", "network", "obs_control", "twitch_api", "process_control"]
 
 [modes.work]
 display_name = "Work"

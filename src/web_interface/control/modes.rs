@@ -3,7 +3,7 @@
 use actix_web::web::{Data, Json};
 use actix_web::{get, post, put, HttpResponse, Responder};
 
-use crate::conf::{build_mode_transition_plan, Conf, ModeTransitionPlan};
+use crate::conf::{apply_capability_policy_preview, build_mode_transition_plan, Conf, ModeTransitionPlan};
 use crate::control_events::RuntimeModeManagedAppOp;
 use crate::state::{
 	apply_runtime_mode_change, apply_runtime_mode_transition_full, try_begin_runtime_mode_transition, ApplyRuntimeModeError,
@@ -88,6 +88,18 @@ fn normalize_body_mode(mode: Option<&String>) -> Option<String> {
 	})
 }
 
+async fn enrich_plan_with_runtime_preview(state: &SharedState, plan: &mut ModeTransitionPlan) {
+	let flowgraph = {
+		let s = state.read().await;
+		s.flowgraph.clone()
+	};
+	let required_capabilities = {
+		let rt = flowgraph.read().await;
+		rt.as_ref().map(|rt| rt.capability_summary.capabilities.clone()).unwrap_or_default()
+	};
+	apply_capability_policy_preview(plan, &required_capabilities);
+}
+
 #[get("/modes")]
 pub async fn get_modes_list(state: Data<SharedState>) -> impl Responder {
 	let s = state.read().await;
@@ -111,25 +123,15 @@ pub async fn get_modes_list(state: Data<SharedState>) -> impl Responder {
 #[get("/modes/current")]
 pub async fn get_current_mode(state: Data<SharedState>) -> impl Responder {
 	let s = state.read().await;
-	let mode = s
-		.runtime_mode_id
-		.read()
-		.ok()
-		.and_then(|g| g.clone());
-	HttpResponse::Ok().json(CurrentModeResponse {
-		mode,
-		managed_apps: None,
-	})
+	let mode = s.runtime_mode_id.read().ok().and_then(|g| g.clone());
+	HttpResponse::Ok().json(CurrentModeResponse { mode, managed_apps: None })
 }
 
 #[put("/modes/current")]
 pub async fn put_current_mode(state: Data<SharedState>, body: Json<PutCurrentModeBody>) -> impl Responder {
 	let (path, current_slot) = {
 		let s = state.read().await;
-		(
-			s.conf_source_path.clone(),
-			s.runtime_mode_id.read().ok().and_then(|g| g.clone()),
-		)
+		(s.conf_source_path.clone(), s.runtime_mode_id.read().ok().and_then(|g| g.clone()))
 	};
 	let Some(path) = path.as_ref() else {
 		return HttpResponse::ServiceUnavailable().json(serde_json::json!({
@@ -145,7 +147,7 @@ pub async fn put_current_mode(state: Data<SharedState>, body: Json<PutCurrentMod
 	};
 
 	let normalized = normalize_body_mode(body.mode.as_ref());
-	let plan = match build_mode_transition_plan(&conf, current_slot.as_deref(), normalized.as_deref()) {
+	let mut plan = match build_mode_transition_plan(&conf, current_slot.as_deref(), normalized.as_deref()) {
 		Ok(p) => p,
 		Err(msg) => {
 			return HttpResponse::BadRequest().json(serde_json::json!({
@@ -154,6 +156,7 @@ pub async fn put_current_mode(state: Data<SharedState>, body: Json<PutCurrentMod
 			}));
 		}
 	};
+	enrich_plan_with_runtime_preview(state.get_ref(), &mut plan).await;
 
 	if plan.noop {
 		match apply_runtime_mode_change(state.get_ref(), &conf, normalized, None).await {
@@ -202,14 +205,13 @@ pub async fn post_modes_plan(state: Data<SharedState>, body: Json<PlanBody>) -> 
 			"message": "conf を再読込できませんでした"
 		}));
 	};
-	let current = s
-		.runtime_mode_id
-		.read()
-		.ok()
-		.and_then(|g| g.clone());
+	let current = s.runtime_mode_id.read().ok().and_then(|g| g.clone());
 	let target_norm = normalize_body_mode(body.target.as_ref());
 	match build_mode_transition_plan(&conf, current.as_deref(), target_norm.as_deref()) {
-		Ok(plan) => HttpResponse::Ok().json(plan),
+		Ok(mut plan) => {
+			enrich_plan_with_runtime_preview(state.get_ref(), &mut plan).await;
+			HttpResponse::Ok().json(plan)
+		}
 		Err(msg) => HttpResponse::BadRequest().json(serde_json::json!({
 			"error": "plan_failed",
 			"message": msg,
@@ -221,10 +223,7 @@ pub async fn post_modes_plan(state: Data<SharedState>, body: Json<PlanBody>) -> 
 pub async fn post_modes_transit(state: Data<SharedState>, body: Json<TransitBody>) -> impl Responder {
 	let (path, current) = {
 		let s = state.read().await;
-		(
-			s.conf_source_path.clone(),
-			s.runtime_mode_id.read().ok().and_then(|g| g.clone()),
-		)
+		(s.conf_source_path.clone(), s.runtime_mode_id.read().ok().and_then(|g| g.clone()))
 	};
 	let Some(path) = path.as_ref() else {
 		return HttpResponse::ServiceUnavailable().json(serde_json::json!({
@@ -241,7 +240,7 @@ pub async fn post_modes_transit(state: Data<SharedState>, body: Json<TransitBody
 
 	let normalized = normalize_body_mode(body.mode.as_ref());
 
-	let plan = match build_mode_transition_plan(&conf, current.as_deref(), normalized.as_deref()) {
+	let mut plan = match build_mode_transition_plan(&conf, current.as_deref(), normalized.as_deref()) {
 		Ok(p) => p,
 		Err(msg) => {
 			return HttpResponse::BadRequest().json(serde_json::json!({
@@ -250,6 +249,7 @@ pub async fn post_modes_transit(state: Data<SharedState>, body: Json<TransitBody
 			}));
 		}
 	};
+	enrich_plan_with_runtime_preview(state.get_ref(), &mut plan).await;
 
 	if body.dry_run {
 		return HttpResponse::Ok().json(TransitResponse {
@@ -260,11 +260,7 @@ pub async fn post_modes_transit(state: Data<SharedState>, body: Json<TransitBody
 		});
 	}
 
-	let reason = body
-		.reason
-		.as_ref()
-		.map(|s| s.trim().to_string())
-		.filter(|s| !s.is_empty());
+	let reason = body.reason.as_ref().map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
 
 	if plan.noop {
 		match apply_runtime_mode_change(state.get_ref(), &conf, normalized.clone(), reason).await {

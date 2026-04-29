@@ -187,6 +187,11 @@ export type ManagedAppsModeDirective = {
  leave: string[];
 };
 
+export type CapabilityPolicyModeOverlay = {
+ allow: string[];
+ deny: string[];
+};
+
 export type ModeTransitionPlan = {
  from_slot: string | null;
  to_slot: string | null;
@@ -195,6 +200,9 @@ export type ModeTransitionPlan = {
  noop: boolean;
  target_flowgraph_groups: FlowgraphGroupsModeSpec;
  target_managed_apps: ManagedAppsModeDirective;
+ target_capability_policy: CapabilityPolicyModeOverlay;
+ capability_denied_by_target: string[];
+ capability_unlisted_by_target: string[];
  flowgraph_enable_added_vs_from: string[];
  flowgraph_disable_added_vs_from: string[];
 };
