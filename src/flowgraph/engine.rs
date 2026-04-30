@@ -983,7 +983,13 @@ mod tests {
 	}
 	#[async_trait]
 	impl PureNode for CountingString {
-		async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, _i: &InputMap, _f: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+		async fn compute(
+			&self,
+			_host: &crate::flowgraph::node::PureEvalHost,
+			_p: &InputMap,
+			_i: &InputMap,
+			_f: &ExecFireSet,
+		) -> Result<NodeOutput, NodeExecError> {
 			self.0.fetch_add(1, Ordering::SeqCst);
 			Ok(NodeOutput::new().set_data("value", SocketValue::String(self.1.clone())))
 		}
