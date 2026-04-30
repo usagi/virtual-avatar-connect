@@ -27,7 +27,7 @@ use crate::flowgraph::node::{
 	NodeSpec, PortSpec, PropertySpec, PureNode,
 };
 use crate::flowgraph::quantity::{Dimension, Quantity, SIPrefix, Unit};
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use async_trait::async_trait;
 use jiff::tz::{Offset, TimeZone};
 use jiff::{SignedDuration, Timestamp};
@@ -215,6 +215,57 @@ impl PureNode for DateTimeParseNode {
 			DateTime::parse_with_default_tz(&s, default_tz).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("datetime.parse: {e}")))?;
 		Ok(NodeOutput::new().set_data("datetime", SocketValue::DateTime(dt)))
 	}
+}
+
+pub struct DateTimeTryParseNode;
+
+impl NodeDescriptor for DateTimeTryParseNode {
+	fn describe(&self) -> NodeSpec {
+		let mut spec = DateTimeParseNode.describe();
+		spec.feature = "flowgraph.datetime.try_parse".into();
+		spec.title = "DateTime Try Parse".into();
+		spec.description = Some("Parse a datetime string and return failure as result<datetime> instead of halting.".into());
+		spec.outputs = vec![
+			PortSpec::output("ok", "OK", SocketType::Bool),
+			PortSpec::output("datetime", "DateTime", SocketType::DateTime),
+			PortSpec::output("error", "Error", SocketType::String),
+			PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::DateTime))),
+		];
+		spec
+	}
+}
+
+#[async_trait]
+impl PureNode for DateTimeTryParseNode {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+		match datetime_try_parse(properties, inputs) {
+			Ok(dt) => Ok(NodeOutput::new()
+				.set_data("ok", SocketValue::Bool(true))
+				.set_data("datetime", SocketValue::DateTime(dt.clone()))
+				.set_data("error", SocketValue::String(String::new()))
+				.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::DateTime(dt))))),
+			Err(error) => Ok(NodeOutput::new()
+				.set_data("ok", SocketValue::Bool(false))
+				.set_data("datetime", SocketType::DateTime.default_value().unwrap())
+				.set_data("error", SocketValue::String(error.clone()))
+				.set_data("result", SocketValue::Result(FlowResult::err(error).with_code("datetime.parse")))),
+		}
+	}
+}
+
+fn datetime_try_parse(properties: &InputMap, inputs: &InputMap) -> Result<DateTime, String> {
+	let s = get_required_string(inputs, "s").map_err(|e| e.to_string())?;
+	let require_tz = properties.get("require_timezone").and_then(|v| v.as_bool().ok()).unwrap_or(false);
+	let default_tz_str = properties
+		.get("default_timezone")
+		.and_then(|v| v.as_str().ok())
+		.unwrap_or("")
+		.to_string();
+	if require_tz {
+		return DateTime::from_rfc3339(&s).map_err(|e| format!("datetime.parse (require_timezone=true): '{s}' は RFC3339 aware ではありません: {e}"));
+	}
+	let default_tz = parse_offset_str(&default_tz_str).map_err(|e| format!("datetime.parse: default_timezone '{default_tz_str}' の書式不正: {e}"))?;
+	DateTime::parse_with_default_tz(&s, default_tz).map_err(|e| format!("datetime.parse: {e}"))
 }
 
 // ---------------------------------------------------------------------------

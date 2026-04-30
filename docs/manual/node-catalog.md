@@ -47,6 +47,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.datetime.now`](#flowgraph-datetime-now) — DateTime Now
   - [`flowgraph.datetime.parse`](#flowgraph-datetime-parse) — DateTime Parse
   - [`flowgraph.datetime.sub_duration`](#flowgraph-datetime-sub-duration) — DateTime - Duration
+  - [`flowgraph.datetime.try_parse`](#flowgraph-datetime-try-parse) — DateTime Try Parse
 - **easing**
   - [`flowgraph.easing.apply`](#flowgraph-easing-apply) — Easing apply
 - **flow**
@@ -699,6 +700,26 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `result` | `datetime` |  |
+
+### `flowgraph.datetime.try_parse`
+
+**DateTime Try Parse** — Parse a datetime string and return failure as result<datetime> instead of halting.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `s` | `string` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `ok` | `bool` |  |
+| `datetime` | `datetime` |  |
+| `error` | `string` |  |
+| `result` | `result<datetime>` |  |
+
+| Property | Type | Default | Required | Note |
+|---|---|---|---|---|
+| `require_timezone` | `bool` | `false` |  | When true, naive (no-timezone) inputs are rejected. Default false: naive inputs are interpreted with `default_timezone` (or UTC). |
+| `default_timezone` | `string` | `""` |  | Fixed offset to apply when the input has no timezone info. Accepts `""` / `"Z"` / `"UTC"` (= UTC), `"+09:00"`, `"-05:30"`. IANA zones (`"Asia/Tokyo"`) are rejected (v0 is fixed-offset only). |
 
 ## easing
 

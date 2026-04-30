@@ -326,6 +326,7 @@ pub fn default_registry() -> NodeRegistry {
 	// --- datetime (Phase pi-5) ---
 	r.register_pure(Arc::new(nodes::datetime::DateTimeNowNode));
 	r.register_pure(Arc::new(nodes::datetime::DateTimeParseNode));
+	r.register_pure(Arc::new(nodes::datetime::DateTimeTryParseNode));
 	r.register_pure(Arc::new(nodes::datetime::DateTimeFormatNode));
 	r.register_pure(Arc::new(nodes::datetime::DateTimeAddDurationNode));
 	r.register_pure(Arc::new(nodes::datetime::DateTimeSubDurationNode));
