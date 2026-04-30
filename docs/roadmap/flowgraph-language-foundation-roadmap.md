@@ -622,6 +622,12 @@ Control API の node catalog JSON に `state_model` metadata を追加した。
 現段階では read-only な宣言として、stateful node の state が `node_instance` scope / `volatile` storage / `program_instance` lifetime であり、reload 時に再初期化されることを明示する。
 snapshot / persistence 実装はまだ行わず、GUI 表示と将来の snapshot policy が参照する machine-readable な足場に留める。
 
+### LF-7b Graph state summary metadata ✅
+
+LoadReport / Control API / fixture report の `capability_summary` に `stateful_node_count` / `volatile_state_node_count` / `state_nodes` を追加した。
+各 stateful node は `node_instance` scope / `volatile` storage / `program_instance` lifetime として列挙し、GUI diagnostics でも stateful node 数を確認できるようにした。
+snapshot / profile-local persistence はまだ実装せず、graph 単位で volatile state の存在を可視化する段階に留める。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
