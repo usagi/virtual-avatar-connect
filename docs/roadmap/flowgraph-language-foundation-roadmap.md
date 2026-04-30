@@ -628,6 +628,12 @@ LoadReport / Control API / fixture report の `capability_summary` に `stateful
 各 stateful node は `node_instance` scope / `volatile` storage / `program_instance` lifetime として列挙し、GUI diagnostics でも stateful node 数を確認できるようにした。
 snapshot / profile-local persistence はまだ実装せず、graph 単位で volatile state の存在を可視化する段階に留める。
 
+### LF-7c Typed state model policy metadata ✅
+
+Node catalog と graph state summary が参照する state model を `FlowgraphStateModel` として型定義し、`scope` / `storage` / `lifetime` に加えて `snapshot_policy` / `persistence_policy` を machine-readable にした。
+現在の stateful node は `snapshot_policy = "unsupported"` / `persistence_policy = "none"` のままなので、runtime の snapshot / restore 挙動は変えない。
+この段階では metadata の重複をなくし、後続で node ごとの差分 policy や snapshot support を足せる足場を作る。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
