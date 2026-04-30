@@ -639,6 +639,11 @@ Node catalog と graph state summary が参照する state model を `FlowgraphS
 Flowgraph diagnostics panel に `state_nodes` の details 表示を追加し、graph 内の stateful node と `volatile` / `program_instance` / snapshot / persistence policy を確認できるようにした。
 これは LF-7b/LF-7c metadata の可視化であり、runtime state の snapshot / restore はまだ行わない。
 
+### LF-7e Runtime state version observations ✅
+
+`ProgramRun` に stateful node の `state_versions` を追加し、fixture JSON report と CLI summary から最後に観測された state version を確認できるようにした。
+これは state mutation / reload / snapshot policy を検証するための観測点であり、state の永続化や restore はまだ実装しない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
