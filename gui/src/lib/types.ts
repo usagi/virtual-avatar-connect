@@ -1107,6 +1107,10 @@ export type FlowgraphStateNode = {
   reinitialized_on_reload: boolean;
   snapshot_supported: boolean;
   snapshot_policy: "unsupported";
+  snapshot_format: "none";
+  restore_supported: boolean;
+  restore_policy: "unsupported";
+  migration_policy: "none";
   persistence_policy: "none";
 };
 

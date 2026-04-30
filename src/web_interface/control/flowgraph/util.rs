@@ -581,6 +581,10 @@ mod tests {
 		assert_eq!(counter["reinitialized_on_reload"].as_bool(), Some(true));
 		assert_eq!(counter["snapshot_supported"].as_bool(), Some(false));
 		assert_eq!(counter["snapshot_policy"].as_str(), Some("unsupported"));
+		assert_eq!(counter["snapshot_format"].as_str(), Some("none"));
+		assert_eq!(counter["restore_supported"].as_bool(), Some(false));
+		assert_eq!(counter["restore_policy"].as_str(), Some("unsupported"));
+		assert_eq!(counter["migration_policy"].as_str(), Some("none"));
 		assert_eq!(counter["persistence_policy"].as_str(), Some("none"));
 
 		let rate_limit = &specs["flowgraph.util.rate_limit"]["state_model"];
@@ -593,6 +597,10 @@ mod tests {
 			assert_eq!(state_model["storage"].as_str(), Some("none"));
 			assert_eq!(state_model["reinitialized_on_reload"].as_bool(), Some(false));
 			assert_eq!(state_model["snapshot_policy"].as_str(), Some("unsupported"));
+			assert_eq!(state_model["snapshot_format"].as_str(), Some("none"));
+			assert_eq!(state_model["restore_supported"].as_bool(), Some(false));
+			assert_eq!(state_model["restore_policy"].as_str(), Some("unsupported"));
+			assert_eq!(state_model["migration_policy"].as_str(), Some("none"));
 			assert_eq!(state_model["persistence_policy"].as_str(), Some("none"));
 		}
 	}

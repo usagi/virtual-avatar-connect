@@ -465,6 +465,10 @@ mod tests {
 				&& node.scope == crate::flowgraph::StateScope::NodeInstance
 				&& node.storage == crate::flowgraph::StateStorage::Volatile
 				&& node.snapshot_policy == crate::flowgraph::StateSnapshotPolicy::Unsupported
+				&& node.snapshot_format == crate::flowgraph::StateSnapshotFormat::None
+				&& !node.restore_supported
+				&& node.restore_policy == crate::flowgraph::StateRestorePolicy::Unsupported
+				&& node.migration_policy == crate::flowgraph::StateMigrationPolicy::None
 				&& node.persistence_policy == crate::flowgraph::StatePersistencePolicy::None
 		}));
 		for cap in ["network", "file_read", "file_write", "trace_write"] {

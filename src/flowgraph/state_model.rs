@@ -33,6 +33,24 @@ pub enum StateSnapshotPolicy {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+pub enum StateSnapshotFormat {
+	None,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum StateRestorePolicy {
+	Unsupported,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum StateMigrationPolicy {
+	None,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum StatePersistencePolicy {
 	None,
 }
@@ -47,6 +65,10 @@ pub struct FlowgraphStateModel {
 	pub reinitialized_on_reload: bool,
 	pub snapshot_supported: bool,
 	pub snapshot_policy: StateSnapshotPolicy,
+	pub snapshot_format: StateSnapshotFormat,
+	pub restore_supported: bool,
+	pub restore_policy: StateRestorePolicy,
+	pub migration_policy: StateMigrationPolicy,
 	pub persistence_policy: StatePersistencePolicy,
 }
 
@@ -69,6 +91,10 @@ impl FlowgraphStateModel {
 			reinitialized_on_reload: false,
 			snapshot_supported: false,
 			snapshot_policy: StateSnapshotPolicy::Unsupported,
+			snapshot_format: StateSnapshotFormat::None,
+			restore_supported: false,
+			restore_policy: StateRestorePolicy::Unsupported,
+			migration_policy: StateMigrationPolicy::None,
 			persistence_policy: StatePersistencePolicy::None,
 		}
 	}
@@ -83,6 +109,10 @@ impl FlowgraphStateModel {
 			reinitialized_on_reload: true,
 			snapshot_supported: false,
 			snapshot_policy: StateSnapshotPolicy::Unsupported,
+			snapshot_format: StateSnapshotFormat::None,
+			restore_supported: false,
+			restore_policy: StateRestorePolicy::Unsupported,
+			migration_policy: StateMigrationPolicy::None,
 			persistence_policy: StatePersistencePolicy::None,
 		}
 	}

@@ -130,9 +130,9 @@
                 </span>
                 <span
                   class="truncate text-right opacity-70"
-                  title={`snapshot: ${node.snapshot_policy}, persistence: ${node.persistence_policy}`}
+                  title={`snapshot: ${node.snapshot_policy} / ${node.snapshot_format}, restore: ${node.restore_policy}, migration: ${node.migration_policy}, persistence: ${node.persistence_policy}`}
                 >
-                  snapshot {node.snapshot_policy} / persist {node.persistence_policy}
+                  snapshot {node.snapshot_policy} / restore {node.restore_policy}
                 </span>
               </div>
             {/each}

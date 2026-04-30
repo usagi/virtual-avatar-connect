@@ -8,7 +8,8 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 use crate::flowgraph::state_model::{
-	FlowgraphStateModel, StateLifetime, StatePersistencePolicy, StateScope, StateSnapshotPolicy, StateStorage,
+	FlowgraphStateModel, StateLifetime, StateMigrationPolicy, StatePersistencePolicy, StateRestorePolicy, StateScope, StateSnapshotFormat,
+	StateSnapshotPolicy, StateStorage,
 };
 
 /// 診断の深刻度。
@@ -227,6 +228,10 @@ pub struct GraphStateNode {
 	pub reinitialized_on_reload: bool,
 	pub snapshot_supported: bool,
 	pub snapshot_policy: StateSnapshotPolicy,
+	pub snapshot_format: StateSnapshotFormat,
+	pub restore_supported: bool,
+	pub restore_policy: StateRestorePolicy,
+	pub migration_policy: StateMigrationPolicy,
 	pub persistence_policy: StatePersistencePolicy,
 }
 
@@ -259,6 +264,10 @@ impl GraphCapabilitySummary {
 					snapshot_supported: state_model.snapshot_supported,
 					snapshot_policy: state_model.snapshot_policy,
 					persistence_policy: state_model.persistence_policy,
+					snapshot_format: state_model.snapshot_format,
+					restore_supported: state_model.restore_supported,
+					restore_policy: state_model.restore_policy,
+					migration_policy: state_model.migration_policy,
 				});
 			}
 			let node_caps: Vec<String> = reg.capabilities(&meta.feature).into_iter().map(str::to_string).collect();
