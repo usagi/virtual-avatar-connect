@@ -551,6 +551,12 @@ Twitch Helix action 系ノードの共通出力に `result: result<json>` を追
 既存の `on_success` / `on_error` / `response` / `error` と各ノード固有出力は維持し、成功時は Helix response JSON、失敗時は `code = "twitch.request"` の recoverable error を返す。
 ad / raid / clip / channel-info / moderation-chat / shield-mode / poll / prediction / goals 系 action が同じ result contract を持つ。
 
+### LF-6i VMC / VRChat OSC send result output ✅
+
+VMC pose 送信ノードと VRChat OSC 送信ノードに `result: result<int>` 出力を追加した。
+既存の `on_success` / `on_error` / `bytes_sent` / `error` は維持し、UDP 送信成功時は送信 byte 数、失敗時は `code = "vmc.send"` または `code = "vrchat.osc.send"` の recoverable error を返す。
+OSC 系送信ノード全体で bytes-sent result contract を揃えた。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
