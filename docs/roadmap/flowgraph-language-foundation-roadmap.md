@@ -575,6 +575,12 @@ TTS 合成・再生・保存結果を downstream が単一 result contract で�
 既存の `on_success` / `on_error` / `text` / `error` は維持し、成功時は OCR text、失敗時は `code = "ocr.recognize"` の recoverable error を返す。
 OCR 結果を downstream が result contract で扱えるようにした。
 
+### LF-6m Screenshot capture result output ✅
+
+`flowgraph.screenshot.capture` に `result: result<json>` 出力を追加した。
+既存の `on_success` / `on_error` / `data_url` / `saved_path` / `width` / `height` / `error` は維持し、成功時は `{ data_url, saved_path, width, height }`、失敗時は `code = "screenshot.capture"` の recoverable error を返す。
+スクリーンショット結果を downstream が単一 result contract で扱えるようにした。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
