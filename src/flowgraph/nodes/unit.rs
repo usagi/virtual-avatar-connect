@@ -6,6 +6,7 @@
 //!
 //! Nodes:
 //! - `flowgraph.unit.assign`          Float (dimensionless) + property `unit` -> Quantity
+//! - `flowgraph.unit.try_parse`       String -> result<Quantity>
 //! - `flowgraph.unit.convert`         Quantity + property `target_unit` -> Quantity (same-dim only)
 //! - `flowgraph.unit.strip`           Quantity -> Float (raw value, dimensionless escape hatch)
 //! - `flowgraph.unit.get_unit_string` Quantity -> String (canonical unit name)
@@ -16,11 +17,11 @@
 //! All pure; no exec ports (D4: dimension errors halt the graph via `NodeExecError::Generic`).
 
 use crate::flowgraph::node::{
-	get_required_float, get_required_quantity, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
-	PropertySpec, PureNode,
+	get_required_float, get_required_quantity, get_required_string, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput,
+	NodeSpec, PortSpec, PropertySpec, PureNode,
 };
 use crate::flowgraph::quantity::{parse_unit, Quantity};
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{parse_quantity_string, FlowResult, SocketType, SocketValue};
 use async_trait::async_trait;
 
 // ---------------------------------------------------------------------------
@@ -50,18 +51,64 @@ impl NodeDescriptor for UnitAssignNode {
 impl PureNode for UnitAssignNode {
 	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
 		let value = get_required_float(inputs, "value")?;
-		let unit_str = properties
-			.get("unit")
-			.and_then(|v| v.as_str().ok())
-			.unwrap_or("")
-			.trim()
-			.to_string();
-		let unit = if unit_str.is_empty() {
-			crate::flowgraph::quantity::Unit::dimensionless()
-		} else {
-			parse_unit(&unit_str).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("unit parse error on '{unit_str}': {e}")))?
-		};
+		let unit_str = unit_property(properties, "unit");
+		let unit = parse_assign_unit(&unit_str).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Quantity(Quantity::of(value, unit))))
+	}
+}
+
+pub struct UnitTryParseNode;
+
+impl NodeDescriptor for UnitTryParseNode {
+	fn describe(&self) -> NodeSpec {
+		NodeSpec {
+			feature: "flowgraph.unit.try_parse".into(),
+			title: "Unit Try Parse".into(),
+			category: "unit".into(),
+			description: Some("Parse a quantity string and return failure as result<quantity> instead of halting.".into()),
+			inputs: vec![PortSpec::input("text", "Text", SocketType::String)],
+			outputs: vec![
+				PortSpec::output("ok", "OK", SocketType::Bool),
+				PortSpec::output("quantity", "Quantity", SocketType::Quantity),
+				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Quantity))),
+			],
+			properties: vec![],
+		}
+	}
+}
+
+#[async_trait]
+impl PureNode for UnitTryParseNode {
+	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+		let text = get_required_string(inputs, "text")?;
+		match parse_quantity_string(&text) {
+			Ok(quantity) => Ok(NodeOutput::new()
+				.set_data("ok", SocketValue::Bool(true))
+				.set_data("quantity", SocketValue::Quantity(quantity.clone()))
+				.set_data("error", SocketValue::String(String::new()))
+				.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Quantity(quantity))))),
+			Err(error) => {
+				let error = format!("quantity parse error: {error}");
+				Ok(NodeOutput::new()
+					.set_data("ok", SocketValue::Bool(false))
+					.set_data("quantity", SocketType::Quantity.default_value().unwrap())
+					.set_data("error", SocketValue::String(error.clone()))
+					.set_data("result", SocketValue::Result(FlowResult::err(error).with_code("unit.parse"))))
+			}
+		}
+	}
+}
+
+fn unit_property(properties: &InputMap, name: &str) -> String {
+	properties.get(name).and_then(|v| v.as_str().ok()).unwrap_or("").trim().to_string()
+}
+
+fn parse_assign_unit(unit_str: &str) -> Result<crate::flowgraph::quantity::Unit, String> {
+	if unit_str.is_empty() {
+		Ok(crate::flowgraph::quantity::Unit::dimensionless())
+	} else {
+		parse_unit(unit_str).map_err(|e| format!("unit parse error on '{unit_str}': {e}"))
 	}
 }
 
@@ -324,6 +371,42 @@ mod tests {
 			.await
 			.unwrap_err();
 		assert!(matches!(err, NodeExecError::Generic(_)));
+	}
+
+	#[tokio::test]
+	async fn try_parse_returns_result_for_success_and_error() {
+		let inputs: InputMap = [("text".into(), SocketValue::String("2 km".into()))].into_iter().collect();
+		let out = UnitTryParseNode
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("ok"), Some(&SocketValue::Bool(true)));
+		match out.data.get("quantity").unwrap() {
+			SocketValue::Quantity(q) => {
+				assert_eq!(q.value, 2.0);
+				assert_eq!(q.unit.canonical(), "1000\u{b7}m");
+			}
+			_ => panic!("expected Quantity"),
+		}
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => assert!(result.ok),
+			_ => panic!("expected Result"),
+		}
+
+		let inputs: InputMap = [("text".into(), SocketValue::String("not_a_quantity".into()))].into_iter().collect();
+		let out = UnitTryParseNode
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("ok"), Some(&SocketValue::Bool(false)));
+		assert!(out.data.get("error").unwrap().as_str().unwrap().contains("quantity parse error"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("unit.parse"));
+			}
+			_ => panic!("expected Result"),
+		}
 	}
 
 	// ---- convert ---------------------------------------------------------

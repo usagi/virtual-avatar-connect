@@ -256,6 +256,7 @@ pub fn default_registry() -> NodeRegistry {
 
 	// --- unit (Phase ξ-2) ---
 	r.register_pure(Arc::new(nodes::unit::UnitAssignNode));
+	r.register_pure(Arc::new(nodes::unit::UnitTryParseNode));
 	r.register_pure(Arc::new(nodes::unit::UnitConvertNode));
 	r.register_pure(Arc::new(nodes::unit::UnitStripNode));
 	r.register_pure(Arc::new(nodes::unit::UnitGetUnitStringNode));

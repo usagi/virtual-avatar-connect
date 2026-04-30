@@ -241,6 +241,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
   - [`flowgraph.unit.same_dimension`](#flowgraph-unit-same-dimension) — Same Dimension?
   - [`flowgraph.unit.strip`](#flowgraph-unit-strip) — Unit Strip
   - [`flowgraph.unit.to_json`](#flowgraph-unit-to-json) — Unit -> JSON
+  - [`flowgraph.unit.try_parse`](#flowgraph-unit-try-parse) — Unit Try Parse
 - **util**
   - [`flowgraph.util.debounce`](#flowgraph-util-debounce) — Debounce
   - [`flowgraph.util.delay`](#flowgraph-util-delay) — Delay
@@ -3390,6 +3391,21 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Output | Type | Note |
 |---|---|---|
 | `json` | `json` |  |
+
+### `flowgraph.unit.try_parse`
+
+**Unit Try Parse** — Parse a quantity string and return failure as result<quantity> instead of halting.
+
+| Input | Type | Default | Note |
+|---|---|---|---|
+| `text` | `string` | — |  |
+
+| Output | Type | Note |
+|---|---|---|
+| `ok` | `bool` |  |
+| `quantity` | `quantity` |  |
+| `error` | `string` |  |
+| `result` | `result<quantity>` |  |
 
 ## util
 
