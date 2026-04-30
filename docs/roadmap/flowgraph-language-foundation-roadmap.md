@@ -539,6 +539,12 @@ parse 成功時は `ok=true` と `result<json>` の value を返し、失敗時�
 既存の `on_success` / `on_error` / `bytes_sent` / `error` は維持し、UDP 送信成功時は送信 byte 数を `result` value として返す。
 OSC encode / UDP send 失敗は `code = "osc.send"` の recoverable error として downstream に流せるようにした。
 
+### LF-6g OBS result output ✅
+
+OBS WebSocket 系ノードの共通出力に `result: result<json>` を追加した。
+既存の `exec_out` / `on_error` / `ok` / `status_code` / `response` / `error` は維持し、成功時は OBS response JSON、失敗時は `code = "obs.request"` の recoverable error を返す。
+汎用 `flowgraph.obs.request` と scene / record / stream 系 action が同じ result contract を持つ。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。

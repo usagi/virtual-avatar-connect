@@ -2141,6 +2141,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `status_code` | `int` |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 | `scene_name` | `string` |  |
 
 ### `flowgraph.obs.request`
@@ -2164,6 +2165,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `status_code` | `int` |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.obs.set_current_program_scene`
 
@@ -2185,6 +2187,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `status_code` | `int` |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.obs.set_scene_item_enabled`
 
@@ -2209,6 +2212,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `status_code` | `int` |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 | `scene_item_id` | `int` |  |
 
 ### `flowgraph.obs.start_record`
@@ -2230,6 +2234,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `status_code` | `int` |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.obs.start_stream`
 
@@ -2250,6 +2255,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `status_code` | `int` |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.obs.stop_record`
 
@@ -2270,6 +2276,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `status_code` | `int` |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.obs.stop_stream`
 
@@ -2290,6 +2297,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `status_code` | `int` |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.obs.trigger_studio_mode_transition`
 
@@ -2310,6 +2318,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `status_code` | `int` |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ## ocr
 

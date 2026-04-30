@@ -7,7 +7,7 @@ use crate::flowgraph::node::{
 	get_optional_bool, get_optional_int, get_optional_string, get_required_json, get_required_string, EffectfulNode, ExecCtx, ExecFireSet,
 	InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use futures_util::{SinkExt, StreamExt};
@@ -59,6 +59,7 @@ impl NodeDescriptor for ObsRequestNode {
 				PortSpec::output("status_code", "Status Code", SocketType::Int),
 				PortSpec::output("response", "Response", SocketType::Json),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Json))),
 			],
 			properties: vec![],
 		}
@@ -391,6 +392,7 @@ fn obs_common_outputs() -> Vec<PortSpec> {
 		PortSpec::output("status_code", "Status Code", SocketType::Int),
 		PortSpec::output("response", "Response", SocketType::Json),
 		PortSpec::output("error", "Error", SocketType::String),
+		PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Json))),
 	]
 }
 
@@ -411,17 +413,20 @@ fn common_success_output(resp: ObsResponse) -> NodeOutput {
 	NodeOutput::new()
 		.set_data("ok", SocketValue::Bool(true))
 		.set_data("status_code", SocketValue::Int(resp.status_code))
-		.set_data("response", SocketValue::Json(resp.response_data))
+		.set_data("response", SocketValue::Json(resp.response_data.clone()))
 		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Json(resp.response_data))))
 		.fire_exec("exec_out")
 }
 
 fn common_error_output(e: impl Into<String>) -> NodeOutput {
+	let e = e.into();
 	NodeOutput::new()
 		.set_data("ok", SocketValue::Bool(false))
 		.set_data("status_code", SocketValue::Int(0))
 		.set_data("response", SocketValue::Json(JsonValue::Null))
-		.set_data("error", SocketValue::String(e.into()))
+		.set_data("error", SocketValue::String(e.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(e).with_code("obs.request")))
 		.fire_exec("on_error")
 }
 
@@ -576,6 +581,31 @@ mod tests {
 			.await
 			.unwrap();
 		assert!(out.fired_exec.is_empty());
+	}
+
+	#[test]
+	fn common_outputs_include_result_for_success_and_error() {
+		let ok = common_success_output(ObsResponse {
+			status_code: 100,
+			response_data: json!({ "ok": true }),
+		});
+		match ok.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert_eq!(result.value.as_deref(), Some(&SocketValue::Json(json!({ "ok": true }))));
+			}
+			_ => panic!("expected Result"),
+		}
+
+		let err = common_error_output("boom");
+		match err.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.error.as_deref(), Some("boom"));
+				assert_eq!(result.code.as_deref(), Some("obs.request"));
+			}
+			_ => panic!("expected Result"),
+		}
 	}
 
 	#[tokio::test]
