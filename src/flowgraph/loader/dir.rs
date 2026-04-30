@@ -457,6 +457,14 @@ mod tests {
 		assert!(report.node_meta.contains_key("chat-echo/tts::speaker"));
 		assert_eq!(report.capability_summary.node_count, report.node_meta.len());
 		assert!(report.capability_summary.effectful_node_count > 0);
+		assert!(report.capability_summary.stateful_node_count > 0);
+		assert_eq!(report.capability_summary.stateful_node_count, report.capability_summary.state_nodes.len());
+		assert_eq!(report.capability_summary.volatile_state_node_count, report.capability_summary.state_nodes.len());
+		assert!(report
+			.capability_summary
+			.state_nodes
+			.iter()
+			.any(|node| node.feature == "flowgraph.util.rate_limit" && node.scope == "node_instance" && node.storage == "volatile"));
 		for cap in ["network", "file_read", "file_write", "trace_write"] {
 			assert!(
 				report.capability_summary.capabilities.iter().any(|actual| actual == cap),

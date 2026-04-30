@@ -194,9 +194,15 @@ impl std::fmt::Debug for LoadReport {
 pub struct GraphCapabilitySummary {
 	pub node_count: usize,
 	pub effectful_node_count: usize,
+	#[serde(default)]
+	pub stateful_node_count: usize,
+	#[serde(default)]
+	pub volatile_state_node_count: usize,
 	pub capabilities: Vec<String>,
 	pub capability_counts: BTreeMap<String, usize>,
 	pub nodes: Vec<GraphCapabilityNode>,
+	#[serde(default)]
+	pub state_nodes: Vec<GraphStateNode>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -207,19 +213,44 @@ pub struct GraphCapabilityNode {
 	pub capabilities: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct GraphStateNode {
+	pub node: String,
+	pub feature: String,
+	pub scope: String,
+	pub storage: String,
+	pub lifetime: String,
+	pub reinitialized_on_reload: bool,
+	pub snapshot_supported: bool,
+}
+
 impl GraphCapabilitySummary {
 	pub fn from_node_meta(
 		reg: &crate::flowgraph::registry::NodeRegistry,
 		node_meta: &std::collections::HashMap<String, LoadedNodeMeta>,
 	) -> Self {
 		let mut nodes = Vec::new();
+		let mut state_nodes = Vec::new();
 		let mut capabilities = BTreeSet::new();
 		let mut effectful_node_count = 0;
+		let mut stateful_node_count = 0;
 
 		for (node, meta) in node_meta {
 			let effect_class = reg.effect_class(&meta.feature).unwrap_or("unknown").to_string();
 			if effect_class == "effectful" {
 				effectful_node_count += 1;
+			}
+			if effect_class == "stateful" {
+				stateful_node_count += 1;
+				state_nodes.push(GraphStateNode {
+					node: node.clone(),
+					feature: meta.feature.clone(),
+					scope: "node_instance".into(),
+					storage: "volatile".into(),
+					lifetime: "program_instance".into(),
+					reinitialized_on_reload: true,
+					snapshot_supported: false,
+				});
 			}
 			let node_caps: Vec<String> = reg.capabilities(&meta.feature).into_iter().map(str::to_string).collect();
 			for cap in &node_caps {
@@ -236,6 +267,7 @@ impl GraphCapabilitySummary {
 		}
 
 		nodes.sort_by(|a, b| a.node.cmp(&b.node));
+		state_nodes.sort_by(|a, b| a.node.cmp(&b.node));
 		let capability_counts = nodes.iter().fold(BTreeMap::new(), |mut out, node| {
 			for cap in &node.capabilities {
 				*out.entry(cap.clone()).or_insert(0) += 1;
@@ -245,9 +277,12 @@ impl GraphCapabilitySummary {
 		Self {
 			node_count: node_meta.len(),
 			effectful_node_count,
+			stateful_node_count,
+			volatile_state_node_count: state_nodes.iter().filter(|node| node.storage == "volatile").count(),
 			capabilities: capabilities.into_iter().collect(),
 			capability_counts,
 			nodes,
+			state_nodes,
 		}
 	}
 

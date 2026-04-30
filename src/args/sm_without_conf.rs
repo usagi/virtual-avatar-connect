@@ -70,6 +70,7 @@ impl Args {
 						let status = if report.ok { "OK" } else { "FAILED" };
 						println!("Flowgraph fixture {status}: {}", report.root);
 						println!("  nodes: {}", report.node_count);
+						println!("  stateful_nodes: {}", report.capability_summary.stateful_node_count);
 						println!("  generation: {}", report.generation);
 						println!(
 							"  capabilities: {}",

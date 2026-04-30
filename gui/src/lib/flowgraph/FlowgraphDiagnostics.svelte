@@ -51,7 +51,7 @@
   <div class="border-b border-surface-300-700 px-2 py-1.5 text-xs">
    <div class="flex flex-wrap items-center gap-2">
     <span class="font-mono text-[0.7rem] opacity-70">
-     nodes {capabilitySummary.node_count} / effects {capabilitySummary.effectful_node_count}
+        nodes {capabilitySummary.node_count} / effects {capabilitySummary.effectful_node_count} / state {capabilitySummary.stateful_node_count}
     </span>
     {#if capabilityCounts.length > 0}
      <span class="opacity-50">capabilities</span>

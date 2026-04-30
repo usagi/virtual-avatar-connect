@@ -1074,12 +1074,25 @@ export type FlowgraphCapabilityNode = {
  capabilities: string[];
 };
 
+export type FlowgraphStateNode = {
+ node: string;
+ feature: string;
+ scope: string;
+ storage: string;
+ lifetime: string;
+ reinitialized_on_reload: boolean;
+ snapshot_supported: boolean;
+};
+
 export type FlowgraphCapabilitySummary = {
  node_count: number;
  effectful_node_count: number;
+ stateful_node_count: number;
+ volatile_state_node_count: number;
  capabilities: string[];
  capability_counts: Record<string, number>;
  nodes: FlowgraphCapabilityNode[];
+ state_nodes: FlowgraphStateNode[];
 };
 
 export type FlowgraphDiagnosticsResponse = {

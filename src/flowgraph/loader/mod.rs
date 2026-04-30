@@ -29,7 +29,7 @@ pub mod file;
 pub mod reference;
 
 pub use diagnostic::{
-	Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, GraphCapabilityNode, GraphCapabilitySummary, LoadError, LoadReport,
+	Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, GraphCapabilityNode, GraphCapabilitySummary, GraphStateNode, LoadError, LoadReport,
 	LoadedNodeMeta, Severity,
 };
 pub use dir::{fq_path_of_file, is_flowgraph_file, load_flowgraph_dir, walk_flowgraph_dir};
