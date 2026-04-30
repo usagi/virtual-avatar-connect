@@ -616,6 +616,12 @@ Twitch 個別契約ノードの `get_token` / `validate_token` / `user_id_by_log
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
 ring buffer、PRNG state、WebSub subscription、mode state で必要。
 
+### LF-7a Node catalog state model metadata ✅
+
+Control API の node catalog JSON に `state_model` metadata を追加した。
+現段階では read-only な宣言として、stateful node の state が `node_instance` scope / `volatile` storage / `program_instance` lifetime であり、reload 時に再初期化されることを明示する。
+snapshot / persistence 実装はまだ行わず、GUI 表示と将来の snapshot policy が参照する machine-readable な足場に留める。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
@@ -627,7 +633,7 @@ node signature / library signature / schema から manual と GUI catalog を生
 - [~] LF-2 Capability / Effect
 - [~] LF-3 Testing / Debugger
 - [ ] LF-4 Module / Package System
-- [ ] LF-5 Generic / Type Parameter
-- [ ] LF-6 Error Model
-- [ ] LF-7 Persistence / State Model
+- [~] LF-5 Generic / Type Parameter
+- [~] LF-6 Error Model
+- [~] LF-7 Persistence / State Model
 - [ ] LF-8 Documentation Generation
