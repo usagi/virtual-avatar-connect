@@ -569,6 +569,12 @@ LibreTranslate / GAS 翻訳ノードに `result: result<string>` 出力を追加
 既存の `on_success` / `on_error` / `played` / `audio_path` / `error` は維持し、成功時は `{ played, audio_path }`、失敗時は `code = "tts.speak"` の recoverable error を返す。
 TTS 合成・再生・保存結果を downstream が単一 result contract で扱えるようにした。
 
+### LF-6l OCR recognize result output ✅
+
+`flowgraph.ocr.recognize` に `result: result<string>` 出力を追加した。
+既存の `on_success` / `on_error` / `text` / `error` は維持し、成功時は OCR text、失敗時は `code = "ocr.recognize"` の recoverable error を返す。
+OCR 結果を downstream が result contract で扱えるようにした。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
