@@ -276,6 +276,8 @@ struct FixtureExpect {
 	#[serde(default)]
 	exec_count: Vec<FixtureExpectedCount>,
 	#[serde(default)]
+	state_versions: Vec<FixtureExpectedStateVersion>,
+	#[serde(default)]
 	stored_values: Vec<FixtureExpectedValue>,
 	#[serde(default)]
 	stored_value_paths: Vec<FixtureExpectedValuePath>,
@@ -310,6 +312,12 @@ struct FixtureExpectedTriggerOverride {
 struct FixtureExpectedCount {
 	node: String,
 	count: usize,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureExpectedStateVersion {
+	node: String,
+	version: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -826,6 +834,20 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 			));
 		}
 	}
+	for expected in &case.expect.state_versions {
+		let actual = report
+			.state_versions
+			.iter()
+			.find(|(node, _)| node == &expected.node)
+			.map(|(_, version)| *version)
+			.unwrap_or(0);
+		if actual != expected.version {
+			failures.push(format!(
+				"state_version {}: expected {}, actual {}",
+				expected.node, expected.version, actual
+			));
+		}
+	}
 	for expected in &case.expect.stored_values {
 		match report
 			.stored_values
@@ -1155,11 +1177,11 @@ mod tests {
 		let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("flowgraph.example");
 		let report = run_fixture_suite_report(&dir).await.expect("report");
 		assert!(report.ok, "errors: {:?}", report.errors);
-		assert_eq!(report.fixture_count, 8);
+		assert_eq!(report.fixture_count, 9);
 		assert_eq!(report.failed_fixtures, 0);
-		assert_eq!(report.test_count, 8);
+		assert_eq!(report.test_count, 9);
 		assert_eq!(report.failed_tests, 0);
-		assert_eq!(report.trigger_count, 7);
+		assert_eq!(report.trigger_count, 8);
 		assert_eq!(report.effect_count, 8);
 	}
 
