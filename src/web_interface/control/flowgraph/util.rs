@@ -163,6 +163,31 @@ pub(crate) fn enrich_effect_metadata_json(reg: &crate::flowgraph::registry::Node
 	);
 }
 
+/// LF-7: catalog JSON に state model metadata を注入する。
+///
+/// 現段階では read-only な宣言に留め、stateful node の state slot が node instance に属し、
+/// program reload で再初期化される volatile state であることを GUI / 将来の snapshot 層へ明示する。
+pub(crate) fn enrich_state_model_json(reg: &crate::flowgraph::registry::NodeRegistry, v: &mut serde_json::Value) {
+	let Some(obj) = v.as_object_mut() else {
+		return;
+	};
+	let feature = obj.get("feature").and_then(|f| f.as_str()).unwrap_or("");
+	let effect_class = reg.effect_class(feature).unwrap_or("unknown");
+	let stateful = effect_class == "stateful";
+	obj.insert(
+		"state_model".to_string(),
+		serde_json::json!({
+			"version": 1,
+			"stateful": stateful,
+			"scope": if stateful { "node_instance" } else { "none" },
+			"storage": if stateful { "volatile" } else { "none" },
+			"lifetime": if stateful { "program_instance" } else { "none" },
+			"reinitialized_on_reload": stateful,
+			"snapshot_supported": false,
+		}),
+	);
+}
+
 /// node-catalog の各 spec JSON に control_triggerable + Quantity UI ヒント + contract/effect metadata を注入する。
 pub(crate) fn enrich_node_catalog_spec_json(reg: &crate::flowgraph::registry::NodeRegistry, v: &mut serde_json::Value) {
 	let Some(obj) = v.as_object_mut() else {
@@ -182,6 +207,7 @@ pub(crate) fn enrich_node_catalog_spec_json(reg: &crate::flowgraph::registry::No
 	}
 	enrich_contract_json(v);
 	enrich_effect_metadata_json(reg, v);
+	enrich_state_model_json(reg, v);
 }
 
 /// `state.flowgraph` と `conf.flowgraph_dir` を取り出す。dir 未設定なら 500。
@@ -534,5 +560,44 @@ mod tests {
 			.as_array()
 			.unwrap()
 			.contains(&serde_json::json!("obs_control")));
+	}
+
+	#[test]
+	fn node_catalog_json_injects_lf7_state_model() {
+		use crate::flowgraph::registry::registry;
+
+		let reg = registry();
+		let mut specs = std::collections::HashMap::new();
+		for feature in [
+			"flowgraph.literal.string",
+			"flowgraph.state.int_counter",
+			"flowgraph.util.rate_limit",
+			"flowgraph.table.write_tsv",
+		] {
+			let spec = reg.spec(feature).unwrap_or_else(|| panic!("{feature} が registry に必要"));
+			let mut v = serde_json::to_value(&spec).unwrap();
+			enrich_node_catalog_spec_json(reg, &mut v);
+			specs.insert(feature, v);
+		}
+
+		let counter = &specs["flowgraph.state.int_counter"]["state_model"];
+		assert_eq!(counter["version"].as_i64(), Some(1));
+		assert_eq!(counter["stateful"].as_bool(), Some(true));
+		assert_eq!(counter["scope"].as_str(), Some("node_instance"));
+		assert_eq!(counter["storage"].as_str(), Some("volatile"));
+		assert_eq!(counter["lifetime"].as_str(), Some("program_instance"));
+		assert_eq!(counter["reinitialized_on_reload"].as_bool(), Some(true));
+		assert_eq!(counter["snapshot_supported"].as_bool(), Some(false));
+
+		let rate_limit = &specs["flowgraph.util.rate_limit"]["state_model"];
+		assert_eq!(rate_limit["stateful"].as_bool(), Some(true));
+
+		for feature in ["flowgraph.literal.string", "flowgraph.table.write_tsv"] {
+			let state_model = &specs[feature]["state_model"];
+			assert_eq!(state_model["stateful"].as_bool(), Some(false));
+			assert_eq!(state_model["scope"].as_str(), Some("none"));
+			assert_eq!(state_model["storage"].as_str(), Some("none"));
+			assert_eq!(state_model["reinitialized_on_reload"].as_bool(), Some(false));
+		}
 	}
 }
