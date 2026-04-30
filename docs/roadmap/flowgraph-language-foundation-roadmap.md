@@ -634,6 +634,11 @@ Node catalog と graph state summary が参照する state model を `FlowgraphS
 現在の stateful node は `snapshot_policy = "unsupported"` / `persistence_policy = "none"` のままなので、runtime の snapshot / restore 挙動は変えない。
 この段階では metadata の重複をなくし、後続で node ごとの差分 policy や snapshot support を足せる足場を作る。
 
+### LF-7d GUI state model visibility ✅
+
+Flowgraph diagnostics panel に `state_nodes` の details 表示を追加し、graph 内の stateful node と `volatile` / `program_instance` / snapshot / persistence policy を確認できるようにした。
+これは LF-7b/LF-7c metadata の可視化であり、runtime state の snapshot / restore はまだ行わない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
