@@ -4084,6 +4084,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `affected_count` | `int` |  |
 | `windows` | `table` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.window.enum`
 
@@ -4103,6 +4104,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `windows` | `table` |  |
 | `count` | `int` |  |
 | `error` | `string` |  |
+| `result` | `result<table>` |  |
 
 ### `flowgraph.window.foreground`
 
@@ -4123,6 +4125,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `affected_count` | `int` |  |
 | `windows` | `table` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.window.maximize`
 
@@ -4143,6 +4146,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `affected_count` | `int` |  |
 | `windows` | `table` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.window.minimize`
 
@@ -4163,6 +4167,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `affected_count` | `int` |  |
 | `windows` | `table` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.window.move`
 
@@ -4185,6 +4190,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `affected_count` | `int` |  |
 | `windows` | `table` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.window.pseudo_fullscreen`
 
@@ -4205,6 +4211,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `affected_count` | `int` |  |
 | `windows` | `table` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.window.pseudo_fullscreen_exit`
 
@@ -4225,6 +4232,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `affected_count` | `int` |  |
 | `windows` | `table` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.window.resize`
 
@@ -4247,6 +4255,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `affected_count` | `int` |  |
 | `windows` | `table` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.window.restore`
 
@@ -4267,4 +4276,5 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `affected_count` | `int` |  |
 | `windows` | `table` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 

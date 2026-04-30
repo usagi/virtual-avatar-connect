@@ -6,7 +6,7 @@ use crate::flowgraph::node::{
 	get_optional_bool, get_optional_int, get_optional_string, get_required_int, EffectfulNode, ExecCtx, ExecFireSet, InputMap,
 	NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use crate::flowgraph::table::{ColumnSpec, Row, Table, TableSchema};
 use async_trait::async_trait;
 use serde_json::{json, Value as JsonValue};
@@ -41,6 +41,7 @@ impl NodeDescriptor for WindowEnumNode {
 				PortSpec::output("windows", "Windows", SocketType::Table),
 				PortSpec::output("count", "Count", SocketType::Int),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Table))),
 			],
 			properties: vec![],
 		}
@@ -64,17 +65,9 @@ impl EffectfulNode for WindowEnumNode {
 			Ok(windows) => {
 				let count = windows.len() as i64;
 				ctx.log(format!("window.enum: {count} windows"));
-				Ok(NodeOutput::new()
-					.set_data("windows", SocketValue::Table(windows_to_table(&windows)))
-					.set_data("count", SocketValue::Int(count))
-					.set_data("error", SocketValue::String(String::new()))
-					.fire_exec("exec_out"))
+				Ok(enum_output(windows, String::new()).fire_exec("exec_out"))
 			}
-			Err(e) => Ok(NodeOutput::new()
-				.set_data("windows", SocketValue::Table(Table::empty()))
-				.set_data("count", SocketValue::Int(0))
-				.set_data("error", SocketValue::String(e))
-				.fire_exec("exec_out")),
+			Err(e) => Ok(enum_output(Vec::new(), e).fire_exec("exec_out")),
 		}
 	}
 }
@@ -103,6 +96,7 @@ macro_rules! action_node {
 						PortSpec::output("affected_count", "Affected Count", SocketType::Int),
 						PortSpec::output("windows", "Windows", SocketType::Table),
 						PortSpec::output("error", "Error", SocketType::String),
+						PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Int))),
 					],
 					properties: vec![],
 				}
@@ -328,11 +322,34 @@ fn windows_to_table(windows: &[WindowInfo]) -> Table {
 	Table::new(schema, rows)
 }
 
+fn enum_output(windows: Vec<WindowInfo>, error: impl Into<String>) -> NodeOutput {
+	let error = error.into();
+	let table = windows_to_table(&windows);
+	let result = if error.is_empty() {
+		FlowResult::ok(SocketValue::Table(table.clone()))
+	} else {
+		FlowResult::err(error.clone()).with_code("window.enum")
+	};
+	NodeOutput::new()
+		.set_data("windows", SocketValue::Table(table))
+		.set_data("count", SocketValue::Int(windows.len() as i64))
+		.set_data("error", SocketValue::String(error))
+		.set_data("result", SocketValue::Result(result))
+}
+
 fn action_output(affected_count: i64, windows: Vec<WindowInfo>, error: impl Into<String>) -> NodeOutput {
+	let error = error.into();
+	let result = if error.is_empty() && affected_count > 0 {
+		FlowResult::ok(SocketValue::Int(affected_count))
+	} else {
+		let msg = if error.is_empty() { "no window affected".to_string() } else { error.clone() };
+		FlowResult::err(msg).with_code("window.action")
+	};
 	NodeOutput::new()
 		.set_data("affected_count", SocketValue::Int(affected_count))
 		.set_data("windows", SocketValue::Table(windows_to_table(&windows)))
-		.set_data("error", SocketValue::String(error.into()))
+		.set_data("error", SocketValue::String(error))
+		.set_data("result", SocketValue::Result(result))
 }
 
 fn i64_to_u32(v: i64) -> Result<u32, NodeExecError> {
@@ -617,5 +634,38 @@ mod tests {
 			.unwrap();
 		assert!(out.fired_exec.contains("exec_out"));
 		assert!(matches!(out.data.get("count"), Some(SocketValue::Int(_))));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				#[cfg(target_os = "windows")]
+				assert!(result.ok);
+				#[cfg(not(target_os = "windows"))]
+				{
+					assert!(!result.ok);
+					assert_eq!(result.code.as_deref(), Some("window.enum"));
+				}
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+	}
+
+	#[test]
+	fn action_output_includes_result() {
+		let ok = action_output(2, Vec::new(), "");
+		match ok.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert_eq!(result.value.as_deref(), Some(&SocketValue::Int(2)));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+
+		let err = action_output(0, Vec::new(), "boom");
+		match err.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("window.action"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 }
