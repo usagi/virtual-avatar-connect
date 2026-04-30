@@ -28,10 +28,11 @@ use crate::flowgraph::node::{
 	get_optional_float, get_optional_map, get_optional_string, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap,
 	NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use crate::flowgraph::tts::driver::{AudioContext, TtsRequest};
 use crate::flowgraph::tts::registry::registry;
 use async_trait::async_trait;
+use serde_json::json;
 
 pub struct TtsSpeakNode;
 
@@ -64,6 +65,7 @@ impl NodeDescriptor for TtsSpeakNode {
 				PortSpec::output("played", "Played", SocketType::Bool),
 				PortSpec::output("audio_path", "Audio Path", SocketType::String),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Json))),
 			],
 			properties: vec![],
 		}
@@ -71,11 +73,26 @@ impl NodeDescriptor for TtsSpeakNode {
 }
 
 fn err_output(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("played", SocketValue::Bool(false))
 		.set_data("audio_path", SocketValue::String(String::new()))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("tts.speak")))
 		.fire_exec("on_error")
+}
+
+fn success_output(played: bool, audio_path: String) -> NodeOutput {
+	let result = json!({
+		"played": played,
+		"audio_path": audio_path,
+	});
+	NodeOutput::new()
+		.set_data("played", SocketValue::Bool(played))
+		.set_data("audio_path", SocketValue::String(audio_path))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Json(result))))
+		.fire_exec("on_success")
 }
 
 #[async_trait]
@@ -134,11 +151,7 @@ impl EffectfulNode for TtsSpeakNode {
 		};
 
 		match driver.speak(req, &audio).await {
-			Ok(outcome) => Ok(NodeOutput::new()
-				.set_data("played", SocketValue::Bool(outcome.played))
-				.set_data("audio_path", SocketValue::String(outcome.audio_path))
-				.set_data("error", SocketValue::String(String::new()))
-				.fire_exec("on_success")),
+			Ok(outcome) => Ok(success_output(outcome.played, outcome.audio_path)),
 			Err(e) => Ok(err_output(e.display_with_engine(&engine))),
 		}
 	}
@@ -184,6 +197,26 @@ mod tests {
 			.and_then(|v| v.as_str().ok().map(str::to_owned))
 			.unwrap_or_default();
 		assert!(err.contains("未知の engine"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("tts.speak"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+	}
+
+	#[test]
+	fn success_output_includes_result() {
+		let out = success_output(true, "out.wav".into());
+		assert!(out.fired_exec.contains("on_success"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert_eq!(result.value.as_deref(), Some(&SocketValue::Json(json!({ "played": true, "audio_path": "out.wav" }))));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 
 	#[tokio::test]

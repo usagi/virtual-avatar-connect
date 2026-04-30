@@ -2875,6 +2875,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `played` | `bool` |  |
 | `audio_path` | `string` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ## twitch
 
