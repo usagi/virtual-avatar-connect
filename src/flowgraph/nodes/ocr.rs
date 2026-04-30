@@ -28,7 +28,7 @@
 use crate::flowgraph::node::{
 	EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use async_trait::async_trait;
 
 pub struct OcrRecognizeNode;
@@ -52,6 +52,7 @@ impl NodeDescriptor for OcrRecognizeNode {
 				PortSpec::exec_output("on_error", "On Error"),
 				PortSpec::output("text", "Text", SocketType::String),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::String))),
 			],
 			properties: vec![],
 		}
@@ -59,10 +60,20 @@ impl NodeDescriptor for OcrRecognizeNode {
 }
 
 fn err_output(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("text", SocketValue::String(String::new()))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("ocr.recognize")))
 		.fire_exec("on_error")
+}
+
+fn success_output(text: String) -> NodeOutput {
+	NodeOutput::new()
+		.set_data("text", SocketValue::String(text.clone()))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::String(text))))
+		.fire_exec("on_success")
 }
 
 #[async_trait]
@@ -149,10 +160,7 @@ impl EffectfulNode for OcrRecognizeNode {
 				}
 			}
 
-			Ok(NodeOutput::new()
-				.set_data("text", SocketValue::String(text))
-				.set_data("error", SocketValue::String(String::new()))
-				.fire_exec("on_success"))
+			Ok(success_output(text))
 		}
 	}
 }
@@ -170,6 +178,19 @@ mod tests {
 			.await
 			.unwrap();
 		assert!(out.fired_exec.is_empty());
+	}
+
+	#[test]
+	fn success_output_includes_result() {
+		let out = success_output("recognized text".into());
+		assert!(out.fired_exec.contains("on_success"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert_eq!(result.value.as_deref(), Some(&SocketValue::String("recognized text".into())));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 
 	/// 非 Windows では常に on_error を返す。
@@ -206,5 +227,12 @@ mod tests {
 		.collect();
 		let out = node.execute(&mut ctx, &InputMap::new(), &inputs, &fired).await.unwrap();
 		assert!(out.fired_exec.contains("on_error"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("ocr.recognize"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 }

@@ -2340,6 +2340,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `text` | `string` |  |
 | `error` | `string` |  |
+| `result` | `result<string>` |  |
 
 ## osc
 
