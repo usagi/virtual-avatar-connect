@@ -581,6 +581,12 @@ OCR 結果を downstream が result contract で扱えるようにした。
 既存の `on_success` / `on_error` / `data_url` / `saved_path` / `width` / `height` / `error` は維持し、成功時は `{ data_url, saved_path, width, height }`、失敗時は `code = "screenshot.capture"` の recoverable error を返す。
 スクリーンショット結果を downstream が単一 result contract で扱えるようにした。
 
+### LF-6n Table TSV result output ✅
+
+`flowgraph.table.load_tsv` に `result: result<table>`、`flowgraph.table.write_tsv` に `result: result<int>` 出力を追加した。
+既存の `on_success` / `on_error` / `table` / `row_count` / `bytes_written` / `error` は維持し、成功時は読み込んだ Table または書き込み byte 数、失敗時は `code = "table.load_tsv"` または `code = "table.write_tsv"` の recoverable error を返す。
+Table I/O を downstream が result contract で扱えるようにした。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
