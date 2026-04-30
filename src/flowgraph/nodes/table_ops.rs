@@ -13,7 +13,7 @@ use crate::flowgraph::node::{
 	get_optional_string, get_required_list, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor,
 	NodeExecError, NodeOutput, NodeSpec, PortSpec, PureNode, RecordedEffect,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use crate::flowgraph::table::{ColumnSpec, Row, Table, TableSchema};
 use async_trait::async_trait;
 use base64::Engine as _;
@@ -180,6 +180,7 @@ impl NodeDescriptor for TableLoadTsvNode {
 				PortSpec::output("table", "Table", SocketType::Table),
 				PortSpec::output("row_count", "Row Count", SocketType::Int),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Table))),
 			],
 			properties: vec![],
 		}
@@ -234,12 +235,7 @@ impl EffectfulNode for TableLoadTsvNode {
 		};
 		match parse_tsv_with_mode(&contents, &mode) {
 			Ok(table) => {
-				let count = table.len() as i64;
-				Ok(NodeOutput::new()
-					.set_data("table", SocketValue::Table(table))
-					.set_data("row_count", SocketValue::Int(count))
-					.set_data("error", SocketValue::String(String::new()))
-					.fire_exec("on_success"))
+				Ok(load_success_output(table))
 			}
 			Err(e) => Ok(err_output_load(format!("parse: {e}"))),
 		}
@@ -247,11 +243,23 @@ impl EffectfulNode for TableLoadTsvNode {
 }
 
 fn err_output_load(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("table", SocketValue::Table(Table::empty()))
 		.set_data("row_count", SocketValue::Int(0))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("table.load_tsv")))
 		.fire_exec("on_error")
+}
+
+fn load_success_output(table: Table) -> NodeOutput {
+	let count = table.len() as i64;
+	NodeOutput::new()
+		.set_data("table", SocketValue::Table(table.clone()))
+		.set_data("row_count", SocketValue::Int(count))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Table(table))))
+		.fire_exec("on_success")
 }
 
 // ---------------------------------------------------------------------
@@ -277,6 +285,7 @@ impl NodeDescriptor for TableWriteTsvNode {
 				PortSpec::exec_output("on_error", "On Error"),
 				PortSpec::output("bytes_written", "Bytes Written", SocketType::Int),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Int))),
 			],
 			properties: vec![],
 		}
@@ -318,10 +327,7 @@ impl EffectfulNode for TableWriteTsvNode {
 				return Ok(err_output_write(format!("write {path}: {error}")));
 			}
 			ctx.record_effect(RecordedEffect::file_write(ctx.node_id.clone(), path.clone(), len, serialized, None));
-			return Ok(NodeOutput::new()
-				.set_data("bytes_written", SocketValue::Int(len))
-				.set_data("error", SocketValue::String(String::new()))
-				.fire_exec("on_success"));
+			return Ok(write_success_output(len));
 		}
 		let tmp = format!("{path}.tmp");
 		if let Err(e) = tokio::fs::write(&tmp, &bytes).await {
@@ -330,18 +336,25 @@ impl EffectfulNode for TableWriteTsvNode {
 		if let Err(e) = tokio::fs::rename(&tmp, &path).await {
 			return Ok(err_output_write(format!("rename {tmp} -> {path}: {e}")));
 		}
-		Ok(NodeOutput::new()
-			.set_data("bytes_written", SocketValue::Int(len))
-			.set_data("error", SocketValue::String(String::new()))
-			.fire_exec("on_success"))
+		Ok(write_success_output(len))
 	}
 }
 
 fn err_output_write(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("bytes_written", SocketValue::Int(0))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("table.write_tsv")))
 		.fire_exec("on_error")
+}
+
+fn write_success_output(bytes_written: i64) -> NodeOutput {
+	NodeOutput::new()
+		.set_data("bytes_written", SocketValue::Int(bytes_written))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Int(bytes_written))))
+		.fire_exec("on_success")
 }
 
 // ---------------------------------------------------------------------
@@ -700,5 +713,53 @@ mod tests {
 		assert!(!esc.contains('\t'));
 		assert!(!esc.contains('\n'));
 		assert_eq!(unescape_tsv_field(&esc), orig);
+	}
+
+	#[test]
+	fn load_success_output_includes_result() {
+		let table = parse_tsv_with_mode("source\treplacement\nhello\tworld\n", "headerful").unwrap();
+		let out = load_success_output(table);
+		assert!(out.fired_exec.contains("on_success"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert!(matches!(result.value.as_deref(), Some(SocketValue::Table(table)) if table.len() == 1));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+	}
+
+	#[test]
+	fn table_error_outputs_include_result() {
+		let load = err_output_load("load failed");
+		match load.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("table.load_tsv"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+
+		let write = err_output_write("write failed");
+		match write.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("table.write_tsv"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+	}
+
+	#[test]
+	fn write_success_output_includes_result() {
+		let out = write_success_output(42);
+		assert!(out.fired_exec.contains("on_success"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert_eq!(result.value.as_deref(), Some(&SocketValue::Int(42)));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 }

@@ -2776,6 +2776,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `table` | `table` |  |
 | `row_count` | `int` |  |
 | `error` | `string` |  |
+| `result` | `result<table>` |  |
 
 ### `flowgraph.table.to_json`
 
@@ -2806,6 +2807,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `bytes_written` | `int` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ## translate
 
