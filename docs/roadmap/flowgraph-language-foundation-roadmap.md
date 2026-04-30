@@ -563,6 +563,12 @@ LibreTranslate / GAS 翻訳ノードに `result: result<string>` 出力を追加
 既存の `on_success` / `on_error` / `translated` / `detected_lang` / `error` は維持し、成功時は翻訳後 text、失敗時は `code = "translate.libre"` または `code = "translate.gas"` の recoverable error を返す。
 翻訳系ノードで downstream が共通の result contract を使えるようにした。
 
+### LF-6k TTS speak result output ✅
+
+`flowgraph.tts.speak` に `result: result<json>` 出力を追加した。
+既存の `on_success` / `on_error` / `played` / `audio_path` / `error` は維持し、成功時は `{ played, audio_path }`、失敗時は `code = "tts.speak"` の recoverable error を返す。
+TTS 合成・再生・保存結果を downstream が単一 result contract で扱えるようにした。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
