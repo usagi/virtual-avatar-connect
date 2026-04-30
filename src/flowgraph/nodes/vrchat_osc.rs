@@ -3,8 +3,8 @@
 //! 仕様: VRChat 公式 OSC ドキュメント。`host` / `port` は例: `127.0.0.1` + VRChat の受信ポート（環境依存）。
 
 use crate::flowgraph::node::{
-	get_optional_bool, get_required_bool, get_required_float, get_required_int, get_required_string, EffectfulNode, ExecCtx,
-	ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
+	get_optional_bool, get_required_bool, get_required_float, get_required_int, get_required_string, EffectfulNode, ExecCtx, ExecFireSet,
+	InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
 };
 use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use crate::flowgraph::vrchat;
@@ -53,9 +53,7 @@ impl NodeDescriptor for VrchatAvatarParameterFloatNode {
 			feature: "flowgraph.vrchat.avatar_parameter_float".into(),
 			title: "VRChat: Avatar Parameter (Float)".into(),
 			category: "vrchat".into(),
-			description: Some(
-				"OSC `/avatar/parameters/<name>` に float を 1 つ送信（VRChat OSC Avatar Parameters）".into(),
-			),
+			description: Some("OSC `/avatar/parameters/<name>` に float を 1 つ送信（VRChat OSC Avatar Parameters）".into()),
 			inputs: vec![
 				PortSpec::exec_input("exec_in", "Exec"),
 				PortSpec::input("host", "Host", SocketType::String),
@@ -85,10 +83,8 @@ impl EffectfulNode for VrchatAvatarParameterFloatNode {
 		let port = get_required_int(inputs, "port")?;
 		let name = get_required_string(inputs, "parameter_name")?;
 		let v = get_required_float(inputs, "value")?;
-		let path = vrchat::avatar_parameter_address(name.trim())
-			.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
-		let bytes = vrchat::encode_avatar_parameter_float(&path, v as f32)
-			.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
+		let path = vrchat::avatar_parameter_address(name.trim()).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
+		let bytes = vrchat::encode_avatar_parameter_float(&path, v as f32).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
 		send_encoded(&host, port, bytes).await
 	}
 }
@@ -132,10 +128,8 @@ impl EffectfulNode for VrchatAvatarParameterIntNode {
 		let port = get_required_int(inputs, "port")?;
 		let name = get_required_string(inputs, "parameter_name")?;
 		let v = get_required_int(inputs, "value")?;
-		let path = vrchat::avatar_parameter_address(name.trim())
-			.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
-		let bytes = vrchat::encode_avatar_parameter_int(&path, v)
-			.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
+		let path = vrchat::avatar_parameter_address(name.trim()).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
+		let bytes = vrchat::encode_avatar_parameter_int(&path, v).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
 		send_encoded(&host, port, bytes).await
 	}
 }
@@ -179,10 +173,8 @@ impl EffectfulNode for VrchatAvatarParameterBoolNode {
 		let port = get_required_int(inputs, "port")?;
 		let name = get_required_string(inputs, "parameter_name")?;
 		let v = get_required_bool(inputs, "value")?;
-		let path = vrchat::avatar_parameter_address(name.trim())
-			.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
-		let bytes = vrchat::encode_avatar_parameter_bool(&path, v)
-			.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
+		let path = vrchat::avatar_parameter_address(name.trim()).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
+		let bytes = vrchat::encode_avatar_parameter_bool(&path, v).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
 		send_encoded(&host, port, bytes).await
 	}
 }
@@ -230,8 +222,7 @@ impl EffectfulNode for VrchatChatboxInputNode {
 		let text = get_required_string(inputs, "text")?;
 		let send_now = get_optional_bool(inputs, "send_immediately", true)?;
 		let notify = get_optional_bool(inputs, "play_notification_sfx", true)?;
-		let bytes = vrchat::encode_chatbox_input(&text, send_now, notify)
-			.map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
+		let bytes = vrchat::encode_chatbox_input(&text, send_now, notify).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
 		send_encoded(&host, port, bytes).await
 	}
 }
@@ -303,7 +294,10 @@ mod tests {
 	async fn float_no_fire_is_noop() {
 		let n = VrchatAvatarParameterFloatNode;
 		let mut ctx = ExecCtx::default();
-		let out = n.execute(&mut ctx, &InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
+		let out = n
+			.execute(&mut ctx, &InputMap::new(), &InputMap::new(), &ExecFireSet::new())
+			.await
+			.unwrap();
 		assert!(out.fired_exec.is_empty());
 	}
 

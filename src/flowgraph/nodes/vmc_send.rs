@@ -3,8 +3,8 @@
 //! [`crate::flowgraph::vmc`] が OSC を組み立てる。全骨のストリーミングはグラフ側で複数回 exec する想定。
 
 use crate::flowgraph::node::{
-	get_required_int, get_required_json, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor,
-	NodeExecError, NodeOutput, NodeSpec, PortSpec,
+	get_required_int, get_required_json, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError,
+	NodeOutput, NodeSpec, PortSpec,
 };
 use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use crate::flowgraph::vmc::{self, VMC_EXT_BONE_POS, VMC_EXT_ROOT_POS};
@@ -103,9 +103,7 @@ impl NodeDescriptor for VmcSendRootPosNode {
 			feature: "flowgraph.vmc.send_root_pos".into(),
 			title: "VMC: Send Root Pos".into(),
 			category: "vmc".into(),
-			description: Some(
-				"VMC `/VMC/Ext/Root/Pos` を 1 回 UDP 送信（骨名は常に `root`）。`position` / `rotation` は JSON 配列".into(),
-			),
+			description: Some("VMC `/VMC/Ext/Root/Pos` を 1 回 UDP 送信（骨名は常に `root`）。`position` / `rotation` は JSON 配列".into()),
 			inputs: vec![
 				PortSpec::exec_input("exec_in", "Exec"),
 				PortSpec::input("host", "Host", SocketType::String),
@@ -168,7 +166,10 @@ mod tests {
 	async fn bone_no_fire_is_noop() {
 		let n = VmcSendBonePosNode;
 		let mut ctx = ExecCtx::default();
-		let out = n.execute(&mut ctx, &InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
+		let out = n
+			.execute(&mut ctx, &InputMap::new(), &InputMap::new(), &ExecFireSet::new())
+			.await
+			.unwrap();
 		assert!(out.fired_exec.is_empty());
 	}
 
@@ -183,10 +184,7 @@ mod tests {
 	async fn bone_send_emits_result_for_success() {
 		let n = VmcSendBonePosNode;
 		let mut ctx = ExecCtx::default();
-		let out = n
-			.execute(&mut ctx, &InputMap::new(), &inputs(9), &fired_exec())
-			.await
-			.unwrap();
+		let out = n.execute(&mut ctx, &InputMap::new(), &inputs(9), &fired_exec()).await.unwrap();
 		assert!(out.fired_exec.contains("on_success"));
 		match out.data.get("result").unwrap() {
 			SocketValue::Result(result) => {
@@ -201,10 +199,7 @@ mod tests {
 	async fn bone_send_emits_result_for_error() {
 		let n = VmcSendBonePosNode;
 		let mut ctx = ExecCtx::default();
-		let out = n
-			.execute(&mut ctx, &InputMap::new(), &inputs(0), &fired_exec())
-			.await
-			.unwrap();
+		let out = n.execute(&mut ctx, &InputMap::new(), &inputs(0), &fired_exec()).await.unwrap();
 		assert!(out.fired_exec.contains("on_error"));
 		assert_eq!(out.data.get("bytes_sent"), Some(&SocketValue::Int(0)));
 		match out.data.get("result").unwrap() {
