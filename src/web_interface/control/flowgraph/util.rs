@@ -174,7 +174,10 @@ pub(crate) fn enrich_state_model_json(reg: &crate::flowgraph::registry::NodeRegi
 	let feature = obj.get("feature").and_then(|f| f.as_str()).unwrap_or("");
 	let effect_class = reg.effect_class(feature).unwrap_or("unknown");
 	let state_model = crate::flowgraph::FlowgraphStateModel::for_effect_class(effect_class);
-	obj.insert("state_model".to_string(), serde_json::to_value(state_model).unwrap_or(serde_json::Value::Null));
+	obj.insert(
+		"state_model".to_string(),
+		serde_json::to_value(state_model).unwrap_or(serde_json::Value::Null),
+	);
 }
 
 /// node-catalog の各 spec JSON に control_triggerable + Quantity UI ヒント + contract/effect metadata を注入する。
