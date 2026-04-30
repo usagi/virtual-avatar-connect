@@ -521,6 +521,12 @@ HTTP status error は `code = "http.status"`、request failure は `code = "http
 parse 成功時は `ok=true` と `result<json>` の value を返し、失敗時は halt せず `ok=false` / `error` / `code = "json.parse"` を返す。
 これにより PureNode 側でも recoverable error を扱う最初の経路ができた。
 
+### LF-6d DateTime try-parse result node ✅
+
+既存の `flowgraph.datetime.parse` は失敗時 halt のまま残し、新規 `flowgraph.datetime.try_parse` を追加した。
+`require_timezone` / `default_timezone` の property は既存 parse と同じ仕様を使い、失敗時は halt せず `result<datetime>` と `code = "datetime.parse"` を返す。
+日時入力の validation を recoverable path に流せるため、GUI 入力、外部 API payload、将来の scheduler 設定で fallback を組みやすくなる。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
