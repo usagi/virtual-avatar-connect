@@ -23,7 +23,7 @@ use crate::flowgraph::node::{
 	get_optional_string, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput,
 	NodeSpec, PortSpec,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use async_trait::async_trait;
 
 const ENV_GAS_TRANSLATION_SCRIPT_ID: &str = "VAC_GAS_TRANSLATION_SCRIPT_ID";
@@ -51,6 +51,7 @@ impl NodeDescriptor for TranslateGasNode {
 				PortSpec::output("translated", "Translated", SocketType::String),
 				PortSpec::output("detected_lang", "Detected Lang", SocketType::String),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::String))),
 			],
 			properties: vec![],
 		}
@@ -68,11 +69,22 @@ fn detect_language_639_1(source: &str) -> Result<String, String> {
 
 /// エラーを on_error 系出力に束ねたショートカット。
 fn err_output(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("translated", SocketValue::String(String::new()))
 		.set_data("detected_lang", SocketValue::String(String::new()))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("translate.gas")))
 		.fire_exec("on_error")
+}
+
+fn success_output(translated: String, detected_lang: String) -> NodeOutput {
+	NodeOutput::new()
+		.set_data("translated", SocketValue::String(translated.clone()))
+		.set_data("detected_lang", SocketValue::String(detected_lang))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::String(translated))))
+		.fire_exec("on_success")
 }
 
 #[async_trait]
@@ -142,11 +154,7 @@ impl EffectfulNode for TranslateGasNode {
 			Err(e) => return Ok(err_output(format!("GET {url}: {e}"))),
 		};
 
-		Ok(NodeOutput::new()
-			.set_data("translated", SocketValue::String(translated))
-			.set_data("detected_lang", SocketValue::String(detected_lang))
-			.set_data("error", SocketValue::String(String::new()))
-			.fire_exec("on_success"))
+		Ok(success_output(translated, detected_lang))
 	}
 }
 
@@ -193,9 +201,29 @@ mod tests {
 			SocketValue::String(s) => assert!(s.contains("script_id")),
 			_ => panic!(),
 		}
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("translate.gas"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 
 		if let Some(v) = saved {
 			std::env::set_var(ENV_GAS_TRANSLATION_SCRIPT_ID, v);
+		}
+	}
+
+	#[test]
+	fn success_output_includes_result() {
+		let out = success_output("hello".into(), "ja".into());
+		assert!(out.fired_exec.contains("on_success"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert_eq!(result.value.as_deref(), Some(&SocketValue::String("hello".into())));
+			}
+			other => panic!("expected result, got {other:?}"),
 		}
 	}
 

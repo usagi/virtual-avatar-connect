@@ -2826,6 +2826,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `translated` | `string` |  |
 | `detected_lang` | `string` |  |
 | `error` | `string` |  |
+| `result` | `result<string>` |  |
 
 ### `flowgraph.translate.libre`
 
@@ -2846,6 +2847,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `translated` | `string` |  |
 | `detected_lang` | `string` |  |
 | `error` | `string` |  |
+| `result` | `result<string>` |  |
 
 ## tts
 

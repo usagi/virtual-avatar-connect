@@ -21,7 +21,7 @@ use crate::flowgraph::node::{
 	get_optional_string, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput,
 	NodeSpec, PortSpec,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use async_trait::async_trait;
 
 pub struct TranslateLibreNode;
@@ -46,6 +46,7 @@ impl NodeDescriptor for TranslateLibreNode {
 				PortSpec::output("translated", "Translated", SocketType::String),
 				PortSpec::output("detected_lang", "Detected Lang", SocketType::String),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::String))),
 			],
 			properties: vec![],
 		}
@@ -53,11 +54,22 @@ impl NodeDescriptor for TranslateLibreNode {
 }
 
 fn err_output(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("translated", SocketValue::String(String::new()))
 		.set_data("detected_lang", SocketValue::String(String::new()))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("translate.libre")))
 		.fire_exec("on_error")
+}
+
+fn success_output(translated: String, detected_lang: String) -> NodeOutput {
+	NodeOutput::new()
+		.set_data("translated", SocketValue::String(translated.clone()))
+		.set_data("detected_lang", SocketValue::String(detected_lang))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::String(translated))))
+		.fire_exec("on_success")
 }
 
 fn detect_language_639_1(source: &str) -> Result<String, String> {
@@ -106,11 +118,7 @@ impl EffectfulNode for TranslateLibreNode {
 		};
 
 		match crate::libretranslate::translate(&base_url, &translate_from, &translate_to, &text).await {
-			Ok(translated) => Ok(NodeOutput::new()
-				.set_data("translated", SocketValue::String(translated))
-				.set_data("detected_lang", SocketValue::String(detected_lang))
-				.set_data("error", SocketValue::String(String::new()))
-				.fire_exec("on_success")),
+			Ok(translated) => Ok(success_output(translated, detected_lang)),
 			Err(e) => Ok(err_output(e)),
 		}
 	}
@@ -151,6 +159,26 @@ mod tests {
 		.collect();
 		let out = node.execute(&mut ctx, &InputMap::new(), &inputs, &fired()).await.unwrap();
 		assert!(out.fired_exec.contains("on_error"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("translate.libre"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+	}
+
+	#[test]
+	fn success_output_includes_result() {
+		let out = success_output("こんにちは".into(), "en".into());
+		assert!(out.fired_exec.contains("on_success"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert_eq!(result.value.as_deref(), Some(&SocketValue::String("こんにちは".into())));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 
 	#[tokio::test]
