@@ -321,6 +321,7 @@ impl FlowgraphProgram {
 				let before = node.state_version;
 				let out = sn.compute(state.as_mut(), &props, &inputs, &fired_exec, &sctx).await?;
 				node.state_version = before.wrapping_add(1);
+				run.state_versions.insert(node_id.clone(), node.state_version);
 				out
 			}
 			NodeImpl::Effectful(en) => en.execute(ctx, &props, &inputs, &fired_exec).await?,
@@ -479,6 +480,7 @@ impl FlowgraphProgram {
 				};
 				let out = sn.compute(state.as_mut(), &props, &inputs, &empty_fired, &sctx).await?;
 				node.state_version = node.state_version.wrapping_add(1);
+				run.state_versions.insert(node_id.clone(), node.state_version);
 				out
 			}
 			NodeImpl::Effectful(_) => unreachable!("effectful handled in pull_node_output"),
@@ -511,6 +513,8 @@ pub struct ProgramRun {
 	pub exec_count: HashMap<NodeId, usize>,
 	/// Pure/Stateful の pull 評価回数（メモ化効果の可視化）
 	pub pure_evaluations: HashMap<NodeId, usize>,
+	/// Stateful ノードの観測済み state version（最後に評価された version）。
+	pub state_versions: HashMap<NodeId, u64>,
 	pub cache_hits: usize,
 	pub cache_misses: usize,
 }
@@ -524,6 +528,9 @@ impl ProgramRun {
 	}
 	pub fn pure_evaluations_of(&self, node: &str) -> usize {
 		self.pure_evaluations.get(node).copied().unwrap_or(0)
+	}
+	pub fn state_version_of(&self, node: &str) -> u64 {
+		self.state_versions.get(node).copied().unwrap_or(0)
 	}
 }
 
@@ -797,6 +804,7 @@ mod tests {
 	use crate::flowgraph::nodes::flow::{BranchNode, SequenceNode};
 	use crate::flowgraph::nodes::literal::{BoolLiteralNode, IntLiteralNode, StringLiteralNode};
 	use crate::flowgraph::nodes::log::LogNode;
+	use crate::flowgraph::nodes::state::IntCounterNode;
 	use crate::flowgraph::socket::SocketValue;
 	use async_trait::async_trait;
 	use std::sync::atomic::{AtomicUsize, Ordering};
@@ -939,6 +947,21 @@ mod tests {
 		assert!(ctx.trace[0].contains("lazy-hi"));
 		assert_eq!(run.pure_evaluations_of("msg"), 1);
 		assert_eq!(run.pure_evaluations_of("seq"), 0, "source は exec 発火、pull 評価でない");
+	}
+
+	#[tokio::test]
+	async fn stateful_exec_updates_state_version_observation() {
+		let mut b = FlowgraphBuilder::new();
+		b.add_node("seq", NodeImpl::pure(Arc::new(SequenceNode::new(1))), InputMap::new());
+		b.add_node("counter", NodeImpl::stateful(Arc::new(IntCounterNode)), InputMap::new());
+		b.connect_exec(PortRef::new("seq", "exec_1"), PortRef::new("counter", "increment"));
+
+		let mut prog = b.build().unwrap();
+		let mut ctx = ExecCtx::default();
+		let run = prog.execute(&mut ctx).await.unwrap();
+
+		assert_eq!(run.state_version_of("counter"), 1);
+		assert_eq!(run.value_at("counter", "value"), Some(&SocketValue::Int(1)));
 	}
 
 	// ----- Branch の dead-port elimination ---------------------------------

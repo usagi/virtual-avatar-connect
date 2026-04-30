@@ -124,6 +124,7 @@ pub struct FixtureRunReport {
 	pub stored_values: Vec<FixtureTraceValue>,
 	pub exec_count: Vec<(String, usize)>,
 	pub pure_evaluations: Vec<(String, usize)>,
+	pub state_versions: Vec<(String, u64)>,
 	pub cache_hits: usize,
 	pub cache_misses: usize,
 	pub tests: Vec<FixtureTestResult>,
@@ -605,8 +606,17 @@ fn make_report(
 	mocks: Vec<FixtureMockSummary>,
 	trigger_history: Vec<FixtureTriggerHistory>,
 ) -> FixtureRunReport {
-	let mut stored_values: Vec<FixtureTraceValue> = run
-		.stored_values
+	let ProgramRun {
+		generation,
+		stored_values,
+		exec_count,
+		pure_evaluations,
+		state_versions,
+		cache_hits,
+		cache_misses,
+	} = run;
+
+	let mut stored_values: Vec<FixtureTraceValue> = stored_values
 		.iter()
 		.map(|(port_ref, value)| FixtureTraceValue {
 			node: port_ref.node.clone(),
@@ -617,11 +627,14 @@ fn make_report(
 		.collect();
 	stored_values.sort_by(|a, b| (&a.node, &a.port).cmp(&(&b.node, &b.port)));
 
-	let mut exec_count: Vec<(String, usize)> = run.exec_count.into_iter().collect();
+	let mut exec_count: Vec<(String, usize)> = exec_count.into_iter().collect();
 	exec_count.sort_by(|a, b| a.0.cmp(&b.0));
 
-	let mut pure_evaluations: Vec<(String, usize)> = run.pure_evaluations.into_iter().collect();
+	let mut pure_evaluations: Vec<(String, usize)> = pure_evaluations.into_iter().collect();
 	pure_evaluations.sort_by(|a, b| a.0.cmp(&b.0));
+
+	let mut state_versions: Vec<(String, u64)> = state_versions.into_iter().collect();
+	state_versions.sort_by(|a, b| a.0.cmp(&b.0));
 
 	let mut recorded_effects: Vec<FixtureRecordedEffect> = ctx
 		.recorded_effects
@@ -645,7 +658,7 @@ fn make_report(
 	FixtureRunReport {
 		ok: true,
 		root: root.display().to_string(),
-		generation: run.generation,
+		generation,
 		node_count,
 		capability_summary,
 		mock_count: mocks.len(),
@@ -659,8 +672,9 @@ fn make_report(
 		stored_values,
 		exec_count,
 		pure_evaluations,
-		cache_hits: run.cache_hits,
-		cache_misses: run.cache_misses,
+		state_versions,
+		cache_hits,
+		cache_misses,
 		tests: Vec::new(),
 		failed_tests: 0,
 	}
@@ -1742,6 +1756,7 @@ mod tests {
 			}],
 			exec_count: Vec::new(),
 			pure_evaluations: Vec::new(),
+			state_versions: Vec::new(),
 			cache_hits: 0,
 			cache_misses: 0,
 			tests: Vec::new(),

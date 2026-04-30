@@ -80,6 +80,7 @@ impl Args {
 						println!("  trace: {} line(s)", report.trace_count);
 						println!("  effects: {}", report.effect_count);
 						println!("  stored_values: {}", report.stored_values.len());
+						println!("  state_versions: {}", report.state_versions.len());
 						println!("  cache: {} hit(s), {} miss(es)", report.cache_hits, report.cache_misses);
 						if !report.tests.is_empty() {
 							println!(
