@@ -649,6 +649,12 @@ Flowgraph diagnostics panel に `state_nodes` の details 表示を追加し、g
 `*.flowgraph.test.toml` の `[tests.expect]` に `[[tests.expect.state_versions]]` を追加し、stateful node の観測済み version を fixture で検証できるようにした。
 `flowgraph.example/twitch-chat-send` では `rate_limit` gate の state version と `remaining` を検証し、stateful graph の reload / snapshot 方針を今後テストで固定できる入口にした。
 
+### LF-7g Snapshot / restore contract metadata ✅
+
+`FlowgraphStateModel` に `snapshot_format` / `restore_supported` / `restore_policy` / `migration_policy` を追加し、snapshot と restore の対応可否を同じ contract metadata として扱えるようにした。
+現在の stateful node は引き続き `snapshot_policy = "unsupported"` / `snapshot_format = "none"` / `restore_policy = "unsupported"` / `migration_policy = "none"` / `persistence_policy = "none"` のままで、runtime の snapshot / restore 挙動は変えない。
+この段階では Control API node catalog、graph state summary、GUI diagnostics の表示面に typed policy を通し、次段の実 snapshot interface 実装前に互換性判断の語彙を固定する。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
