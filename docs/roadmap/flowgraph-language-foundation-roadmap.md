@@ -271,8 +271,8 @@ mock HTTP は `recorded_effects[]` に method / url / request_body / status / re
 [[mocks.file_read]]
 node = "main::load"
 contents = """
-source	replacement
-hello	hi
+source replacement
+hello hi
 """
 ```
 

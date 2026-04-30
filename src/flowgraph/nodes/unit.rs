@@ -49,7 +49,13 @@ impl NodeDescriptor for UnitAssignNode {
 
 #[async_trait]
 impl PureNode for UnitAssignNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		properties: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let value = get_required_float(inputs, "value")?;
 		let unit_str = unit_property(properties, "unit");
 		let unit = parse_assign_unit(&unit_str).map_err(|e| NodeExecError::Generic(anyhow::anyhow!("{e}")))?;
@@ -80,7 +86,13 @@ impl NodeDescriptor for UnitTryParseNode {
 
 #[async_trait]
 impl PureNode for UnitTryParseNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_properties: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let text = get_required_string(inputs, "text")?;
 		match parse_quantity_string(&text) {
 			Ok(quantity) => Ok(NodeOutput::new()
@@ -140,7 +152,13 @@ impl NodeDescriptor for UnitConvertNode {
 
 #[async_trait]
 impl PureNode for UnitConvertNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		properties: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "value")?.clone();
 		let target_str = properties
 			.get("target_unit")
@@ -182,7 +200,13 @@ impl NodeDescriptor for UnitStripNode {
 
 #[async_trait]
 impl PureNode for UnitStripNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_properties: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "value")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Float(q.value)))
 	}
@@ -210,7 +234,13 @@ impl NodeDescriptor for UnitGetUnitStringNode {
 
 #[async_trait]
 impl PureNode for UnitGetUnitStringNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_properties: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "value")?;
 		Ok(NodeOutput::new().set_data("name", SocketValue::String(q.unit.canonical())))
 	}
@@ -238,7 +268,13 @@ impl NodeDescriptor for UnitGetDimensionStringNode {
 
 #[async_trait]
 impl PureNode for UnitGetDimensionStringNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_properties: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "value")?;
 		Ok(NodeOutput::new().set_data("dim", SocketValue::String(q.dimension().canonical())))
 	}
@@ -269,7 +305,13 @@ impl NodeDescriptor for UnitSameDimensionNode {
 
 #[async_trait]
 impl PureNode for UnitSameDimensionNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_properties: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let a = get_required_quantity(inputs, "a")?;
 		let b = get_required_quantity(inputs, "b")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Bool(a.dimension() == b.dimension())))
@@ -298,7 +340,13 @@ impl NodeDescriptor for UnitToJsonNode {
 
 #[async_trait]
 impl PureNode for UnitToJsonNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _properties: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_properties: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let q = get_required_quantity(inputs, "value")?;
 		let j = serde_json::json!({
 			"value": q.value,
@@ -338,7 +386,12 @@ mod tests {
 	#[tokio::test]
 	async fn assign_attaches_unit_to_float() {
 		let out = UnitAssignNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &prop_str("unit", "m/s"), &in_float("value", 9.5), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&prop_str("unit", "m/s"),
+				&in_float("value", 9.5),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		let q = match out.data.get("result").unwrap() {
@@ -352,7 +405,12 @@ mod tests {
 	#[tokio::test]
 	async fn assign_empty_unit_produces_dimensionless() {
 		let out = UnitAssignNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &in_float("value", 3.14), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&in_float("value", 3.14),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		match out.data.get("result").unwrap() {
@@ -367,7 +425,12 @@ mod tests {
 	#[tokio::test]
 	async fn assign_invalid_unit_errors() {
 		let err = UnitAssignNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &prop_str("unit", "not_a_unit"), &in_float("value", 1.0), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&prop_str("unit", "not_a_unit"),
+				&in_float("value", 1.0),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap_err();
 		assert!(matches!(err, NodeExecError::Generic(_)));
@@ -377,7 +440,12 @@ mod tests {
 	async fn try_parse_returns_result_for_success_and_error() {
 		let inputs: InputMap = [("text".into(), SocketValue::String("2 km".into()))].into_iter().collect();
 		let out = UnitTryParseNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("ok"), Some(&SocketValue::Bool(true)));
@@ -393,9 +461,16 @@ mod tests {
 			_ => panic!("expected Result"),
 		}
 
-		let inputs: InputMap = [("text".into(), SocketValue::String("not_a_quantity".into()))].into_iter().collect();
+		let inputs: InputMap = [("text".into(), SocketValue::String("not_a_quantity".into()))]
+			.into_iter()
+			.collect();
 		let out = UnitTryParseNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("ok"), Some(&SocketValue::Bool(false)));
@@ -415,7 +490,12 @@ mod tests {
 	async fn convert_km_to_m() {
 		let km = Quantity::of(1.0, Unit::metre().with_prefix(SIPrefix::Kilo));
 		let out = UnitConvertNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &prop_str("target_unit", "m"), &in_quantity("value", km), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&prop_str("target_unit", "m"),
+				&in_quantity("value", km),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		match out.data.get("result").unwrap() {
@@ -431,7 +511,12 @@ mod tests {
 	async fn convert_deg_to_rad() {
 		let deg = Quantity::of(180.0, Unit::degree());
 		let out = UnitConvertNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &prop_str("target_unit", "rad"), &in_quantity("value", deg), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&prop_str("target_unit", "rad"),
+				&in_quantity("value", deg),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		match out.data.get("result").unwrap() {
@@ -447,7 +532,12 @@ mod tests {
 	async fn convert_dimension_mismatch_errors() {
 		let metres = Quantity::of(1.0, Unit::metre());
 		let err = UnitConvertNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &prop_str("target_unit", "s"), &in_quantity("value", metres), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&prop_str("target_unit", "s"),
+				&in_quantity("value", metres),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap_err();
 		assert!(matches!(err, NodeExecError::Generic(_)));
@@ -457,7 +547,12 @@ mod tests {
 	async fn convert_requires_target_unit_property() {
 		let q = Quantity::of(1.0, Unit::metre());
 		let err = UnitConvertNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &in_quantity("value", q), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&in_quantity("value", q),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap_err();
 		assert!(matches!(err, NodeExecError::Generic(_)));
@@ -468,7 +563,12 @@ mod tests {
 		// K and \u{394}K share dimension but have different semantics; convert must reject
 		let k = Quantity::of(300.0, Unit::kelvin());
 		let err = UnitConvertNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &prop_str("target_unit", "\u{394}K"), &in_quantity("value", k), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&prop_str("target_unit", "\u{394}K"),
+				&in_quantity("value", k),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap_err();
 		assert!(matches!(err, NodeExecError::Generic(_)));
@@ -480,7 +580,12 @@ mod tests {
 	async fn strip_discards_unit() {
 		let q = Quantity::of(9.8, Unit::metre().div(&Unit::second().pow_i8(2)));
 		let out = UnitStripNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &in_quantity("value", q), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&in_quantity("value", q),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Float(9.8)));
@@ -492,7 +597,12 @@ mod tests {
 	async fn get_unit_string_returns_canonical_form() {
 		let q = Quantity::of(1.0, Unit::metre().with_prefix(SIPrefix::Kilo));
 		let out = UnitGetUnitStringNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &in_quantity("value", q), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&in_quantity("value", q),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("name"), Some(&SocketValue::String("km".into())));
@@ -502,7 +612,12 @@ mod tests {
 	async fn get_dim_string_returns_canonical_dimension() {
 		let q = Quantity::of(9.8, Unit::metre().div(&Unit::second().pow_i8(2)));
 		let out = UnitGetDimensionStringNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &in_quantity("value", q), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&in_quantity("value", q),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("dim"), Some(&SocketValue::String("L\u{b7}T^-2".into())));
@@ -519,7 +634,12 @@ mod tests {
 		);
 		inputs.insert("b".into(), SocketValue::Quantity(Quantity::of(500.0, Unit::metre())));
 		let out = UnitSameDimensionNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
@@ -531,7 +651,12 @@ mod tests {
 		inputs.insert("a".into(), SocketValue::Quantity(Quantity::of(1.0, Unit::metre())));
 		inputs.insert("b".into(), SocketValue::Quantity(Quantity::of(1.0, Unit::second())));
 		let out = UnitSameDimensionNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(false)));
@@ -543,7 +668,12 @@ mod tests {
 	async fn to_json_emits_internal_form() {
 		let q = Quantity::of(60.0, Unit::hertz());
 		let out = UnitToJsonNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &in_quantity("value", q), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&in_quantity("value", q),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		match out.data.get("json").unwrap() {
