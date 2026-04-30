@@ -644,6 +644,11 @@ Flowgraph diagnostics panel に `state_nodes` の details 表示を追加し、g
 `ProgramRun` に stateful node の `state_versions` を追加し、fixture JSON report と CLI summary から最後に観測された state version を確認できるようにした。
 これは state mutation / reload / snapshot policy を検証するための観測点であり、state の永続化や restore はまだ実装しない。
 
+### LF-7f Fixture state version assertions ✅
+
+`*.flowgraph.test.toml` の `[tests.expect]` に `[[tests.expect.state_versions]]` を追加し、stateful node の観測済み version を fixture で検証できるようにした。
+`flowgraph.example/twitch-chat-send` では `rate_limit` gate の state version と `remaining` を検証し、stateful graph の reload / snapshot 方針を今後テストで固定できる入口にした。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
