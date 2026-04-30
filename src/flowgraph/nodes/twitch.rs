@@ -260,8 +260,14 @@ fn get_token_success(access_token: String, client_id: String) -> NodeOutput {
 		"client_id": client_id,
 	});
 	NodeOutput::new()
-		.set_data("access_token", SocketValue::String(value["access_token"].as_str().unwrap_or_default().to_string()))
-		.set_data("client_id", SocketValue::String(value["client_id"].as_str().unwrap_or_default().to_string()))
+		.set_data(
+			"access_token",
+			SocketValue::String(value["access_token"].as_str().unwrap_or_default().to_string()),
+		)
+		.set_data(
+			"client_id",
+			SocketValue::String(value["client_id"].as_str().unwrap_or_default().to_string()),
+		)
 		.set_data("error", SocketValue::String(String::new()))
 		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Json(value))))
 		.fire_exec("on_success")
@@ -368,7 +374,10 @@ fn validate_err(msg: impl Into<String>) -> NodeOutput {
 		.set_data("login", SocketValue::String(String::new()))
 		.set_data("client_id", SocketValue::String(String::new()))
 		.set_data("error", SocketValue::String(msg.clone()))
-		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("twitch.validate_token")))
+		.set_data(
+			"result",
+			SocketValue::Result(FlowResult::err(msg).with_code("twitch.validate_token")),
+		)
 		.fire_exec("on_error")
 }
 
@@ -379,9 +388,18 @@ fn validate_success(user_id: String, login: String, client_id: String) -> NodeOu
 		"client_id": client_id,
 	});
 	NodeOutput::new()
-		.set_data("user_id", SocketValue::String(value["user_id"].as_str().unwrap_or_default().to_string()))
-		.set_data("login", SocketValue::String(value["login"].as_str().unwrap_or_default().to_string()))
-		.set_data("client_id", SocketValue::String(value["client_id"].as_str().unwrap_or_default().to_string()))
+		.set_data(
+			"user_id",
+			SocketValue::String(value["user_id"].as_str().unwrap_or_default().to_string()),
+		)
+		.set_data(
+			"login",
+			SocketValue::String(value["login"].as_str().unwrap_or_default().to_string()),
+		)
+		.set_data(
+			"client_id",
+			SocketValue::String(value["client_id"].as_str().unwrap_or_default().to_string()),
+		)
 		.set_data("error", SocketValue::String(String::new()))
 		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Json(value))))
 		.fire_exec("on_success")
@@ -480,7 +498,10 @@ fn user_id_err(msg: impl Into<String>) -> NodeOutput {
 	NodeOutput::new()
 		.set_data("user_id", SocketValue::String(String::new()))
 		.set_data("error", SocketValue::String(msg.clone()))
-		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("twitch.user_id_by_login")))
+		.set_data(
+			"result",
+			SocketValue::Result(FlowResult::err(msg).with_code("twitch.user_id_by_login")),
+		)
 		.fire_exec("on_error")
 }
 
@@ -745,7 +766,11 @@ fn moderation_success(end_time: String) -> NodeOutput {
 }
 
 /// `duration_secs` が `Some(d)` で d>0 なら timeout、None/0 以下なら永久 ban。
-async fn execute_moderation_ban(inputs: &InputMap, duration_secs: Option<i64>, result_code: &'static str) -> Result<NodeOutput, NodeExecError> {
+async fn execute_moderation_ban(
+	inputs: &InputMap,
+	duration_secs: Option<i64>,
+	result_code: &'static str,
+) -> Result<NodeOutput, NodeExecError> {
 	let user_id = get_required_string(inputs, "user_id")?;
 	let broadcaster_id = get_required_string(inputs, "broadcaster_id")?;
 	let moderator_id = get_required_string(inputs, "moderator_id")?;
@@ -771,9 +796,10 @@ async fn execute_moderation_ban(inputs: &InputMap, duration_secs: Option<i64>, r
 	}
 	if let Some(d) = duration_secs {
 		if !(1..=TIMEOUT_MAX_SECS).contains(&d) {
-			return Ok(moderation_err(format!(
-				"duration_secs は 1..={TIMEOUT_MAX_SECS} の範囲でなければなりません（指定値: {d}）"
-			), result_code));
+			return Ok(moderation_err(
+				format!("duration_secs は 1..={TIMEOUT_MAX_SECS} の範囲でなければなりません（指定値: {d}）"),
+				result_code,
+			));
 		}
 		body_data.insert("duration".into(), JsonValue::Number(d.into()));
 	}
@@ -804,7 +830,10 @@ async fn execute_moderation_ban(inputs: &InputMap, duration_secs: Option<i64>, r
 	let status = resp.status();
 	let body_text = resp.text().await.unwrap_or_default();
 	if !status.is_success() {
-		return Ok(moderation_err(format!("POST /moderation/bans HTTP {status}: {body_text}"), result_code));
+		return Ok(moderation_err(
+			format!("POST /moderation/bans HTTP {status}: {body_text}"),
+			result_code,
+		));
 	}
 	// レスポンスから end_time（timeout のみ値あり、ban は null）を拾う。
 	let end_time = serde_json::from_str::<JsonValue>(&body_text)

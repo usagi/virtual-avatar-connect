@@ -234,9 +234,7 @@ impl EffectfulNode for TableLoadTsvNode {
 			}
 		};
 		match parse_tsv_with_mode(&contents, &mode) {
-			Ok(table) => {
-				Ok(load_success_output(table))
-			}
+			Ok(table) => Ok(load_success_output(table)),
 			Err(e) => Ok(err_output_load(format!("parse: {e}"))),
 		}
 	}
