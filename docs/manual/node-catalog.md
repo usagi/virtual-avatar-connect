@@ -354,6 +354,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 |---|---|---|
 | `exec_out` | `exec` (out) |  |
 | `on_error` | `exec` (out) |  |
+| `result` | `result<bool>` |  |
 
 | Property | Type | Default | Required | Note |
 |---|---|---|---|---|

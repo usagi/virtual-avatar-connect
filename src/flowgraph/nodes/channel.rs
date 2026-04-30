@@ -26,10 +26,22 @@
 use crate::flowgraph::node::{
 	EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec, PropertySpec,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use async_trait::async_trait;
 
 pub struct ChannelEmitNode;
+
+fn success_output() -> NodeOutput {
+	NodeOutput::new()
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Bool(true))))
+		.fire_exec("exec_out")
+}
+
+fn err_output(msg: impl Into<String>) -> NodeOutput {
+	NodeOutput::new()
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("channel.emit")))
+		.fire_exec("on_error")
+}
 
 impl NodeDescriptor for ChannelEmitNode {
 	fn describe(&self) -> NodeSpec {
@@ -54,6 +66,7 @@ impl NodeDescriptor for ChannelEmitNode {
 			outputs: vec![
 				PortSpec::exec_output("exec_out", "On Success"),
 				PortSpec::exec_output("on_error", "On Error"),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Bool))),
 			],
 			properties: vec![
 				PropertySpec::new(
@@ -101,7 +114,7 @@ impl EffectfulNode for ChannelEmitNode {
 		let channel = if !channel_in.is_empty() { channel_in } else { fallback };
 		if channel.is_empty() {
 			ctx.log("channel.emit: channel が空のため on_error");
-			return Ok(NodeOutput::new().fire_exec("on_error"));
+			return Ok(err_output("channel is empty"));
 		}
 
 		let content = inputs.get("content").and_then(|v| v.as_str().ok()).unwrap_or("").to_string();
@@ -124,11 +137,11 @@ impl EffectfulNode for ChannelEmitNode {
 
 		let Some(weak) = ctx.state_handle.as_ref() else {
 			ctx.log("channel.emit: state_handle が None のため push スキップ (on_error)");
-			return Ok(NodeOutput::new().fire_exec("on_error"));
+			return Ok(err_output("state_handle is not available"));
 		};
 		let Some(state_arc) = weak.upgrade() else {
 			ctx.log("channel.emit: State が既に drop されている (on_error)");
-			return Ok(NodeOutput::new().fire_exec("on_error"));
+			return Ok(err_output("state has been dropped"));
 		};
 
 		let mut cd = crate::state::ChannelDatum::new(channel, content).with_flag_if(crate::state::ChannelDatum::FLAG_IS_FINAL, is_final);
@@ -138,7 +151,7 @@ impl EffectfulNode for ChannelEmitNode {
 		let id = cd.get_id();
 		state_arc.read().await.push_channel_datum(cd).await;
 		ctx.log(format!("channel.emit: pushed id={id}"));
-		Ok(NodeOutput::new().fire_exec("exec_out"))
+		Ok(success_output())
 	}
 }
 
@@ -163,6 +176,13 @@ mod tests {
 		let out = node.execute(&mut ctx, &InputMap::new(), &inputs, &fired).await.unwrap();
 		assert!(out.fired_exec.contains("on_error"));
 		assert!(!out.fired_exec.contains("exec_out"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("channel.emit"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 
 	#[tokio::test]
@@ -176,6 +196,13 @@ mod tests {
 		inputs.insert("content".into(), SocketValue::String("hi".into()));
 		let out = node.execute(&mut ctx, &InputMap::new(), &inputs, &fired).await.unwrap();
 		assert!(out.fired_exec.contains("on_error"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("channel.emit"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 
 	#[tokio::test]
