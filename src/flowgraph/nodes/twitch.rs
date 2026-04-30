@@ -26,7 +26,7 @@ use crate::flowgraph::node::{
 	get_optional_bool, get_optional_int, get_optional_string, get_required_bool, get_required_int, get_required_json, get_required_string,
 	EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use async_trait::async_trait;
 use serde_json::{json, Value as JsonValue};
 
@@ -84,22 +84,26 @@ fn twitch_action_outputs(extra: Vec<PortSpec>) -> Vec<PortSpec> {
 		PortSpec::exec_output("on_error", "On Error"),
 		PortSpec::output("response", "Response", SocketType::Json),
 		PortSpec::output("error", "Error", SocketType::String),
+		PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Json))),
 	];
 	outputs.extend(extra);
 	outputs
 }
 
 fn twitch_action_err(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("response", SocketValue::Json(JsonValue::Null))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("twitch.request")))
 		.fire_exec("on_error")
 }
 
 fn twitch_action_success(response: JsonValue) -> NodeOutput {
 	NodeOutput::new()
-		.set_data("response", SocketValue::Json(response))
+		.set_data("response", SocketValue::Json(response.clone()))
 		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Json(response))))
 		.fire_exec("on_success")
 }
 
@@ -1720,6 +1724,36 @@ mod tests {
 	#[test]
 	fn json_array_of_titles_rejects_bad_count() {
 		assert!(json_array_of_titles(&json!(["only one"]), "choices", 2, 5, 25).is_err());
+	}
+
+	#[test]
+	fn twitch_action_common_outputs_include_result() {
+		let outputs = twitch_action_outputs(vec![]);
+		let result = outputs.iter().find(|p| p.name == "result").expect("result output");
+		assert_eq!(result.ty, SocketType::Result(Box::new(SocketType::Json)));
+	}
+
+	#[test]
+	fn twitch_action_result_matches_success_and_error() {
+		let success = twitch_action_success(json!({ "ok": true }));
+		match success.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert_eq!(result.value, Some(Box::new(SocketValue::Json(json!({ "ok": true })))));
+				assert_eq!(result.error, None);
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+
+		let failure = twitch_action_err("boom");
+		match failure.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.error.as_deref(), Some("boom"));
+				assert_eq!(result.code.as_deref(), Some("twitch.request"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 
 	#[tokio::test]

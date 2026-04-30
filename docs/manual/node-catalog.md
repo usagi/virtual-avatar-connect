@@ -2895,6 +2895,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.twitch.ban`
 
@@ -2940,6 +2941,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.twitch.chat_clear`
 
@@ -2961,6 +2963,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.twitch.chat_send`
 
@@ -3014,6 +3017,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.twitch.clip_create`
 
@@ -3034,6 +3038,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 | `clip_id` | `string` |  |
 | `edit_url` | `string` |  |
 
@@ -3072,6 +3077,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 | `goals` | `json` |  |
 
 ### `flowgraph.twitch.poll_create`
@@ -3097,6 +3103,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 | `poll_id` | `string` |  |
 
 ### `flowgraph.twitch.poll_end`
@@ -3119,6 +3126,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.twitch.prediction_create`
 
@@ -3141,6 +3149,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 | `prediction_id` | `string` |  |
 
 ### `flowgraph.twitch.prediction_end`
@@ -3164,6 +3173,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.twitch.raid_cancel`
 
@@ -3183,6 +3193,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.twitch.raid_start`
 
@@ -3203,6 +3214,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.twitch.shield_mode_update`
 
@@ -3224,6 +3236,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.twitch.stream_marker_create`
 
@@ -3244,6 +3257,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `response` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 | `marker_id` | `string` |  |
 
 ### `flowgraph.twitch.timeout`
