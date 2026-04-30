@@ -173,19 +173,8 @@ pub(crate) fn enrich_state_model_json(reg: &crate::flowgraph::registry::NodeRegi
 	};
 	let feature = obj.get("feature").and_then(|f| f.as_str()).unwrap_or("");
 	let effect_class = reg.effect_class(feature).unwrap_or("unknown");
-	let stateful = effect_class == "stateful";
-	obj.insert(
-		"state_model".to_string(),
-		serde_json::json!({
-			"version": 1,
-			"stateful": stateful,
-			"scope": if stateful { "node_instance" } else { "none" },
-			"storage": if stateful { "volatile" } else { "none" },
-			"lifetime": if stateful { "program_instance" } else { "none" },
-			"reinitialized_on_reload": stateful,
-			"snapshot_supported": false,
-		}),
-	);
+	let state_model = crate::flowgraph::FlowgraphStateModel::for_effect_class(effect_class);
+	obj.insert("state_model".to_string(), serde_json::to_value(state_model).unwrap_or(serde_json::Value::Null));
 }
 
 /// node-catalog の各 spec JSON に control_triggerable + Quantity UI ヒント + contract/effect metadata を注入する。
@@ -588,6 +577,8 @@ mod tests {
 		assert_eq!(counter["lifetime"].as_str(), Some("program_instance"));
 		assert_eq!(counter["reinitialized_on_reload"].as_bool(), Some(true));
 		assert_eq!(counter["snapshot_supported"].as_bool(), Some(false));
+		assert_eq!(counter["snapshot_policy"].as_str(), Some("unsupported"));
+		assert_eq!(counter["persistence_policy"].as_str(), Some("none"));
 
 		let rate_limit = &specs["flowgraph.util.rate_limit"]["state_model"];
 		assert_eq!(rate_limit["stateful"].as_bool(), Some(true));
@@ -598,6 +589,8 @@ mod tests {
 			assert_eq!(state_model["scope"].as_str(), Some("none"));
 			assert_eq!(state_model["storage"].as_str(), Some("none"));
 			assert_eq!(state_model["reinitialized_on_reload"].as_bool(), Some(false));
+			assert_eq!(state_model["snapshot_policy"].as_str(), Some("unsupported"));
+			assert_eq!(state_model["persistence_policy"].as_str(), Some("none"));
 		}
 	}
 }

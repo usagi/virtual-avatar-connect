@@ -1077,11 +1077,13 @@ export type FlowgraphCapabilityNode = {
 export type FlowgraphStateNode = {
  node: string;
  feature: string;
- scope: string;
- storage: string;
- lifetime: string;
+ scope: 'none' | 'node_instance';
+ storage: 'none' | 'volatile';
+ lifetime: 'none' | 'program_instance';
  reinitialized_on_reload: boolean;
  snapshot_supported: boolean;
+ snapshot_policy: 'unsupported';
+ persistence_policy: 'none';
 };
 
 export type FlowgraphCapabilitySummary = {

@@ -7,6 +7,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use thiserror::Error;
 
+use crate::flowgraph::state_model::{
+	FlowgraphStateModel, StateLifetime, StatePersistencePolicy, StateScope, StateSnapshotPolicy, StateStorage,
+};
+
 /// 診断の深刻度。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -217,11 +221,13 @@ pub struct GraphCapabilityNode {
 pub struct GraphStateNode {
 	pub node: String,
 	pub feature: String,
-	pub scope: String,
-	pub storage: String,
-	pub lifetime: String,
+	pub scope: StateScope,
+	pub storage: StateStorage,
+	pub lifetime: StateLifetime,
 	pub reinitialized_on_reload: bool,
 	pub snapshot_supported: bool,
+	pub snapshot_policy: StateSnapshotPolicy,
+	pub persistence_policy: StatePersistencePolicy,
 }
 
 impl GraphCapabilitySummary {
@@ -242,14 +248,17 @@ impl GraphCapabilitySummary {
 			}
 			if effect_class == "stateful" {
 				stateful_node_count += 1;
+				let state_model = FlowgraphStateModel::for_effect_class(&effect_class);
 				state_nodes.push(GraphStateNode {
 					node: node.clone(),
 					feature: meta.feature.clone(),
-					scope: "node_instance".into(),
-					storage: "volatile".into(),
-					lifetime: "program_instance".into(),
-					reinitialized_on_reload: true,
-					snapshot_supported: false,
+					scope: state_model.scope,
+					storage: state_model.storage,
+					lifetime: state_model.lifetime,
+					reinitialized_on_reload: state_model.reinitialized_on_reload,
+					snapshot_supported: state_model.snapshot_supported,
+					snapshot_policy: state_model.snapshot_policy,
+					persistence_policy: state_model.persistence_policy,
 				});
 			}
 			let node_caps: Vec<String> = reg.capabilities(&meta.feature).into_iter().map(str::to_string).collect();
@@ -278,7 +287,7 @@ impl GraphCapabilitySummary {
 			node_count: node_meta.len(),
 			effectful_node_count,
 			stateful_node_count,
-			volatile_state_node_count: state_nodes.iter().filter(|node| node.storage == "volatile").count(),
+			volatile_state_node_count: state_nodes.iter().filter(|node| node.storage == StateStorage::Volatile).count(),
 			capabilities: capabilities.into_iter().collect(),
 			capability_counts,
 			nodes,
