@@ -593,6 +593,12 @@ Table I/O を downstream が result contract で扱えるようにした。
 既存の `exec_out` / `on_error` は維持し、成功時は `true`、失敗時は `code = "channel.emit"` の recoverable error を返す。
 Channel 終端ノードの失敗も downstream が result contract で扱えるようにした。
 
+### LF-6p Process result output ✅
+
+`flowgraph.process.spawn` / `running` / `kill` / `wait` に `result` 出力を追加した。
+既存の `on_success` / `on_error` / `exec_out` / `on_exit` / `on_timeout` と個別 data port は維持し、spawn/running/kill は `result<json>`、wait は `result<bool>` を返す。
+失敗時は `code = "process.spawn"` / `process.kill` / `process.wait` の recoverable error として downstream に流せるようにした。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
