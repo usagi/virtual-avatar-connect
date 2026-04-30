@@ -527,6 +527,12 @@ parse 成功時は `ok=true` と `result<json>` の value を返し、失敗時�
 `require_timezone` / `default_timezone` の property は既存 parse と同じ仕様を使い、失敗時は halt せず `result<datetime>` と `code = "datetime.parse"` を返す。
 日時入力の validation を recoverable path に流せるため、GUI 入力、外部 API payload、将来の scheduler 設定で fallback を組みやすくなる。
 
+### LF-6e Unit try-parse result node ✅
+
+文字列 Quantity literal を recoverable に扱うため、新規 `flowgraph.unit.try_parse` を追加した。
+`"2 km"` / `"9.8 m/s^2"` / `"42"` のような既存 Quantity literal parser を使い、失敗時は halt せず `result<quantity>` と `code = "unit.parse"` を返す。
+既存の `flowgraph.unit.assign` / `flowgraph.unit.convert` の halt 挙動は維持し、外部入力や GUI 入力から来る単位付き数値だけを fallback 可能な経路へ流せるようにした。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
