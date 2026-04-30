@@ -605,6 +605,12 @@ Channel 終端ノードの失敗も downstream が result contract で扱える�
 既存の `exec_out` / `on_success` / `on_error` と `windows` / `count` / `affected_count` / `error` は維持し、enum は `result<table>`、action は `result<int>` を返す。
 失敗時は `code = "window.enum"` または `window.action` の recoverable error として downstream に流せるようにした。
 
+### LF-6r Twitch individual result output ✅
+
+Twitch 個別契約ノードの `get_token` / `validate_token` / `user_id_by_login` / `chat_send` / `ban` / `timeout` に `result` 出力を追加した。
+既存の `on_success` / `on_failure` / `on_error` / `on_skipped` と個別 data port は維持し、token/validate は `result<json>`、user_id/chat/ban/timeout は `result<string>` を返す。
+失敗時は `twitch.get_token` / `twitch.validate_token` / `twitch.user_id_by_login` / `twitch.chat_send` / `twitch.ban` / `twitch.timeout` の recoverable error として downstream に流せるようにした。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
