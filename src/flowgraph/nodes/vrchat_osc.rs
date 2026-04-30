@@ -6,23 +6,40 @@ use crate::flowgraph::node::{
 	get_optional_bool, get_required_bool, get_required_float, get_required_int, get_required_string, EffectfulNode, ExecCtx,
 	ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use crate::flowgraph::vrchat;
 use async_trait::async_trait;
 
 fn err_out(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("bytes_sent", SocketValue::Int(0))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("vrchat.osc.send")))
 		.fire_exec("on_error")
+}
+
+fn send_outputs() -> Vec<PortSpec> {
+	vec![
+		PortSpec::exec_output("on_success", "On Success"),
+		PortSpec::exec_output("on_error", "On Error"),
+		PortSpec::output("bytes_sent", "Bytes Sent", SocketType::Int),
+		PortSpec::output("error", "Error", SocketType::String),
+		PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Int))),
+	]
+}
+
+fn success_out(bytes_sent: usize) -> NodeOutput {
+	NodeOutput::new()
+		.set_data("bytes_sent", SocketValue::Int(bytes_sent as i64))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Int(bytes_sent as i64))))
+		.fire_exec("on_success")
 }
 
 async fn send_encoded(host: &str, port: i64, bytes: Vec<u8>) -> Result<NodeOutput, NodeExecError> {
 	match vrchat::send_vrchat_osc(host.trim(), port, &bytes).await {
-		Ok(n) => Ok(NodeOutput::new()
-			.set_data("bytes_sent", SocketValue::Int(n as i64))
-			.set_data("error", SocketValue::String(String::new()))
-			.fire_exec("on_success")),
+		Ok(n) => Ok(success_out(n)),
 		Err(e) => Ok(err_out(e)),
 	}
 }
@@ -46,12 +63,7 @@ impl NodeDescriptor for VrchatAvatarParameterFloatNode {
 				PortSpec::input("parameter_name", "Parameter name", SocketType::String),
 				PortSpec::input("value", "Value", SocketType::Float),
 			],
-			outputs: vec![
-				PortSpec::exec_output("on_success", "On Success"),
-				PortSpec::exec_output("on_error", "On Error"),
-				PortSpec::output("bytes_sent", "Bytes Sent", SocketType::Int),
-				PortSpec::output("error", "Error", SocketType::String),
-			],
+			outputs: send_outputs(),
 			properties: vec![],
 		}
 	}
@@ -98,12 +110,7 @@ impl NodeDescriptor for VrchatAvatarParameterIntNode {
 				PortSpec::input("parameter_name", "Parameter name", SocketType::String),
 				PortSpec::input("value", "Value", SocketType::Int),
 			],
-			outputs: vec![
-				PortSpec::exec_output("on_success", "On Success"),
-				PortSpec::exec_output("on_error", "On Error"),
-				PortSpec::output("bytes_sent", "Bytes Sent", SocketType::Int),
-				PortSpec::output("error", "Error", SocketType::String),
-			],
+			outputs: send_outputs(),
 			properties: vec![],
 		}
 	}
@@ -150,12 +157,7 @@ impl NodeDescriptor for VrchatAvatarParameterBoolNode {
 				PortSpec::input("parameter_name", "Parameter name", SocketType::String),
 				PortSpec::input("value", "Value", SocketType::Bool),
 			],
-			outputs: vec![
-				PortSpec::exec_output("on_success", "On Success"),
-				PortSpec::exec_output("on_error", "On Error"),
-				PortSpec::output("bytes_sent", "Bytes Sent", SocketType::Int),
-				PortSpec::output("error", "Error", SocketType::String),
-			],
+			outputs: send_outputs(),
 			properties: vec![],
 		}
 	}
@@ -205,12 +207,7 @@ impl NodeDescriptor for VrchatChatboxInputNode {
 				PortSpec::input("send_immediately", "Send immediately", SocketType::Bool).with_default(SocketValue::Bool(true)),
 				PortSpec::input("play_notification_sfx", "Play notification SFX", SocketType::Bool).with_default(SocketValue::Bool(true)),
 			],
-			outputs: vec![
-				PortSpec::exec_output("on_success", "On Success"),
-				PortSpec::exec_output("on_error", "On Error"),
-				PortSpec::output("bytes_sent", "Bytes Sent", SocketType::Int),
-				PortSpec::output("error", "Error", SocketType::String),
-			],
+			outputs: send_outputs(),
 			properties: vec![],
 		}
 	}
@@ -255,12 +252,7 @@ impl NodeDescriptor for VrchatChatboxTypingNode {
 				PortSpec::input("port", "Port", SocketType::Int),
 				PortSpec::input("typing", "Typing on", SocketType::Bool),
 			],
-			outputs: vec![
-				PortSpec::exec_output("on_success", "On Success"),
-				PortSpec::exec_output("on_error", "On Error"),
-				PortSpec::output("bytes_sent", "Bytes Sent", SocketType::Int),
-				PortSpec::output("error", "Error", SocketType::String),
-			],
+			outputs: send_outputs(),
 			properties: vec![],
 		}
 	}
@@ -290,11 +282,72 @@ impl EffectfulNode for VrchatChatboxTypingNode {
 mod tests {
 	use super::*;
 
+	fn fired_exec() -> ExecFireSet {
+		let mut fired = ExecFireSet::new();
+		fired.insert("exec_in");
+		fired
+	}
+
+	fn float_inputs(port: i64) -> InputMap {
+		[
+			("host".to_string(), SocketValue::String("127.0.0.1".into())),
+			("port".to_string(), SocketValue::Int(port)),
+			("parameter_name".to_string(), SocketValue::String("Smile".into())),
+			("value".to_string(), SocketValue::Float(0.5)),
+		]
+		.into_iter()
+		.collect()
+	}
+
 	#[tokio::test]
 	async fn float_no_fire_is_noop() {
 		let n = VrchatAvatarParameterFloatNode;
 		let mut ctx = ExecCtx::default();
 		let out = n.execute(&mut ctx, &InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
 		assert!(out.fired_exec.is_empty());
+	}
+
+	#[test]
+	fn vrchat_send_outputs_include_result() {
+		let outputs = send_outputs();
+		let result = outputs.iter().find(|p| p.name == "result").expect("result output");
+		assert_eq!(result.ty, SocketType::Result(Box::new(SocketType::Int)));
+	}
+
+	#[tokio::test]
+	async fn float_send_emits_result_for_success() {
+		let n = VrchatAvatarParameterFloatNode;
+		let mut ctx = ExecCtx::default();
+		let out = n
+			.execute(&mut ctx, &InputMap::new(), &float_inputs(9), &fired_exec())
+			.await
+			.unwrap();
+		assert!(out.fired_exec.contains("on_success"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert!(matches!(result.value.as_deref(), Some(SocketValue::Int(n)) if *n > 0));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+	}
+
+	#[tokio::test]
+	async fn float_send_emits_result_for_error() {
+		let n = VrchatAvatarParameterFloatNode;
+		let mut ctx = ExecCtx::default();
+		let out = n
+			.execute(&mut ctx, &InputMap::new(), &float_inputs(0), &fired_exec())
+			.await
+			.unwrap();
+		assert!(out.fired_exec.contains("on_error"));
+		assert_eq!(out.data.get("bytes_sent"), Some(&SocketValue::Int(0)));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("vrchat.osc.send"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 }

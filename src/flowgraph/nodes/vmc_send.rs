@@ -6,15 +6,35 @@ use crate::flowgraph::node::{
 	get_required_int, get_required_json, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor,
 	NodeExecError, NodeOutput, NodeSpec, PortSpec,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use crate::flowgraph::vmc::{self, VMC_EXT_BONE_POS, VMC_EXT_ROOT_POS};
 use async_trait::async_trait;
 
 fn err_out(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("bytes_sent", SocketValue::Int(0))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("vmc.send")))
 		.fire_exec("on_error")
+}
+
+fn send_outputs() -> Vec<PortSpec> {
+	vec![
+		PortSpec::exec_output("on_success", "On Success"),
+		PortSpec::exec_output("on_error", "On Error"),
+		PortSpec::output("bytes_sent", "Bytes Sent", SocketType::Int),
+		PortSpec::output("error", "Error", SocketType::String),
+		PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Int))),
+	]
+}
+
+fn success_out(bytes_sent: usize) -> NodeOutput {
+	NodeOutput::new()
+		.set_data("bytes_sent", SocketValue::Int(bytes_sent as i64))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Int(bytes_sent as i64))))
+		.fire_exec("on_success")
 }
 
 fn read_pos_rot(inputs: &InputMap) -> Result<([f64; 3], [f64; 4]), NodeExecError> {
@@ -45,12 +65,7 @@ impl NodeDescriptor for VmcSendBonePosNode {
 				PortSpec::input("position", "Position [x,y,z]", SocketType::Json),
 				PortSpec::input("rotation", "Rotation [qx,qy,qz,qw]", SocketType::Json),
 			],
-			outputs: vec![
-				PortSpec::exec_output("on_success", "On Success"),
-				PortSpec::exec_output("on_error", "On Error"),
-				PortSpec::output("bytes_sent", "Bytes Sent", SocketType::Int),
-				PortSpec::output("error", "Error", SocketType::String),
-			],
+			outputs: send_outputs(),
 			properties: vec![],
 		}
 	}
@@ -73,10 +88,7 @@ impl EffectfulNode for VmcSendBonePosNode {
 		let bone = get_required_string(inputs, "bone_name")?;
 		let (pos, rot) = read_pos_rot(inputs)?;
 		match vmc::send_vmc_transform_pos_udp(host.trim(), port, VMC_EXT_BONE_POS, bone.trim(), pos, rot).await {
-			Ok(n) => Ok(NodeOutput::new()
-				.set_data("bytes_sent", SocketValue::Int(n as i64))
-				.set_data("error", SocketValue::String(String::new()))
-				.fire_exec("on_success")),
+			Ok(n) => Ok(success_out(n)),
 			Err(e) => Ok(err_out(e)),
 		}
 	}
@@ -101,12 +113,7 @@ impl NodeDescriptor for VmcSendRootPosNode {
 				PortSpec::input("position", "Position [x,y,z]", SocketType::Json),
 				PortSpec::input("rotation", "Rotation [qx,qy,qz,qw]", SocketType::Json),
 			],
-			outputs: vec![
-				PortSpec::exec_output("on_success", "On Success"),
-				PortSpec::exec_output("on_error", "On Error"),
-				PortSpec::output("bytes_sent", "Bytes Sent", SocketType::Int),
-				PortSpec::output("error", "Error", SocketType::String),
-			],
+			outputs: send_outputs(),
 			properties: vec![],
 		}
 	}
@@ -128,10 +135,7 @@ impl EffectfulNode for VmcSendRootPosNode {
 		let port = get_required_int(inputs, "port")?;
 		let (pos, rot) = read_pos_rot(inputs)?;
 		match vmc::send_vmc_transform_pos_udp(host.trim(), port, VMC_EXT_ROOT_POS, "root", pos, rot).await {
-			Ok(n) => Ok(NodeOutput::new()
-				.set_data("bytes_sent", SocketValue::Int(n as i64))
-				.set_data("error", SocketValue::String(String::new()))
-				.fire_exec("on_success")),
+			Ok(n) => Ok(success_out(n)),
 			Err(e) => Ok(err_out(e)),
 		}
 	}
@@ -140,6 +144,25 @@ impl EffectfulNode for VmcSendRootPosNode {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use serde_json::json;
+
+	fn fired_exec() -> ExecFireSet {
+		let mut fired = ExecFireSet::new();
+		fired.insert("exec_in");
+		fired
+	}
+
+	fn inputs(port: i64) -> InputMap {
+		[
+			("host".to_string(), SocketValue::String("127.0.0.1".into())),
+			("port".to_string(), SocketValue::Int(port)),
+			("bone_name".to_string(), SocketValue::String("Head".into())),
+			("position".to_string(), SocketValue::Json(json!([0.0, 1.0, 2.0]))),
+			("rotation".to_string(), SocketValue::Json(json!([0.0, 0.0, 0.0, 1.0]))),
+		]
+		.into_iter()
+		.collect()
+	}
 
 	#[tokio::test]
 	async fn bone_no_fire_is_noop() {
@@ -147,5 +170,49 @@ mod tests {
 		let mut ctx = ExecCtx::default();
 		let out = n.execute(&mut ctx, &InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
 		assert!(out.fired_exec.is_empty());
+	}
+
+	#[test]
+	fn vmc_send_outputs_include_result() {
+		let outputs = send_outputs();
+		let result = outputs.iter().find(|p| p.name == "result").expect("result output");
+		assert_eq!(result.ty, SocketType::Result(Box::new(SocketType::Int)));
+	}
+
+	#[tokio::test]
+	async fn bone_send_emits_result_for_success() {
+		let n = VmcSendBonePosNode;
+		let mut ctx = ExecCtx::default();
+		let out = n
+			.execute(&mut ctx, &InputMap::new(), &inputs(9), &fired_exec())
+			.await
+			.unwrap();
+		assert!(out.fired_exec.contains("on_success"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert!(matches!(result.value.as_deref(), Some(SocketValue::Int(n)) if *n > 0));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+	}
+
+	#[tokio::test]
+	async fn bone_send_emits_result_for_error() {
+		let n = VmcSendBonePosNode;
+		let mut ctx = ExecCtx::default();
+		let out = n
+			.execute(&mut ctx, &InputMap::new(), &inputs(0), &fired_exec())
+			.await
+			.unwrap();
+		assert!(out.fired_exec.contains("on_error"));
+		assert_eq!(out.data.get("bytes_sent"), Some(&SocketValue::Int(0)));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("vmc.send"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 }

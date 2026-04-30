@@ -3927,6 +3927,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `bytes_sent` | `int` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.vmc.send_root_pos`
 
@@ -3946,6 +3947,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `bytes_sent` | `int` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ## vrchat
 
@@ -3967,6 +3969,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `bytes_sent` | `int` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.vrchat.avatar_parameter_float`
 
@@ -3986,6 +3989,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `bytes_sent` | `int` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.vrchat.avatar_parameter_int`
 
@@ -4005,6 +4009,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `bytes_sent` | `int` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.vrchat.chatbox_input`
 
@@ -4025,6 +4030,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `bytes_sent` | `int` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ### `flowgraph.vrchat.chatbox_typing`
 
@@ -4043,6 +4049,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `bytes_sent` | `int` |  |
 | `error` | `string` |  |
+| `result` | `result<int>` |  |
 
 ## window
 
