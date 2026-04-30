@@ -28,8 +28,9 @@
 use crate::flowgraph::node::{
 	EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use async_trait::async_trait;
+use serde_json::json;
 
 pub struct ScreenshotCaptureNode;
 
@@ -58,6 +59,7 @@ impl NodeDescriptor for ScreenshotCaptureNode {
 				PortSpec::output("width", "Width", SocketType::Int),
 				PortSpec::output("height", "Height", SocketType::Int),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Json))),
 			],
 			properties: vec![],
 		}
@@ -65,13 +67,32 @@ impl NodeDescriptor for ScreenshotCaptureNode {
 }
 
 fn err_output(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("data_url", SocketValue::String(String::new()))
 		.set_data("saved_path", SocketValue::String(String::new()))
 		.set_data("width", SocketValue::Int(0))
 		.set_data("height", SocketValue::Int(0))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("screenshot.capture")))
 		.fire_exec("on_error")
+}
+
+fn success_output(data_url: String, saved_path: String, width: i64, height: i64) -> NodeOutput {
+	let result = json!({
+		"data_url": data_url,
+		"saved_path": saved_path,
+		"width": width,
+		"height": height,
+	});
+	NodeOutput::new()
+		.set_data("data_url", SocketValue::String(data_url))
+		.set_data("saved_path", SocketValue::String(saved_path))
+		.set_data("width", SocketValue::Int(width))
+		.set_data("height", SocketValue::Int(height))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Json(result))))
+		.fire_exec("on_success")
 }
 
 /// クロップ指定は 4 軸それぞれ Option（省略時は元画像の端まで）。V1 互換。
@@ -199,13 +220,7 @@ impl EffectfulNode for ScreenshotCaptureNode {
 
 			let data_url = format!("data:image/png;base64,{}", general_purpose::STANDARD.encode(&png));
 
-			Ok(NodeOutput::new()
-				.set_data("data_url", SocketValue::String(data_url))
-				.set_data("saved_path", SocketValue::String(saved_path))
-				.set_data("width", SocketValue::Int(buf.width as i64))
-				.set_data("height", SocketValue::Int(buf.height as i64))
-				.set_data("error", SocketValue::String(String::new()))
-				.fire_exec("on_success"))
+			Ok(success_output(data_url, saved_path, buf.width as i64, buf.height as i64))
 		}
 	}
 }
@@ -256,6 +271,27 @@ mod tests {
 		assert!(extract_crop(&null).is_none());
 	}
 
+	#[test]
+	fn success_output_includes_result() {
+		let out = success_output("data:image/png;base64,AAA=".into(), "shot.png".into(), 640, 360);
+		assert!(out.fired_exec.contains("on_success"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert_eq!(
+					result.value.as_deref(),
+					Some(&SocketValue::Json(json!({
+						"data_url": "data:image/png;base64,AAA=",
+						"saved_path": "shot.png",
+						"width": 640,
+						"height": 360,
+					})))
+				);
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+	}
+
 	/// 非 Windows では常に on_error が返る。
 	#[cfg(not(target_os = "windows"))]
 	#[tokio::test]
@@ -266,5 +302,12 @@ mod tests {
 		fired.insert("exec_in");
 		let out = node.execute(&mut ctx, &InputMap::new(), &InputMap::new(), &fired).await.unwrap();
 		assert!(out.fired_exec.contains("on_error"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("screenshot.capture"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 }
