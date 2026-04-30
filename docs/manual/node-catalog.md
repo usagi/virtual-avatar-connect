@@ -2930,6 +2930,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `end_time` | `string` |  |
 | `error` | `string` |  |
+| `result` | `result<string>` |  |
 
 ### `flowgraph.twitch.channel_info_update`
 
@@ -3000,6 +3001,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_skipped` | `exec` (out) |  |
 | `sent_text` | `string` |  |
 | `error` | `string` |  |
+| `result` | `result<string>` |  |
 
 ### `flowgraph.twitch.chat_settings_update`
 
@@ -3070,6 +3072,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `access_token` | `string` |  |
 | `client_id` | `string` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.twitch.goals_get`
 
@@ -3294,6 +3297,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `end_time` | `string` |  |
 | `error` | `string` |  |
+| `result` | `result<string>` |  |
 
 ### `flowgraph.twitch.user_id_by_login`
 
@@ -3313,6 +3317,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `on_error` | `exec` (out) |  |
 | `user_id` | `string` |  |
 | `error` | `string` |  |
+| `result` | `result<string>` |  |
 
 ### `flowgraph.twitch.validate_token`
 
@@ -3332,6 +3337,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `login` | `string` |  |
 | `client_id` | `string` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ## unit
 

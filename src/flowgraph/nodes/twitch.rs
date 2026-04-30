@@ -237,6 +237,7 @@ impl NodeDescriptor for GetTokenNode {
 				PortSpec::output("access_token", "Access Token", SocketType::String),
 				PortSpec::output("client_id", "Client ID", SocketType::String),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Json))),
 			],
 			properties: vec![],
 		}
@@ -244,11 +245,26 @@ impl NodeDescriptor for GetTokenNode {
 }
 
 fn get_token_fail(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("access_token", SocketValue::String(String::new()))
 		.set_data("client_id", SocketValue::String(String::new()))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("twitch.get_token")))
 		.fire_exec("on_failure")
+}
+
+fn get_token_success(access_token: String, client_id: String) -> NodeOutput {
+	let value = json!({
+		"access_token": access_token,
+		"client_id": client_id,
+	});
+	NodeOutput::new()
+		.set_data("access_token", SocketValue::String(value["access_token"].as_str().unwrap_or_default().to_string()))
+		.set_data("client_id", SocketValue::String(value["client_id"].as_str().unwrap_or_default().to_string()))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Json(value))))
+		.fire_exec("on_success")
 }
 
 #[async_trait]
@@ -302,11 +318,7 @@ impl EffectfulNode for GetTokenNode {
 		match crate::twitch::oauth::try_load_valid_token_for(&ident).await {
 			Some(token) => {
 				ctx.log(format!("twitch.get_token: resolved token for key='{}'", key));
-				Ok(NodeOutput::new()
-					.set_data("access_token", SocketValue::String(token))
-					.set_data("client_id", SocketValue::String(client_id_for_output))
-					.set_data("error", SocketValue::String(String::new()))
-					.fire_exec("on_success"))
+				Ok(get_token_success(token, client_id_for_output))
 			}
 			None => {
 				let msg = format!("no valid stored token for token_key='{}'", key);
@@ -342,6 +354,7 @@ impl NodeDescriptor for ValidateTokenNode {
 				PortSpec::output("login", "Login", SocketType::String),
 				PortSpec::output("client_id", "Client ID", SocketType::String),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Json))),
 			],
 			properties: vec![],
 		}
@@ -349,12 +362,29 @@ impl NodeDescriptor for ValidateTokenNode {
 }
 
 fn validate_err(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("user_id", SocketValue::String(String::new()))
 		.set_data("login", SocketValue::String(String::new()))
 		.set_data("client_id", SocketValue::String(String::new()))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("twitch.validate_token")))
 		.fire_exec("on_error")
+}
+
+fn validate_success(user_id: String, login: String, client_id: String) -> NodeOutput {
+	let value = json!({
+		"user_id": user_id,
+		"login": login,
+		"client_id": client_id,
+	});
+	NodeOutput::new()
+		.set_data("user_id", SocketValue::String(value["user_id"].as_str().unwrap_or_default().to_string()))
+		.set_data("login", SocketValue::String(value["login"].as_str().unwrap_or_default().to_string()))
+		.set_data("client_id", SocketValue::String(value["client_id"].as_str().unwrap_or_default().to_string()))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Json(value))))
+		.fire_exec("on_success")
 }
 
 #[async_trait]
@@ -409,12 +439,7 @@ impl EffectfulNode for ValidateTokenNode {
 		if user_id.is_empty() || login.is_empty() {
 			return Ok(validate_err(format!("validate レスポンスに user_id/login が欠落: {text}")));
 		}
-		Ok(NodeOutput::new()
-			.set_data("user_id", SocketValue::String(user_id))
-			.set_data("login", SocketValue::String(login))
-			.set_data("client_id", SocketValue::String(client_id))
-			.set_data("error", SocketValue::String(String::new()))
-			.fire_exec("on_success"))
+		Ok(validate_success(user_id, login, client_id))
 	}
 }
 
@@ -443,6 +468,7 @@ impl NodeDescriptor for UserIdByLoginNode {
 				PortSpec::exec_output("on_error", "On Error"),
 				PortSpec::output("user_id", "User ID", SocketType::String),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::String))),
 			],
 			properties: vec![],
 		}
@@ -450,10 +476,20 @@ impl NodeDescriptor for UserIdByLoginNode {
 }
 
 fn user_id_err(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("user_id", SocketValue::String(String::new()))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("twitch.user_id_by_login")))
 		.fire_exec("on_error")
+}
+
+fn user_id_success(user_id: String) -> NodeOutput {
+	NodeOutput::new()
+		.set_data("user_id", SocketValue::String(user_id.clone()))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::String(user_id))))
+		.fire_exec("on_success")
 }
 
 #[async_trait]
@@ -513,10 +549,7 @@ impl EffectfulNode for UserIdByLoginNode {
 		if uid.is_empty() {
 			return Ok(user_id_err(format!("login '{normalized}' の user_id が見つかりません: {text}")));
 		}
-		Ok(NodeOutput::new()
-			.set_data("user_id", SocketValue::String(uid))
-			.set_data("error", SocketValue::String(String::new()))
-			.fire_exec("on_success"))
+		Ok(user_id_success(uid))
 	}
 }
 
@@ -553,6 +586,7 @@ impl NodeDescriptor for ChatSendNode {
     PortSpec::exec_output("on_skipped", "On Skipped"),
     PortSpec::output("sent_text", "Sent Text", SocketType::String),
     PortSpec::output("error", "Error", SocketType::String),
+	PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::String))),
    ],
    properties: vec![],
   }
@@ -560,9 +594,11 @@ impl NodeDescriptor for ChatSendNode {
 }
 
 fn chat_send_err(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("sent_text", SocketValue::String(String::new()))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("twitch.chat_send")))
 		.fire_exec("on_error")
 }
 
@@ -570,7 +606,16 @@ fn chat_send_skipped() -> NodeOutput {
 	NodeOutput::new()
 		.set_data("sent_text", SocketValue::String(String::new()))
 		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::String(String::new()))))
 		.fire_exec("on_skipped")
+}
+
+fn chat_send_success(sent_text: String) -> NodeOutput {
+	NodeOutput::new()
+		.set_data("sent_text", SocketValue::String(sent_text.clone()))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::String(sent_text))))
+		.fire_exec("on_success")
 }
 
 #[async_trait]
@@ -637,10 +682,7 @@ impl EffectfulNode for ChatSendNode {
 		if !status.is_success() {
 			return Ok(chat_send_err(format!("POST /chat/messages HTTP {status}: {body_text}")));
 		}
-		Ok(NodeOutput::new()
-			.set_data("sent_text", SocketValue::String(text))
-			.set_data("error", SocketValue::String(String::new()))
-			.fire_exec("on_success"))
+		Ok(chat_send_success(text))
 	}
 }
 
@@ -681,18 +723,29 @@ fn moderation_ban_outputs() -> Vec<PortSpec> {
 		PortSpec::exec_output("on_error", "On Error"),
 		PortSpec::output("end_time", "End Time (ISO8601)", SocketType::String),
 		PortSpec::output("error", "Error", SocketType::String),
+		PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::String))),
 	]
 }
 
-fn moderation_err(msg: impl Into<String>) -> NodeOutput {
+fn moderation_err(msg: impl Into<String>, code: &'static str) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("end_time", SocketValue::String(String::new()))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code(code)))
 		.fire_exec("on_error")
 }
 
+fn moderation_success(end_time: String) -> NodeOutput {
+	NodeOutput::new()
+		.set_data("end_time", SocketValue::String(end_time.clone()))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::String(end_time))))
+		.fire_exec("on_success")
+}
+
 /// `duration_secs` が `Some(d)` で d>0 なら timeout、None/0 以下なら永久 ban。
-async fn execute_moderation_ban(inputs: &InputMap, duration_secs: Option<i64>) -> Result<NodeOutput, NodeExecError> {
+async fn execute_moderation_ban(inputs: &InputMap, duration_secs: Option<i64>, result_code: &'static str) -> Result<NodeOutput, NodeExecError> {
 	let user_id = get_required_string(inputs, "user_id")?;
 	let broadcaster_id = get_required_string(inputs, "broadcaster_id")?;
 	let moderator_id = get_required_string(inputs, "moderator_id")?;
@@ -702,13 +755,13 @@ async fn execute_moderation_ban(inputs: &InputMap, duration_secs: Option<i64>) -
 	let reason = clip_chars(reason_raw.trim(), MODERATION_REASON_MAX_CHARS);
 
 	if user_id.trim().is_empty() {
-		return Ok(moderation_err("user_id が空です"));
+		return Ok(moderation_err("user_id が空です", result_code));
 	}
 	if broadcaster_id.trim().is_empty() || moderator_id.trim().is_empty() {
-		return Ok(moderation_err("broadcaster_id / moderator_id が空です"));
+		return Ok(moderation_err("broadcaster_id / moderator_id が空です", result_code));
 	}
 	if access_token.trim().is_empty() || client_id.trim().is_empty() {
-		return Ok(moderation_err("access_token / client_id が空です"));
+		return Ok(moderation_err("access_token / client_id が空です", result_code));
 	}
 
 	let mut body_data = serde_json::Map::new();
@@ -720,7 +773,7 @@ async fn execute_moderation_ban(inputs: &InputMap, duration_secs: Option<i64>) -
 		if !(1..=TIMEOUT_MAX_SECS).contains(&d) {
 			return Ok(moderation_err(format!(
 				"duration_secs は 1..={TIMEOUT_MAX_SECS} の範囲でなければなりません（指定値: {d}）"
-			)));
+			), result_code));
 		}
 		body_data.insert("duration".into(), JsonValue::Number(d.into()));
 	}
@@ -730,7 +783,7 @@ async fn execute_moderation_ban(inputs: &InputMap, duration_secs: Option<i64>) -
 	let base = if endpoint.trim().is_empty() { HELIX } else { endpoint.trim() };
 	let client = match http_client() {
 		Ok(c) => c,
-		Err(e) => return Ok(moderation_err(e)),
+		Err(e) => return Ok(moderation_err(e, result_code)),
 	};
 	let url = format!(
 		"{base}/moderation/bans?broadcaster_id={}&moderator_id={}",
@@ -746,12 +799,12 @@ async fn execute_moderation_ban(inputs: &InputMap, duration_secs: Option<i64>) -
 		.await
 	{
 		Ok(r) => r,
-		Err(e) => return Ok(moderation_err(format!("POST /moderation/bans 送信失敗: {e}"))),
+		Err(e) => return Ok(moderation_err(format!("POST /moderation/bans 送信失敗: {e}"), result_code)),
 	};
 	let status = resp.status();
 	let body_text = resp.text().await.unwrap_or_default();
 	if !status.is_success() {
-		return Ok(moderation_err(format!("POST /moderation/bans HTTP {status}: {body_text}")));
+		return Ok(moderation_err(format!("POST /moderation/bans HTTP {status}: {body_text}"), result_code));
 	}
 	// レスポンスから end_time（timeout のみ値あり、ban は null）を拾う。
 	let end_time = serde_json::from_str::<JsonValue>(&body_text)
@@ -764,10 +817,7 @@ async fn execute_moderation_ban(inputs: &InputMap, duration_secs: Option<i64>) -
 		.and_then(JsonValue::as_str)
 		.map(str::to_owned)
 		.unwrap_or_default();
-	Ok(NodeOutput::new()
-		.set_data("end_time", SocketValue::String(end_time))
-		.set_data("error", SocketValue::String(String::new()))
-		.fire_exec("on_success"))
+	Ok(moderation_success(end_time))
 }
 
 pub struct BanNode;
@@ -800,7 +850,7 @@ impl EffectfulNode for BanNode {
 		if !fired_exec.contains("exec_in") {
 			return Ok(NodeOutput::new());
 		}
-		execute_moderation_ban(inputs, None).await
+		execute_moderation_ban(inputs, None, "twitch.ban").await
 	}
 }
 
@@ -836,7 +886,7 @@ impl EffectfulNode for TimeoutNode {
 			return Ok(NodeOutput::new());
 		}
 		let duration = get_required_int(inputs, "duration_secs")?;
-		execute_moderation_ban(inputs, Some(duration)).await
+		execute_moderation_ban(inputs, Some(duration), "twitch.timeout").await
 	}
 }
 
@@ -1751,6 +1801,45 @@ mod tests {
 				assert!(!result.ok);
 				assert_eq!(result.error.as_deref(), Some("boom"));
 				assert_eq!(result.code.as_deref(), Some("twitch.request"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+	}
+
+	#[test]
+	fn twitch_individual_outputs_include_result() {
+		let get_token = get_token_fail("boom");
+		match get_token.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("twitch.get_token"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+
+		let validate = validate_success("u".into(), "login".into(), "cid".into());
+		match validate.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert!(matches!(result.value.as_deref(), Some(SocketValue::Json(value)) if value["user_id"] == "u"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+
+		let chat = chat_send_success("hello".into());
+		match chat.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert_eq!(result.value.as_deref(), Some(&SocketValue::String("hello".into())));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
+
+		let moderation = moderation_err("nope", "twitch.timeout");
+		match moderation.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("twitch.timeout"));
 			}
 			other => panic!("expected result, got {other:?}"),
 		}
