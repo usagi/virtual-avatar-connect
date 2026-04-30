@@ -8,13 +8,15 @@ use crate::flowgraph::node::{
 	NodeExecError, NodeOutput, NodeSpec, PortSpec,
 };
 use crate::flowgraph::osc;
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use async_trait::async_trait;
 
 fn err_out(msg: impl Into<String>) -> NodeOutput {
+	let msg = msg.into();
 	NodeOutput::new()
 		.set_data("bytes_sent", SocketValue::Int(0))
-		.set_data("error", SocketValue::String(msg.into()))
+		.set_data("error", SocketValue::String(msg.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(msg).with_code("osc.send")))
 		.fire_exec("on_error")
 }
 
@@ -41,6 +43,7 @@ impl NodeDescriptor for OscSendNode {
 				PortSpec::exec_output("on_error", "On Error"),
 				PortSpec::output("bytes_sent", "Bytes Sent", SocketType::Int),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Int))),
 			],
 			properties: vec![],
 		}
@@ -70,6 +73,7 @@ impl EffectfulNode for OscSendNode {
 			Ok(n) => Ok(NodeOutput::new()
 				.set_data("bytes_sent", SocketValue::Int(n as i64))
 				.set_data("error", SocketValue::String(String::new()))
+				.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Int(n as i64))))
 				.fire_exec("on_success")),
 			Err(e) => Ok(err_out(e)),
 		}
@@ -79,6 +83,24 @@ impl EffectfulNode for OscSendNode {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use serde_json::json;
+
+	fn fired_exec() -> ExecFireSet {
+		let mut fired = ExecFireSet::new();
+		fired.insert("exec_in");
+		fired
+	}
+
+	fn inputs(path: &str) -> InputMap {
+		[
+			("host".into(), SocketValue::String("127.0.0.1".into())),
+			("port".into(), SocketValue::Int(9)),
+			("path".into(), SocketValue::String(path.into())),
+			("args".into(), SocketValue::Json(json!([null]))),
+		]
+		.into_iter()
+		.collect()
+	}
 
 	#[tokio::test]
 	async fn no_fire_is_noop() {
@@ -86,5 +108,38 @@ mod tests {
 		let mut ctx = ExecCtx::default();
 		let out = node.execute(&mut ctx, &InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
 		assert!(out.fired_exec.is_empty());
+	}
+
+	#[tokio::test]
+	async fn osc_send_emits_result_for_success() {
+		let node = OscSendNode;
+		let mut ctx = ExecCtx::default();
+		let out = node.execute(&mut ctx, &InputMap::new(), &inputs("/vac/test"), &fired_exec()).await.unwrap();
+		assert!(out.fired_exec.contains("on_success"));
+		assert_eq!(out.data.get("error"), Some(&SocketValue::String(String::new())));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert!(matches!(result.value.as_deref(), Some(SocketValue::Int(n)) if *n > 0));
+			}
+			_ => panic!("expected Result"),
+		}
+	}
+
+	#[tokio::test]
+	async fn osc_send_emits_result_for_error() {
+		let node = OscSendNode;
+		let mut ctx = ExecCtx::default();
+		let out = node.execute(&mut ctx, &InputMap::new(), &inputs("not/slash"), &fired_exec()).await.unwrap();
+		assert!(out.fired_exec.contains("on_error"));
+		assert_eq!(out.data.get("bytes_sent"), Some(&SocketValue::Int(0)));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("osc.send"));
+				assert!(result.error.as_deref().unwrap_or_default().contains('/'));
+			}
+			_ => panic!("expected Result"),
+		}
 	}
 }

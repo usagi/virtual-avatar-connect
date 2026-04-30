@@ -533,6 +533,12 @@ parse 成功時は `ok=true` と `result<json>` の value を返し、失敗時�
 `"2 km"` / `"9.8 m/s^2"` / `"42"` のような既存 Quantity literal parser を使い、失敗時は halt せず `result<quantity>` と `code = "unit.parse"` を返す。
 既存の `flowgraph.unit.assign` / `flowgraph.unit.convert` の halt 挙動は維持し、外部入力や GUI 入力から来る単位付き数値だけを fallback 可能な経路へ流せるようにした。
 
+### LF-6f OSC send result output ✅
+
+`flowgraph.osc.send` に `result: result<int>` 出力を追加した。
+既存の `on_success` / `on_error` / `bytes_sent` / `error` は維持し、UDP 送信成功時は送信 byte 数を `result` value として返す。
+OSC encode / UDP send 失敗は `code = "osc.send"` の recoverable error として downstream に流せるようにした。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
