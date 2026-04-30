@@ -7,7 +7,7 @@ use crate::flowgraph::node::{
 	get_optional_bool, get_optional_int, get_optional_string, get_required_int, get_required_json, get_required_list, get_required_string,
 	EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec,
 };
-use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
 use async_trait::async_trait;
 use serde_json::{json, Value as JsonValue};
 use std::process::Stdio;
@@ -43,6 +43,7 @@ impl NodeDescriptor for ProcessSpawnNode {
 				PortSpec::output("stdout", "Stdout", SocketType::String),
 				PortSpec::output("stderr", "Stderr", SocketType::String),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Json))),
 			],
 			properties: vec![],
 		}
@@ -77,12 +78,7 @@ impl EffectfulNode for ProcessSpawnNode {
 					result.exit_code.unwrap_or(-1)
 				));
 				let ok = result.exit_code.map(|code| code == 0).unwrap_or(true);
-				let out = NodeOutput::new()
-					.set_data("pid", SocketValue::Int(result.pid.map(u32_to_i64).unwrap_or(0)))
-					.set_data("exit_code", SocketValue::Int(result.exit_code.unwrap_or(-1)))
-					.set_data("stdout", SocketValue::String(result.stdout))
-					.set_data("stderr", SocketValue::String(result.stderr))
-					.set_data("error", SocketValue::String(String::new()));
+				let out = spawn_output(&result, ok);
 				Ok(if ok {
 					out.fire_exec("on_success")
 				} else {
@@ -116,6 +112,7 @@ impl NodeDescriptor for ProcessRunningNode {
 				PortSpec::output("count", "Count", SocketType::Int),
 				PortSpec::output("pids", "PIDs", SocketType::Json),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Json))),
 			],
 			properties: vec![],
 		}
@@ -161,6 +158,7 @@ impl NodeDescriptor for ProcessKillNode {
 				PortSpec::output("killed_count", "Killed Count", SocketType::Int),
 				PortSpec::output("pids", "PIDs", SocketType::Json),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Json))),
 			],
 			properties: vec![],
 		}
@@ -215,6 +213,7 @@ impl NodeDescriptor for ProcessWaitNode {
 				PortSpec::output("exited", "Exited", SocketType::Bool),
 				PortSpec::output("exit_code", "Exit Code", SocketType::Int),
 				PortSpec::output("error", "Error", SocketType::String),
+				PortSpec::output("result", "Result", SocketType::Result(Box::new(SocketType::Bool))),
 			],
 			properties: vec![],
 		}
@@ -238,10 +237,7 @@ impl EffectfulNode for ProcessWaitNode {
 		let poll_interval_ms = get_optional_int(inputs, "poll_interval_ms", 250)?.clamp(10, 10_000) as u64;
 		let exited = wait_until_exit(pid, Duration::from_millis(timeout_ms), Duration::from_millis(poll_interval_ms)).await;
 		ctx.log(format!("process.wait: pid={} exited={}", pid, exited));
-		let out = NodeOutput::new()
-			.set_data("exited", SocketValue::Bool(exited))
-			.set_data("exit_code", SocketValue::Int(-1))
-			.set_data("error", SocketValue::String(String::new()));
+		let out = wait_output(pid, exited);
 		Ok(if exited {
 			out.fire_exec("on_exit")
 		} else {
@@ -430,28 +426,84 @@ fn is_pid_alive(pid: u32) -> bool {
 }
 
 fn process_query_output(pids: Vec<u32>) -> NodeOutput {
+	let value = json!({
+		"running": !pids.is_empty(),
+		"count": pids.len(),
+		"pids": pids,
+	});
 	NodeOutput::new()
-		.set_data("running", SocketValue::Bool(!pids.is_empty()))
-		.set_data("count", SocketValue::Int(pids.len() as i64))
-		.set_data("pids", SocketValue::Json(json!(pids)))
+		.set_data("running", SocketValue::Bool(value["running"].as_bool().unwrap_or(false)))
+		.set_data("count", SocketValue::Int(value["count"].as_i64().unwrap_or(0)))
+		.set_data("pids", SocketValue::Json(value["pids"].clone()))
 		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(FlowResult::ok(SocketValue::Json(value))))
 }
 
 fn kill_output(pids: Vec<u32>, killed_count: i64, error: impl Into<String>) -> NodeOutput {
+	let error = error.into();
+	let value = json!({
+		"killed_count": killed_count,
+		"pids": pids,
+	});
+	let result = if error.is_empty() && killed_count > 0 {
+		FlowResult::ok(SocketValue::Json(value.clone()))
+	} else {
+		let msg = if error.is_empty() { "no process killed".to_string() } else { error.clone() };
+		FlowResult::err(msg).with_code("process.kill")
+	};
 	NodeOutput::new()
 		.set_data("killed_count", SocketValue::Int(killed_count))
-		.set_data("pids", SocketValue::Json(json!(pids)))
-		.set_data("error", SocketValue::String(error.into()))
+		.set_data("pids", SocketValue::Json(value["pids"].clone()))
+		.set_data("error", SocketValue::String(error))
+		.set_data("result", SocketValue::Result(result))
 }
 
 fn process_error_output(e: impl Into<String>) -> NodeOutput {
+	let error = e.into();
 	NodeOutput::new()
 		.set_data("pid", SocketValue::Int(0))
 		.set_data("exit_code", SocketValue::Int(-1))
 		.set_data("stdout", SocketValue::String(String::new()))
 		.set_data("stderr", SocketValue::String(String::new()))
-		.set_data("error", SocketValue::String(e.into()))
+		.set_data("error", SocketValue::String(error.clone()))
+		.set_data("result", SocketValue::Result(FlowResult::err(error).with_code("process.spawn")))
 		.fire_exec("on_error")
+}
+
+fn spawn_output(result: &SpawnResult, ok: bool) -> NodeOutput {
+	let pid = result.pid.map(u32_to_i64).unwrap_or(0);
+	let exit_code = result.exit_code.unwrap_or(-1);
+	let value = json!({
+		"pid": pid,
+		"exit_code": exit_code,
+		"stdout": result.stdout,
+		"stderr": result.stderr,
+	});
+	let flow_result = if ok {
+		FlowResult::ok(SocketValue::Json(value.clone()))
+	} else {
+		FlowResult::err(format!("process exited with code {exit_code}")).with_code("process.spawn")
+	};
+	NodeOutput::new()
+		.set_data("pid", SocketValue::Int(pid))
+		.set_data("exit_code", SocketValue::Int(exit_code))
+		.set_data("stdout", SocketValue::String(result.stdout.clone()))
+		.set_data("stderr", SocketValue::String(result.stderr.clone()))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(flow_result))
+}
+
+fn wait_output(pid: u32, exited: bool) -> NodeOutput {
+	let result = if exited {
+		FlowResult::ok(SocketValue::Bool(true))
+	} else {
+		FlowResult::err(format!("timeout waiting for pid {pid}")).with_code("process.wait")
+	};
+	NodeOutput::new()
+		.set_data("exited", SocketValue::Bool(exited))
+		.set_data("exit_code", SocketValue::Int(-1))
+		.set_data("error", SocketValue::String(String::new()))
+		.set_data("result", SocketValue::Result(result))
 }
 
 fn i64_to_pid_u32(v: i64) -> Result<u32, NodeExecError> {
@@ -521,6 +573,13 @@ mod tests {
 			.unwrap();
 		assert!(matches!(out.data.get("running"), Some(SocketValue::Bool(true))));
 		assert!(matches!(out.data.get("count"), Some(SocketValue::Int(1))));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert!(matches!(result.value.as_deref(), Some(SocketValue::Json(value)) if value["running"] == true));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 		assert!(out.fired_exec.contains("exec_out"));
 	}
 
@@ -542,7 +601,32 @@ mod tests {
 			.await
 			.unwrap();
 		assert!(matches!(out.data.get("exit_code"), Some(SocketValue::Int(0))));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert!(matches!(result.value.as_deref(), Some(SocketValue::Json(value)) if value["exit_code"] == 0));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 		assert!(out.fired_exec.contains("on_success"));
+	}
+
+	#[tokio::test]
+	async fn kill_without_selector_reports_result_error() {
+		let mut ctx = ExecCtx::default();
+		let inputs = InputMap::new();
+		let out = ProcessKillNode
+			.execute(&mut ctx, &InputMap::new(), &inputs, &exec_in_fire())
+			.await
+			.unwrap();
+		assert!(out.fired_exec.contains("on_error"));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(!result.ok);
+				assert_eq!(result.code.as_deref(), Some("process.kill"));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 	}
 
 	#[tokio::test]
@@ -559,6 +643,13 @@ mod tests {
 			.await
 			.unwrap();
 		assert!(matches!(out.data.get("exited"), Some(SocketValue::Bool(true))));
+		match out.data.get("result").unwrap() {
+			SocketValue::Result(result) => {
+				assert!(result.ok);
+				assert_eq!(result.value.as_deref(), Some(&SocketValue::Bool(true)));
+			}
+			other => panic!("expected result, got {other:?}"),
+		}
 		assert!(out.fired_exec.contains("on_exit"));
 	}
 }

@@ -2386,6 +2386,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `killed_count` | `int` |  |
 | `pids` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.process.running`
 
@@ -2405,6 +2406,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `count` | `int` |  |
 | `pids` | `json` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.process.spawn`
 
@@ -2429,6 +2431,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `stdout` | `string` |  |
 | `stderr` | `string` |  |
 | `error` | `string` |  |
+| `result` | `result<json>` |  |
 
 ### `flowgraph.process.wait`
 
@@ -2448,6 +2451,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | `exited` | `bool` |  |
 | `exit_code` | `int` |  |
 | `error` | `string` |  |
+| `result` | `result<bool>` |  |
 
 ## random
 
