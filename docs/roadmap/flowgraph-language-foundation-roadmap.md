@@ -599,6 +599,12 @@ Channel 終端ノードの失敗も downstream が result contract で扱える�
 既存の `on_success` / `on_error` / `exec_out` / `on_exit` / `on_timeout` と個別 data port は維持し、spawn/running/kill は `result<json>`、wait は `result<bool>` を返す。
 失敗時は `code = "process.spawn"` / `process.kill` / `process.wait` の recoverable error として downstream に流せるようにした。
 
+### LF-6q Window result output ✅
+
+`flowgraph.window.enum` と window action 系ノードに `result` 出力を追加した。
+既存の `exec_out` / `on_success` / `on_error` と `windows` / `count` / `affected_count` / `error` は維持し、enum は `result<table>`、action は `result<int>` を返す。
+失敗時は `code = "window.enum"` または `window.action` の recoverable error として downstream に流せるようにした。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
