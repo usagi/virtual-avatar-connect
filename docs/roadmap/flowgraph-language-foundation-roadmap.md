@@ -503,6 +503,24 @@ WASM は Flowgraph の主表現ではなく、module / package system の実行�
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
 Resident I/O と SQLite、Google Sheets、OBS template で必須になる。
 
+### LF-6a first-class `result<T>` socket type ✅
+
+recoverable error を Flowgraph の値として扱うため、`SocketType::Result(Box<SocketType>)` と `SocketValue::Result` を追加した。
+wire 表現は `{ ok, value?, error?, code? }` の JSON object とし、JSON / TOML default 復元と nested value の coerce に対応した。
+既存の fatal `NodeExecError` と recoverable `result<T>` を分離し、ノードごとに段階移行できる土台を作った。
+
+### LF-6b HTTP request result output ✅
+
+`flowgraph.http.request` に `result: result<json>` 出力を追加した。
+既存の `on_success` / `on_error` / `ok` / `status` / `body` / `json` / `error` は維持し、互換性を壊さず値として成功・失敗を下流へ渡せるようにした。
+HTTP status error は `code = "http.status"`、request failure は `code = "http.request"` として扱う。
+
+### LF-6c JSON try-parse result node ✅
+
+既存の `flowgraph.json.parse` は失敗時 halt のまま残し、新規 `flowgraph.json.try_parse` を追加した。
+parse 成功時は `ok=true` と `result<json>` の value を返し、失敗時は halt せず `ok=false` / `error` / `code = "json.parse"` を返す。
+これにより PureNode 側でも recoverable error を扱う最初の経路ができた。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
