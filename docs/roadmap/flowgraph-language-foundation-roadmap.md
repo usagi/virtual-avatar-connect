@@ -587,6 +587,12 @@ OCR 結果を downstream が result contract で扱えるようにした。
 既存の `on_success` / `on_error` / `table` / `row_count` / `bytes_written` / `error` は維持し、成功時は読み込んだ Table または書き込み byte 数、失敗時は `code = "table.load_tsv"` または `code = "table.write_tsv"` の recoverable error を返す。
 Table I/O を downstream が result contract で扱えるようにした。
 
+### LF-6o Channel emit result output ✅
+
+`flowgraph.channel.emit` に `result: result<bool>` 出力を追加した。
+既存の `exec_out` / `on_error` は維持し、成功時は `true`、失敗時は `code = "channel.emit"` の recoverable error を返す。
+Channel 終端ノードの失敗も downstream が result contract で扱えるようにした。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
