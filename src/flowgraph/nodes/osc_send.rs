@@ -4,8 +4,8 @@
 //! エンコード・送信の本体は [`crate::flowgraph::osc`]。
 
 use crate::flowgraph::node::{
-	get_required_int, get_required_json, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor,
-	NodeExecError, NodeOutput, NodeSpec, PortSpec,
+	get_required_int, get_required_json, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError,
+	NodeOutput, NodeSpec, PortSpec,
 };
 use crate::flowgraph::osc;
 use crate::flowgraph::socket::{FlowResult, SocketType, SocketValue};
@@ -28,9 +28,7 @@ impl NodeDescriptor for OscSendNode {
 			feature: "flowgraph.osc.send".into(),
 			title: "OSC: UDP Send".into(),
 			category: "osc".into(),
-			description: Some(
-				"単一 OSC メッセージを UDP で送信する。args は JSON 配列（数値・文字列・真偽・null・ネスト配列）".into(),
-			),
+			description: Some("単一 OSC メッセージを UDP で送信する。args は JSON 配列（数値・文字列・真偽・null・ネスト配列）".into()),
 			inputs: vec![
 				PortSpec::exec_input("exec_in", "Exec"),
 				PortSpec::input("host", "Host", SocketType::String),
@@ -106,7 +104,10 @@ mod tests {
 	async fn no_fire_is_noop() {
 		let node = OscSendNode;
 		let mut ctx = ExecCtx::default();
-		let out = node.execute(&mut ctx, &InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
+		let out = node
+			.execute(&mut ctx, &InputMap::new(), &InputMap::new(), &ExecFireSet::new())
+			.await
+			.unwrap();
 		assert!(out.fired_exec.is_empty());
 	}
 
@@ -114,7 +115,10 @@ mod tests {
 	async fn osc_send_emits_result_for_success() {
 		let node = OscSendNode;
 		let mut ctx = ExecCtx::default();
-		let out = node.execute(&mut ctx, &InputMap::new(), &inputs("/vac/test"), &fired_exec()).await.unwrap();
+		let out = node
+			.execute(&mut ctx, &InputMap::new(), &inputs("/vac/test"), &fired_exec())
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("on_success"));
 		assert_eq!(out.data.get("error"), Some(&SocketValue::String(String::new())));
 		match out.data.get("result").unwrap() {
@@ -130,7 +134,10 @@ mod tests {
 	async fn osc_send_emits_result_for_error() {
 		let node = OscSendNode;
 		let mut ctx = ExecCtx::default();
-		let out = node.execute(&mut ctx, &InputMap::new(), &inputs("not/slash"), &fired_exec()).await.unwrap();
+		let out = node
+			.execute(&mut ctx, &InputMap::new(), &inputs("not/slash"), &fired_exec())
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("on_error"));
 		assert_eq!(out.data.get("bytes_sent"), Some(&SocketValue::Int(0)));
 		match out.data.get("result").unwrap() {
