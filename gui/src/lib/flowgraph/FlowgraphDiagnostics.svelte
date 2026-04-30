@@ -50,6 +50,7 @@
     ),
   );
   const capabilityNodes = $derived(capabilitySummary?.nodes ?? []);
+  const stateNodes = $derived(capabilitySummary?.state_nodes ?? []);
 </script>
 
 <div class="h-full">
@@ -99,6 +100,33 @@
                   {node.capabilities
                     .map((capability) => capabilityLabel(capability))
                     .join(", ") || node.effect_class}
+                </span>
+              </div>
+            {/each}
+          </div>
+        </details>
+      {/if}
+      {#if stateNodes.length > 0}
+        <details class="mt-1">
+          <summary class="cursor-pointer select-none text-[0.65rem] opacity-60">
+            state nodes {stateNodes.length} / volatile {capabilitySummary.volatile_state_node_count}
+          </summary>
+          <div class="mt-1 grid gap-1">
+            {#each stateNodes as node (node.node)}
+              <div
+                class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(8rem,auto)_minmax(8rem,auto)] items-center gap-2 text-[0.65rem]"
+              >
+                <span class="truncate font-mono" title={node.node}
+                  >{node.node}</span
+                >
+                <span class="truncate font-mono opacity-70" title={node.feature}
+                  >{node.feature}</span
+                >
+                <span class="truncate text-right opacity-70" title={`${node.scope} / ${node.storage} / ${node.lifetime}`}>
+                  {node.storage} / {node.lifetime}
+                </span>
+                <span class="truncate text-right opacity-70" title={`snapshot: ${node.snapshot_policy}, persistence: ${node.persistence_policy}`}>
+                  snapshot {node.snapshot_policy} / persist {node.persistence_policy}
                 </span>
               </div>
             {/each}
