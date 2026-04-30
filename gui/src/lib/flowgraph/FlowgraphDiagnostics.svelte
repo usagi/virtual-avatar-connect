@@ -122,10 +122,16 @@
                 <span class="truncate font-mono opacity-70" title={node.feature}
                   >{node.feature}</span
                 >
-                <span class="truncate text-right opacity-70" title={`${node.scope} / ${node.storage} / ${node.lifetime}`}>
+                <span
+                  class="truncate text-right opacity-70"
+                  title={`${node.scope} / ${node.storage} / ${node.lifetime}`}
+                >
                   {node.storage} / {node.lifetime}
                 </span>
-                <span class="truncate text-right opacity-70" title={`snapshot: ${node.snapshot_policy}, persistence: ${node.persistence_policy}`}>
+                <span
+                  class="truncate text-right opacity-70"
+                  title={`snapshot: ${node.snapshot_policy}, persistence: ${node.persistence_policy}`}
+                >
                   snapshot {node.snapshot_policy} / persist {node.persistence_policy}
                 </span>
               </div>
