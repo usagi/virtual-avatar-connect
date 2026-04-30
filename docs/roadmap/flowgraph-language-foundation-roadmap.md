@@ -557,6 +557,12 @@ VMC pose 送信ノードと VRChat OSC 送信ノードに `result: result<int>` 
 既存の `on_success` / `on_error` / `bytes_sent` / `error` は維持し、UDP 送信成功時は送信 byte 数、失敗時は `code = "vmc.send"` または `code = "vrchat.osc.send"` の recoverable error を返す。
 OSC 系送信ノード全体で bytes-sent result contract を揃えた。
 
+### LF-6j Translate result output ✅
+
+LibreTranslate / GAS 翻訳ノードに `result: result<string>` 出力を追加した。
+既存の `on_success` / `on_error` / `translated` / `detected_lang` / `error` は維持し、成功時は翻訳後 text、失敗時は `code = "translate.libre"` または `code = "translate.gas"` の recoverable error を返す。
+翻訳系ノードで downstream が共通の result contract を使えるようにした。
+
 ### LF-7 Persistence / State Model
 
 StatefulNode の state 寿命、reload 時保持、profile-local/global、snapshot/migration を定義する。
