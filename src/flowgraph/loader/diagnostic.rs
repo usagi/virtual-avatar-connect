@@ -63,6 +63,8 @@ pub enum DiagnosticCode {
 	InvalidModeMetadata,
 	/// RM-3: `[meta].mode_groups` の名前が、いかなる `[modes].flowgraph_groups` でも使われていない。
 	OrphanModeGroup,
+	/// LF-7: load-time state snapshot restore failed.
+	StateRestore,
 }
 
 /// 単一診断メッセージ。

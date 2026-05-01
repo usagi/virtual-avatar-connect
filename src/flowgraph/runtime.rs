@@ -17,7 +17,7 @@ use crate::flowgraph::activation::{mode_group_orphan_diagnostics, TriggerGate};
 use crate::flowgraph::loader::{Diagnostic, FlowgraphFileActivationMeta, GraphCapabilitySummary, LoadedNodeMeta, Severity};
 use crate::flowgraph::node::PureEvalHost;
 use crate::flowgraph::node::TriggerHandle;
-use crate::flowgraph::{ProgramStateSnapshot, ProgramStateSummary};
+use crate::flowgraph::{ProgramStateRestoreReport, ProgramStateSnapshot, ProgramStateSummary};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -101,11 +101,35 @@ impl FlowgraphRuntime {
 		rt
 	}
 
+	/// `load` と同じ diagnostic-only runtime を返すが、ロード後 metadata を作る前に
+	/// 明示 snapshot を restore する。profile-local persistence / reload restore の接続点。
+	pub fn load_with_state_snapshot(root_dir: &std::path::Path, snapshot: &ProgramStateSnapshot) -> Self {
+		let (rt, _program, _restore) = Self::load_program_with_state_snapshot(root_dir, snapshot);
+		rt
+	}
+
 	/// `load` と違い、ロードした program を第 2 戻り値で返す内部ユーティリティ。
 	/// `(runtime_meta, Option<program>)` のペア。
 	pub fn load_program(root_dir: &std::path::Path) -> (Self, Option<crate::flowgraph::FlowgraphProgram>) {
+		let (rt, program, _restore) = Self::load_program_inner(root_dir, None);
+		(rt, program)
+	}
+
+	/// `load_program` と同じくロードした program も返すが、metadata 生成前に snapshot を restore する。
+	/// restore に失敗した場合は error diagnostic を持つ runtime と `None` program を返す。
+	pub fn load_program_with_state_snapshot(
+		root_dir: &std::path::Path,
+		snapshot: &ProgramStateSnapshot,
+	) -> (Self, Option<crate::flowgraph::FlowgraphProgram>, Option<ProgramStateRestoreReport>) {
+		Self::load_program_inner(root_dir, Some(snapshot))
+	}
+
+	fn load_program_inner(
+		root_dir: &std::path::Path,
+		initial_state_snapshot: Option<&ProgramStateSnapshot>,
+	) -> (Self, Option<crate::flowgraph::FlowgraphProgram>, Option<ProgramStateRestoreReport>) {
 		if !root_dir.exists() {
-			return (Self::empty(root_dir.to_path_buf()), None);
+			return (Self::empty(root_dir.to_path_buf()), None, None);
 		}
 		if !root_dir.is_dir() {
 			return (
@@ -125,18 +149,45 @@ impl FlowgraphRuntime {
 					handle: None,
 				},
 				None,
+				None,
 			);
 		}
 		match crate::flowgraph::load_flowgraph_dir(root_dir) {
 			Ok(report) => {
 				let crate::flowgraph::LoadReport {
-					program,
-					diagnostics,
+					mut program,
+					mut diagnostics,
 					node_meta,
 					capability_summary,
 					file_activation,
 					..
 				} = report;
+				let state_restore = if let Some(snapshot) = initial_state_snapshot {
+					match program.restore_state_snapshot(snapshot) {
+						Ok(report) => Some(report),
+						Err(error) => {
+							diagnostics.push(Diagnostic::error(
+								crate::flowgraph::DiagnosticCode::StateRestore,
+								format!("state snapshot restore failed: {error}"),
+							));
+							let rt = Self {
+								root_dir: root_dir.to_path_buf(),
+								ok: false,
+								diagnostics,
+								node_meta,
+								capability_summary,
+								loaded_state_summary: program.state_summary(),
+								loaded_state_snapshot: program.export_state_snapshot(),
+								file_activation,
+								trigger_gate: None,
+								handle: None,
+							};
+							return (rt, None, None);
+						}
+					}
+				} else {
+					None
+				};
 				let loaded_state_summary = program.state_summary();
 				let loaded_state_snapshot = program.export_state_snapshot();
 				let has_nodes = !node_meta.is_empty();
@@ -152,7 +203,7 @@ impl FlowgraphRuntime {
 					trigger_gate: None,
 					handle: None,
 				};
-				(rt, if has_nodes { Some(program) } else { None })
+				(rt, if has_nodes { Some(program) } else { None }, state_restore)
 			}
 			Err(crate::flowgraph::LoadError { diagnostics }) => (
 				Self {
@@ -167,6 +218,7 @@ impl FlowgraphRuntime {
 					trigger_gate: None,
 					handle: None,
 				},
+				None,
 				None,
 			),
 		}
@@ -259,12 +311,30 @@ impl FlowgraphRuntime {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::flowgraph::{ProgramStateSnapshotNode, StateSnapshotFormat};
+
+	fn state_counter_root() -> std::path::PathBuf {
+		std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+			.join("flowgraph.example")
+			.join("state-counter")
+	}
+
+	fn counter_snapshot(node: &str, feature: &str, version: u64, value: i64) -> ProgramStateSnapshot {
+		ProgramStateSnapshot {
+			snapshot_node_count: 1,
+			nodes: vec![ProgramStateSnapshotNode {
+				node: node.into(),
+				feature: feature.into(),
+				version,
+				format: StateSnapshotFormat::Json,
+				value: serde_json::json!({ "value": value }),
+			}],
+		}
+	}
 
 	#[test]
 	fn load_reports_loaded_state_summary_and_snapshot() {
-		let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-			.join("flowgraph.example")
-			.join("state-counter");
+		let root = state_counter_root();
 		let rt = FlowgraphRuntime::load(&root);
 
 		assert!(rt.ok, "diagnostics: {:#?}", rt.diagnostics);
@@ -277,6 +347,41 @@ mod tests {
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].node, "main::counter");
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].version, 0);
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].value, serde_json::json!({ "value": 0 }));
+	}
+
+	#[test]
+	fn load_program_with_state_snapshot_restores_before_metadata() {
+		let root = state_counter_root();
+		let snapshot = counter_snapshot("main::counter", "flowgraph.state.int_counter", 41, 41);
+		let (rt, program, restore) = FlowgraphRuntime::load_program_with_state_snapshot(&root, &snapshot);
+
+		assert!(rt.ok, "diagnostics: {:#?}", rt.diagnostics);
+		let restore = restore.expect("restore report");
+		assert_eq!(restore.restored_node_count, 1);
+		assert_eq!(restore.nodes[0].node, "main::counter");
+		assert_eq!(restore.nodes[0].version, 41);
+		assert!(program.is_some());
+		assert_eq!(rt.loaded_state_summary.nodes[0].node, "main::counter");
+		assert_eq!(rt.loaded_state_summary.nodes[0].version, 41);
+		assert_eq!(rt.loaded_state_snapshot.snapshot_node_count, 1);
+		assert_eq!(rt.loaded_state_snapshot.nodes[0].node, "main::counter");
+		assert_eq!(rt.loaded_state_snapshot.nodes[0].version, 41);
+		assert_eq!(rt.loaded_state_snapshot.nodes[0].value, serde_json::json!({ "value": 41 }));
+	}
+
+	#[test]
+	fn load_program_with_state_snapshot_reports_restore_error() {
+		let root = state_counter_root();
+		let snapshot = counter_snapshot("main::counter", "flowgraph.state.bool", 1, 1);
+		let (rt, program, restore) = FlowgraphRuntime::load_program_with_state_snapshot(&root, &snapshot);
+
+		assert!(!rt.ok);
+		assert!(program.is_none());
+		assert!(restore.is_none());
+		assert!(rt.diagnostics.iter().any(|diagnostic| {
+			diagnostic.code == crate::flowgraph::DiagnosticCode::StateRestore
+				&& diagnostic.message.contains("feature mismatch")
+		}));
 	}
 }
 

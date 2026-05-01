@@ -864,7 +864,10 @@ export type FlowgraphDiagnosticCode =
   | "duplicate-enum-id"
   | "invalid-enum-definition"
   | "unknown-library-ref"
-  | "library-dependency-cycle";
+  | "library-dependency-cycle"
+  | "invalid-mode-metadata"
+  | "orphan-mode-group"
+  | "state-restore";
 
 export type FlowgraphDiagnostic = {
   severity: FlowgraphSeverity;
