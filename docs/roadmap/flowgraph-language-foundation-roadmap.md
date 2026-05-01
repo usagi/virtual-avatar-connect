@@ -745,6 +745,12 @@ GUI diagnostics の summary 行にも snapshots / restores の件数を追加し
 GUI diagnostics の loaded state details も snapshot-capable / restore-capable / exported snapshots を並べて表示し、Control API の graph summary と runtime summary の語彙を揃えた。
 現段階では read-only metadata の追加に留め、live worker state の取得や自動 restore はまだ導入しない。
 
+### LF-7w Control API state metadata manual ✅
+
+`docs/manual/conf-reference.md` に `GET /api/v1/control/flowgraph/diagnostics` の state metadata を追記し、`capability_summary` と `loaded_state_summary` / `loaded_state_snapshot` の役割を manual から確認できるようにした。
+`docs/manual/v1-to-v2-migration.md` の debug notes にも、diagnostics JSON の state 系 field が reload 直後の read-only metadata であり live worker state ではないことを明記した。
+併せて `FlowgraphRuntime::load()` の regression test で `loaded_state_summary.restore_supported_node_count` を固定し、runtime diagnostics 側の restore support count が落ちないようにした。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
