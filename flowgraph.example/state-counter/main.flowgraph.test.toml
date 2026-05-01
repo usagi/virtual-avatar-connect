@@ -1,3 +1,10 @@
+[[state_snapshots]]
+node = "main::counter"
+feature = "flowgraph.state.int_counter"
+version = 41
+format = "json"
+value = { value = 41 }
+
 [[triggers]]
 node = "main::in"
 
@@ -12,16 +19,16 @@ effect_count = 0
 
 [[tests.expect.state_versions]]
 node = "main::counter"
-version = 1
+version = 42
 
 [[tests.expect.state_snapshots]]
 node = "main::counter"
-version = 1
+version = 42
 format = "json"
-value = { value = 1 }
+value = { value = 42 }
 
 [[tests.expect.stored_values]]
 node = "main::counter"
 port = "value"
 ty = "int"
-value = 1
+value = 42

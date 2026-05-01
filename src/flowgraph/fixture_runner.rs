@@ -10,7 +10,10 @@ use crate::flowgraph::node::{
 	EffectMocks, ExecCtx, FileReadMockResponse, FileWriteMockResponse, HttpMockResponse, SocketValueRepr, TriggerEvent,
 };
 use crate::flowgraph::socket::{from_toml_value, SocketType};
-use crate::flowgraph::{load_flowgraph_dir, FlowgraphProgram, LoadError, NodeExecError, ProgramRun, ProgramStateSnapshot};
+use crate::flowgraph::{
+	load_flowgraph_dir, FlowgraphProgram, LoadError, NodeExecError, ProgramRun, ProgramStateSnapshot, ProgramStateSnapshotNode,
+	StateRestoreError, StateSnapshotFormat,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -49,6 +52,13 @@ pub enum FixtureError {
 		node: String,
 		reason: String,
 	},
+	StateSnapshotValue {
+		path: PathBuf,
+		index: usize,
+		field: String,
+		reason: String,
+	},
+	StateRestore(StateRestoreError),
 }
 
 impl std::fmt::Display for FixtureError {
@@ -77,6 +87,17 @@ impl std::fmt::Display for FixtureError {
 				)
 			}
 			FixtureError::TriggerSend { node, reason } => write!(f, "trigger send failed: node={node}: {reason}"),
+			FixtureError::StateSnapshotValue {
+				path,
+				index,
+				field,
+				reason,
+			} => write!(
+				f,
+				"state snapshot parse failed: {} state_snapshots#{index} field={field}: {reason}",
+				path.display()
+			),
+			FixtureError::StateRestore(e) => write!(f, "state restore failed: {e}"),
 		}
 	}
 }
@@ -195,11 +216,23 @@ struct FixtureTestFile {
 	#[serde(default)]
 	mocks: FixtureMockSpec,
 	#[serde(default)]
+	state_snapshots: Vec<FixtureStateSnapshotSpec>,
+	#[serde(default)]
 	triggers: Vec<FixtureTriggerSpec>,
 	#[serde(default)]
 	test: Option<FixtureTestCase>,
 	#[serde(default)]
 	tests: Vec<FixtureTestCase>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureStateSnapshotSpec {
+	node: String,
+	feature: String,
+	version: u64,
+	#[serde(default = "default_state_snapshot_format")]
+	format: String,
+	value: toml::Value,
 }
 
 struct ParsedFixtureTestFile {
@@ -419,6 +452,13 @@ pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, Fi
 	let node_count = fixture.program.node_ids().count();
 	let capability_summary = fixture.capability_summary.clone();
 	let declared_tests = read_declared_tests(root)?;
+	let initial_state_snapshot = build_initial_state_snapshot(&declared_tests)?;
+	if initial_state_snapshot.snapshot_node_count > 0 {
+		fixture
+			.program
+			.restore_state_snapshot(&initial_state_snapshot)
+			.map_err(FixtureError::StateRestore)?;
+	}
 	let (run, ctx, mock_summaries, trigger_history) = run_fixture_program(&mut fixture.program, &declared_tests).await?;
 	let state_snapshot = fixture.program.export_state_snapshot();
 	let mut report = make_report(
@@ -823,8 +863,46 @@ fn default_trigger_exec() -> Vec<String> {
 	vec!["__trigger__".into()]
 }
 
+fn default_state_snapshot_format() -> String {
+	"json".into()
+}
+
 fn default_http_mock_status() -> i64 {
 	200
+}
+
+fn build_initial_state_snapshot(declared_tests: &[ParsedFixtureTestFile]) -> Result<ProgramStateSnapshot, FixtureError> {
+	let mut nodes = Vec::new();
+	for file in declared_tests {
+		for (index, snapshot) in file.parsed.state_snapshots.iter().enumerate() {
+			let format = parse_state_snapshot_format(&snapshot.format).map_err(|reason| FixtureError::StateSnapshotValue {
+				path: file.path.clone(),
+				index,
+				field: "format".into(),
+				reason,
+			})?;
+			nodes.push(ProgramStateSnapshotNode {
+				node: snapshot.node.clone(),
+				feature: snapshot.feature.clone(),
+				version: snapshot.version,
+				format,
+				value: toml_value_to_json(&snapshot.value),
+			});
+		}
+	}
+	nodes.sort_by(|a, b| a.node.cmp(&b.node));
+	Ok(ProgramStateSnapshot {
+		snapshot_node_count: nodes.len(),
+		nodes,
+	})
+}
+
+fn parse_state_snapshot_format(format: &str) -> Result<StateSnapshotFormat, String> {
+	match format {
+		"json" => Ok(StateSnapshotFormat::Json),
+		"none" => Ok(StateSnapshotFormat::None),
+		other => Err(format!("unknown state snapshot format '{other}'")),
+	}
 }
 
 fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report: &FixtureRunReport) -> FixtureTestResult {
@@ -1272,11 +1350,11 @@ mod tests {
 		let dir = example_dir("state-counter");
 		let report = run_fixture_once_report(&dir).await.expect("report");
 		assert!(report.ok, "report: {:?}", report.tests);
-		assert_eq!(report.state_versions, vec![("main::counter".into(), 1)]);
+		assert_eq!(report.state_versions, vec![("main::counter".into(), 42)]);
 		assert_eq!(report.state_snapshots.len(), 1);
 		assert_eq!(report.state_snapshots[0].node, "main::counter");
 		assert_eq!(report.state_snapshots[0].format, "json");
-		assert_eq!(report.state_snapshots[0].value, serde_json::json!({ "value": 1 }));
+		assert_eq!(report.state_snapshots[0].value, serde_json::json!({ "value": 42 }));
 		assert_eq!(report.failed_tests, 0);
 	}
 
