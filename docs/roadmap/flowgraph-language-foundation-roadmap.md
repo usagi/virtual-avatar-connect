@@ -799,6 +799,12 @@ hash は profile path と flowgraph root を正規化した文字列から作る
 snapshot file の JSON parse / schema validation / count validation に失敗した場合は `state-restore` diagnostic として報告し、worker に渡す program を返さない。
 この段階では明示 helper の追加に留め、profile-local path からの自動読込や runtime 起動時の暗黙 restore はまだ接続しない。
 
+### LF-7af Explicit spawn restore from snapshot file ✅
+
+`FlowgraphRuntime::load_and_spawn_with_state_snapshot_file()` を追加し、snapshot file envelope を明示指定した場合に restore 済み program をそのまま worker 起動できるようにした。
+既存の `load_and_spawn()` と spawn 後半を共有することで、mode gate / pure host / shutdown handle の組み立ては従来経路と揃えている。
+この段階では明示 API の追加に留め、profile-local path からの自動読込や reload 時の暗黙 restore はまだ接続しない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
