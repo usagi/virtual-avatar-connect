@@ -15,7 +15,7 @@ use crate::flowgraph::node::{
 	TriggerHandle,
 };
 use crate::flowgraph::socket::{coerce_to_type, SocketType, SocketValue};
-use crate::flowgraph::FlowgraphStateModel;
+use crate::flowgraph::{FlowgraphStateModel, StateSnapshotFormat};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::future::Future;
@@ -209,6 +209,50 @@ impl FlowgraphProgram {
 			snapshot_node_count: nodes.len(),
 			nodes,
 		}
+	}
+
+	pub fn restore_state_snapshot(&mut self, snapshot: &ProgramStateSnapshot) -> Result<ProgramStateRestoreReport, StateRestoreError> {
+		let mut nodes = Vec::new();
+		for item in &snapshot.nodes {
+			let node = self
+				.nodes
+				.get_mut(&item.node)
+				.ok_or_else(|| StateRestoreError::UnknownNode { node: item.node.clone() })?;
+			let spec = node.impl_.describe();
+			if spec.feature != item.feature {
+				return Err(StateRestoreError::FeatureMismatch {
+					node: item.node.clone(),
+					expected: spec.feature,
+					actual: item.feature.clone(),
+				});
+			}
+			let state_model = node.impl_.state_model();
+			if !state_model.restore_supported {
+				return Err(StateRestoreError::UnsupportedNode { node: item.node.clone() });
+			}
+			if state_model.snapshot_format != item.format {
+				return Err(StateRestoreError::FormatMismatch {
+					node: item.node.clone(),
+					expected: state_model.snapshot_format,
+					actual: item.format,
+				});
+			}
+			node.impl_.restore_state(&item.value).map_err(|detail| StateRestoreError::InvalidPayload {
+				node: item.node.clone(),
+				detail,
+			})?;
+			node.state_version = item.version;
+			node.cache.clear();
+			nodes.push(ProgramStateRestoreNode {
+				node: item.node.clone(),
+				feature: item.feature.clone(),
+				version: item.version,
+			});
+		}
+		Ok(ProgramStateRestoreReport {
+			restored_node_count: nodes.len(),
+			nodes,
+		})
 	}
 
 	/// 1-shot 実行: 全ソースノードを初期発火して完走させる。event loop は `run_forever`。
@@ -618,8 +662,39 @@ pub struct ProgramStateSnapshotNode {
 	pub node: NodeId,
 	pub feature: String,
 	pub version: u64,
-	pub format: crate::flowgraph::StateSnapshotFormat,
+	pub format: StateSnapshotFormat,
 	pub value: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ProgramStateRestoreReport {
+	pub restored_node_count: usize,
+	pub nodes: Vec<ProgramStateRestoreNode>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ProgramStateRestoreNode {
+	pub node: NodeId,
+	pub feature: String,
+	pub version: u64,
+}
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum StateRestoreError {
+	#[error("state restore target node '{node}' does not exist")]
+	UnknownNode { node: NodeId },
+	#[error("state restore target node '{node}' feature mismatch: expected '{expected}', snapshot has '{actual}'")]
+	FeatureMismatch { node: NodeId, expected: String, actual: String },
+	#[error("state restore target node '{node}' does not support restore")]
+	UnsupportedNode { node: NodeId },
+	#[error("state restore target node '{node}' format mismatch: expected '{expected:?}', snapshot has '{actual:?}'")]
+	FormatMismatch {
+		node: NodeId,
+		expected: StateSnapshotFormat,
+		actual: StateSnapshotFormat,
+	},
+	#[error("state restore target node '{node}' payload is invalid: {detail}")]
+	InvalidPayload { node: NodeId, detail: String },
 }
 
 // ---------------------------------------------------------------------
@@ -1068,6 +1143,7 @@ mod tests {
 		assert_eq!(before.nodes[0].version, 0);
 		assert!(before.nodes[0].state_model.snapshot_supported);
 		assert_eq!(before.nodes[0].state_model.snapshot_format, crate::flowgraph::StateSnapshotFormat::Json);
+		assert!(before.nodes[0].state_model.restore_supported);
 		let initial_snapshot = prog.export_state_snapshot();
 		assert_eq!(initial_snapshot.snapshot_node_count, 1);
 		assert_eq!(initial_snapshot.nodes[0].value, serde_json::json!({ "value": 0 }));
@@ -1082,6 +1158,23 @@ mod tests {
 		assert_eq!(snapshot.nodes[0].version, 1);
 		assert_eq!(snapshot.nodes[0].format, crate::flowgraph::StateSnapshotFormat::Json);
 		assert_eq!(snapshot.nodes[0].value, serde_json::json!({ "value": 1 }));
+
+		let mut restored_builder = FlowgraphBuilder::new();
+		restored_builder.add_node("seq", NodeImpl::pure(Arc::new(SequenceNode::new(1))), InputMap::new());
+		restored_builder.add_node("counter", NodeImpl::stateful(Arc::new(IntCounterNode)), InputMap::new());
+		restored_builder.connect_exec(PortRef::new("seq", "exec_1"), PortRef::new("counter", "increment"));
+		let mut restored = restored_builder.build().unwrap();
+		let restore_report = restored.restore_state_snapshot(&snapshot).unwrap();
+		assert_eq!(restore_report.restored_node_count, 1);
+		assert_eq!(restore_report.nodes[0].node, "counter");
+		let restored_summary = restored.state_summary();
+		assert_eq!(restored_summary.nodes[0].version, 1);
+		assert_eq!(restored.export_state_snapshot().nodes[0].value, serde_json::json!({ "value": 1 }));
+
+		let _run = restored.execute(&mut ExecCtx::default()).await.unwrap();
+		let restored_after = restored.export_state_snapshot();
+		assert_eq!(restored_after.nodes[0].version, 2);
+		assert_eq!(restored_after.nodes[0].value, serde_json::json!({ "value": 2 }));
 	}
 
 	// ----- Branch の dead-port elimination ---------------------------------

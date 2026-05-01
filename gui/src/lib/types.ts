@@ -1109,7 +1109,7 @@ export type FlowgraphStateNode = {
   snapshot_policy: "unsupported" | "explicit";
   snapshot_format: "none" | "json";
   restore_supported: boolean;
-  restore_policy: "unsupported";
+  restore_policy: "unsupported" | "explicit";
   migration_policy: "none";
   persistence_policy: "none";
 };

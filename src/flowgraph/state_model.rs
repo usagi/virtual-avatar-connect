@@ -43,6 +43,7 @@ pub enum StateSnapshotFormat {
 #[serde(rename_all = "snake_case")]
 pub enum StateRestorePolicy {
 	Unsupported,
+	Explicit,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -130,8 +131,8 @@ impl FlowgraphStateModel {
 			snapshot_supported: true,
 			snapshot_policy: StateSnapshotPolicy::Explicit,
 			snapshot_format: StateSnapshotFormat::Json,
-			restore_supported: false,
-			restore_policy: StateRestorePolicy::Unsupported,
+			restore_supported: true,
+			restore_policy: StateRestorePolicy::Explicit,
 			migration_policy: StateMigrationPolicy::None,
 			persistence_policy: StatePersistencePolicy::None,
 		}

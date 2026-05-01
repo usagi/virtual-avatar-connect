@@ -878,6 +878,10 @@ pub trait StatefulNode: NodeDescriptor {
 		None
 	}
 
+	fn restore_state(&self, _state: &mut (dyn Any + Send), _value: &JsonValue) -> Result<(), String> {
+		Err("state restore is unsupported".to_string())
+	}
+
 	async fn compute(
 		&self,
 		state: &mut (dyn Any + Send),
@@ -959,6 +963,13 @@ impl NodeImpl {
 		match self {
 			NodeImpl::Stateful { node, state } => node.snapshot_state(state.as_ref()),
 			NodeImpl::Pure(_) | NodeImpl::Effectful(_) => None,
+		}
+	}
+
+	pub fn restore_state(&mut self, value: &JsonValue) -> Result<(), String> {
+		match self {
+			NodeImpl::Stateful { node, state } => node.restore_state(state.as_mut(), value),
+			NodeImpl::Pure(_) | NodeImpl::Effectful(_) => Err("node is not stateful".to_string()),
 		}
 	}
 }
