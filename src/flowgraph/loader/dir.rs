@@ -466,6 +466,8 @@ mod tests {
 			report.capability_summary.volatile_state_node_count,
 			report.capability_summary.state_nodes.len()
 		);
+		assert_eq!(report.capability_summary.snapshot_supported_state_node_count, 1);
+		assert_eq!(report.capability_summary.restore_supported_state_node_count, 1);
 		assert!(report.capability_summary.state_nodes.iter().any(|node| {
 			node.feature == "flowgraph.util.rate_limit"
 				&& node.scope == crate::flowgraph::StateScope::NodeInstance

@@ -203,6 +203,10 @@ pub struct GraphCapabilitySummary {
 	pub stateful_node_count: usize,
 	#[serde(default)]
 	pub volatile_state_node_count: usize,
+	#[serde(default)]
+	pub snapshot_supported_state_node_count: usize,
+	#[serde(default)]
+	pub restore_supported_state_node_count: usize,
 	pub capabilities: Vec<String>,
 	pub capability_counts: BTreeMap<String, usize>,
 	pub nodes: Vec<GraphCapabilityNode>,
@@ -299,6 +303,8 @@ impl GraphCapabilitySummary {
 			effectful_node_count,
 			stateful_node_count,
 			volatile_state_node_count: state_nodes.iter().filter(|node| node.storage == StateStorage::Volatile).count(),
+			snapshot_supported_state_node_count: state_nodes.iter().filter(|node| node.snapshot_supported).count(),
+			restore_supported_state_node_count: state_nodes.iter().filter(|node| node.restore_supported).count(),
 			capabilities: capabilities.into_iter().collect(),
 			capability_counts,
 			nodes,

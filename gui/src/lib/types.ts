@@ -1166,6 +1166,8 @@ export type FlowgraphCapabilitySummary = {
   effectful_node_count: number;
   stateful_node_count: number;
   volatile_state_node_count: number;
+  snapshot_supported_state_node_count: number;
+  restore_supported_state_node_count: number;
   capabilities: string[];
   capability_counts: Record<string, number>;
   nodes: FlowgraphCapabilityNode[];

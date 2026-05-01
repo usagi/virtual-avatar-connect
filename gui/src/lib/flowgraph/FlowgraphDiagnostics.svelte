@@ -71,7 +71,8 @@
       <div class="flex flex-wrap items-center gap-2">
         <span class="font-mono text-[0.7rem] opacity-70">
           nodes {capabilitySummary.node_count} / effects {capabilitySummary.effectful_node_count}
-          / state {capabilitySummary.stateful_node_count}
+          / state {capabilitySummary.stateful_node_count} / snapshots {capabilitySummary.snapshot_supported_state_node_count}
+          / restores {capabilitySummary.restore_supported_state_node_count}
         </span>
         {#if capabilityCounts.length > 0}
           <span class="opacity-50">capabilities</span>
