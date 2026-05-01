@@ -19,10 +19,12 @@ use crate::flowgraph::node::{
 	StatefulNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::FlowgraphStateModel;
 use async_trait::async_trait;
+use serde_json::Value as JsonValue;
 use std::any::Any;
 use std::collections::VecDeque;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub struct RateLimitNode;
 
@@ -57,6 +59,59 @@ impl NodeDescriptor for RateLimitNode {
 impl StatefulNode for RateLimitNode {
 	fn init_state(&self) -> Box<dyn Any + Send> {
 		Box::new(RateLimitState::default())
+	}
+
+	fn state_model(&self) -> FlowgraphStateModel {
+		FlowgraphStateModel::volatile_node_instance_json_snapshot()
+	}
+
+	fn snapshot_state(&self, state: &(dyn Any + Send)) -> Option<JsonValue> {
+		let state = state.downcast_ref::<RateLimitState>()?;
+		let now = Instant::now();
+		let recent_elapsed_ms: Vec<u64> = state
+			.recent
+			.iter()
+			.map(|instant| duration_ms_u64(now.checked_duration_since(*instant).unwrap_or_default()))
+			.collect();
+		Some(serde_json::json!({
+			"recorded_at_unix_ms": unix_time_ms(),
+			"recent_elapsed_ms": recent_elapsed_ms,
+		}))
+	}
+
+	fn restore_state(&self, state: &mut (dyn Any + Send), value: &JsonValue) -> Result<(), String> {
+		let state = state
+			.downcast_mut::<RateLimitState>()
+			.ok_or_else(|| "RateLimitState downcast failed".to_string())?;
+		let restored_recent = value
+			.get("recent_elapsed_ms")
+			.and_then(|value| value.as_array())
+			.ok_or_else(|| "expected object with array field 'recent_elapsed_ms'".to_string())?;
+		let recorded_at_unix_ms = match value.get("recorded_at_unix_ms") {
+			Some(value) => Some(
+				value
+					.as_u64()
+					.ok_or_else(|| "expected integer field 'recorded_at_unix_ms'".to_string())?,
+			),
+			None => None,
+		};
+		let now = Instant::now();
+		let now_unix_ms = unix_time_ms();
+		let mut recent = VecDeque::new();
+		for value in restored_recent {
+			let elapsed_ms = value
+				.as_u64()
+				.ok_or_else(|| "expected array field 'recent_elapsed_ms' to contain integers".to_string())?;
+			let restored_elapsed_ms = if let Some(recorded_at_unix_ms) = recorded_at_unix_ms {
+				let event_unix_ms = recorded_at_unix_ms.saturating_sub(elapsed_ms);
+				now_unix_ms.saturating_sub(event_unix_ms)
+			} else {
+				elapsed_ms
+			};
+			recent.push_back(instant_from_elapsed_ms(now, restored_elapsed_ms));
+		}
+		state.recent = recent;
+		Ok(())
 	}
 
 	async fn compute(
@@ -100,6 +155,25 @@ impl StatefulNode for RateLimitNode {
 				.fire_exec("on_deny"))
 		}
 	}
+}
+
+fn unix_time_ms() -> u64 {
+	duration_ms_u64(SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default())
+}
+
+fn duration_ms_u64(duration: Duration) -> u64 {
+	duration.as_millis().min(u128::from(u64::MAX)) as u64
+}
+
+fn instant_from_elapsed_ms(now: Instant, elapsed_ms: u64) -> Instant {
+	let mut duration = Duration::from_millis(elapsed_ms.min(3_600_000));
+	while duration > Duration::ZERO {
+		if let Some(instant) = now.checked_sub(duration) {
+			return instant;
+		}
+		duration /= 2;
+	}
+	now
 }
 
 #[cfg(test)]
@@ -199,5 +273,75 @@ mod tests {
 		assert!(out.fired_exec.is_empty());
 		let remaining = out.data.get("remaining").and_then(|v| v.as_i64().ok()).unwrap();
 		assert_eq!(remaining, 4);
+	}
+
+	#[tokio::test]
+	async fn snapshot_restore_preserves_rate_limit_budget() {
+		let node = RateLimitNode;
+		let mut st: Box<dyn Any + Send> = node.init_state();
+		let mut fired = ExecFireSet::new();
+		fired.insert("exec_in");
+		let ctx = StatefulCtx {
+			node_id: "rl",
+			trigger: None,
+		};
+
+		assert!(node.state_model().snapshot_supported);
+		assert!(node.state_model().restore_supported);
+		for _ in 0..2 {
+			let out = node
+				.compute(st.as_mut(), &InputMap::new(), &inputs_with(2, 10_000), &fired, &ctx)
+				.await
+				.unwrap();
+			assert!(out.fired_exec.contains("on_allow"));
+		}
+		let snapshot = node.snapshot_state(st.as_ref()).expect("snapshot");
+		assert!(snapshot.get("recorded_at_unix_ms").and_then(|value| value.as_u64()).is_some());
+		assert_eq!(
+			snapshot
+				.get("recent_elapsed_ms")
+				.and_then(|value| value.as_array())
+				.map(|values| values.len()),
+			Some(2)
+		);
+
+		let mut restored: Box<dyn Any + Send> = node.init_state();
+		node.restore_state(restored.as_mut(), &snapshot).unwrap();
+		let out = node
+			.compute(restored.as_mut(), &InputMap::new(), &inputs_with(2, 10_000), &fired, &ctx)
+			.await
+			.unwrap();
+		assert!(out.fired_exec.contains("on_deny"));
+	}
+
+	#[tokio::test]
+	async fn restore_with_recorded_wall_time_expires_old_entries() {
+		let node = RateLimitNode;
+		let mut st: Box<dyn Any + Send> = node.init_state();
+		let mut fired = ExecFireSet::new();
+		fired.insert("exec_in");
+		let ctx = StatefulCtx {
+			node_id: "rl",
+			trigger: None,
+		};
+
+		node.restore_state(
+			st.as_mut(),
+			&serde_json::json!({
+				"recorded_at_unix_ms": 0,
+				"recent_elapsed_ms": [0, 0],
+			}),
+		)
+		.unwrap();
+		let out = node
+			.compute(st.as_mut(), &InputMap::new(), &inputs_with(2, 50), &fired, &ctx)
+			.await
+			.unwrap();
+		assert!(out.fired_exec.contains("on_allow"));
+		assert_eq!(
+			node.restore_state(st.as_mut(), &serde_json::json!({ "recent_elapsed_ms": [null] }))
+				.unwrap_err(),
+			"expected array field 'recent_elapsed_ms' to contain integers"
+		);
 	}
 }

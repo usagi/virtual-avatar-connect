@@ -466,16 +466,16 @@ mod tests {
 			report.capability_summary.volatile_state_node_count,
 			report.capability_summary.state_nodes.len()
 		);
-		assert_eq!(report.capability_summary.snapshot_supported_state_node_count, 4);
-		assert_eq!(report.capability_summary.restore_supported_state_node_count, 4);
+		assert_eq!(report.capability_summary.snapshot_supported_state_node_count, 5);
+		assert_eq!(report.capability_summary.restore_supported_state_node_count, 5);
 		assert!(report.capability_summary.state_nodes.iter().any(|node| {
 			node.feature == "flowgraph.util.rate_limit"
 				&& node.scope == crate::flowgraph::StateScope::NodeInstance
 				&& node.storage == crate::flowgraph::StateStorage::Volatile
-				&& node.snapshot_policy == crate::flowgraph::StateSnapshotPolicy::Unsupported
-				&& node.snapshot_format == crate::flowgraph::StateSnapshotFormat::None
-				&& !node.restore_supported
-				&& node.restore_policy == crate::flowgraph::StateRestorePolicy::Unsupported
+				&& node.snapshot_policy == crate::flowgraph::StateSnapshotPolicy::Explicit
+				&& node.snapshot_format == crate::flowgraph::StateSnapshotFormat::Json
+				&& node.restore_supported
+				&& node.restore_policy == crate::flowgraph::StateRestorePolicy::Explicit
 				&& node.migration_policy == crate::flowgraph::StateMigrationPolicy::None
 				&& node.persistence_policy == crate::flowgraph::StatePersistencePolicy::None
 		}));

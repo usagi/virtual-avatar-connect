@@ -24,6 +24,7 @@ node_count = 15
 trigger_count = 1
 trace_count = 2
 effect_count = 0
+state_snapshot_count = 1
 
 [[tests.expect.trigger_history]]
 node = "main::in"
@@ -38,6 +39,11 @@ value = "hello fixture"
 [[tests.expect.state_versions]]
 node = "main::gate"
 version = 1
+
+[[tests.expect.state_snapshots]]
+node = "main::gate"
+version = 1
+format = "json"
 
 [[tests.expect.stored_values]]
 node = "main::gate"

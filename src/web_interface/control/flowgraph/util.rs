@@ -590,9 +590,11 @@ mod tests {
 
 		let rate_limit = &specs["flowgraph.util.rate_limit"]["state_model"];
 		assert_eq!(rate_limit["stateful"].as_bool(), Some(true));
-		assert_eq!(rate_limit["snapshot_supported"].as_bool(), Some(false));
-		assert_eq!(rate_limit["snapshot_policy"].as_str(), Some("unsupported"));
-		assert_eq!(rate_limit["snapshot_format"].as_str(), Some("none"));
+		assert_eq!(rate_limit["snapshot_supported"].as_bool(), Some(true));
+		assert_eq!(rate_limit["snapshot_policy"].as_str(), Some("explicit"));
+		assert_eq!(rate_limit["snapshot_format"].as_str(), Some("json"));
+		assert_eq!(rate_limit["restore_supported"].as_bool(), Some(true));
+		assert_eq!(rate_limit["restore_policy"].as_str(), Some("explicit"));
 
 		for feature in ["flowgraph.literal.string", "flowgraph.table.write_tsv"] {
 			let state_model = &specs[feature]["state_model"];

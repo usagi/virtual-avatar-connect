@@ -331,6 +331,7 @@ struct FixtureExpect {
 	trace_contains: Vec<String>,
 	effect_count: Option<usize>,
 	state_restore_count: Option<usize>,
+	state_snapshot_count: Option<usize>,
 	#[serde(default)]
 	trigger_history: Vec<FixtureExpectedTriggerHistory>,
 	#[serde(default)]
@@ -400,7 +401,8 @@ struct FixtureExpectedStateSnapshot {
 	version: Option<u64>,
 	#[serde(default)]
 	format: Option<String>,
-	value: toml::Value,
+	#[serde(default)]
+	value: Option<toml::Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -995,6 +997,14 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 			));
 		}
 	}
+	if let Some(expected) = case.expect.state_snapshot_count {
+		if report.state_snapshots.len() != expected {
+			failures.push(format!(
+				"state_snapshot_count: expected {expected}, actual {}",
+				report.state_snapshots.len()
+			));
+		}
+	}
 	if let Some(expected) = &case.expect.trace {
 		if &report.trace != expected {
 			failures.push(format!("trace: expected {expected:?}, actual {:?}", report.trace));
@@ -1081,14 +1091,16 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 						));
 					}
 				}
-				let expected_value = toml_value_to_json(&expected.value);
-				if actual.value != expected_value {
-					failures.push(format!(
-						"state_snapshot {} value: expected {}, actual {}",
-						expected.node,
-						compact_json(&expected_value),
-						compact_json(&actual.value)
-					));
+				if let Some(expected_value) = &expected.value {
+					let expected_value = toml_value_to_json(expected_value);
+					if actual.value != expected_value {
+						failures.push(format!(
+							"state_snapshot {} value: expected {}, actual {}",
+							expected.node,
+							compact_json(&expected_value),
+							compact_json(&actual.value)
+						));
+					}
 				}
 			}
 			None => failures.push(format!("state_snapshot {}: missing", expected.node)),
@@ -1430,7 +1442,25 @@ mod tests {
 		assert_eq!(report.trigger_count, 12);
 		assert_eq!(report.effect_count, 8);
 		assert_eq!(report.state_restore_count, 4);
-		assert_eq!(report.state_snapshot_count, 4);
+		assert_eq!(report.state_snapshot_count, 5);
+	}
+
+	#[tokio::test]
+	async fn twitch_chat_send_rate_limit_snapshot_declared_test_passes() {
+		let dir = example_dir("twitch-chat-send");
+		let report = run_fixture_once_report(&dir).await.expect("report");
+		assert!(report.ok, "report: {:?}", report.tests);
+		let snapshot = report
+			.state_snapshots
+			.iter()
+			.find(|snapshot| snapshot.node == "main::gate")
+			.expect("rate_limit snapshot");
+		assert_eq!(snapshot.feature, "flowgraph.util.rate_limit");
+		assert_eq!(snapshot.version, 1);
+		assert_eq!(snapshot.format, "json");
+		assert_eq!(snapshot.value["recent_elapsed_ms"].as_array().map(|items| items.len()), Some(1));
+		assert!(snapshot.value["recorded_at_unix_ms"].as_u64().is_some());
+		assert_eq!(report.failed_tests, 0);
 	}
 
 	#[tokio::test]
