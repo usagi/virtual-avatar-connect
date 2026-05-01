@@ -120,7 +120,7 @@ value = "hello"
 ## state restore / snapshot
 
 テスト定義の top-level `[[state_snapshots]]` は、trigger 実行前に復元する state snapshot です。
-現時点で snapshot / restore 対応済みの標準 node は `flowgraph.state.bool`、`flowgraph.state.int_counter`、`flowgraph.state.latch` です。
+現時点で snapshot / restore 対応済みの標準 node は `flowgraph.state.bool`、`flowgraph.state.int_counter`、`flowgraph.state.latch`、`flowgraph.state.accumulator` です。
 
 ```toml
 [[state_snapshots]]
