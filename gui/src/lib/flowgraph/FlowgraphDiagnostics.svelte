@@ -154,7 +154,8 @@
       {#if loadedStateSummary && (loadedStateNodes.length > 0 || loadedSnapshotNodes.length > 0)}
         <details class="mt-1">
           <summary class="cursor-pointer select-none text-[0.65rem] opacity-60">
-            loaded state {loadedStateSummary.stateful_node_count} / snapshots {loadedStateSnapshot?.snapshot_node_count ?? 0}
+            loaded state {loadedStateSummary.stateful_node_count} / snapshots {loadedStateSnapshot?.snapshot_node_count ??
+              0}
           </summary>
           <div class="mt-1 grid gap-1">
             {#each loadedStateNodes as node (node.node)}
@@ -174,7 +175,8 @@
                   class="truncate text-right opacity-70"
                   title={`snapshot: ${node.state_model.snapshot_policy} / ${node.state_model.snapshot_format}, restore: ${node.state_model.restore_policy}`}
                 >
-                  {node.state_model.snapshot_format} / {node.state_model.restore_policy}
+                  {node.state_model.snapshot_format} / {node.state_model
+                    .restore_policy}
                 </span>
               </div>
             {/each}

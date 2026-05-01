@@ -249,10 +249,12 @@ impl FlowgraphProgram {
 					actual: item.format,
 				});
 			}
-			node.impl_.restore_state(&item.value).map_err(|detail| StateRestoreError::InvalidPayload {
-				node: item.node.clone(),
-				detail,
-			})?;
+			node.impl_
+				.restore_state(&item.value)
+				.map_err(|detail| StateRestoreError::InvalidPayload {
+					node: item.node.clone(),
+					detail,
+				})?;
 			node.state_version = item.version;
 			node.cache.clear();
 			nodes.push(ProgramStateRestoreNode {
@@ -1158,7 +1160,10 @@ mod tests {
 		assert_eq!(before.nodes[0].feature, "flowgraph.state.int_counter");
 		assert_eq!(before.nodes[0].version, 0);
 		assert!(before.nodes[0].state_model.snapshot_supported);
-		assert_eq!(before.nodes[0].state_model.snapshot_format, crate::flowgraph::StateSnapshotFormat::Json);
+		assert_eq!(
+			before.nodes[0].state_model.snapshot_format,
+			crate::flowgraph::StateSnapshotFormat::Json
+		);
 		assert!(before.nodes[0].state_model.restore_supported);
 		let initial_snapshot = prog.export_state_snapshot();
 		assert_eq!(initial_snapshot.snapshot_node_count, 1);
@@ -1204,9 +1209,7 @@ mod tests {
 		duplicate.snapshot_node_count = duplicate.nodes.len();
 		assert_eq!(
 			restored.restore_state_snapshot(&duplicate).unwrap_err(),
-			StateRestoreError::DuplicateNode {
-				node: "counter".into()
-			}
+			StateRestoreError::DuplicateNode { node: "counter".into() }
 		);
 	}
 
