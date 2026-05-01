@@ -27,6 +27,7 @@ pub mod registry;
 pub mod runtime;
 pub mod socket;
 pub mod spawn;
+pub mod state_snapshot_file;
 pub mod state_model;
 pub mod table;
 pub mod tts;
@@ -50,6 +51,10 @@ pub use node::{
 pub use registry::{default_registry, registry, NodeRegistry};
 pub use runtime::{shared_flowgraph_new, FlowgraphRuntime, RuntimeHandle, SharedFlowgraph};
 pub use socket::{SocketType, SocketValue, TypeParseError, ValueCastError};
+pub use state_snapshot_file::{
+	read_state_snapshot_file, write_state_snapshot_file, ProgramStateSnapshotFile, StateSnapshotFileError,
+	FLOWGRAPH_STATE_SNAPSHOT_FILE_KIND, FLOWGRAPH_STATE_SNAPSHOT_FILE_SCHEMA_VERSION,
+};
 pub use state_model::{
 	FlowgraphStateModel, StateLifetime, StateMigrationPolicy, StatePersistencePolicy, StateRestorePolicy, StateScope, StateSnapshotFormat,
 	StateSnapshotPolicy, StateStorage,
