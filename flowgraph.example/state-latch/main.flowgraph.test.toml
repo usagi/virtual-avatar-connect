@@ -1,0 +1,46 @@
+[[state_snapshots]]
+node = "main::latch"
+feature = "flowgraph.state.latch"
+version = 7
+format = "json"
+value = { has_value = true, value = { message = "restored", count = 1 } }
+
+[[triggers]]
+node = "main::in"
+
+[[tests]]
+name = "latch state snapshot is restored and exported"
+
+[tests.expect]
+node_count = 3
+trigger_count = 1
+trace_count = 0
+effect_count = 0
+state_restore_count = 1
+
+[[tests.expect.state_versions]]
+node = "main::latch"
+version = 8
+
+[[tests.expect.state_restores]]
+node = "main::latch"
+feature = "flowgraph.state.latch"
+version = 7
+
+[[tests.expect.state_snapshots]]
+node = "main::latch"
+version = 8
+format = "json"
+value = { has_value = true, value = { message = "updated", count = 2 } }
+
+[[tests.expect.stored_values]]
+node = "main::latch"
+port = "has_value"
+ty = "bool"
+value = true
+
+[[tests.expect.stored_values]]
+node = "main::latch"
+port = "value"
+ty = "json"
+value = { message = "updated", count = 2 }

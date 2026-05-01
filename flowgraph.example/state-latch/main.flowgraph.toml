@@ -1,0 +1,28 @@
+[meta]
+title = "State Latch Snapshot"
+description = "Minimal state.latch fixture for JSON snapshot restore assertions."
+tags = ["example", "state", "snapshot", "fixture"]
+
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 160]
+
+[[nodes]]
+id = "payload"
+feature = "flowgraph.literal.json"
+position = [320, 260]
+properties.value = { message = "updated", count = 2 }
+
+[[nodes]]
+id = "latch"
+feature = "flowgraph.state.latch"
+position = [560, 160]
+
+[[edges]]
+from = "in:exec_out"
+to = "latch:exec_in"
+
+[[edges]]
+from = "payload:value"
+to = "latch:input"

@@ -243,6 +243,34 @@ impl StatefulNode for LatchNode {
 		Box::new(LatchState::default())
 	}
 
+	fn state_model(&self) -> FlowgraphStateModel {
+		FlowgraphStateModel::volatile_node_instance_json_snapshot()
+	}
+
+	fn snapshot_state(&self, state: &(dyn Any + Send)) -> Option<JsonValue> {
+		let state = state.downcast_ref::<LatchState>()?;
+		Some(serde_json::json!({
+			"has_value": state.has_value,
+			"value": state.value,
+		}))
+	}
+
+	fn restore_state(&self, state: &mut (dyn Any + Send), value: &JsonValue) -> Result<(), String> {
+		let state = state
+			.downcast_mut::<LatchState>()
+			.ok_or_else(|| "LatchState downcast failed".to_string())?;
+		let restored_has_value = value
+			.get("has_value")
+			.and_then(|value| value.as_bool())
+			.ok_or_else(|| "expected object with boolean field 'has_value' and field 'value'".to_string())?;
+		let restored_value = value
+			.get("value")
+			.ok_or_else(|| "expected object with boolean field 'has_value' and field 'value'".to_string())?;
+		state.has_value = restored_has_value;
+		state.value = restored_value.clone();
+		Ok(())
+	}
+
 	async fn compute(
 		&self,
 		state: &mut (dyn Any + Send),
@@ -510,6 +538,11 @@ mod tests {
 		let mut state: Box<dyn Any + Send> = node.init_state();
 		let sctx = sctx();
 
+		assert_eq!(
+			node.snapshot_state(state.as_ref()),
+			Some(serde_json::json!({ "has_value": false, "value": null }))
+		);
+
 		// 未 set 状態では has_value = false
 		let out = node
 			.compute(state.as_mut(), &InputMap::new(), &InputMap::new(), &ExecFireSet::new(), &sctx)
@@ -527,6 +560,10 @@ mod tests {
 		assert_eq!(out.data.get("value"), Some(&SocketValue::Json(serde_json::json!("hello"))));
 		assert_eq!(out.data.get("has_value"), Some(&SocketValue::Bool(true)));
 		assert!(out.fired_exec.contains("updated"));
+		assert_eq!(
+			node.snapshot_state(state.as_ref()),
+			Some(serde_json::json!({ "has_value": true, "value": "hello" }))
+		);
 
 		// 非発火時でも value は保持値
 		let out = node
@@ -535,6 +572,36 @@ mod tests {
 			.unwrap();
 		assert_eq!(out.data.get("value"), Some(&SocketValue::Json(serde_json::json!("hello"))));
 		assert!(out.fired_exec.is_empty());
+	}
+
+	#[tokio::test]
+	async fn latch_snapshot_restore() {
+		let node = LatchNode;
+		let mut state: Box<dyn Any + Send> = node.init_state();
+		let sctx = sctx();
+
+		assert!(node.state_model().snapshot_supported);
+		assert!(node.state_model().restore_supported);
+		node.restore_state(
+			state.as_mut(),
+			&serde_json::json!({ "has_value": true, "value": { "message": "restored" } }),
+		)
+		.unwrap();
+		assert_eq!(
+			node.snapshot_state(state.as_ref()),
+			Some(serde_json::json!({ "has_value": true, "value": { "message": "restored" } }))
+		);
+
+		let out = node
+			.compute(state.as_mut(), &InputMap::new(), &InputMap::new(), &ExecFireSet::new(), &sctx)
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("value"), Some(&SocketValue::Json(serde_json::json!({ "message": "restored" }))));
+		assert_eq!(out.data.get("has_value"), Some(&SocketValue::Bool(true)));
+		assert_eq!(
+			node.restore_state(state.as_mut(), &serde_json::json!({ "value": null })).unwrap_err(),
+			"expected object with boolean field 'has_value' and field 'value'"
+		);
 	}
 
 	// ----- accumulator -----
