@@ -709,6 +709,12 @@ Flowgraph diagnostics panel に `loaded_state_summary` / `loaded_state_snapshot`
 これにより snapshot restore は node / feature / format / payload の検証へ進む前に、manifest と target set の基本的な整合性を固定する。
 将来 profile-local persistence や reload restore を足す際に、破損 snapshot や重複 entry を黙って部分適用しないための contract validation として扱う。
 
+### LF-7q Fixture restore validation coverage ✅
+
+Fixture runner 経由で重複 `[[state_snapshots]]` restore entry が `FixtureError::StateRestore` として失敗することを regression test で固定した。
+これにより LF-7p の engine-level validation が fixture language の実行前 restore path でも観測でき、破損 fixture / 将来の永続化 snapshot が重複 target を持つ場合に黙って後勝ち適用されないことを保証する。
+現段階では重複 entry の negative test に留め、profile-local snapshot ファイル形式や migration policy はまだ導入しない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
