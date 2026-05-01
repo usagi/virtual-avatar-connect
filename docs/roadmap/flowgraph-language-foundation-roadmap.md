@@ -769,6 +769,12 @@ GUI diagnostics の loaded state details も snapshot-capable / restore-capable 
 `flowgraph.example/state-accumulator` を追加し、restore 済み item 配列に literal JSON 入力を push した後の state version、stored value、snapshot payload を fixture runner で固定した。
 これにより標準 state node 4 種（bool / int_counter / latch / accumulator）が snapshot / restore 対応となり、fixture suite summary でも restore / snapshot が 4 件として観測される。
 
+### LF-7aa Rate limit state snapshot/restore coverage ✅
+
+`flowgraph.util.rate_limit` を JSON snapshot / restore 対応にし、payload `{ recorded_at_unix_ms, recent_elapsed_ms }` で rolling window 内の発火履歴を export / restore できるようにした。
+`recorded_at_unix_ms` がある snapshot は restore 時点の wall-clock 差分を反映するため、停止時間が window を超えた古い entry は復元後の最初の評価で期限切れとして扱われる。
+fixture runner には `state_snapshot_count` と payload 省略可能な `[[tests.expect.state_snapshots]]` を追加し、時刻依存 payload を完全一致させずに snapshot metadata を固定できるようにした。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
