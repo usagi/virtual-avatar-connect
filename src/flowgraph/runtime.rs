@@ -17,6 +17,7 @@ use crate::flowgraph::activation::{mode_group_orphan_diagnostics, TriggerGate};
 use crate::flowgraph::loader::{Diagnostic, FlowgraphFileActivationMeta, GraphCapabilitySummary, LoadedNodeMeta, Severity};
 use crate::flowgraph::node::PureEvalHost;
 use crate::flowgraph::node::TriggerHandle;
+use crate::flowgraph::{ProgramStateSnapshot, ProgramStateSummary};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -54,6 +55,10 @@ pub struct FlowgraphRuntime {
 	pub node_meta: HashMap<String, LoadedNodeMeta>,
 	/// LF-2: graph 全体の capability summary。GUI と policy preview 用の read-only metadata。
 	pub capability_summary: GraphCapabilitySummary,
+	/// LF-7: ロード直後の stateful node summary。worker 実行後の live state ではない。
+	pub loaded_state_summary: ProgramStateSummary,
+	/// LF-7: ロード直後に snapshot export できる state payload。worker 実行後の live state ではない。
+	pub loaded_state_snapshot: ProgramStateSnapshot,
 	/// RM-3: 各 flowgraph ファイル fq → mode 用メタ（`GET /flowgraph/diagnostics` 等で参照）。
 	pub file_activation: HashMap<String, FlowgraphFileActivationMeta>,
 	/// RM-3: exec 抑止ゲート（ワーカーと共有）。未 spawn 時は `None`。
@@ -71,6 +76,8 @@ impl Clone for FlowgraphRuntime {
 			diagnostics: self.diagnostics.clone(),
 			node_meta: self.node_meta.clone(),
 			capability_summary: self.capability_summary.clone(),
+			loaded_state_summary: self.loaded_state_summary.clone(),
+			loaded_state_snapshot: self.loaded_state_snapshot.clone(),
 			file_activation: self.file_activation.clone(),
 			trigger_gate: self.trigger_gate.clone(),
 			handle: self.handle.clone(),
@@ -111,6 +118,8 @@ impl FlowgraphRuntime {
 					)],
 					node_meta: HashMap::new(),
 					capability_summary: GraphCapabilitySummary::default(),
+					loaded_state_summary: ProgramStateSummary::default(),
+					loaded_state_snapshot: ProgramStateSnapshot::default(),
 					file_activation: HashMap::new(),
 					trigger_gate: None,
 					handle: None,
@@ -128,6 +137,8 @@ impl FlowgraphRuntime {
 					file_activation,
 					..
 				} = report;
+				let loaded_state_summary = program.state_summary();
+				let loaded_state_snapshot = program.export_state_snapshot();
 				let has_nodes = !node_meta.is_empty();
 				let rt = Self {
 					root_dir: root_dir.to_path_buf(),
@@ -135,6 +146,8 @@ impl FlowgraphRuntime {
 					diagnostics,
 					node_meta,
 					capability_summary,
+					loaded_state_summary,
+					loaded_state_snapshot,
 					file_activation,
 					trigger_gate: None,
 					handle: None,
@@ -148,6 +161,8 @@ impl FlowgraphRuntime {
 					diagnostics,
 					node_meta: HashMap::new(),
 					capability_summary: GraphCapabilitySummary::default(),
+					loaded_state_summary: ProgramStateSummary::default(),
+					loaded_state_snapshot: ProgramStateSnapshot::default(),
 					file_activation: HashMap::new(),
 					trigger_gate: None,
 					handle: None,
@@ -209,6 +224,8 @@ impl FlowgraphRuntime {
 			diagnostics: Vec::new(),
 			node_meta: HashMap::new(),
 			capability_summary: GraphCapabilitySummary::default(),
+			loaded_state_summary: ProgramStateSummary::default(),
+			loaded_state_snapshot: ProgramStateSnapshot::default(),
 			file_activation: HashMap::new(),
 			trigger_gate: None,
 			handle: None,
@@ -236,6 +253,29 @@ impl FlowgraphRuntime {
 			return true;
 		}
 		false
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn load_reports_loaded_state_summary_and_snapshot() {
+		let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+			.join("flowgraph.example")
+			.join("state-counter");
+		let rt = FlowgraphRuntime::load(&root);
+
+		assert!(rt.ok, "diagnostics: {:#?}", rt.diagnostics);
+		assert_eq!(rt.loaded_state_summary.stateful_node_count, 1);
+		assert_eq!(rt.loaded_state_summary.snapshot_supported_node_count, 1);
+		assert_eq!(rt.loaded_state_summary.nodes[0].node, "main::counter");
+		assert_eq!(rt.loaded_state_summary.nodes[0].version, 0);
+		assert_eq!(rt.loaded_state_snapshot.snapshot_node_count, 1);
+		assert_eq!(rt.loaded_state_snapshot.nodes[0].node, "main::counter");
+		assert_eq!(rt.loaded_state_snapshot.nodes[0].version, 0);
+		assert_eq!(rt.loaded_state_snapshot.nodes[0].value, serde_json::json!({ "value": 0 }));
 	}
 }
 

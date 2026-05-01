@@ -1114,6 +1114,53 @@ export type FlowgraphStateNode = {
   persistence_policy: "none";
 };
 
+export type FlowgraphStateModel = {
+  version: number;
+  stateful: boolean;
+  scope: "none" | "node_instance";
+  storage: "none" | "volatile";
+  lifetime: "none" | "program_instance";
+  reinitialized_on_reload: boolean;
+  snapshot_supported: boolean;
+  snapshot_policy: "unsupported" | "explicit";
+  snapshot_format: "none" | "json";
+  restore_supported: boolean;
+  restore_policy: "unsupported" | "explicit";
+  migration_policy: "none";
+  persistence_policy: "none";
+};
+
+export type FlowgraphProgramStateNode = {
+  node: string;
+  feature: string;
+  version: number;
+  state_model: FlowgraphStateModel;
+};
+
+export type FlowgraphProgramStateSummary = {
+  stateful_node_count: number;
+  snapshot_supported_node_count: number;
+  nodes: FlowgraphProgramStateNode[];
+};
+
+export type FlowgraphProgramStateSnapshotNode = {
+  node: string;
+  feature: string;
+  version: number;
+  format: "none" | "json";
+  value: JsonValue;
+};
+
+export type FlowgraphProgramStateSnapshot = {
+  snapshot_node_count: number;
+  nodes: FlowgraphProgramStateSnapshotNode[];
+};
+
+export type FlowgraphFileActivationMeta = {
+  mode_groups: string[];
+  default_enabled: boolean;
+};
+
 export type FlowgraphCapabilitySummary = {
   node_count: number;
   effectful_node_count: number;
@@ -1132,6 +1179,10 @@ export type FlowgraphDiagnosticsResponse = {
   /** `fq_name` → 定義元メタ。 */
   node_meta: Record<string, FlowgraphLoadedNodeMeta>;
   capability_summary: FlowgraphCapabilitySummary;
+  loaded_state_summary: FlowgraphProgramStateSummary;
+  loaded_state_snapshot: FlowgraphProgramStateSnapshot;
+  file_activation: Record<string, FlowgraphFileActivationMeta>;
+  inactive_exec_nodes: string[];
 };
 
 export type FlowgraphCreateFileRequest = {

@@ -289,6 +289,10 @@ pub struct DiagnosticsResponse {
 	pub node_meta: std::collections::HashMap<String, crate::flowgraph::loader::LoadedNodeMeta>,
 	/// LF-2: graph 全体が要求する capability summary。
 	pub capability_summary: crate::flowgraph::loader::GraphCapabilitySummary,
+	/// LF-7: ロード直後の stateful node summary。worker 実行後の live state ではない。
+	pub loaded_state_summary: crate::flowgraph::ProgramStateSummary,
+	/// LF-7: ロード直後に snapshot export できる state payload。worker 実行後の live state ではない。
+	pub loaded_state_snapshot: crate::flowgraph::ProgramStateSnapshot,
 	/// RM-3: 各 flowgraph ファイルの mode 用メタ（`[meta].mode_groups` / `default_enabled`）。
 	pub file_activation: std::collections::HashMap<String, crate::flowgraph::FlowgraphFileActivationMeta>,
 	/// RM-3: exec が抑止されているノード ID。
@@ -313,6 +317,8 @@ pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 		diagnostics: rt.diagnostics.clone(),
 		node_meta: rt.node_meta.clone(),
 		capability_summary: rt.capability_summary.clone(),
+		loaded_state_summary: rt.loaded_state_summary.clone(),
+		loaded_state_snapshot: rt.loaded_state_snapshot.clone(),
 		file_activation: rt.file_activation.clone(),
 		inactive_exec_nodes,
 	})
