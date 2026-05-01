@@ -120,7 +120,7 @@ value = "hello"
 ## state restore / snapshot
 
 テスト定義の top-level `[[state_snapshots]]` は、trigger 実行前に復元する state snapshot です。
-現時点で snapshot / restore 対応済みの標準 node は `flowgraph.state.bool`、`flowgraph.state.int_counter`、`flowgraph.state.latch`、`flowgraph.state.accumulator` です。
+現時点で snapshot / restore 対応済みの node は `flowgraph.state.bool`、`flowgraph.state.int_counter`、`flowgraph.state.latch`、`flowgraph.state.accumulator`、`flowgraph.util.rate_limit` です。
 
 ```toml
 [[state_snapshots]]
@@ -136,6 +136,7 @@ value = { value = 41 }
 ```toml
 [tests.expect]
 state_restore_count = 1
+state_snapshot_count = 1
 
 [[tests.expect.state_restores]]
 node = "main::counter"
@@ -154,6 +155,7 @@ value = { value = 42 }
 ```
 
 `state_restore` は実行前 restore の観測結果、`state_snapshots` は trigger 実行後に export された snapshot です。
+時刻を含む state など payload が実行時に変わる node では、`[[tests.expect.state_snapshots]]` から `value` を省略して node / version / format だけを検証できます。
 同じ node への重複 restore entry や `snapshot_node_count` と payload 件数の不一致は、部分適用せず restore error として失敗します。
 
 ## mock IO
