@@ -109,7 +109,7 @@ state 関連の値は reload 直後の read-only snapshot であり、worker 実
 - `loaded_state_snapshot`: ロード直後に export できた snapshot payload。現段階では対応 node のみ含む。
 
 現在は `flowgraph.state.bool`、`flowgraph.state.int_counter`、`flowgraph.state.latch`、`flowgraph.state.accumulator`、`flowgraph.util.rate_limit` が JSON snapshot / restore に対応しています。
-profile-local persistence、migration、reload 時の自動 restore はまだ導入していません。
+内部の state snapshot ファイル形式は `kind = "vac.flowgraph.state_snapshot"`、`schema_version = 1` の JSON envelope として固定していますが、Control API からの保存/読込、profile-local persistence、migration、reload 時の自動 restore はまだ導入していません。
 
 ### 5.1 `[[control_api.tables]]` — Glossary / 汎用 Table の GUI 編集許可リスト (Phase φ / GRN)
 

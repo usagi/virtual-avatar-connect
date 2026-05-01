@@ -157,6 +157,7 @@ value = { value = 42 }
 `state_restore` は実行前 restore の観測結果、`state_snapshots` は trigger 実行後に export された snapshot です。
 時刻を含む state など payload が実行時に変わる node では、`[[tests.expect.state_snapshots]]` から `value` を省略して node / version / format だけを検証できます。
 同じ node への重複 restore entry や `snapshot_node_count` と payload 件数の不一致は、部分適用せず restore error として失敗します。
+永続化用の JSON snapshot file envelope は schema version 付きですが、fixture の top-level `[[state_snapshots]]` は人間が書きやすい restore shorthand として envelope なしの entry 配列を使います。
 
 ## mock IO
 
