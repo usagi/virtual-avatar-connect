@@ -715,6 +715,12 @@ Fixture runner 経由で重複 `[[state_snapshots]]` restore entry が `FixtureE
 これにより LF-7p の engine-level validation が fixture language の実行前 restore path でも観測でき、破損 fixture / 将来の永続化 snapshot が重複 target を持つ場合に黙って後勝ち適用されないことを保証する。
 現段階では重複 entry の negative test に留め、profile-local snapshot ファイル形式や migration policy はまだ導入しない。
 
+### LF-7r Fixture CLI state summary counts ✅
+
+Fixture suite report に `state_restore_count` / `state_snapshot_count` の aggregate を追加し、CLI human summary でも single fixture / suite の state restore と snapshot 件数を確認できるようにした。
+これにより JSON report の詳細を開かなくても、fixture 実行結果に snapshot restore/export が含まれているかを CI log から一目で確認できる。
+`flowgraph.example` suite は現在 restore 1 件 / snapshot 1 件を期待値として固定し、state-counter fixture の観測値が summary に反映されることを保証する。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
