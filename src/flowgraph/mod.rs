@@ -32,7 +32,10 @@ pub mod table;
 pub mod tts;
 
 pub use config::{parse_offset_str, ConfigError as FlowgraphConfigError, FlowgraphInstanceConfig};
-pub use engine::{BuildError, Edge, FlowgraphBuilder, FlowgraphProgram, NodeId, NodeInstance, PortName, PortRef, ProgramRun};
+pub use engine::{
+	BuildError, Edge, FlowgraphBuilder, FlowgraphProgram, NodeId, NodeInstance, PortName, PortRef, ProgramRun, ProgramStateNode,
+	ProgramStateSummary,
+};
 pub use activation::{
 	build_node_exec_active_map, file_effective_exec_active, file_fq_for_node_id, mode_group_orphan_diagnostics, TriggerGate,
 };

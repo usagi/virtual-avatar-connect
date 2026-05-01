@@ -15,6 +15,8 @@ use crate::flowgraph::node::{
 	TriggerHandle,
 };
 use crate::flowgraph::socket::{coerce_to_type, SocketType, SocketValue};
+use crate::flowgraph::FlowgraphStateModel;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::future::Future;
 use thiserror::Error;
@@ -151,6 +153,32 @@ pub struct FlowgraphProgram {
 impl FlowgraphProgram {
 	pub fn node_ids(&self) -> impl Iterator<Item = &NodeId> {
 		self.nodes.keys()
+	}
+
+	pub fn state_summary(&self) -> ProgramStateSummary {
+		let mut nodes: Vec<ProgramStateNode> = self
+			.nodes
+			.iter()
+			.filter_map(|(node_id, node)| {
+				let NodeImpl::Stateful { .. } = &node.impl_ else {
+					return None;
+				};
+				let spec = node.impl_.describe();
+				let state_model = FlowgraphStateModel::for_effect_class("stateful");
+				Some(ProgramStateNode {
+					node: node_id.clone(),
+					feature: spec.feature,
+					version: node.state_version,
+					state_model,
+				})
+			})
+			.collect();
+		nodes.sort_by(|a, b| a.node.cmp(&b.node));
+		ProgramStateSummary {
+			stateful_node_count: nodes.len(),
+			snapshot_supported_node_count: nodes.iter().filter(|node| node.state_model.snapshot_supported).count(),
+			nodes,
+		}
 	}
 
 	/// 1-shot 実行: 全ソースノードを初期発火して完走させる。event loop は `run_forever`。
@@ -532,6 +560,21 @@ impl ProgramRun {
 	pub fn state_version_of(&self, node: &str) -> u64 {
 		self.state_versions.get(node).copied().unwrap_or(0)
 	}
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ProgramStateSummary {
+	pub stateful_node_count: usize,
+	pub snapshot_supported_node_count: usize,
+	pub nodes: Vec<ProgramStateNode>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ProgramStateNode {
+	pub node: NodeId,
+	pub feature: String,
+	pub version: u64,
+	pub state_model: FlowgraphStateModel,
 }
 
 // ---------------------------------------------------------------------
@@ -962,6 +1005,28 @@ mod tests {
 
 		assert_eq!(run.state_version_of("counter"), 1);
 		assert_eq!(run.value_at("counter", "value"), Some(&SocketValue::Int(1)));
+	}
+
+	#[tokio::test]
+	async fn program_state_summary_reports_current_versions() {
+		let mut b = FlowgraphBuilder::new();
+		b.add_node("seq", NodeImpl::pure(Arc::new(SequenceNode::new(1))), InputMap::new());
+		b.add_node("counter", NodeImpl::stateful(Arc::new(IntCounterNode)), InputMap::new());
+		b.connect_exec(PortRef::new("seq", "exec_1"), PortRef::new("counter", "increment"));
+
+		let mut prog = b.build().unwrap();
+		let before = prog.state_summary();
+		assert_eq!(before.stateful_node_count, 1);
+		assert_eq!(before.snapshot_supported_node_count, 0);
+		assert_eq!(before.nodes[0].node, "counter");
+		assert_eq!(before.nodes[0].feature, "flowgraph.state.int_counter");
+		assert_eq!(before.nodes[0].version, 0);
+		assert!(!before.nodes[0].state_model.snapshot_supported);
+
+		let mut ctx = ExecCtx::default();
+		let _run = prog.execute(&mut ctx).await.unwrap();
+		let after = prog.state_summary();
+		assert_eq!(after.nodes[0].version, 1);
 	}
 
 	// ----- Branch の dead-port elimination ---------------------------------
