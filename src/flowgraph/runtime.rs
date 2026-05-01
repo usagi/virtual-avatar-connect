@@ -17,7 +17,9 @@ use crate::flowgraph::activation::{mode_group_orphan_diagnostics, TriggerGate};
 use crate::flowgraph::loader::{Diagnostic, FlowgraphFileActivationMeta, GraphCapabilitySummary, LoadedNodeMeta, Severity};
 use crate::flowgraph::node::PureEvalHost;
 use crate::flowgraph::node::TriggerHandle;
-use crate::flowgraph::{ProgramStateRestoreReport, ProgramStateSnapshot, ProgramStateSummary};
+use crate::flowgraph::{
+	ProgramStateRestoreReport, ProgramStateSnapshot, ProgramStateSummary, StateSnapshotFileError,
+};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -108,6 +110,13 @@ impl FlowgraphRuntime {
 		rt
 	}
 
+	/// `load_with_state_snapshot` と同じ diagnostic-only runtime を返すが、snapshot は
+	/// `ProgramStateSnapshotFile` JSON envelope から読み込む。
+	pub fn load_with_state_snapshot_file(root_dir: &std::path::Path, snapshot_path: &std::path::Path) -> Self {
+		let (rt, _program, _restore) = Self::load_program_with_state_snapshot_file(root_dir, snapshot_path);
+		rt
+	}
+
 	/// `load` と違い、ロードした program を第 2 戻り値で返す内部ユーティリティ。
 	/// `(runtime_meta, Option<program>)` のペア。
 	pub fn load_program(root_dir: &std::path::Path) -> (Self, Option<crate::flowgraph::FlowgraphProgram>) {
@@ -122,6 +131,40 @@ impl FlowgraphRuntime {
 		snapshot: &ProgramStateSnapshot,
 	) -> (Self, Option<crate::flowgraph::FlowgraphProgram>, Option<ProgramStateRestoreReport>) {
 		Self::load_program_inner(root_dir, Some(snapshot))
+	}
+
+	/// `load_program_with_state_snapshot` と同じくロードした program も返すが、snapshot は
+	/// `ProgramStateSnapshotFile` JSON envelope から読み込む。
+	pub fn load_program_with_state_snapshot_file(
+		root_dir: &std::path::Path,
+		snapshot_path: &std::path::Path,
+	) -> (Self, Option<crate::flowgraph::FlowgraphProgram>, Option<ProgramStateRestoreReport>) {
+		match crate::flowgraph::read_state_snapshot_file(snapshot_path) {
+			Ok(file) => Self::load_program_with_state_snapshot(root_dir, &file.snapshot),
+			Err(error) => (
+				Self::state_snapshot_file_error(root_dir.to_path_buf(), snapshot_path, error),
+				None,
+				None,
+			),
+		}
+	}
+
+	fn state_snapshot_file_error(root_dir: PathBuf, snapshot_path: &std::path::Path, error: StateSnapshotFileError) -> Self {
+		Self {
+			root_dir,
+			ok: false,
+			diagnostics: vec![Diagnostic::error(
+				crate::flowgraph::DiagnosticCode::StateRestore,
+				format!("state snapshot file restore failed ({}): {error}", snapshot_path.display()),
+			)],
+			node_meta: HashMap::new(),
+			capability_summary: GraphCapabilitySummary::default(),
+			loaded_state_summary: ProgramStateSummary::default(),
+			loaded_state_snapshot: ProgramStateSnapshot::default(),
+			file_activation: HashMap::new(),
+			trigger_gate: None,
+			handle: None,
+		}
 	}
 
 	fn load_program_inner(
@@ -311,7 +354,7 @@ impl FlowgraphRuntime {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::flowgraph::{ProgramStateSnapshotNode, StateSnapshotFormat};
+	use crate::flowgraph::{ProgramStateSnapshotFile, ProgramStateSnapshotNode, StateSnapshotFormat};
 
 	fn state_counter_root() -> std::path::PathBuf {
 		std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -330,6 +373,12 @@ mod tests {
 				value: serde_json::json!({ "value": value }),
 			}],
 		}
+	}
+
+	fn temp_snapshot_path(name: &str) -> std::path::PathBuf {
+		let dir = std::env::temp_dir().join(format!("vac-runtime-state-snapshot-{}", std::process::id()));
+		std::fs::create_dir_all(&dir).expect("create temp dir");
+		dir.join(name)
 	}
 
 	#[test]
@@ -381,6 +430,42 @@ mod tests {
 		assert!(rt.diagnostics.iter().any(|diagnostic| {
 			diagnostic.code == crate::flowgraph::DiagnosticCode::StateRestore && diagnostic.message.contains("feature mismatch")
 		}));
+	}
+
+	#[test]
+	fn load_program_with_state_snapshot_file_restores_before_metadata() {
+		let root = state_counter_root();
+		let snapshot_path = temp_snapshot_path("restore-ok.snapshot.json");
+		let snapshot = counter_snapshot("main::counter", "flowgraph.state.int_counter", 42, 42);
+		let file = ProgramStateSnapshotFile::with_created_at_unix_ms(snapshot, 1234);
+		crate::flowgraph::write_state_snapshot_file(&snapshot_path, &file).expect("write snapshot file");
+
+		let (rt, program, restore) = FlowgraphRuntime::load_program_with_state_snapshot_file(&root, &snapshot_path);
+
+		assert!(rt.ok, "diagnostics: {:#?}", rt.diagnostics);
+		assert!(program.is_some());
+		assert_eq!(restore.expect("restore report").restored_node_count, 1);
+		assert_eq!(rt.loaded_state_snapshot.nodes[0].version, 42);
+		assert_eq!(rt.loaded_state_snapshot.nodes[0].value, serde_json::json!({ "value": 42 }));
+		let _ = std::fs::remove_file(snapshot_path);
+	}
+
+	#[test]
+	fn load_program_with_state_snapshot_file_reports_file_error() {
+		let root = state_counter_root();
+		let snapshot_path = temp_snapshot_path("restore-bad.snapshot.json");
+		std::fs::write(&snapshot_path, "{ not json").expect("write bad snapshot file");
+
+		let (rt, program, restore) = FlowgraphRuntime::load_program_with_state_snapshot_file(&root, &snapshot_path);
+
+		assert!(!rt.ok);
+		assert!(program.is_none());
+		assert!(restore.is_none());
+		assert!(rt.diagnostics.iter().any(|diagnostic| {
+			diagnostic.code == crate::flowgraph::DiagnosticCode::StateRestore
+				&& diagnostic.message.contains("state snapshot file restore failed")
+		}));
+		let _ = std::fs::remove_file(snapshot_path);
 	}
 }
 
