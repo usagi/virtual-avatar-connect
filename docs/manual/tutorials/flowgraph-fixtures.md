@@ -33,7 +33,7 @@ cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-root flowgraph.ex
 ```
 
 JSON 出力では suite 全体の成否、fixture 件数、失敗件数、各 fixture の report を返します。
-`test_count` / `failed_tests` / `trigger_count` / `effect_count` も suite 直下に出るため、CI やスクリプト側で全 report を走査せずに要約を読めます。
+`test_count` / `failed_tests` / `trigger_count` / `effect_count` / `state_restore_count` / `state_snapshot_count` も suite 直下に出るため、CI やスクリプト側で全 report を走査せずに要約を読めます。
 各 fixture report には `capability_summary` も含まれるため、テスト対象 graph が要求する file / network などの capability も同じ JSON で確認できます。
 
 ```powershell
@@ -117,6 +117,45 @@ ty = "string"
 value = "hello"
 ```
 
+## state restore / snapshot
+
+テスト定義の top-level `[[state_snapshots]]` は、trigger 実行前に復元する state snapshot です。
+現時点で snapshot / restore 対応済みの標準 node は `flowgraph.state.int_counter` です。
+
+```toml
+[[state_snapshots]]
+node = "main::counter"
+feature = "flowgraph.state.int_counter"
+version = 41
+format = "json"
+value = { value = 41 }
+```
+
+`[tests.expect]` では、復元件数、復元された entry、実行後の state version、実行後 snapshot payload を検証できます。
+
+```toml
+[tests.expect]
+state_restore_count = 1
+
+[[tests.expect.state_restores]]
+node = "main::counter"
+feature = "flowgraph.state.int_counter"
+version = 41
+
+[[tests.expect.state_versions]]
+node = "main::counter"
+version = 42
+
+[[tests.expect.state_snapshots]]
+node = "main::counter"
+version = 42
+format = "json"
+value = { value = 42 }
+```
+
+`state_restore` は実行前 restore の観測結果、`state_snapshots` は trigger 実行後に export された snapshot です。
+同じ node への重複 restore entry や `snapshot_node_count` と payload 件数の不一致は、部分適用せず restore error として失敗します。
+
 ## mock IO
 
 fixture runner は現時点で HTTP、ファイル読み込み、ファイル書き込みを mock できます。
@@ -160,7 +199,7 @@ mock された副作用は `recorded_effects[]` として report に記録され
 主な field:
 
 | kind | field |
-|---|---|
+| --- | --- |
 | `http` | `node`, `method`, `url`, `status`, `request_body`, `response_body`, `error` |
 | `file_read` | `node`, `path`, `bytes`, `contents`, `error` |
 | `file_write` | `node`, `path`, `bytes`, `contents`, `error` |
