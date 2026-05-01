@@ -112,6 +112,7 @@ state 関連の値は reload 直後の read-only snapshot であり、worker 実
 内部の state snapshot ファイル形式は `kind = "vac.flowgraph.state_snapshot"`、`schema_version = 1` の JSON envelope として固定しています。
 profile-local snapshot の保存先は `<runtime_dir>/flowgraph-state/<profile-stem>-<hash>/state.snapshot.json` 形式で導出します。
 runtime loader には明示的な load-time restore helper があり、raw snapshot payload または state snapshot file envelope から復元できます。
+worker spawn 経路にも snapshot file envelope を明示指定する内部 helper があり、復元後の state を持つ program をそのまま起動できます。
 restore や snapshot file 読込に失敗した場合は `state-restore` diagnostic として報告されますが、Control API からの保存/読込、profile-local persistence、migration、reload 時の自動 restore はまだ導入していません。
 
 ### 5.1 `[[control_api.tables]]` — Glossary / 汎用 Table の GUI 編集許可リスト (Phase φ / GRN)
