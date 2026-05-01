@@ -59,6 +59,8 @@ pub struct FlowgraphRuntime {
 	pub loaded_state_summary: ProgramStateSummary,
 	/// LF-7: ロード直後に snapshot export できる state payload。worker 実行後の live state ではない。
 	pub loaded_state_snapshot: ProgramStateSnapshot,
+	/// LF-7: profile-local state snapshot file の予定保存先。自動 read/write はまだ行わない。
+	pub state_snapshot_file_path: Option<PathBuf>,
 	/// RM-3: 各 flowgraph ファイル fq → mode 用メタ（`GET /flowgraph/diagnostics` 等で参照）。
 	pub file_activation: HashMap<String, FlowgraphFileActivationMeta>,
 	/// RM-3: exec 抑止ゲート（ワーカーと共有）。未 spawn 時は `None`。
@@ -78,6 +80,7 @@ impl Clone for FlowgraphRuntime {
 			capability_summary: self.capability_summary.clone(),
 			loaded_state_summary: self.loaded_state_summary.clone(),
 			loaded_state_snapshot: self.loaded_state_snapshot.clone(),
+			state_snapshot_file_path: self.state_snapshot_file_path.clone(),
 			file_activation: self.file_activation.clone(),
 			trigger_gate: self.trigger_gate.clone(),
 			handle: self.handle.clone(),
@@ -93,6 +96,14 @@ pub fn shared_flowgraph_new() -> SharedFlowgraph {
 }
 
 impl FlowgraphRuntime {
+	pub fn set_profile_local_state_snapshot_path(&mut self, runtime_root: &std::path::Path, profile_path: &std::path::Path) {
+		self.state_snapshot_file_path = Some(crate::flowgraph::profile_local_state_snapshot_path(
+			runtime_root,
+			profile_path,
+			&self.root_dir,
+		));
+	}
+
 	/// `root_dir` を [`crate::flowgraph::load_flowgraph_dir`] でロードし、**program は drop 扱い**の
 	/// diagnostic-only runtime を返す（テスト・GUI 単独起動用）。通常運用では
 	/// [`FlowgraphRuntime::load_and_spawn`] を使って worker を起こすこと。
@@ -159,6 +170,7 @@ impl FlowgraphRuntime {
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),
 			loaded_state_snapshot: ProgramStateSnapshot::default(),
+			state_snapshot_file_path: None,
 			file_activation: HashMap::new(),
 			trigger_gate: None,
 			handle: None,
@@ -185,6 +197,7 @@ impl FlowgraphRuntime {
 					capability_summary: GraphCapabilitySummary::default(),
 					loaded_state_summary: ProgramStateSummary::default(),
 					loaded_state_snapshot: ProgramStateSnapshot::default(),
+					state_snapshot_file_path: None,
 					file_activation: HashMap::new(),
 					trigger_gate: None,
 					handle: None,
@@ -219,6 +232,7 @@ impl FlowgraphRuntime {
 								capability_summary,
 								loaded_state_summary: program.state_summary(),
 								loaded_state_snapshot: program.export_state_snapshot(),
+								state_snapshot_file_path: None,
 								file_activation,
 								trigger_gate: None,
 								handle: None,
@@ -240,6 +254,7 @@ impl FlowgraphRuntime {
 					capability_summary,
 					loaded_state_summary,
 					loaded_state_snapshot,
+					state_snapshot_file_path: None,
 					file_activation,
 					trigger_gate: None,
 					handle: None,
@@ -255,6 +270,7 @@ impl FlowgraphRuntime {
 					capability_summary: GraphCapabilitySummary::default(),
 					loaded_state_summary: ProgramStateSummary::default(),
 					loaded_state_snapshot: ProgramStateSnapshot::default(),
+					state_snapshot_file_path: None,
 					file_activation: HashMap::new(),
 					trigger_gate: None,
 					handle: None,
@@ -346,6 +362,7 @@ impl FlowgraphRuntime {
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),
 			loaded_state_snapshot: ProgramStateSnapshot::default(),
+			state_snapshot_file_path: None,
 			file_activation: HashMap::new(),
 			trigger_gate: None,
 			handle: None,
@@ -421,6 +438,21 @@ mod tests {
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].node, "main::counter");
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].version, 0);
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].value, serde_json::json!({ "value": 0 }));
+	}
+
+	#[test]
+	fn set_profile_local_state_snapshot_path_uses_runtime_root_profile_and_flowgraph_root() {
+		let root = state_counter_root();
+		let mut rt = FlowgraphRuntime::load(&root);
+		rt.set_profile_local_state_snapshot_path(
+			std::path::Path::new("C:/vac/runtime"),
+			std::path::Path::new("C:/Users/me/vac/conf.local.toml"),
+		);
+
+		let path = rt.state_snapshot_file_path.expect("snapshot path");
+		let text = path.to_string_lossy().replace('\\', "/");
+		assert!(text.starts_with("C:/vac/runtime/flowgraph-state/conf-local-"), "{text}");
+		assert!(text.ends_with("/state.snapshot.json"), "{text}");
 	}
 
 	#[test]

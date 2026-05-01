@@ -61,6 +61,9 @@
   const loadedStateSnapshot = $derived(
     flowgraphStore.diagnostics?.loaded_state_snapshot,
   );
+  const stateSnapshotFilePath = $derived(
+    flowgraphStore.diagnostics?.state_snapshot_file_path,
+  );
   const loadedStateNodes = $derived(loadedStateSummary?.nodes ?? []);
   const loadedSnapshotNodes = $derived(loadedStateSnapshot?.nodes ?? []);
 </script>
@@ -206,6 +209,14 @@
             {/each}
           </div>
         </details>
+      {/if}
+      {#if stateSnapshotFilePath}
+        <div
+          class="mt-1 truncate font-mono text-[0.65rem] opacity-60"
+          title={stateSnapshotFilePath}
+        >
+          state snapshot file {stateSnapshotFilePath}
+        </div>
       {/if}
     </div>
   {/if}

@@ -331,13 +331,19 @@ impl State {
 		// δ-9 Part A: Flowgraph ロード + ワーカー spawn。`State` 全体への `Weak` を ExecCtx に渡して
 		// `channel.emit` 等が `State::push_channel_datum` を呼べるようにする。
 		if let Some(root) = conf.flowgraph_dir.as_deref() {
-			let (audio_sink_clone, flowgraph_arc, mode_for_gate) = {
+			let (audio_sink_clone, flowgraph_arc, mode_for_gate, runtime_root, profile_path) = {
 				let s = state.read().await;
 				let m = s.runtime_mode_id.read().ok().and_then(|g| g.clone());
-				(s.audio_sink.clone(), s.flowgraph.clone(), m)
+				(
+					s.audio_sink.clone(),
+					s.flowgraph.clone(),
+					m,
+					s.runtime_paths.root.clone(),
+					s.conf_source_path.clone(),
+				)
 			};
 			let state_weak = Arc::downgrade(&state);
-			let rt = crate::flowgraph::FlowgraphRuntime::load_and_spawn(
+			let mut rt = crate::flowgraph::FlowgraphRuntime::load_and_spawn(
 				root,
 				state_weak,
 				Some(audio_sink_clone),
@@ -345,6 +351,9 @@ impl State {
 				mode_for_gate.as_deref(),
 				Some(runtime_mode_id_for_flowgraph),
 			);
+			if let Some(profile_path) = profile_path.as_ref() {
+				rt.set_profile_local_state_snapshot_path(&runtime_root, profile_path);
+			}
 			crate::flowgraph::runtime::log_load_outcome(&rt);
 			*flowgraph_arc.write().await = Some(rt);
 		}

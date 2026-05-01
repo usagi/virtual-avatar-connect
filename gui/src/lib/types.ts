@@ -1187,6 +1187,7 @@ export type FlowgraphDiagnosticsResponse = {
   capability_summary: FlowgraphCapabilitySummary;
   loaded_state_summary: FlowgraphProgramStateSummary;
   loaded_state_snapshot: FlowgraphProgramStateSnapshot;
+  state_snapshot_file_path: string | null;
   file_activation: Record<string, FlowgraphFileActivationMeta>;
   inactive_exec_nodes: string[];
 };
