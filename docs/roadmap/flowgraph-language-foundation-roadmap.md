@@ -727,6 +727,12 @@ Fixture suite report に `state_restore_count` / `state_snapshot_count` の aggr
 `flowgraph.example/state-counter` は実行前 restore entry が `main::counter` / `flowgraph.state.int_counter` / version `41` として観測されることを TOML 側でも固定する。
 これにより restore 件数だけでなく、どの stateful node にどの snapshot version が適用されたかを fixture language の assertion として扱える。
 
+### LF-7t Fixture state assertion manual ✅
+
+`docs/manual/tutorials/flowgraph-fixtures.md` に state restore / snapshot の fixture 構文を追記した。
+top-level `[[state_snapshots]]` が実行前 restore payload であること、`state_restore_count` / `[[tests.expect.state_restores]]` / `[[tests.expect.state_versions]]` / `[[tests.expect.state_snapshots]]` の使い分けを開発者向けに明文化した。
+suite summary の `state_restore_count` / `state_snapshot_count` と、重複 restore entry が restore error になる contract も同じ manual で確認できるようにした。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
