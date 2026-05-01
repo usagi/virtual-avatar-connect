@@ -57,9 +57,8 @@ pub use state_model::{
 	StateSnapshotPolicy, StateStorage,
 };
 pub use state_snapshot_file::{
-	profile_local_state_snapshot_dir_name, profile_local_state_snapshot_path, read_state_snapshot_file,
-	write_state_snapshot_file, ProgramStateSnapshotFile, StateSnapshotFileError, FLOWGRAPH_STATE_SNAPSHOT_DIR,
-	FLOWGRAPH_STATE_SNAPSHOT_FILE_KIND, FLOWGRAPH_STATE_SNAPSHOT_FILE_NAME,
-	FLOWGRAPH_STATE_SNAPSHOT_FILE_SCHEMA_VERSION,
+	profile_local_state_snapshot_dir_name, profile_local_state_snapshot_path, read_state_snapshot_file, write_state_snapshot_file,
+	ProgramStateSnapshotFile, StateSnapshotFileError, FLOWGRAPH_STATE_SNAPSHOT_DIR, FLOWGRAPH_STATE_SNAPSHOT_FILE_KIND,
+	FLOWGRAPH_STATE_SNAPSHOT_FILE_NAME, FLOWGRAPH_STATE_SNAPSHOT_FILE_SCHEMA_VERSION,
 };
 pub use table::{ColumnSpec, Row, Table, TableFromJsonError, TableSchema};

@@ -154,7 +154,11 @@ fn profile_slug(profile_path: &Path) -> String {
 		}
 	}
 	let slug = slug.trim_matches('-');
-	if slug.is_empty() { "profile".into() } else { slug.into() }
+	if slug.is_empty() {
+		"profile".into()
+	} else {
+		slug.into()
+	}
 }
 
 fn hex_prefix(bytes: &[u8], hex_len: usize) -> String {
