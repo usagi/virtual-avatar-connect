@@ -121,11 +121,7 @@ mod tests {
 	}
 
 	fn temp_path(name: &str) -> std::path::PathBuf {
-		let dir = std::env::temp_dir().join(format!(
-			"vac-state-snapshot-file-{}-{}",
-			std::process::id(),
-			unix_time_ms()
-		));
+		let dir = std::env::temp_dir().join(format!("vac-state-snapshot-file-{}-{}", std::process::id(), unix_time_ms()));
 		std::fs::create_dir_all(&dir).expect("create temp dir");
 		dir.join(name)
 	}
