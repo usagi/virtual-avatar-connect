@@ -155,9 +155,10 @@
       {#if loadedStateSummary && (loadedStateNodes.length > 0 || loadedSnapshotNodes.length > 0)}
         <details class="mt-1">
           <summary class="cursor-pointer select-none text-[0.65rem] opacity-60">
-            loaded state {loadedStateSummary.stateful_node_count} / snapshot-capable {loadedStateSummary.snapshot_supported_node_count}
-            / restore-capable {loadedStateSummary.restore_supported_node_count} / snapshots {loadedStateSnapshot?.snapshot_node_count ??
-              0}
+            loaded state {loadedStateSummary.stateful_node_count} / snapshot-capable
+            {loadedStateSummary.snapshot_supported_node_count}
+            / restore-capable {loadedStateSummary.restore_supported_node_count} /
+            snapshots {loadedStateSnapshot?.snapshot_node_count ?? 0}
           </summary>
           <div class="mt-1 grid gap-1">
             {#each loadedStateNodes as node (node.node)}
