@@ -703,6 +703,12 @@ Flowgraph diagnostics panel に `loaded_state_summary` / `loaded_state_snapshot`
 表示は既存 capability / state nodes の diagnostics summary と同じ折りたたみ領域に収め、live runtime state ではなく loaded state として区別する。
 これにより Control API に出した LF-7n metadata が GUI 上でも観測可能になり、後続の永続化 / reload restore 実装前に snapshot 対応 node の初期状態を確認できる。
 
+### LF-7p Restore payload shape validation ✅
+
+`FlowgraphProgram::restore_state_snapshot()` が `snapshot_node_count` と実 payload 件数の不一致、同一 node の重複 restore entry を明示エラーとして拒否するようにした。
+これにより snapshot restore は node / feature / format / payload の検証へ進む前に、manifest と target set の基本的な整合性を固定する。
+将来 profile-local persistence や reload restore を足す際に、破損 snapshot や重複 entry を黙って部分適用しないための contract validation として扱う。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
