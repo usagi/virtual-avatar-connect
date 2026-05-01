@@ -1,0 +1,18 @@
+[meta]
+title = "State Bool Snapshot"
+description = "Minimal state.bool fixture for state snapshot restore assertions."
+tags = ["example", "state", "snapshot", "fixture"]
+
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 160]
+
+[[nodes]]
+id = "flag"
+feature = "flowgraph.state.bool"
+position = [320, 160]
+
+[[edges]]
+from = "in:exec_out"
+to = "flag:toggle"

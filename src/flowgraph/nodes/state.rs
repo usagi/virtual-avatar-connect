@@ -58,6 +58,27 @@ impl StatefulNode for BoolStateNode {
 		Box::new(BoolStateState::default())
 	}
 
+	fn state_model(&self) -> FlowgraphStateModel {
+		FlowgraphStateModel::volatile_node_instance_json_snapshot()
+	}
+
+	fn snapshot_state(&self, state: &(dyn Any + Send)) -> Option<JsonValue> {
+		let state = state.downcast_ref::<BoolStateState>()?;
+		Some(serde_json::json!({ "value": state.value }))
+	}
+
+	fn restore_state(&self, state: &mut (dyn Any + Send), value: &JsonValue) -> Result<(), String> {
+		let state = state
+			.downcast_mut::<BoolStateState>()
+			.ok_or_else(|| "BoolStateState downcast failed".to_string())?;
+		let restored = value
+			.get("value")
+			.and_then(|value| value.as_bool())
+			.ok_or_else(|| "expected object with boolean field 'value'".to_string())?;
+		state.value = restored;
+		Ok(())
+	}
+
 	async fn compute(
 		&self,
 		state: &mut (dyn Any + Send),
@@ -396,12 +417,15 @@ mod tests {
 		let empty = InputMap::new();
 		let sctx = sctx();
 
+		assert_eq!(node.snapshot_state(state.as_ref()), Some(serde_json::json!({ "value": false })));
+
 		let out = node
 			.compute(state.as_mut(), &empty, &empty, &fire("set_true"), &sctx)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("value"), Some(&SocketValue::Bool(true)));
 		assert!(out.fired_exec.contains("changed"));
+		assert_eq!(node.snapshot_state(state.as_ref()), Some(serde_json::json!({ "value": true })));
 
 		// already true → set_true で変化なし → changed 非発火
 		let out = node
@@ -421,6 +445,28 @@ mod tests {
 			.unwrap();
 		assert_eq!(out.data.get("value"), Some(&SocketValue::Bool(false)));
 		assert!(out.fired_exec.is_empty());
+	}
+
+	#[tokio::test]
+	async fn bool_state_snapshot_restore() {
+		let node = BoolStateNode;
+		let mut state: Box<dyn Any + Send> = node.init_state();
+		let sctx = sctx();
+
+		assert!(node.state_model().snapshot_supported);
+		assert!(node.state_model().restore_supported);
+		node.restore_state(state.as_mut(), &serde_json::json!({ "value": true })).unwrap();
+		assert_eq!(node.snapshot_state(state.as_ref()), Some(serde_json::json!({ "value": true })));
+
+		let out = node
+			.compute(state.as_mut(), &InputMap::new(), &InputMap::new(), &ExecFireSet::new(), &sctx)
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("value"), Some(&SocketValue::Bool(true)));
+		assert_eq!(
+			node.restore_state(state.as_mut(), &serde_json::json!({ "value": 1 })).unwrap_err(),
+			"expected object with boolean field 'value'"
+		);
 	}
 
 	// ----- int_counter -----

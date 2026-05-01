@@ -1,0 +1,40 @@
+[[state_snapshots]]
+node = "main::flag"
+feature = "flowgraph.state.bool"
+version = 5
+format = "json"
+value = { value = true }
+
+[[triggers]]
+node = "main::in"
+
+[[tests]]
+name = "bool state snapshot is restored and exported"
+
+[tests.expect]
+node_count = 2
+trigger_count = 1
+trace_count = 0
+effect_count = 0
+state_restore_count = 1
+
+[[tests.expect.state_versions]]
+node = "main::flag"
+version = 6
+
+[[tests.expect.state_restores]]
+node = "main::flag"
+feature = "flowgraph.state.bool"
+version = 5
+
+[[tests.expect.state_snapshots]]
+node = "main::flag"
+version = 6
+format = "json"
+value = { value = false }
+
+[[tests.expect.stored_values]]
+node = "main::flag"
+port = "value"
+ty = "bool"
+value = false
