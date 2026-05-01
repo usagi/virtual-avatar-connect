@@ -282,7 +282,34 @@ impl FlowgraphRuntime {
 		runtime_mode: Option<&str>,
 		runtime_mode_id: Option<std::sync::Arc<std::sync::RwLock<Option<String>>>>,
 	) -> Self {
-		let (mut rt, program) = Self::load_program(root_dir);
+		let (rt, program) = Self::load_program(root_dir);
+		Self::finish_spawn(rt, program, state_weak, audio_sink, conf, runtime_mode, runtime_mode_id)
+	}
+
+	/// `load_and_spawn` と同じく worker を起こすが、metadata 生成前に snapshot file から明示 restore する。
+	/// profile-local persistence / reload restore の自動接続は行わない。
+	pub fn load_and_spawn_with_state_snapshot_file(
+		root_dir: &std::path::Path,
+		snapshot_path: &std::path::Path,
+		state_weak: std::sync::Weak<RwLock<crate::state::State>>,
+		audio_sink: Option<crate::SharedAudioSink>,
+		conf: Option<&crate::conf::Conf>,
+		runtime_mode: Option<&str>,
+		runtime_mode_id: Option<std::sync::Arc<std::sync::RwLock<Option<String>>>>,
+	) -> Self {
+		let (rt, program, _restore) = Self::load_program_with_state_snapshot_file(root_dir, snapshot_path);
+		Self::finish_spawn(rt, program, state_weak, audio_sink, conf, runtime_mode, runtime_mode_id)
+	}
+
+	fn finish_spawn(
+		mut rt: Self,
+		program: Option<crate::flowgraph::FlowgraphProgram>,
+		state_weak: std::sync::Weak<RwLock<crate::state::State>>,
+		audio_sink: Option<crate::SharedAudioSink>,
+		conf: Option<&crate::conf::Conf>,
+		runtime_mode: Option<&str>,
+		runtime_mode_id: Option<std::sync::Arc<std::sync::RwLock<Option<String>>>>,
+	) -> Self {
 		if let Some(c) = conf {
 			if !rt.has_errors() {
 				rt.diagnostics.extend(mode_group_orphan_diagnostics(c, &rt.file_activation));
@@ -459,6 +486,59 @@ mod tests {
 		assert!(!rt.ok);
 		assert!(program.is_none());
 		assert!(restore.is_none());
+		assert!(rt.diagnostics.iter().any(|diagnostic| {
+			diagnostic.code == crate::flowgraph::DiagnosticCode::StateRestore
+				&& diagnostic.message.contains("state snapshot file restore failed")
+		}));
+		let _ = std::fs::remove_file(snapshot_path);
+	}
+
+	#[tokio::test]
+	async fn load_and_spawn_with_state_snapshot_file_restores_before_spawning() {
+		let root = state_counter_root();
+		let snapshot_path = temp_snapshot_path("spawn-restore-ok.snapshot.json");
+		let snapshot = counter_snapshot("main::counter", "flowgraph.state.int_counter", 43, 43);
+		let file = ProgramStateSnapshotFile::with_created_at_unix_ms(snapshot, 1234);
+		crate::flowgraph::write_state_snapshot_file(&snapshot_path, &file).expect("write snapshot file");
+
+		let rt = FlowgraphRuntime::load_and_spawn_with_state_snapshot_file(
+			&root,
+			&snapshot_path,
+			std::sync::Weak::new(),
+			None,
+			None,
+			None,
+			None,
+		);
+
+		assert!(rt.ok, "diagnostics: {:#?}", rt.diagnostics);
+		assert!(rt.handle.is_some());
+		assert_eq!(rt.loaded_state_snapshot.nodes[0].version, 43);
+		assert_eq!(rt.loaded_state_snapshot.nodes[0].value, serde_json::json!({ "value": 43 }));
+		if let Some(handle) = rt.handle.as_ref() {
+			handle.shutdown().await;
+		}
+		let _ = std::fs::remove_file(snapshot_path);
+	}
+
+	#[test]
+	fn load_and_spawn_with_state_snapshot_file_does_not_spawn_on_file_error() {
+		let root = state_counter_root();
+		let snapshot_path = temp_snapshot_path("spawn-restore-bad.snapshot.json");
+		std::fs::write(&snapshot_path, "{ not json").expect("write bad snapshot file");
+
+		let rt = FlowgraphRuntime::load_and_spawn_with_state_snapshot_file(
+			&root,
+			&snapshot_path,
+			std::sync::Weak::new(),
+			None,
+			None,
+			None,
+			None,
+		);
+
+		assert!(!rt.ok);
+		assert!(rt.handle.is_none());
 		assert!(rt.diagnostics.iter().any(|diagnostic| {
 			diagnostic.code == crate::flowgraph::DiagnosticCode::StateRestore
 				&& diagnostic.message.contains("state snapshot file restore failed")
