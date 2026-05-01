@@ -19,6 +19,7 @@
 
 use crate::flowgraph::quantity::{parse_unit, Quantity};
 use crate::flowgraph::socket::{parse_quantity_string, SocketType, SocketValue};
+use crate::flowgraph::state_model::FlowgraphStateModel;
 use async_trait::async_trait;
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
@@ -869,6 +870,14 @@ pub trait StatefulNode: NodeDescriptor {
 	/// state の初期値を生成。engine が NodeInstance 作成時に 1 度だけ呼ぶ。
 	fn init_state(&self) -> Box<dyn Any + Send>;
 
+	fn state_model(&self) -> FlowgraphStateModel {
+		FlowgraphStateModel::volatile_node_instance()
+	}
+
+	fn snapshot_state(&self, _state: &(dyn Any + Send)) -> Option<JsonValue> {
+		None
+	}
+
 	async fn compute(
 		&self,
 		state: &mut (dyn Any + Send),
@@ -937,6 +946,20 @@ impl NodeImpl {
 	}
 	pub fn is_effectful(&self) -> bool {
 		matches!(self, NodeImpl::Effectful(_))
+	}
+
+	pub fn state_model(&self) -> FlowgraphStateModel {
+		match self {
+			NodeImpl::Pure(_) | NodeImpl::Effectful(_) => FlowgraphStateModel::stateless(),
+			NodeImpl::Stateful { node, .. } => node.state_model(),
+		}
+	}
+
+	pub fn snapshot_state(&self) -> Option<JsonValue> {
+		match self {
+			NodeImpl::Stateful { node, state } => node.snapshot_state(state.as_ref()),
+			NodeImpl::Pure(_) | NodeImpl::Effectful(_) => None,
+		}
 	}
 }
 

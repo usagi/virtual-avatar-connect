@@ -164,7 +164,7 @@ impl FlowgraphProgram {
 					return None;
 				};
 				let spec = node.impl_.describe();
-				let state_model = FlowgraphStateModel::for_effect_class("stateful");
+				let state_model = node.impl_.state_model();
 				Some(ProgramStateNode {
 					node: node_id.clone(),
 					feature: spec.feature,
@@ -177,6 +177,36 @@ impl FlowgraphProgram {
 		ProgramStateSummary {
 			stateful_node_count: nodes.len(),
 			snapshot_supported_node_count: nodes.iter().filter(|node| node.state_model.snapshot_supported).count(),
+			nodes,
+		}
+	}
+
+	pub fn export_state_snapshot(&self) -> ProgramStateSnapshot {
+		let mut nodes: Vec<ProgramStateSnapshotNode> = self
+			.nodes
+			.iter()
+			.filter_map(|(node_id, node)| {
+				let NodeImpl::Stateful { .. } = &node.impl_ else {
+					return None;
+				};
+				let state_model = node.impl_.state_model();
+				if !state_model.snapshot_supported {
+					return None;
+				}
+				let value = node.impl_.snapshot_state()?;
+				let spec = node.impl_.describe();
+				Some(ProgramStateSnapshotNode {
+					node: node_id.clone(),
+					feature: spec.feature,
+					version: node.state_version,
+					format: state_model.snapshot_format,
+					value,
+				})
+			})
+			.collect();
+		nodes.sort_by(|a, b| a.node.cmp(&b.node));
+		ProgramStateSnapshot {
+			snapshot_node_count: nodes.len(),
 			nodes,
 		}
 	}
@@ -575,6 +605,21 @@ pub struct ProgramStateNode {
 	pub feature: String,
 	pub version: u64,
 	pub state_model: FlowgraphStateModel,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ProgramStateSnapshot {
+	pub snapshot_node_count: usize,
+	pub nodes: Vec<ProgramStateSnapshotNode>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ProgramStateSnapshotNode {
+	pub node: NodeId,
+	pub feature: String,
+	pub version: u64,
+	pub format: crate::flowgraph::StateSnapshotFormat,
+	pub value: serde_json::Value,
 }
 
 // ---------------------------------------------------------------------
@@ -1017,16 +1062,26 @@ mod tests {
 		let mut prog = b.build().unwrap();
 		let before = prog.state_summary();
 		assert_eq!(before.stateful_node_count, 1);
-		assert_eq!(before.snapshot_supported_node_count, 0);
+		assert_eq!(before.snapshot_supported_node_count, 1);
 		assert_eq!(before.nodes[0].node, "counter");
 		assert_eq!(before.nodes[0].feature, "flowgraph.state.int_counter");
 		assert_eq!(before.nodes[0].version, 0);
-		assert!(!before.nodes[0].state_model.snapshot_supported);
+		assert!(before.nodes[0].state_model.snapshot_supported);
+		assert_eq!(before.nodes[0].state_model.snapshot_format, crate::flowgraph::StateSnapshotFormat::Json);
+		let initial_snapshot = prog.export_state_snapshot();
+		assert_eq!(initial_snapshot.snapshot_node_count, 1);
+		assert_eq!(initial_snapshot.nodes[0].value, serde_json::json!({ "value": 0 }));
 
 		let mut ctx = ExecCtx::default();
 		let _run = prog.execute(&mut ctx).await.unwrap();
 		let after = prog.state_summary();
 		assert_eq!(after.nodes[0].version, 1);
+		let snapshot = prog.export_state_snapshot();
+		assert_eq!(snapshot.nodes[0].node, "counter");
+		assert_eq!(snapshot.nodes[0].feature, "flowgraph.state.int_counter");
+		assert_eq!(snapshot.nodes[0].version, 1);
+		assert_eq!(snapshot.nodes[0].format, crate::flowgraph::StateSnapshotFormat::Json);
+		assert_eq!(snapshot.nodes[0].value, serde_json::json!({ "value": 1 }));
 	}
 
 	// ----- Branch の dead-port elimination ---------------------------------

@@ -22,6 +22,7 @@
 
 use crate::flowgraph::node::{EffectfulNode, NodeImpl, NodeSpec, PureNode, StatefulNode};
 use crate::flowgraph::nodes;
+use crate::flowgraph::FlowgraphStateModel;
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 
@@ -54,6 +55,13 @@ impl NodeArc {
 			NodeArc::Pure(_) => "pure",
 			NodeArc::Stateful(_) => "stateful",
 			NodeArc::Effectful(_) => "effectful",
+		}
+	}
+
+	fn state_model(&self) -> FlowgraphStateModel {
+		match self {
+			NodeArc::Pure(_) | NodeArc::Effectful(_) => FlowgraphStateModel::stateless(),
+			NodeArc::Stateful(n) => n.state_model(),
 		}
 	}
 
@@ -131,6 +139,10 @@ impl NodeRegistry {
 	/// LF-2: feature の副作用クラス。alias は正規 feature へ解決して返す。
 	pub fn effect_class(&self, feature: &str) -> Option<&'static str> {
 		self.map.get(self.resolve_feature(feature)).map(|n| n.effect_class())
+	}
+
+	pub fn state_model(&self, feature: &str) -> Option<FlowgraphStateModel> {
+		self.map.get(self.resolve_feature(feature)).map(|n| n.state_model())
 	}
 
 	/// LF-2: feature が要求する capability 群を返す。

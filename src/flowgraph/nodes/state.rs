@@ -14,6 +14,7 @@ use crate::flowgraph::node::{
 	get_optional_int, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput, NodeSpec, PortSpec, StatefulCtx, StatefulNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
+use crate::flowgraph::FlowgraphStateModel;
 use async_trait::async_trait;
 use base64::Engine as _;
 use serde_json::Value as JsonValue;
@@ -122,6 +123,15 @@ impl NodeDescriptor for IntCounterNode {
 impl StatefulNode for IntCounterNode {
 	fn init_state(&self) -> Box<dyn Any + Send> {
 		Box::new(IntCounterState::default())
+	}
+
+	fn state_model(&self) -> FlowgraphStateModel {
+		FlowgraphStateModel::volatile_node_instance_json_snapshot()
+	}
+
+	fn snapshot_state(&self, state: &(dyn Any + Send)) -> Option<JsonValue> {
+		let state = state.downcast_ref::<IntCounterState>()?;
+		Some(serde_json::json!({ "value": state.value }))
 	}
 
 	async fn compute(

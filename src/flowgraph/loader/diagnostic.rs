@@ -253,7 +253,9 @@ impl GraphCapabilitySummary {
 			}
 			if effect_class == "stateful" {
 				stateful_node_count += 1;
-				let state_model = FlowgraphStateModel::for_effect_class(&effect_class);
+				let state_model = reg
+					.state_model(&meta.feature)
+					.unwrap_or_else(|| FlowgraphStateModel::for_effect_class(&effect_class));
 				state_nodes.push(GraphStateNode {
 					node: node.clone(),
 					feature: meta.feature.clone(),

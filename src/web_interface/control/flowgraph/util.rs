@@ -172,8 +172,9 @@ pub(crate) fn enrich_state_model_json(reg: &crate::flowgraph::registry::NodeRegi
 		return;
 	};
 	let feature = obj.get("feature").and_then(|f| f.as_str()).unwrap_or("");
-	let effect_class = reg.effect_class(feature).unwrap_or("unknown");
-	let state_model = crate::flowgraph::FlowgraphStateModel::for_effect_class(effect_class);
+	let state_model = reg
+		.state_model(feature)
+		.unwrap_or_else(|| crate::flowgraph::FlowgraphStateModel::for_effect_class("unknown"));
 	obj.insert(
 		"state_model".to_string(),
 		serde_json::to_value(state_model).unwrap_or(serde_json::Value::Null),
@@ -579,9 +580,9 @@ mod tests {
 		assert_eq!(counter["storage"].as_str(), Some("volatile"));
 		assert_eq!(counter["lifetime"].as_str(), Some("program_instance"));
 		assert_eq!(counter["reinitialized_on_reload"].as_bool(), Some(true));
-		assert_eq!(counter["snapshot_supported"].as_bool(), Some(false));
-		assert_eq!(counter["snapshot_policy"].as_str(), Some("unsupported"));
-		assert_eq!(counter["snapshot_format"].as_str(), Some("none"));
+		assert_eq!(counter["snapshot_supported"].as_bool(), Some(true));
+		assert_eq!(counter["snapshot_policy"].as_str(), Some("explicit"));
+		assert_eq!(counter["snapshot_format"].as_str(), Some("json"));
 		assert_eq!(counter["restore_supported"].as_bool(), Some(false));
 		assert_eq!(counter["restore_policy"].as_str(), Some("unsupported"));
 		assert_eq!(counter["migration_policy"].as_str(), Some("none"));
@@ -589,6 +590,9 @@ mod tests {
 
 		let rate_limit = &specs["flowgraph.util.rate_limit"]["state_model"];
 		assert_eq!(rate_limit["stateful"].as_bool(), Some(true));
+		assert_eq!(rate_limit["snapshot_supported"].as_bool(), Some(false));
+		assert_eq!(rate_limit["snapshot_policy"].as_str(), Some("unsupported"));
+		assert_eq!(rate_limit["snapshot_format"].as_str(), Some("none"));
 
 		for feature in ["flowgraph.literal.string", "flowgraph.table.write_tsv"] {
 			let state_model = &specs[feature]["state_model"];

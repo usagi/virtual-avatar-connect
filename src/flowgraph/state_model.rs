@@ -29,12 +29,14 @@ pub enum StateLifetime {
 #[serde(rename_all = "snake_case")]
 pub enum StateSnapshotPolicy {
 	Unsupported,
+	Explicit,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum StateSnapshotFormat {
 	None,
+	Json,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -110,6 +112,24 @@ impl FlowgraphStateModel {
 			snapshot_supported: false,
 			snapshot_policy: StateSnapshotPolicy::Unsupported,
 			snapshot_format: StateSnapshotFormat::None,
+			restore_supported: false,
+			restore_policy: StateRestorePolicy::Unsupported,
+			migration_policy: StateMigrationPolicy::None,
+			persistence_policy: StatePersistencePolicy::None,
+		}
+	}
+
+	pub fn volatile_node_instance_json_snapshot() -> Self {
+		Self {
+			version: 1,
+			stateful: true,
+			scope: StateScope::NodeInstance,
+			storage: StateStorage::Volatile,
+			lifetime: StateLifetime::ProgramInstance,
+			reinitialized_on_reload: true,
+			snapshot_supported: true,
+			snapshot_policy: StateSnapshotPolicy::Explicit,
+			snapshot_format: StateSnapshotFormat::Json,
 			restore_supported: false,
 			restore_policy: StateRestorePolicy::Unsupported,
 			migration_policy: StateMigrationPolicy::None,
