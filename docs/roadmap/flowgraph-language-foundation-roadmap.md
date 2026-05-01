@@ -667,6 +667,12 @@ snapshot payload / restore / persistence はまだ実装せず、次段で snaps
 Control API node catalog、graph state summary、runtime state summary は registry / node 実装由来の state model を読むため、stateful node 全体を一律 `unsupported` と扱わず、node ごとの snapshot capability を表現できる。
 現段階では export のみで、restore / persistence / migration は引き続き未実装。`FlowgraphProgram::export_state_snapshot()` は対応 node の現在 version と JSON snapshot payload を read-only に返す。
 
+### LF-7j Int counter snapshot restore ✅
+
+`FlowgraphProgram::restore_state_snapshot()` を追加し、`ProgramStateSnapshot` の node / feature / format を検証してから対応 stateful node に JSON payload を復元できるようにした。
+最初の restore 対応 node は `flowgraph.state.int_counter` で、snapshot の `{ value }` を fresh program に復元し、state version も snapshot 側の version に合わせる。
+現段階では明示的な runtime API のみで、profile-local persistence、migration、ロード時自動復元はまだ行わない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
