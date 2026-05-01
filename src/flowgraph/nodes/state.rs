@@ -135,7 +135,9 @@ impl StatefulNode for IntCounterNode {
 	}
 
 	fn restore_state(&self, state: &mut (dyn Any + Send), value: &JsonValue) -> Result<(), String> {
-		let state = state.downcast_mut::<IntCounterState>().ok_or_else(|| "IntCounterState downcast failed".to_string())?;
+		let state = state
+			.downcast_mut::<IntCounterState>()
+			.ok_or_else(|| "IntCounterState downcast failed".to_string())?;
 		let restored = value
 			.get("value")
 			.and_then(|value| value.as_i64())
