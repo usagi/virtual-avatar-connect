@@ -5,12 +5,14 @@
 
 use crate::flowgraph::ProgramStateSnapshot;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
 pub const FLOWGRAPH_STATE_SNAPSHOT_FILE_KIND: &str = "vac.flowgraph.state_snapshot";
 pub const FLOWGRAPH_STATE_SNAPSHOT_FILE_SCHEMA_VERSION: u8 = 1;
+pub const FLOWGRAPH_STATE_SNAPSHOT_DIR: &str = "flowgraph-state";
+pub const FLOWGRAPH_STATE_SNAPSHOT_FILE_NAME: &str = "state.snapshot.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ProgramStateSnapshotFile {
@@ -80,6 +82,30 @@ pub fn read_state_snapshot_file(path: impl AsRef<Path>) -> Result<ProgramStateSn
 	ProgramStateSnapshotFile::from_json_str(&raw)
 }
 
+pub fn profile_local_state_snapshot_path(
+	runtime_root: impl AsRef<Path>,
+	profile_path: impl AsRef<Path>,
+	flowgraph_root: impl AsRef<Path>,
+) -> PathBuf {
+	runtime_root
+		.as_ref()
+		.join(FLOWGRAPH_STATE_SNAPSHOT_DIR)
+		.join(profile_local_state_snapshot_dir_name(profile_path, flowgraph_root))
+		.join(FLOWGRAPH_STATE_SNAPSHOT_FILE_NAME)
+}
+
+pub fn profile_local_state_snapshot_dir_name(profile_path: impl AsRef<Path>, flowgraph_root: impl AsRef<Path>) -> String {
+	let profile_path = profile_path.as_ref();
+	let key = format!(
+		"profile={}\nflowgraph={}",
+		normalize_path_for_key(profile_path),
+		normalize_path_for_key(flowgraph_root.as_ref())
+	);
+	let digest = blake3::hash(key.as_bytes());
+	let digest_hex = hex_prefix(digest.as_bytes(), 16);
+	format!("{}-{digest_hex}", profile_slug(profile_path))
+}
+
 #[derive(Debug, Error)]
 pub enum StateSnapshotFileError {
 	#[error("state snapshot file io failed: {0}")]
@@ -100,6 +126,51 @@ fn unix_time_ms() -> u64 {
 		.unwrap_or(Duration::ZERO)
 		.as_millis()
 		.min(u128::from(u64::MAX)) as u64
+}
+
+fn normalize_path_for_key(path: &Path) -> String {
+	path.to_string_lossy().replace('\\', "/")
+}
+
+fn profile_slug(profile_path: &Path) -> String {
+	let stem = profile_path.file_stem().and_then(|stem| stem.to_str()).unwrap_or("profile");
+	let mut slug = String::new();
+	let mut prev_dash = false;
+	for ch in stem.chars() {
+		let next = if ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-') {
+			prev_dash = false;
+			Some(ch)
+		} else if !prev_dash {
+			prev_dash = true;
+			Some('-')
+		} else {
+			None
+		};
+		if let Some(ch) = next {
+			slug.push(ch);
+		}
+		if slug.len() >= 48 {
+			break;
+		}
+	}
+	let slug = slug.trim_matches('-');
+	if slug.is_empty() { "profile".into() } else { slug.into() }
+}
+
+fn hex_prefix(bytes: &[u8], hex_len: usize) -> String {
+	const HEX: &[u8; 16] = b"0123456789abcdef";
+	let mut out = String::with_capacity(hex_len);
+	for byte in bytes {
+		if out.len() >= hex_len {
+			break;
+		}
+		out.push(HEX[(byte >> 4) as usize] as char);
+		if out.len() >= hex_len {
+			break;
+		}
+		out.push(HEX[(byte & 0x0f) as usize] as char);
+	}
+	out
 }
 
 #[cfg(test)]
@@ -171,5 +242,40 @@ mod tests {
 			bad_count.validate(),
 			Err(StateSnapshotFileError::SnapshotCountMismatch { declared: 2, actual: 1 })
 		));
+	}
+
+	#[test]
+	fn profile_local_snapshot_path_is_stable_and_profile_scoped() {
+		let path = profile_local_state_snapshot_path(
+			"C:/vac/runtime",
+			"C:/Users/me/vac/conf.local.toml",
+			"C:/Users/me/vac/flowgraph.example",
+		);
+		let text = path.to_string_lossy().replace('\\', "/");
+		assert!(
+			text.ends_with("/flowgraph-state/conf-local-4397fb2756fd0d7f/state.snapshot.json"),
+			"{text}"
+		);
+
+		let other_profile = profile_local_state_snapshot_path(
+			"C:/vac/runtime",
+			"C:/Users/me/vac/conf.streaming.toml",
+			"C:/Users/me/vac/flowgraph.example",
+		);
+		assert_ne!(path, other_profile);
+
+		let other_flowgraph = profile_local_state_snapshot_path(
+			"C:/vac/runtime",
+			"C:/Users/me/vac/conf.local.toml",
+			"C:/Users/me/vac/flowgraph.local",
+		);
+		assert_ne!(path, other_flowgraph);
+	}
+
+	#[test]
+	fn profile_local_snapshot_dir_name_sanitizes_non_ascii_stems() {
+		let name = profile_local_state_snapshot_dir_name("C:/vac/設定.toml", "C:/vac/flowgraph.example");
+		assert!(name.starts_with("profile-"), "{name}");
+		assert!(name.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-'), "{name}");
 	}
 }
