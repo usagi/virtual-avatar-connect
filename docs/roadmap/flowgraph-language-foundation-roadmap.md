@@ -733,6 +733,12 @@ Fixture suite report に `state_restore_count` / `state_snapshot_count` の aggr
 top-level `[[state_snapshots]]` が実行前 restore payload であること、`state_restore_count` / `[[tests.expect.state_restores]]` / `[[tests.expect.state_versions]]` / `[[tests.expect.state_snapshots]]` の使い分けを開発者向けに明文化した。
 suite summary の `state_restore_count` / `state_snapshot_count` と、重複 restore entry が restore error になる contract も同じ manual で確認できるようにした。
 
+### LF-7u Graph state snapshot/restore support counts ✅
+
+`GraphCapabilitySummary` に `snapshot_supported_state_node_count` / `restore_supported_state_node_count` を追加し、graph 内で snapshot / restore 対応済みの stateful node 数を summary level で確認できるようにした。
+GUI diagnostics の summary 行にも snapshots / restores の件数を追加し、state nodes details を開かなくても state support coverage を把握できる。
+現時点の `flowgraph.example` では `flowgraph.state.int_counter` の 1 node が snapshot / restore 対応として固定される。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
