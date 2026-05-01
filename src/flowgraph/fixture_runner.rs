@@ -12,7 +12,7 @@ use crate::flowgraph::node::{
 use crate::flowgraph::socket::{from_toml_value, SocketType};
 use crate::flowgraph::{
 	load_flowgraph_dir, FlowgraphProgram, LoadError, NodeExecError, ProgramRun, ProgramStateSnapshot, ProgramStateSnapshotNode,
-	StateRestoreError, StateSnapshotFormat,
+	ProgramStateRestoreReport, StateRestoreError, StateSnapshotFormat,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -136,6 +136,19 @@ pub struct FixtureStateSnapshot {
 	pub value: serde_json::Value,
 }
 
+#[derive(Debug, Default, Serialize)]
+pub struct FixtureStateRestoreReport {
+	pub restored_node_count: usize,
+	pub nodes: Vec<FixtureStateRestoreNode>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FixtureStateRestoreNode {
+	pub node: String,
+	pub feature: String,
+	pub version: u64,
+}
+
 #[derive(Debug, Serialize)]
 pub struct FixtureRunReport {
 	pub ok: bool,
@@ -155,6 +168,7 @@ pub struct FixtureRunReport {
 	pub exec_count: Vec<(String, usize)>,
 	pub pure_evaluations: Vec<(String, usize)>,
 	pub state_versions: Vec<(String, u64)>,
+	pub state_restore: FixtureStateRestoreReport,
 	pub state_snapshots: Vec<FixtureStateSnapshot>,
 	pub cache_hits: usize,
 	pub cache_misses: usize,
@@ -314,6 +328,7 @@ struct FixtureExpect {
 	#[serde(default)]
 	trace_contains: Vec<String>,
 	effect_count: Option<usize>,
+	state_restore_count: Option<usize>,
 	#[serde(default)]
 	trigger_history: Vec<FixtureExpectedTriggerHistory>,
 	#[serde(default)]
@@ -453,12 +468,15 @@ pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, Fi
 	let capability_summary = fixture.capability_summary.clone();
 	let declared_tests = read_declared_tests(root)?;
 	let initial_state_snapshot = build_initial_state_snapshot(&declared_tests)?;
-	if initial_state_snapshot.snapshot_node_count > 0 {
-		fixture
+	let state_restore = if initial_state_snapshot.snapshot_node_count > 0 {
+		let report = fixture
 			.program
 			.restore_state_snapshot(&initial_state_snapshot)
 			.map_err(FixtureError::StateRestore)?;
-	}
+		fixture_state_restore_report(report)
+	} else {
+		FixtureStateRestoreReport::default()
+	};
 	let (run, ctx, mock_summaries, trigger_history) = run_fixture_program(&mut fixture.program, &declared_tests).await?;
 	let state_snapshot = fixture.program.export_state_snapshot();
 	let mut report = make_report(
@@ -469,6 +487,7 @@ pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, Fi
 		ctx,
 		mock_summaries,
 		trigger_history,
+		state_restore,
 		state_snapshot,
 	);
 	report.tests = evaluate_declared_tests(&declared_tests, &report);
@@ -685,6 +704,7 @@ fn make_report(
 	ctx: ExecCtx,
 	mocks: Vec<FixtureMockSummary>,
 	trigger_history: Vec<FixtureTriggerHistory>,
+	state_restore: FixtureStateRestoreReport,
 	state_snapshot: ProgramStateSnapshot,
 ) -> FixtureRunReport {
 	let ProgramRun {
@@ -770,6 +790,7 @@ fn make_report(
 		exec_count,
 		pure_evaluations,
 		state_versions,
+		state_restore,
 		state_snapshots,
 		cache_hits,
 		cache_misses,
@@ -897,6 +918,23 @@ fn build_initial_state_snapshot(declared_tests: &[ParsedFixtureTestFile]) -> Res
 	})
 }
 
+fn fixture_state_restore_report(report: ProgramStateRestoreReport) -> FixtureStateRestoreReport {
+	let mut nodes: Vec<FixtureStateRestoreNode> = report
+		.nodes
+		.into_iter()
+		.map(|node| FixtureStateRestoreNode {
+			node: node.node,
+			feature: node.feature,
+			version: node.version,
+		})
+		.collect();
+	nodes.sort_by(|a, b| a.node.cmp(&b.node));
+	FixtureStateRestoreReport {
+		restored_node_count: report.restored_node_count,
+		nodes,
+	}
+}
+
 fn parse_state_snapshot_format(format: &str) -> Result<StateSnapshotFormat, String> {
 	match format {
 		"json" => Ok(StateSnapshotFormat::Json),
@@ -930,6 +968,14 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 	if let Some(expected) = case.expect.effect_count {
 		if report.effect_count != expected {
 			failures.push(format!("effect_count: expected {expected}, actual {}", report.effect_count));
+		}
+	}
+	if let Some(expected) = case.expect.state_restore_count {
+		if report.state_restore.restored_node_count != expected {
+			failures.push(format!(
+				"state_restore_count: expected {expected}, actual {}",
+				report.state_restore.restored_node_count
+			));
 		}
 	}
 	if let Some(expected) = &case.expect.trace {
@@ -1350,6 +1396,9 @@ mod tests {
 		let dir = example_dir("state-counter");
 		let report = run_fixture_once_report(&dir).await.expect("report");
 		assert!(report.ok, "report: {:?}", report.tests);
+		assert_eq!(report.state_restore.restored_node_count, 1);
+		assert_eq!(report.state_restore.nodes[0].node, "main::counter");
+		assert_eq!(report.state_restore.nodes[0].version, 41);
 		assert_eq!(report.state_versions, vec![("main::counter".into(), 42)]);
 		assert_eq!(report.state_snapshots.len(), 1);
 		assert_eq!(report.state_snapshots[0].node, "main::counter");
@@ -1952,6 +2001,7 @@ mod tests {
 			exec_count: Vec::new(),
 			pure_evaluations: Vec::new(),
 			state_versions: Vec::new(),
+			state_restore: FixtureStateRestoreReport::default(),
 			state_snapshots: Vec::new(),
 			cache_hits: 0,
 			cache_misses: 0,
