@@ -697,6 +697,12 @@ Fixture runner の JSON report に `state_restore` summary を追加し、実行
 これは worker 実行後の live state ではなく、reload 時点で snapshot export 可能な node と初期 payload を確認するための surface として名前を明示している。
 GUI DTO も diagnostics response の既存 `file_activation` / `inactive_exec_nodes` と合わせて更新し、後続の表示実装や Control API 連携で型安全に参照できるようにした。
 
+### LF-7o GUI loaded state visibility ✅
+
+Flowgraph diagnostics panel に `loaded_state_summary` / `loaded_state_snapshot` の compact details 表示を追加し、reload 直後に stateful node の version と snapshot payload を GUI から確認できるようにした。
+表示は既存 capability / state nodes の diagnostics summary と同じ折りたたみ領域に収め、live runtime state ではなく loaded state として区別する。
+これにより Control API に出した LF-7n metadata が GUI 上でも観測可能になり、後続の永続化 / reload restore 実装前に snapshot 対応 node の初期状態を確認できる。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
