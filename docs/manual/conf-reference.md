@@ -108,7 +108,7 @@ state 関連の値は reload 直後の read-only snapshot であり、worker 実
 - `loaded_state_summary.restore_supported_node_count`: ロード直後 program の restore 対応 node 数。
 - `loaded_state_snapshot`: ロード直後に export できた snapshot payload。現段階では対応 node のみ含む。
 
-現在の標準 node では `flowgraph.state.bool` と `flowgraph.state.int_counter` が JSON snapshot / restore に対応しています。
+現在の標準 node では `flowgraph.state.bool`、`flowgraph.state.int_counter`、`flowgraph.state.latch` が JSON snapshot / restore に対応しています。
 profile-local persistence、migration、reload 時の自動 restore はまだ導入していません。
 
 ### 5.1 `[[control_api.tables]]` — Glossary / 汎用 Table の GUI 編集許可リスト (Phase φ / GRN)
