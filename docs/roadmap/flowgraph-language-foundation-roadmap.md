@@ -757,6 +757,12 @@ GUI diagnostics の loaded state details も snapshot-capable / restore-capable 
 `flowgraph.example/state-bool` を追加し、restore 済み bool state を trigger で toggle した後の state version、stored value、snapshot payload を fixture runner で固定した。
 これにより snapshot / restore 対応標準 node は `flowgraph.state.bool` と `flowgraph.state.int_counter` の 2 種となり、fixture suite summary でも restore / snapshot が 2 件として観測される。
 
+### LF-7y Latch state snapshot/restore coverage ✅
+
+`flowgraph.state.latch` を JSON snapshot / restore 対応にし、payload `{ has_value: bool, value: json }` で未設定状態と保持値を export / restore できるようにした。
+`flowgraph.example/state-latch` を追加し、restore 済み latch を literal JSON 入力で更新した後の state version、stored value、snapshot payload を fixture runner で固定した。
+これにより snapshot / restore 対応標準 node は `flowgraph.state.bool`、`flowgraph.state.int_counter`、`flowgraph.state.latch` の 3 種となり、fixture suite summary でも restore / snapshot が 3 件として観測される。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
