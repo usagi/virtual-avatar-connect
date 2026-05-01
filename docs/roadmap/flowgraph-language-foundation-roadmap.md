@@ -793,6 +793,12 @@ restore 成功時は `loaded_state_summary` / `loaded_state_snapshot` が復元�
 hash は profile path と flowgraph root を正規化した文字列から作るため、同名 profile や別 flowgraph root の snapshot が同じファイルに混ざらない。
 この段階では保存先 contract の固定に留め、runtime からの自動 write/read や Control API はまだ接続しない。
 
+### LF-7ae State snapshot file restore helper ✅
+
+`FlowgraphRuntime::load_program_with_state_snapshot_file()` / `load_with_state_snapshot_file()` を追加し、`ProgramStateSnapshotFile` envelope を読んで既存の load-time restore hook に渡せるようにした。
+snapshot file の JSON parse / schema validation / count validation に失敗した場合は `state-restore` diagnostic として報告し、worker に渡す program を返さない。
+この段階では明示 helper の追加に留め、profile-local path からの自動読込や runtime 起動時の暗黙 restore はまだ接続しない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
