@@ -781,6 +781,12 @@ fixture runner には `state_snapshot_count` と payload 省略可能な `[[test
 read / write helper は schema version、kind、`snapshot_node_count` と payload 件数の不一致を検出し、破損 snapshot を restore path に渡す前に拒否できる。
 現段階では保存形式だけを固定し、Control API 経由の live state export / import、profile-local persistence、reload 時自動 restore はまだ接続しない。
 
+### LF-7ac Explicit load-time state restore hook ✅
+
+`FlowgraphRuntime::load_program_with_state_snapshot()` / `load_with_state_snapshot()` を追加し、ロード済み program の metadata を作る前に明示 snapshot を restore できる内部 hook を用意した。
+restore 成功時は `loaded_state_summary` / `loaded_state_snapshot` が復元後 version と payload を示し、失敗時は `state-restore` diagnostic を出して worker に渡す program を返さない。
+通常の `load()` / `load_program()` / `load_and_spawn()` の挙動は変えず、profile-local persistence や reload 時自動 restore を後続で接続するための内部 hook に留めた。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
