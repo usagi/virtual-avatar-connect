@@ -270,6 +270,7 @@ mod tests {
 		assert!(rt.ok, "diagnostics: {:#?}", rt.diagnostics);
 		assert_eq!(rt.loaded_state_summary.stateful_node_count, 1);
 		assert_eq!(rt.loaded_state_summary.snapshot_supported_node_count, 1);
+		assert_eq!(rt.loaded_state_summary.restore_supported_node_count, 1);
 		assert_eq!(rt.loaded_state_summary.nodes[0].node, "main::counter");
 		assert_eq!(rt.loaded_state_summary.nodes[0].version, 0);
 		assert_eq!(rt.loaded_state_snapshot.snapshot_node_count, 1);
