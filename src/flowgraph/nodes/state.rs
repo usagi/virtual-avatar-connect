@@ -617,10 +617,14 @@ mod tests {
 			.compute(state.as_mut(), &InputMap::new(), &InputMap::new(), &ExecFireSet::new(), &sctx)
 			.await
 			.unwrap();
-		assert_eq!(out.data.get("value"), Some(&SocketValue::Json(serde_json::json!({ "message": "restored" }))));
+		assert_eq!(
+			out.data.get("value"),
+			Some(&SocketValue::Json(serde_json::json!({ "message": "restored" })))
+		);
 		assert_eq!(out.data.get("has_value"), Some(&SocketValue::Bool(true)));
 		assert_eq!(
-			node.restore_state(state.as_mut(), &serde_json::json!({ "value": null })).unwrap_err(),
+			node.restore_state(state.as_mut(), &serde_json::json!({ "value": null }))
+				.unwrap_err(),
 			"expected object with boolean field 'has_value' and field 'value'"
 		);
 	}
@@ -677,9 +681,12 @@ mod tests {
 			Some(serde_json::json!({ "items": [{ "message": "restored", "count": 1 }] }))
 		);
 
-		let inputs: InputMap = [("input".into(), SocketValue::Json(serde_json::json!({ "message": "updated", "count": 2 })))]
-			.into_iter()
-			.collect();
+		let inputs: InputMap = [(
+			"input".into(),
+			SocketValue::Json(serde_json::json!({ "message": "updated", "count": 2 })),
+		)]
+		.into_iter()
+		.collect();
 		let out = node
 			.compute(state.as_mut(), &InputMap::new(), &inputs, &fire("push"), &sctx)
 			.await
@@ -693,7 +700,8 @@ mod tests {
 			] }))
 		);
 		assert_eq!(
-			node.restore_state(state.as_mut(), &serde_json::json!({ "items": null })).unwrap_err(),
+			node.restore_state(state.as_mut(), &serde_json::json!({ "items": null }))
+				.unwrap_err(),
 			"expected object with array field 'items'"
 		);
 	}

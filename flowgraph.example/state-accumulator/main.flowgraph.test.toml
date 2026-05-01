@@ -31,7 +31,10 @@ version = 9
 node = "main::acc"
 version = 10
 format = "json"
-value = { items = [{ message = "restored", count = 1 }, { message = "updated", count = 2 }] }
+value = { items = [
+ { message = "restored", count = 1 },
+ { message = "updated", count = 2 },
+] }
 
 [[tests.expect.stored_values]]
 node = "main::acc"
@@ -43,4 +46,7 @@ value = 2
 node = "main::acc"
 port = "items"
 ty = "list<json>"
-value = [{ message = "restored", count = 1 }, { message = "updated", count = 2 }]
+value = [
+ { message = "restored", count = 1 },
+ { message = "updated", count = 2 },
+]
