@@ -17,9 +17,7 @@ use crate::flowgraph::activation::{mode_group_orphan_diagnostics, TriggerGate};
 use crate::flowgraph::loader::{Diagnostic, FlowgraphFileActivationMeta, GraphCapabilitySummary, LoadedNodeMeta, Severity};
 use crate::flowgraph::node::PureEvalHost;
 use crate::flowgraph::node::TriggerHandle;
-use crate::flowgraph::{
-	ProgramStateRestoreReport, ProgramStateSnapshot, ProgramStateSummary, StateSnapshotFileError,
-};
+use crate::flowgraph::{ProgramStateRestoreReport, ProgramStateSnapshot, ProgramStateSummary, StateSnapshotFileError};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
