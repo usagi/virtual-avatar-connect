@@ -340,6 +340,27 @@ impl StatefulNode for AccumulatorNode {
 		Box::new(AccumulatorState::default())
 	}
 
+	fn state_model(&self) -> FlowgraphStateModel {
+		FlowgraphStateModel::volatile_node_instance_json_snapshot()
+	}
+
+	fn snapshot_state(&self, state: &(dyn Any + Send)) -> Option<JsonValue> {
+		let state = state.downcast_ref::<AccumulatorState>()?;
+		Some(serde_json::json!({ "items": state.items }))
+	}
+
+	fn restore_state(&self, state: &mut (dyn Any + Send), value: &JsonValue) -> Result<(), String> {
+		let state = state
+			.downcast_mut::<AccumulatorState>()
+			.ok_or_else(|| "AccumulatorState downcast failed".to_string())?;
+		let restored_items = value
+			.get("items")
+			.and_then(|value| value.as_array())
+			.ok_or_else(|| "expected object with array field 'items'".to_string())?;
+		state.items = restored_items.clone();
+		Ok(())
+	}
+
 	async fn compute(
 		&self,
 		state: &mut (dyn Any + Send),
@@ -612,6 +633,8 @@ mod tests {
 		let mut state: Box<dyn Any + Send> = node.init_state();
 		let sctx = sctx();
 
+		assert_eq!(node.snapshot_state(state.as_ref()), Some(serde_json::json!({ "items": [] })));
+
 		for n in 1..=3 {
 			let inputs: InputMap = [("input".into(), SocketValue::Int(n))].into_iter().collect();
 			let out = node
@@ -627,11 +650,51 @@ mod tests {
 			.unwrap();
 		assert!(out.fired_exec.contains("cleared"));
 		assert_eq!(out.data.get("count"), Some(&SocketValue::Int(0)));
+		assert_eq!(node.snapshot_state(state.as_ref()), Some(serde_json::json!({ "items": [] })));
 		// 再 clear は no-op（cleared 発火なし）
 		let out = node
 			.compute(state.as_mut(), &InputMap::new(), &InputMap::new(), &fire("clear"), &sctx)
 			.await
 			.unwrap();
 		assert!(!out.fired_exec.contains("cleared"));
+	}
+
+	#[tokio::test]
+	async fn accumulator_snapshot_restore() {
+		let node = AccumulatorNode;
+		let mut state: Box<dyn Any + Send> = node.init_state();
+		let sctx = sctx();
+
+		assert!(node.state_model().snapshot_supported);
+		assert!(node.state_model().restore_supported);
+		node.restore_state(
+			state.as_mut(),
+			&serde_json::json!({ "items": [{ "message": "restored", "count": 1 }] }),
+		)
+		.unwrap();
+		assert_eq!(
+			node.snapshot_state(state.as_ref()),
+			Some(serde_json::json!({ "items": [{ "message": "restored", "count": 1 }] }))
+		);
+
+		let inputs: InputMap = [("input".into(), SocketValue::Json(serde_json::json!({ "message": "updated", "count": 2 })))]
+			.into_iter()
+			.collect();
+		let out = node
+			.compute(state.as_mut(), &InputMap::new(), &inputs, &fire("push"), &sctx)
+			.await
+			.unwrap();
+		assert_eq!(out.data.get("count"), Some(&SocketValue::Int(2)));
+		assert_eq!(
+			node.snapshot_state(state.as_ref()),
+			Some(serde_json::json!({ "items": [
+				{ "message": "restored", "count": 1 },
+				{ "message": "updated", "count": 2 }
+			] }))
+		);
+		assert_eq!(
+			node.restore_state(state.as_mut(), &serde_json::json!({ "items": null })).unwrap_err(),
+			"expected object with array field 'items'"
+		);
 	}
 }

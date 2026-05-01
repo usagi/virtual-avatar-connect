@@ -1,0 +1,28 @@
+[meta]
+title = "State Accumulator Snapshot"
+description = "Minimal state.accumulator fixture for JSON snapshot restore assertions."
+tags = ["example", "state", "snapshot", "fixture"]
+
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 160]
+
+[[nodes]]
+id = "payload"
+feature = "flowgraph.literal.json"
+position = [320, 260]
+properties.value = { message = "updated", count = 2 }
+
+[[nodes]]
+id = "acc"
+feature = "flowgraph.state.accumulator"
+position = [560, 160]
+
+[[edges]]
+from = "in:exec_out"
+to = "acc:push"
+
+[[edges]]
+from = "payload:value"
+to = "acc:input"

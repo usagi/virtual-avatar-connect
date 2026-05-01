@@ -1423,14 +1423,36 @@ mod tests {
 		let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("flowgraph.example");
 		let report = run_fixture_suite_report(&dir).await.expect("report");
 		assert!(report.ok, "errors: {:?}", report.errors);
-		assert_eq!(report.fixture_count, 12);
+		assert_eq!(report.fixture_count, 13);
 		assert_eq!(report.failed_fixtures, 0);
-		assert_eq!(report.test_count, 12);
+		assert_eq!(report.test_count, 13);
 		assert_eq!(report.failed_tests, 0);
-		assert_eq!(report.trigger_count, 11);
+		assert_eq!(report.trigger_count, 12);
 		assert_eq!(report.effect_count, 8);
-		assert_eq!(report.state_restore_count, 3);
-		assert_eq!(report.state_snapshot_count, 3);
+		assert_eq!(report.state_restore_count, 4);
+		assert_eq!(report.state_snapshot_count, 4);
+	}
+
+	#[tokio::test]
+	async fn state_accumulator_snapshot_declared_test_passes() {
+		let dir = example_dir("state-accumulator");
+		let report = run_fixture_once_report(&dir).await.expect("report");
+		assert!(report.ok, "report: {:?}", report.tests);
+		assert_eq!(report.state_restore.restored_node_count, 1);
+		assert_eq!(report.state_restore.nodes[0].node, "main::acc");
+		assert_eq!(report.state_restore.nodes[0].version, 9);
+		assert_eq!(report.state_versions, vec![("main::acc".into(), 10)]);
+		assert_eq!(report.state_snapshots.len(), 1);
+		assert_eq!(report.state_snapshots[0].node, "main::acc");
+		assert_eq!(report.state_snapshots[0].format, "json");
+		assert_eq!(
+			report.state_snapshots[0].value,
+			serde_json::json!({ "items": [
+				{ "message": "restored", "count": 1 },
+				{ "message": "updated", "count": 2 }
+			] })
+		);
+		assert_eq!(report.failed_tests, 0);
 	}
 
 	#[tokio::test]
