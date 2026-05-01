@@ -1408,6 +1408,48 @@ mod tests {
 	}
 
 	#[tokio::test]
+	async fn duplicate_state_snapshot_restore_entry_is_rejected() {
+		let root = make_temp_dir("fixture-duplicate-state-snapshot");
+		std::fs::write(
+			root.join("main.flowgraph.toml"),
+			r#"[[nodes]]
+id = "counter"
+feature = "flowgraph.state.int_counter"
+"#,
+		)
+		.unwrap();
+		std::fs::write(
+			root.join("main.flowgraph.test.toml"),
+			r#"[[state_snapshots]]
+node = "main::counter"
+feature = "flowgraph.state.int_counter"
+version = 1
+format = "json"
+value = { value = 1 }
+
+[[state_snapshots]]
+node = "main::counter"
+feature = "flowgraph.state.int_counter"
+version = 2
+format = "json"
+value = { value = 2 }
+
+[[tests]]
+name = "duplicate restore entry fails"
+
+[tests.expect]
+node_count = 1
+"#,
+		)
+		.unwrap();
+
+		let error = run_fixture_once_report(&root).await.unwrap_err();
+		assert!(matches!(error, FixtureError::StateRestore(StateRestoreError::DuplicateNode { .. })));
+		assert!(error.to_string().contains("duplicate target node 'main::counter'"));
+		let _ = std::fs::remove_dir_all(root);
+	}
+
+	#[tokio::test]
 	async fn table_load_tsv_mock_declared_test_passes() {
 		let dir = example_dir("table-load-tsv-mock");
 		let report = run_fixture_once_report(&dir).await.expect("report");
