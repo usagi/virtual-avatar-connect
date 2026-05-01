@@ -379,8 +379,7 @@ mod tests {
 		assert!(program.is_none());
 		assert!(restore.is_none());
 		assert!(rt.diagnostics.iter().any(|diagnostic| {
-			diagnostic.code == crate::flowgraph::DiagnosticCode::StateRestore
-				&& diagnostic.message.contains("feature mismatch")
+			diagnostic.code == crate::flowgraph::DiagnosticCode::StateRestore && diagnostic.message.contains("feature mismatch")
 		}));
 	}
 }
