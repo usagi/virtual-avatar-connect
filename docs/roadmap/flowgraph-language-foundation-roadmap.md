@@ -721,6 +721,12 @@ Fixture suite report に `state_restore_count` / `state_snapshot_count` の aggr
 これにより JSON report の詳細を開かなくても、fixture 実行結果に snapshot restore/export が含まれているかを CI log から一目で確認できる。
 `flowgraph.example` suite は現在 restore 1 件 / snapshot 1 件を期待値として固定し、state-counter fixture の観測値が summary に反映されることを保証する。
 
+### LF-7s Fixture state restore entry assertions ✅
+
+`[[tests.expect.state_restores]]` を追加し、fixture test から restore された node / feature / version を個別に検証できるようにした。
+`flowgraph.example/state-counter` は実行前 restore entry が `main::counter` / `flowgraph.state.int_counter` / version `41` として観測されることを TOML 側でも固定する。
+これにより restore 件数だけでなく、どの stateful node にどの snapshot version が適用されたかを fixture language の assertion として扱える。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
