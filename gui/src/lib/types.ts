@@ -1140,6 +1140,7 @@ export type FlowgraphProgramStateNode = {
 export type FlowgraphProgramStateSummary = {
   stateful_node_count: number;
   snapshot_supported_node_count: number;
+  restore_supported_node_count: number;
   nodes: FlowgraphProgramStateNode[];
 };
 

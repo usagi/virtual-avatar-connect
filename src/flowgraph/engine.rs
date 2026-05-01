@@ -177,6 +177,7 @@ impl FlowgraphProgram {
 		ProgramStateSummary {
 			stateful_node_count: nodes.len(),
 			snapshot_supported_node_count: nodes.iter().filter(|node| node.state_model.snapshot_supported).count(),
+			restore_supported_node_count: nodes.iter().filter(|node| node.state_model.restore_supported).count(),
 			nodes,
 		}
 	}
@@ -654,6 +655,7 @@ impl ProgramRun {
 pub struct ProgramStateSummary {
 	pub stateful_node_count: usize,
 	pub snapshot_supported_node_count: usize,
+	pub restore_supported_node_count: usize,
 	pub nodes: Vec<ProgramStateNode>,
 }
 
@@ -1156,6 +1158,7 @@ mod tests {
 		let before = prog.state_summary();
 		assert_eq!(before.stateful_node_count, 1);
 		assert_eq!(before.snapshot_supported_node_count, 1);
+		assert_eq!(before.restore_supported_node_count, 1);
 		assert_eq!(before.nodes[0].node, "counter");
 		assert_eq!(before.nodes[0].feature, "flowgraph.state.int_counter");
 		assert_eq!(before.nodes[0].version, 0);
