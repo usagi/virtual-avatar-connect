@@ -661,6 +661,12 @@ Flowgraph diagnostics panel に `state_nodes` の details 表示を追加し、g
 これは `ProgramRun.state_versions` の「実行後観測」と対になる現在値の inspect API であり、state version が初期状態では `0`、stateful node 実行後には増えることを unit test で固定した。
 snapshot payload / restore / persistence はまだ実装せず、次段で snapshot 対応 node を足す前の runtime inspection surface に留める。
 
+### LF-7i Node-specific state model and int counter snapshot export ✅
+
+`StatefulNode` が node 固有の `FlowgraphStateModel` と JSON snapshot export を返せるようにし、`flowgraph.state.int_counter` を最初の `snapshot_policy = "explicit"` / `snapshot_format = "json"` 対応 node にした。
+Control API node catalog、graph state summary、runtime state summary は registry / node 実装由来の state model を読むため、stateful node 全体を一律 `unsupported` と扱わず、node ごとの snapshot capability を表現できる。
+現段階では export のみで、restore / persistence / migration は引き続き未実装。`FlowgraphProgram::export_state_snapshot()` は対応 node の現在 version と JSON snapshot payload を read-only に返す。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
