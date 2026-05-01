@@ -685,6 +685,12 @@ Fixture test file の top-level `[[state_snapshots]]` を実行前 restore paylo
 `flowgraph.example/state-counter` は `{ value = 41 }` / `version = 41` を restore してから 1 回 increment し、実行後の state version と snapshot payload が `42` になることを fixture で検証する。
 これにより snapshot export だけでなく、restore 後の graph 実行が fixture runner 経由で回帰検証できる。
 
+### LF-7m Fixture state restore report ✅
+
+Fixture runner の JSON report に `state_restore` summary を追加し、実行前 snapshot restore が何件適用されたかと各 node / feature / version を確認できるようにした。
+`[tests.expect].state_restore_count` で restore 件数を検証でき、`flowgraph.example/state-counter` は restore が 1 件走ったことを fixture assertion と unit test の両方で固定する。
+これにより restore 後の state 結果だけでなく、restore 処理そのものが report 上で観測可能になった。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
