@@ -36,6 +36,10 @@
     return "bg-surface-400 text-white";
   }
 
+  function formatJson(value: unknown): string {
+    return JSON.stringify(value);
+  }
+
   const diags = $derived(flowgraphStore.diagnostics?.diagnostics ?? []);
   const capabilitySummary = $derived(
     flowgraphStore.diagnostics?.capability_summary,
@@ -51,6 +55,14 @@
   );
   const capabilityNodes = $derived(capabilitySummary?.nodes ?? []);
   const stateNodes = $derived(capabilitySummary?.state_nodes ?? []);
+  const loadedStateSummary = $derived(
+    flowgraphStore.diagnostics?.loaded_state_summary,
+  );
+  const loadedStateSnapshot = $derived(
+    flowgraphStore.diagnostics?.loaded_state_snapshot,
+  );
+  const loadedStateNodes = $derived(loadedStateSummary?.nodes ?? []);
+  const loadedSnapshotNodes = $derived(loadedStateSnapshot?.nodes ?? []);
 </script>
 
 <div class="h-full">
@@ -133,6 +145,57 @@
                   title={`snapshot: ${node.snapshot_policy} / ${node.snapshot_format}, restore: ${node.restore_policy}, migration: ${node.migration_policy}, persistence: ${node.persistence_policy}`}
                 >
                   snapshot {node.snapshot_policy} / restore {node.restore_policy}
+                </span>
+              </div>
+            {/each}
+          </div>
+        </details>
+      {/if}
+      {#if loadedStateSummary && (loadedStateNodes.length > 0 || loadedSnapshotNodes.length > 0)}
+        <details class="mt-1">
+          <summary class="cursor-pointer select-none text-[0.65rem] opacity-60">
+            loaded state {loadedStateSummary.stateful_node_count} / snapshots {loadedStateSnapshot?.snapshot_node_count ?? 0}
+          </summary>
+          <div class="mt-1 grid gap-1">
+            {#each loadedStateNodes as node (node.node)}
+              <div
+                class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(4rem,auto)_minmax(8rem,auto)] items-center gap-2 text-[0.65rem]"
+              >
+                <span class="truncate font-mono" title={node.node}
+                  >{node.node}</span
+                >
+                <span class="truncate font-mono opacity-70" title={node.feature}
+                  >{node.feature}</span
+                >
+                <span class="truncate text-right font-mono opacity-70"
+                  >v{node.version}</span
+                >
+                <span
+                  class="truncate text-right opacity-70"
+                  title={`snapshot: ${node.state_model.snapshot_policy} / ${node.state_model.snapshot_format}, restore: ${node.state_model.restore_policy}`}
+                >
+                  {node.state_model.snapshot_format} / {node.state_model.restore_policy}
+                </span>
+              </div>
+            {/each}
+            {#each loadedSnapshotNodes as node (node.node)}
+              <div
+                class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(4rem,auto)_minmax(10rem,auto)] items-center gap-2 text-[0.65rem]"
+              >
+                <span class="truncate font-mono opacity-70" title={node.node}
+                  >{node.node}</span
+                >
+                <span class="truncate font-mono opacity-60" title={node.feature}
+                  >{node.feature}</span
+                >
+                <span class="truncate text-right font-mono opacity-60"
+                  >v{node.version}</span
+                >
+                <span
+                  class="truncate text-right font-mono opacity-70"
+                  title={formatJson(node.value)}
+                >
+                  {formatJson(node.value)}
                 </span>
               </div>
             {/each}
