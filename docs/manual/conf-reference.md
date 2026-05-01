@@ -94,6 +94,23 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 - `POST /api/v1/control/modes/plan` — 本文 `{"target": "..."}` または `{"target": null}`。遷移プレビュー（`ModeTransitionPlan`）。`modes` があるとき未知の `target` は 400。`capability_denied_by_target` / `capability_unlisted_by_target` は preview 専用で、現段階では実行拒否しない。
 - `POST /api/v1/control/modes/transit` — 本文 `{"mode": "...", "dry_run": false, "reason": "..."}`。`dry_run: true` のときは状態を変えず `plan` のみ返す。`dry_run: false` で `PUT .../current` と同様の適用＋応答に `plan` を含む。**非 noop** 時は `managed_apps` 配列を任意同梱。再入時は **409**。
 
+#### Flowgraph Diagnostics API（LF-7）
+
+`GET /api/v1/control/flowgraph/diagnostics` は、ロード診断に加えて Flowgraph の capability / state metadata を返します。
+state 関連の値は reload 直後の read-only snapshot であり、worker 実行後の live state ではありません。
+
+- `capability_summary.stateful_node_count`: graph 内の stateful node 数。
+- `capability_summary.snapshot_supported_state_node_count`: graph 内で snapshot export に対応する stateful node 数。
+- `capability_summary.restore_supported_state_node_count`: graph 内で snapshot restore に対応する stateful node 数。
+- `capability_summary.state_nodes[]`: node ごとの scope / storage / lifetime / snapshot / restore / persistence policy。
+- `loaded_state_summary`: ロード直後の stateful node、feature、version、state model の一覧。
+- `loaded_state_summary.snapshot_supported_node_count`: ロード直後 program の snapshot 対応 node 数。
+- `loaded_state_summary.restore_supported_node_count`: ロード直後 program の restore 対応 node 数。
+- `loaded_state_snapshot`: ロード直後に export できた snapshot payload。現段階では対応 node のみ含む。
+
+現在の標準 node では `flowgraph.state.int_counter` が JSON snapshot / restore に対応しています。
+profile-local persistence、migration、reload 時の自動 restore はまだ導入していません。
+
 ### 5.1 `[[control_api.tables]]` — Glossary / 汎用 Table の GUI 編集許可リスト (Phase φ / GRN)
 
 GUI の **Glossary Editor Pane** と **Live Quick-Add Widget** から操作できる TSV ファイルの allow-list。

@@ -86,6 +86,8 @@ v2 では GUI の `Flowgraph` タブで:
 ## デバッグ
 
 - `GET /api/v1/control/flowgraph/diagnostics`：現在の graph 診断。
+- diagnostics JSON には `capability_summary`、`loaded_state_summary`、`loaded_state_snapshot` も含まれる。
+  state 系の値は reload 直後の read-only metadata で、worker 実行後の live state ではない。
 - GUI の Diagnostics パネルで error / warning / info 件数とメッセージを確認。
 - `reload` API（`POST /api/v1/control/flowgraph/reload`）でディスクから再読込。
   bridges も自動で respawn される。web_input endpoint の追加／削除時だけは
