@@ -673,6 +673,12 @@ Control API node catalog、graph state summary、runtime state summary は regis
 最初の restore 対応 node は `flowgraph.state.int_counter` で、snapshot の `{ value }` を fresh program に復元し、state version も snapshot 側の version に合わせる。
 現段階では明示的な runtime API のみで、profile-local persistence、migration、ロード時自動復元はまだ行わない。
 
+### LF-7k Fixture state snapshot assertions ✅
+
+Fixture runner の JSON report に `state_snapshots` を追加し、`[[tests.expect.state_snapshots]]` で node / version / format / JSON payload を検証できるようにした。
+`flowgraph.example/state-counter` は `ingress.web_input -> state.int_counter` の最小 graph として、trigger 後の `state_versions`、stored value、snapshot payload `{ value = 1 }` を fixture で固定する。
+これにより snapshot export / restore の runtime API だけでなく、Flowgraph 言語テスト側からも state snapshot contract を回帰検証できる。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
