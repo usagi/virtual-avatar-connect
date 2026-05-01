@@ -81,6 +81,8 @@ impl Args {
 						println!("  effects: {}", report.effect_count);
 						println!("  stored_values: {}", report.stored_values.len());
 						println!("  state_versions: {}", report.state_versions.len());
+						println!("  state_restores: {}", report.state_restore.restored_node_count);
+						println!("  state_snapshots: {}", report.state_snapshots.len());
 						println!("  cache: {} hit(s), {} miss(es)", report.cache_hits, report.cache_misses);
 						if !report.tests.is_empty() {
 							println!(
@@ -131,6 +133,8 @@ impl Args {
 						println!("  tests: {} total / {} failed", report.test_count, report.failed_tests);
 						println!("  triggers: {}", report.trigger_count);
 						println!("  effects: {}", report.effect_count);
+						println!("  state_restores: {}", report.state_restore_count);
+						println!("  state_snapshots: {}", report.state_snapshot_count);
 						println!("  capabilities: {}", format_suite_capability_counts(&report.reports));
 						for fixture in &report.reports {
 							if !fixture.ok {

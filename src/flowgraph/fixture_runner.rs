@@ -186,6 +186,8 @@ pub struct FixtureSuiteReport {
 	pub failed_tests: usize,
 	pub trigger_count: usize,
 	pub effect_count: usize,
+	pub state_restore_count: usize,
+	pub state_snapshot_count: usize,
 	pub reports: Vec<FixtureRunReport>,
 	pub errors: Vec<FixtureSuiteError>,
 }
@@ -518,6 +520,8 @@ pub async fn run_fixture_suite_report(root: &Path) -> Result<FixtureSuiteReport,
 	let failed_tests = reports.iter().map(|report| report.failed_tests).sum();
 	let trigger_count = reports.iter().map(|report| report.trigger_count).sum();
 	let effect_count = reports.iter().map(|report| report.effect_count).sum();
+	let state_restore_count = reports.iter().map(|report| report.state_restore.restored_node_count).sum();
+	let state_snapshot_count = reports.iter().map(|report| report.state_snapshots.len()).sum();
 	Ok(FixtureSuiteReport {
 		ok: failed_fixtures == 0,
 		root: root.display().to_string(),
@@ -527,6 +531,8 @@ pub async fn run_fixture_suite_report(root: &Path) -> Result<FixtureSuiteReport,
 		failed_tests,
 		trigger_count,
 		effect_count,
+		state_restore_count,
+		state_snapshot_count,
 		reports,
 		errors,
 	})
@@ -1389,6 +1395,8 @@ mod tests {
 		assert_eq!(report.failed_tests, 0);
 		assert_eq!(report.trigger_count, 9);
 		assert_eq!(report.effect_count, 8);
+		assert_eq!(report.state_restore_count, 1);
+		assert_eq!(report.state_snapshot_count, 1);
 	}
 
 	#[tokio::test]
