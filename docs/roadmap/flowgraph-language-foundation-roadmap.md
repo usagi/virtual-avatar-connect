@@ -787,6 +787,12 @@ read / write helper は schema version、kind、`snapshot_node_count` と payloa
 restore 成功時は `loaded_state_summary` / `loaded_state_snapshot` が復元後 version と payload を示し、失敗時は `state-restore` diagnostic を出して worker に渡す program を返さない。
 通常の `load()` / `load_program()` / `load_and_spawn()` の挙動は変えず、profile-local persistence や reload 時自動 restore を後続で接続するための内部 hook に留めた。
 
+### LF-7ad Profile-local state snapshot path ✅
+
+`profile_local_state_snapshot_path()` を追加し、`runtime_dir` 配下の `flowgraph-state/<profile-stem>-<hash>/state.snapshot.json` を profile-local snapshot 保存先として導出できるようにした。
+hash は profile path と flowgraph root を正規化した文字列から作るため、同名 profile や別 flowgraph root の snapshot が同じファイルに混ざらない。
+この段階では保存先 contract の固定に留め、runtime からの自動 write/read や Control API はまだ接続しない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
