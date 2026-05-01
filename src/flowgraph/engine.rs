@@ -212,6 +212,18 @@ impl FlowgraphProgram {
 	}
 
 	pub fn restore_state_snapshot(&mut self, snapshot: &ProgramStateSnapshot) -> Result<ProgramStateRestoreReport, StateRestoreError> {
+		if snapshot.snapshot_node_count != snapshot.nodes.len() {
+			return Err(StateRestoreError::SnapshotCountMismatch {
+				declared: snapshot.snapshot_node_count,
+				actual: snapshot.nodes.len(),
+			});
+		}
+		let mut seen = HashSet::new();
+		for item in &snapshot.nodes {
+			if !seen.insert(item.node.clone()) {
+				return Err(StateRestoreError::DuplicateNode { node: item.node.clone() });
+			}
+		}
 		let mut nodes = Vec::new();
 		for item in &snapshot.nodes {
 			let node = self
@@ -681,6 +693,10 @@ pub struct ProgramStateRestoreNode {
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum StateRestoreError {
+	#[error("state snapshot node count mismatch: declared {declared}, actual {actual}")]
+	SnapshotCountMismatch { declared: usize, actual: usize },
+	#[error("state snapshot contains duplicate target node '{node}'")]
+	DuplicateNode { node: NodeId },
 	#[error("state restore target node '{node}' does not exist")]
 	UnknownNode { node: NodeId },
 	#[error("state restore target node '{node}' feature mismatch: expected '{expected}', snapshot has '{actual}'")]
@@ -1175,6 +1191,23 @@ mod tests {
 		let restored_after = restored.export_state_snapshot();
 		assert_eq!(restored_after.nodes[0].version, 2);
 		assert_eq!(restored_after.nodes[0].value, serde_json::json!({ "value": 2 }));
+
+		let mut count_mismatch = snapshot.clone();
+		count_mismatch.snapshot_node_count = 2;
+		assert_eq!(
+			restored.restore_state_snapshot(&count_mismatch).unwrap_err(),
+			StateRestoreError::SnapshotCountMismatch { declared: 2, actual: 1 }
+		);
+
+		let mut duplicate = snapshot.clone();
+		duplicate.nodes.push(snapshot.nodes[0].clone());
+		duplicate.snapshot_node_count = duplicate.nodes.len();
+		assert_eq!(
+			restored.restore_state_snapshot(&duplicate).unwrap_err(),
+			StateRestoreError::DuplicateNode {
+				node: "counter".into()
+			}
+		);
 	}
 
 	// ----- Branch の dead-port elimination ---------------------------------
