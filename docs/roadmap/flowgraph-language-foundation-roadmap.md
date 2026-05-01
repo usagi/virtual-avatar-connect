@@ -655,6 +655,12 @@ Flowgraph diagnostics panel に `state_nodes` の details 表示を追加し、g
 現在の stateful node は引き続き `snapshot_policy = "unsupported"` / `snapshot_format = "none"` / `restore_policy = "unsupported"` / `migration_policy = "none"` / `persistence_policy = "none"` のままで、runtime の snapshot / restore 挙動は変えない。
 この段階では Control API node catalog、graph state summary、GUI diagnostics の表示面に typed policy を通し、次段の実 snapshot interface 実装前に互換性判断の語彙を固定する。
 
+### LF-7h Runtime state summary API ✅
+
+`FlowgraphProgram::state_summary()` を追加し、現在の stateful node、feature、state version、state model contract を runtime から read-only に列挙できるようにした。
+これは `ProgramRun.state_versions` の「実行後観測」と対になる現在値の inspect API であり、state version が初期状態では `0`、stateful node 実行後には増えることを unit test で固定した。
+snapshot payload / restore / persistence はまだ実装せず、次段で snapshot 対応 node を足す前の runtime inspection surface に留める。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
