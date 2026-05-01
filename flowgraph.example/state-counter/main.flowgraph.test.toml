@@ -1,0 +1,27 @@
+[[triggers]]
+node = "main::in"
+
+[[tests]]
+name = "int counter snapshot is exported"
+
+[tests.expect]
+node_count = 2
+trigger_count = 1
+trace_count = 0
+effect_count = 0
+
+[[tests.expect.state_versions]]
+node = "main::counter"
+version = 1
+
+[[tests.expect.state_snapshots]]
+node = "main::counter"
+version = 1
+format = "json"
+value = { value = 1 }
+
+[[tests.expect.stored_values]]
+node = "main::counter"
+port = "value"
+ty = "int"
+value = 1

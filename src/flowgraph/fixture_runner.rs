@@ -10,7 +10,7 @@ use crate::flowgraph::node::{
 	EffectMocks, ExecCtx, FileReadMockResponse, FileWriteMockResponse, HttpMockResponse, SocketValueRepr, TriggerEvent,
 };
 use crate::flowgraph::socket::{from_toml_value, SocketType};
-use crate::flowgraph::{load_flowgraph_dir, FlowgraphProgram, LoadError, NodeExecError, ProgramRun};
+use crate::flowgraph::{load_flowgraph_dir, FlowgraphProgram, LoadError, NodeExecError, ProgramRun, ProgramStateSnapshot};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -107,6 +107,15 @@ pub struct FixtureRecordedEffect {
 }
 
 #[derive(Debug, Serialize)]
+pub struct FixtureStateSnapshot {
+	pub node: String,
+	pub feature: String,
+	pub version: u64,
+	pub format: String,
+	pub value: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
 pub struct FixtureRunReport {
 	pub ok: bool,
 	pub root: String,
@@ -125,6 +134,7 @@ pub struct FixtureRunReport {
 	pub exec_count: Vec<(String, usize)>,
 	pub pure_evaluations: Vec<(String, usize)>,
 	pub state_versions: Vec<(String, u64)>,
+	pub state_snapshots: Vec<FixtureStateSnapshot>,
 	pub cache_hits: usize,
 	pub cache_misses: usize,
 	pub tests: Vec<FixtureTestResult>,
@@ -278,6 +288,8 @@ struct FixtureExpect {
 	#[serde(default)]
 	state_versions: Vec<FixtureExpectedStateVersion>,
 	#[serde(default)]
+	state_snapshots: Vec<FixtureExpectedStateSnapshot>,
+	#[serde(default)]
 	stored_values: Vec<FixtureExpectedValue>,
 	#[serde(default)]
 	stored_value_paths: Vec<FixtureExpectedValuePath>,
@@ -318,6 +330,16 @@ struct FixtureExpectedCount {
 struct FixtureExpectedStateVersion {
 	node: String,
 	version: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureExpectedStateSnapshot {
+	node: String,
+	#[serde(default)]
+	version: Option<u64>,
+	#[serde(default)]
+	format: Option<String>,
+	value: toml::Value,
 }
 
 #[derive(Debug, Deserialize)]
@@ -398,7 +420,17 @@ pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, Fi
 	let capability_summary = fixture.capability_summary.clone();
 	let declared_tests = read_declared_tests(root)?;
 	let (run, ctx, mock_summaries, trigger_history) = run_fixture_program(&mut fixture.program, &declared_tests).await?;
-	let mut report = make_report(root, node_count, capability_summary, run, ctx, mock_summaries, trigger_history);
+	let state_snapshot = fixture.program.export_state_snapshot();
+	let mut report = make_report(
+		root,
+		node_count,
+		capability_summary,
+		run,
+		ctx,
+		mock_summaries,
+		trigger_history,
+		state_snapshot,
+	);
 	report.tests = evaluate_declared_tests(&declared_tests, &report);
 	report.failed_tests = report.tests.iter().filter(|t| !t.ok).count();
 	report.ok = report.failed_tests == 0;
@@ -613,6 +645,7 @@ fn make_report(
 	ctx: ExecCtx,
 	mocks: Vec<FixtureMockSummary>,
 	trigger_history: Vec<FixtureTriggerHistory>,
+	state_snapshot: ProgramStateSnapshot,
 ) -> FixtureRunReport {
 	let ProgramRun {
 		generation,
@@ -643,6 +676,22 @@ fn make_report(
 
 	let mut state_versions: Vec<(String, u64)> = state_versions.into_iter().collect();
 	state_versions.sort_by(|a, b| a.0.cmp(&b.0));
+
+	let mut state_snapshots: Vec<FixtureStateSnapshot> = state_snapshot
+		.nodes
+		.into_iter()
+		.map(|node| FixtureStateSnapshot {
+			node: node.node,
+			feature: node.feature,
+			version: node.version,
+			format: serde_json::to_value(node.format)
+				.ok()
+				.and_then(|value| value.as_str().map(str::to_string))
+				.unwrap_or_else(|| "unknown".to_string()),
+			value: node.value,
+		})
+		.collect();
+	state_snapshots.sort_by(|a, b| a.node.cmp(&b.node));
 
 	let mut recorded_effects: Vec<FixtureRecordedEffect> = ctx
 		.recorded_effects
@@ -681,6 +730,7 @@ fn make_report(
 		exec_count,
 		pure_evaluations,
 		state_versions,
+		state_snapshots,
 		cache_hits,
 		cache_misses,
 		tests: Vec::new(),
@@ -846,6 +896,38 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 				"state_version {}: expected {}, actual {}",
 				expected.node, expected.version, actual
 			));
+		}
+	}
+	for expected in &case.expect.state_snapshots {
+		match report.state_snapshots.iter().find(|actual| actual.node == expected.node) {
+			Some(actual) => {
+				if let Some(expected_version) = expected.version {
+					if actual.version != expected_version {
+						failures.push(format!(
+							"state_snapshot {} version: expected {}, actual {}",
+							expected.node, expected_version, actual.version
+						));
+					}
+				}
+				if let Some(expected_format) = &expected.format {
+					if &actual.format != expected_format {
+						failures.push(format!(
+							"state_snapshot {} format: expected {}, actual {}",
+							expected.node, expected_format, actual.format
+						));
+					}
+				}
+				let expected_value = toml_value_to_json(&expected.value);
+				if actual.value != expected_value {
+					failures.push(format!(
+						"state_snapshot {} value: expected {}, actual {}",
+						expected.node,
+						compact_json(&expected_value),
+						compact_json(&actual.value)
+					));
+				}
+			}
+			None => failures.push(format!("state_snapshot {}: missing", expected.node)),
 		}
 	}
 	for expected in &case.expect.stored_values {
@@ -1177,12 +1259,25 @@ mod tests {
 		let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("flowgraph.example");
 		let report = run_fixture_suite_report(&dir).await.expect("report");
 		assert!(report.ok, "errors: {:?}", report.errors);
-		assert_eq!(report.fixture_count, 9);
+		assert_eq!(report.fixture_count, 10);
 		assert_eq!(report.failed_fixtures, 0);
-		assert_eq!(report.test_count, 9);
+		assert_eq!(report.test_count, 10);
 		assert_eq!(report.failed_tests, 0);
-		assert_eq!(report.trigger_count, 8);
+		assert_eq!(report.trigger_count, 9);
 		assert_eq!(report.effect_count, 8);
+	}
+
+	#[tokio::test]
+	async fn state_counter_snapshot_declared_test_passes() {
+		let dir = example_dir("state-counter");
+		let report = run_fixture_once_report(&dir).await.expect("report");
+		assert!(report.ok, "report: {:?}", report.tests);
+		assert_eq!(report.state_versions, vec![("main::counter".into(), 1)]);
+		assert_eq!(report.state_snapshots.len(), 1);
+		assert_eq!(report.state_snapshots[0].node, "main::counter");
+		assert_eq!(report.state_snapshots[0].format, "json");
+		assert_eq!(report.state_snapshots[0].value, serde_json::json!({ "value": 1 }));
+		assert_eq!(report.failed_tests, 0);
 	}
 
 	#[tokio::test]
@@ -1779,6 +1874,7 @@ mod tests {
 			exec_count: Vec::new(),
 			pure_evaluations: Vec::new(),
 			state_versions: Vec::new(),
+			state_snapshots: Vec::new(),
 			cache_hits: 0,
 			cache_misses: 0,
 			tests: Vec::new(),
