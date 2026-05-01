@@ -775,6 +775,12 @@ GUI diagnostics の loaded state details も snapshot-capable / restore-capable 
 `recorded_at_unix_ms` がある snapshot は restore 時点の wall-clock 差分を反映するため、停止時間が window を超えた古い entry は復元後の最初の評価で期限切れとして扱われる。
 fixture runner には `state_snapshot_count` と payload 省略可能な `[[tests.expect.state_snapshots]]` を追加し、時刻依存 payload を完全一致させずに snapshot metadata を固定できるようにした。
 
+### LF-7ab State snapshot file envelope ✅
+
+`ProgramStateSnapshotFile` を追加し、`kind = "vac.flowgraph.state_snapshot"` / `schema_version = 1` / `created_at_unix_ms` / `snapshot` を持つ JSON envelope として永続化用 snapshot の外形を固定した。
+read / write helper は schema version、kind、`snapshot_node_count` と payload 件数の不一致を検出し、破損 snapshot を restore path に渡す前に拒否できる。
+現段階では保存形式だけを固定し、Control API 経由の live state export / import、profile-local persistence、reload 時自動 restore はまだ接続しない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
