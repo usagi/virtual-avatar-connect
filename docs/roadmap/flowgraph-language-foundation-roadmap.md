@@ -679,6 +679,12 @@ Fixture runner の JSON report に `state_snapshots` を追加し、`[[tests.exp
 `flowgraph.example/state-counter` は `ingress.web_input -> state.int_counter` の最小 graph として、trigger 後の `state_versions`、stored value、snapshot payload `{ value = 1 }` を fixture で固定する。
 これにより snapshot export / restore の runtime API だけでなく、Flowgraph 言語テスト側からも state snapshot contract を回帰検証できる。
 
+### LF-7l Fixture state snapshot restore ✅
+
+Fixture test file の top-level `[[state_snapshots]]` を実行前 restore payload として読み、trigger 実行前に `FlowgraphProgram::restore_state_snapshot()` へ渡せるようにした。
+`flowgraph.example/state-counter` は `{ value = 41 }` / `version = 41` を restore してから 1 回 increment し、実行後の state version と snapshot payload が `42` になることを fixture で検証する。
+これにより snapshot export だけでなく、restore 後の graph 実行が fixture runner 経由で回帰検証できる。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
