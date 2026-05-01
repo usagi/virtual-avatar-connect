@@ -338,6 +338,8 @@ struct FixtureExpect {
 	#[serde(default)]
 	state_versions: Vec<FixtureExpectedStateVersion>,
 	#[serde(default)]
+	state_restores: Vec<FixtureExpectedStateRestore>,
+	#[serde(default)]
 	state_snapshots: Vec<FixtureExpectedStateSnapshot>,
 	#[serde(default)]
 	stored_values: Vec<FixtureExpectedValue>,
@@ -380,6 +382,15 @@ struct FixtureExpectedCount {
 struct FixtureExpectedStateVersion {
 	node: String,
 	version: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct FixtureExpectedStateRestore {
+	node: String,
+	#[serde(default)]
+	feature: Option<String>,
+	#[serde(default)]
+	version: Option<u64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1026,6 +1037,29 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 				"state_version {}: expected {}, actual {}",
 				expected.node, expected.version, actual
 			));
+		}
+	}
+	for expected in &case.expect.state_restores {
+		match report.state_restore.nodes.iter().find(|actual| actual.node == expected.node) {
+			Some(actual) => {
+				if let Some(expected_feature) = &expected.feature {
+					if &actual.feature != expected_feature {
+						failures.push(format!(
+							"state_restore {} feature: expected {}, actual {}",
+							expected.node, expected_feature, actual.feature
+						));
+					}
+				}
+				if let Some(expected_version) = expected.version {
+					if actual.version != expected_version {
+						failures.push(format!(
+							"state_restore {} version: expected {}, actual {}",
+							expected.node, expected_version, actual.version
+						));
+					}
+				}
+			}
+			None => failures.push(format!("state_restore {}: missing", expected.node)),
 		}
 	}
 	for expected in &case.expect.state_snapshots {
@@ -1750,6 +1784,72 @@ node_count = 1
 		assert!(result.failures.iter().any(|f| f.contains("trigger_history in override text value")));
 		assert!(result.failures.iter().any(|f| f == "trigger_history in override missing: missing"));
 		assert!(result.failures.iter().any(|f| f == "trigger_history missing: missing"));
+	}
+
+	#[test]
+	fn state_restore_assertion_passes() {
+		let mut report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		report.state_restore.restored_node_count = 1;
+		report.state_restore.nodes.push(FixtureStateRestoreNode {
+			node: "counter".into(),
+			feature: "flowgraph.state.int_counter".into(),
+			version: 41,
+		});
+		let case = FixtureTestCase {
+			name: Some("state restore".into()),
+			expect: FixtureExpect {
+				state_restore_count: Some(1),
+				state_restores: vec![FixtureExpectedStateRestore {
+					node: "counter".into(),
+					feature: Some("flowgraph.state.int_counter".into()),
+					version: Some(41),
+				}],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(result.ok, "{:?}", result.failures);
+	}
+
+	#[test]
+	fn state_restore_assertion_reports_missing_and_mismatch() {
+		let mut report = report_with_stored_value("n", "out", "string", serde_json::json!("ok"));
+		report.state_restore.restored_node_count = 1;
+		report.state_restore.nodes.push(FixtureStateRestoreNode {
+			node: "counter".into(),
+			feature: "actual.feature".into(),
+			version: 1,
+		});
+		let case = FixtureTestCase {
+			name: Some("state restore".into()),
+			expect: FixtureExpect {
+				state_restore_count: Some(2),
+				state_restores: vec![
+					FixtureExpectedStateRestore {
+						node: "counter".into(),
+						feature: Some("expected.feature".into()),
+						version: Some(2),
+					},
+					FixtureExpectedStateRestore {
+						node: "missing".into(),
+						feature: None,
+						version: None,
+					},
+				],
+				..FixtureExpect::default()
+			},
+		};
+
+		let result = evaluate_test_case(Path::new("x.flowgraph.test.toml"), 0, &case, &report);
+
+		assert!(!result.ok);
+		assert_eq!(result.failures.len(), 4);
+		assert!(result.failures.iter().any(|f| f.contains("state_restore_count: expected 2")));
+		assert!(result.failures.iter().any(|f| f.contains("state_restore counter feature")));
+		assert!(result.failures.iter().any(|f| f.contains("state_restore counter version")));
+		assert!(result.failures.iter().any(|f| f == "state_restore missing: missing"));
 	}
 
 	#[test]

@@ -22,6 +22,11 @@ state_restore_count = 1
 node = "main::counter"
 version = 42
 
+[[tests.expect.state_restores]]
+node = "main::counter"
+feature = "flowgraph.state.int_counter"
+version = 41
+
 [[tests.expect.state_snapshots]]
 node = "main::counter"
 version = 42
