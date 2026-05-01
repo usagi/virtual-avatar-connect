@@ -739,6 +739,12 @@ suite summary の `state_restore_count` / `state_snapshot_count` と、重複 re
 GUI diagnostics の summary 行にも snapshots / restores の件数を追加し、state nodes details を開かなくても state support coverage を把握できる。
 現時点の `flowgraph.example` では `flowgraph.state.int_counter` の 1 node が snapshot / restore 対応として固定される。
 
+### LF-7v Runtime state restore support count ✅
+
+`ProgramStateSummary` に `restore_supported_node_count` を追加し、runtime / loaded state summary でも snapshot 対応数と restore 対応数を対で確認できるようにした。
+GUI diagnostics の loaded state details も snapshot-capable / restore-capable / exported snapshots を並べて表示し、Control API の graph summary と runtime summary の語彙を揃えた。
+現段階では read-only metadata の追加に留め、live worker state の取得や自動 restore はまだ導入しない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
