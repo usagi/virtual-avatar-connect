@@ -805,6 +805,12 @@ snapshot file の JSON parse / schema validation / count validation に失敗し
 既存の `load_and_spawn()` と spawn 後半を共有することで、mode gate / pure host / shutdown handle の組み立ては従来経路と揃えている。
 この段階では明示 API の追加に留め、profile-local path からの自動読込や reload 時の暗黙 restore はまだ接続しない。
 
+### LF-7ag Profile-local snapshot path metadata ✅
+
+`FlowgraphRuntime` に `state_snapshot_file_path` metadata を追加し、初回起動と Flowgraph reload の両方で現在の profile / flowgraph root に対応する予定保存先を埋めるようにした。
+`GET /flowgraph/diagnostics` と GUI diagnostics panel から同じ path を確認できるため、後続の save/load Control API や自動 restore がどのファイルを使うかを先に観測できる。
+この段階では path metadata の公開に留め、snapshot file の自動 read/write や live worker state export はまだ接続しない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
