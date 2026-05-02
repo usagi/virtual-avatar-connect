@@ -321,7 +321,10 @@ pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 		capability_summary: rt.capability_summary.clone(),
 		loaded_state_summary: rt.loaded_state_summary.clone(),
 		loaded_state_snapshot: rt.loaded_state_snapshot.clone(),
-		state_snapshot_file_path: rt.state_snapshot_file_path.as_ref().map(|path| path.display().to_string().replace('\\', "/")),
+		state_snapshot_file_path: rt
+			.state_snapshot_file_path
+			.as_ref()
+			.map(|path| path.display().to_string().replace('\\', "/")),
 		file_activation: rt.file_activation.clone(),
 		inactive_exec_nodes,
 	})
