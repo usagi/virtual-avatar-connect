@@ -213,7 +213,10 @@ mod tests {
 		match out.data.get("result").unwrap() {
 			SocketValue::Result(result) => {
 				assert!(result.ok);
-				assert_eq!(result.value.as_deref(), Some(&SocketValue::Json(json!({ "played": true, "audio_path": "out.wav" }))));
+				assert_eq!(
+					result.value.as_deref(),
+					Some(&SocketValue::Json(json!({ "played": true, "audio_path": "out.wav" })))
+				);
 			}
 			other => panic!("expected result, got {other:?}"),
 		}

@@ -342,7 +342,11 @@ fn action_output(affected_count: i64, windows: Vec<WindowInfo>, error: impl Into
 	let result = if error.is_empty() && affected_count > 0 {
 		FlowResult::ok(SocketValue::Int(affected_count))
 	} else {
-		let msg = if error.is_empty() { "no window affected".to_string() } else { error.clone() };
+		let msg = if error.is_empty() {
+			"no window affected".to_string()
+		} else {
+			error.clone()
+		};
 		FlowResult::err(msg).with_code("window.action")
 	};
 	NodeOutput::new()

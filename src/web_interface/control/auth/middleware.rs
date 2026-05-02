@@ -126,8 +126,8 @@ mod tests {
 	use actix_web::{web, App, HttpResponse};
 	use std::net::SocketAddr;
 
-	use crate::conf::ControlTableEntry;
 	use super::super::runtime::{ControlApiRuntime, TokenSource};
+	use crate::conf::ControlTableEntry;
 
 	/// テスト用に `peer_addr` とポリシーを切り替えたランタイムを組む。
 	/// ミドルウェア結合テストでは `TestRequest` に `peer_addr` を載せる。

@@ -64,8 +64,8 @@ pub(crate) fn dto_to_value(dto: &RunWithDto) -> Value {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use super::super::RunWithTableDto;
+	use super::*;
 	use toml_edit::DocumentMut;
 
 	fn doc(src: &str) -> DocumentMut {

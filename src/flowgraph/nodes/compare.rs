@@ -36,7 +36,13 @@ impl NodeDescriptor for EqNode {
 
 #[async_trait]
 impl PureNode for EqNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let a = crate::flowgraph::node::get_required_json(inputs, "a")?;
 		let b = crate::flowgraph::node::get_required_json(inputs, "b")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Bool(a == b)))
@@ -62,7 +68,13 @@ impl NodeDescriptor for NeqNode {
 
 #[async_trait]
 impl PureNode for NeqNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let a = crate::flowgraph::node::get_required_json(inputs, "a")?;
 		let b = crate::flowgraph::node::get_required_json(inputs, "b")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Bool(a != b)))
@@ -198,25 +210,45 @@ mod tests {
 	#[tokio::test]
 	async fn int_cmp_basic() {
 		let out = IntLtNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &int_inputs(1, 2), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&int_inputs(1, 2),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
 
 		let out = IntGtNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &int_inputs(5, 3), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&int_inputs(5, 3),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
 
 		let out = IntLeNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &int_inputs(2, 2), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&int_inputs(2, 2),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
 
 		let out = IntGeNode
-			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &int_inputs(2, 3), &ExecFireSet::new())
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&int_inputs(2, 3),
+				&ExecFireSet::new(),
+			)
 			.await
 			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(false)));
@@ -227,7 +259,15 @@ mod tests {
 		let inputs: InputMap = [("a".into(), SocketValue::Float(1.5)), ("b".into(), SocketValue::Float(2.5))]
 			.into_iter()
 			.collect();
-		let out = FloatLtNode.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = FloatLtNode
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(true)));
 	}
 }

@@ -5,11 +5,11 @@ use std::time::{Duration, SystemTime};
 use anyhow::{anyhow, Context, Result};
 use tokio::time::Instant as TokioInstant;
 
-use crate::web_interface::control::events::ControlEvent;
 use crate::twitch::oauth::{
 	self, launch_browser, poll_device_token, save_stored_tokens, start_device_authorization, OAuthIdent, StoredTokens,
 };
 use crate::twitch_oauth_sessions::{OAuthAccount, OAuthSessionInternal, OAuthSessionStatus};
+use crate::web_interface::control::events::ControlEvent;
 use crate::SharedState;
 
 use super::OAuthStartResponse;

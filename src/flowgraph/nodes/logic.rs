@@ -30,7 +30,13 @@ macro_rules! binary_logic_node {
 
 		#[async_trait]
 		impl PureNode for $name {
-			async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+			async fn compute(
+				&self,
+				_host: &crate::flowgraph::node::PureEvalHost,
+				_p: &InputMap,
+				inputs: &InputMap,
+				_fired: &ExecFireSet,
+			) -> Result<NodeOutput, NodeExecError> {
 				let a = get_required_bool(inputs, "a")?;
 				let b = get_required_bool(inputs, "b")?;
 				let op: fn(bool, bool) -> bool = $op;
@@ -64,7 +70,13 @@ impl NodeDescriptor for NotNode {
 
 #[async_trait]
 impl PureNode for NotNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _p: &InputMap, inputs: &InputMap, _fired: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_p: &InputMap,
+		inputs: &InputMap,
+		_fired: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let a = get_required_bool(inputs, "a")?;
 		Ok(NodeOutput::new().set_data("result", SocketValue::Bool(!a)))
 	}
@@ -89,7 +101,15 @@ mod tests {
 			(false, true, false),
 			(false, false, false),
 		] {
-			let out = n.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &bool_inputs(a, b), &ExecFireSet::new()).await.unwrap();
+			let out = n
+				.compute(
+					&crate::flowgraph::node::PureEvalHost::default(),
+					&InputMap::new(),
+					&bool_inputs(a, b),
+					&ExecFireSet::new(),
+				)
+				.await
+				.unwrap();
 			assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(ex)));
 		}
 	}
@@ -98,7 +118,15 @@ mod tests {
 	async fn or_truth_table() {
 		let n = OrNode;
 		for (a, b, ex) in [(true, true, true), (true, false, true), (false, true, true), (false, false, false)] {
-			let out = n.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &bool_inputs(a, b), &ExecFireSet::new()).await.unwrap();
+			let out = n
+				.compute(
+					&crate::flowgraph::node::PureEvalHost::default(),
+					&InputMap::new(),
+					&bool_inputs(a, b),
+					&ExecFireSet::new(),
+				)
+				.await
+				.unwrap();
 			assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(ex)));
 		}
 	}
@@ -107,7 +135,15 @@ mod tests {
 	async fn xor_truth_table() {
 		let n = XorNode;
 		for (a, b, ex) in [(true, true, false), (true, false, true), (false, true, true), (false, false, false)] {
-			let out = n.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &bool_inputs(a, b), &ExecFireSet::new()).await.unwrap();
+			let out = n
+				.compute(
+					&crate::flowgraph::node::PureEvalHost::default(),
+					&InputMap::new(),
+					&bool_inputs(a, b),
+					&ExecFireSet::new(),
+				)
+				.await
+				.unwrap();
 			assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(ex)));
 		}
 	}
@@ -117,7 +153,15 @@ mod tests {
 		let n = NotNode;
 		for (a, ex) in [(true, false), (false, true)] {
 			let inputs: InputMap = [("a".into(), SocketValue::Bool(a))].into_iter().collect();
-			let out = n.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+			let out = n
+				.compute(
+					&crate::flowgraph::node::PureEvalHost::default(),
+					&InputMap::new(),
+					&inputs,
+					&ExecFireSet::new(),
+				)
+				.await
+				.unwrap();
 			assert_eq!(out.data.get("result"), Some(&SocketValue::Bool(ex)));
 		}
 	}
@@ -128,7 +172,15 @@ mod tests {
 		let inputs: InputMap = [("a".into(), SocketValue::Int(1)), ("b".into(), SocketValue::Bool(true))]
 			.into_iter()
 			.collect();
-		let e = n.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap_err();
+		let e = n
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap_err();
 		assert!(matches!(e, NodeExecError::TypeMismatch { .. }));
 	}
 }

@@ -1,8 +1,8 @@
 //! RM-2 / RM-5: Runtime Mode の観測（Pure）と遷移要求（Effectful）。
 
 use crate::flowgraph::node::{
-	get_optional_string, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError,
-	NodeOutput, NodeSpec, PortSpec, PropertySpec, PureEvalHost, PureNode,
+	get_optional_string, get_required_string, EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeOutput,
+	NodeSpec, PortSpec, PropertySpec, PureEvalHost, PureNode,
 };
 use crate::flowgraph::socket::{SocketType, SocketValue};
 use async_trait::async_trait;
@@ -35,10 +35,7 @@ impl PureNode for ModeGetNode {
 		_inputs: &InputMap,
 		_fired: &ExecFireSet,
 	) -> Result<NodeOutput, NodeExecError> {
-		Ok(NodeOutput::new().set_data(
-			"mode",
-			SocketValue::String(host.effective_runtime_mode_id()),
-		))
+		Ok(NodeOutput::new().set_data("mode", SocketValue::String(host.effective_runtime_mode_id())))
 	}
 }
 
@@ -51,8 +48,7 @@ impl NodeDescriptor for ModeEqualsNode {
 			title: "Mode Equals".into(),
 			category: "mode".into(),
 			description: Some(
-				"実効 Runtime Mode が expected と一致するか（前後空白は無視）。未上書き時は default_runtime_mode 相当と比較。"
-					.into(),
+				"実効 Runtime Mode が expected と一致するか（前後空白は無視）。未上書き時は default_runtime_mode 相当と比較。".into(),
 			),
 			inputs: vec![PortSpec::input("expected", "Expected", SocketType::String)],
 			outputs: vec![PortSpec::output("equals", "Equals", SocketType::Bool)],
@@ -221,11 +217,7 @@ impl EffectfulNode for ModeTransitNode {
 
 		match apply_result {
 			Ok(applied) => {
-				let msg = if applied.noop {
-					noop_msg
-				} else {
-					"ok".into()
-				};
+				let msg = if applied.noop { noop_msg } else { "ok".into() };
 				ctx.log(format!("mode.transit: accepted mode_slot={:?}", applied.mode_slot));
 				Ok(NodeOutput::new()
 					.set_data("accepted", SocketValue::Bool(true))
@@ -268,9 +260,7 @@ mod tests {
 			runtime_mode: Some(slot),
 			default_runtime_mode: Some("daily".into()),
 		};
-		let mut inputs: InputMap = [("expected".into(), SocketValue::String("work".into()))]
-			.into_iter()
-			.collect();
+		let mut inputs: InputMap = [("expected".into(), SocketValue::String("work".into()))].into_iter().collect();
 		let out = ModeEqualsNode
 			.compute(&host, &InputMap::new(), &inputs, &ExecFireSet::new())
 			.await

@@ -22,12 +22,7 @@ pub fn file_fq_for_node_id(node_id: &str) -> Option<&str> {
 /// 1 ファイル分の「この conf / 現在 mode 下で exec を走らせてよいか」。
 ///
 /// `runtime_mode` が `Some`（非空）のときは `conf.default_runtime_mode` より優先。`None` または空文字は conf の default にフォールバック。
-pub fn file_effective_exec_active(
-	fq: &str,
-	meta: &FlowgraphFileActivationMeta,
-	conf: &Conf,
-	runtime_mode: Option<&str>,
-) -> bool {
+pub fn file_effective_exec_active(fq: &str, meta: &FlowgraphFileActivationMeta, conf: &Conf, runtime_mode: Option<&str>) -> bool {
 	let _ = fq;
 	if meta.mode_groups.is_empty() {
 		return true;
@@ -80,10 +75,7 @@ pub fn build_node_exec_active_map(
 }
 
 /// `conf` に `[modes.*]` があるとき、Flowgraph 側 `mode_groups` のうち **どの mode 定義の enable/disable にも出てこない** 名前へ警告を生成する。
-pub fn mode_group_orphan_diagnostics(
-	conf: &Conf,
-	file_activation: &HashMap<String, FlowgraphFileActivationMeta>,
-) -> Vec<Diagnostic> {
+pub fn mode_group_orphan_diagnostics(conf: &Conf, file_activation: &HashMap<String, FlowgraphFileActivationMeta>) -> Vec<Diagnostic> {
 	if conf.modes.is_empty() {
 		return Vec::new();
 	}

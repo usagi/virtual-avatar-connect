@@ -42,8 +42,8 @@ use serde::Serialize;
 use tokio::sync::RwLock;
 
 use crate::conf::{Conf, RunWith, RunWithShutdownAction, RunWithShutdownMethod, RunWithShutdownSpec};
-use crate::shutdown::ShutdownBroker;
 use crate::control_events::ControlEvent;
+use crate::shutdown::ShutdownBroker;
 
 /// Phase ε-2: `run_with` entry の shutdown 設定の **既定 grace_ms**（ミリ秒）。
 ///

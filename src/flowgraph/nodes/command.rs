@@ -57,7 +57,13 @@ impl NodeDescriptor for CommandMatchNode {
 
 #[async_trait]
 impl PureNode for CommandMatchNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _props: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_props: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		if !fired_exec.contains("exec_in") {
 			return Ok(NodeOutput::new());
 		}
@@ -101,7 +107,15 @@ mod tests {
 		let inputs: InputMap = [("content".into(), SocketValue::String("/set foo bar".into()))]
 			.into_iter()
 			.collect();
-		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fired()).await.unwrap();
+		let out = node
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&fired(),
+			)
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("on_command"));
 		assert!(!out.fired_exec.contains("on_other"));
 		assert_eq!(out.data.get("command"), Some(&SocketValue::String("set".into())));
@@ -118,7 +132,15 @@ mod tests {
 		let inputs: InputMap = [("content".into(), SocketValue::String("hello world".into()))]
 			.into_iter()
 			.collect();
-		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fired()).await.unwrap();
+		let out = node
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&fired(),
+			)
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("on_other"));
 		assert!(!out.fired_exec.contains("on_command"));
 		assert_eq!(out.data.get("command"), Some(&SocketValue::String("".into())));
@@ -135,7 +157,15 @@ mod tests {
 		]
 		.into_iter()
 		.collect();
-		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fired()).await.unwrap();
+		let out = node
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&fired(),
+			)
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("on_command"));
 		assert_eq!(out.data.get("command"), Some(&SocketValue::String("quit".into())));
 	}
@@ -144,7 +174,15 @@ mod tests {
 	async fn no_exec_firing_is_noop() {
 		let node = CommandMatchNode;
 		let inputs: InputMap = [("content".into(), SocketValue::String("/x".into()))].into_iter().collect();
-		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &ExecFireSet::new()).await.unwrap();
+		let out = node
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&inputs,
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		assert!(out.fired_exec.is_empty());
 		assert!(out.data.is_empty());
 	}

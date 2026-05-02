@@ -448,7 +448,11 @@ fn kill_output(pids: Vec<u32>, killed_count: i64, error: impl Into<String>) -> N
 	let result = if error.is_empty() && killed_count > 0 {
 		FlowResult::ok(SocketValue::Json(value.clone()))
 	} else {
-		let msg = if error.is_empty() { "no process killed".to_string() } else { error.clone() };
+		let msg = if error.is_empty() {
+			"no process killed".to_string()
+		} else {
+			error.clone()
+		};
 		FlowResult::err(msg).with_code("process.kill")
 	};
 	NodeOutput::new()

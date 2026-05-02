@@ -94,10 +94,10 @@ pub async fn post_oauth_cancel(state: Data<SharedState>, path: web::Path<String>
 	};
 
 	let Some((canceled, view)) = sessions.cancel_pending(account).await else {
-			return HttpResponse::NotFound().json(serde_json::json!({
-			 "error": "no_session",
-			 "account": account.as_tag(),
-			}));
+		return HttpResponse::NotFound().json(serde_json::json!({
+		 "error": "no_session",
+		 "account": account.as_tag(),
+		}));
 	};
 
 	if canceled {

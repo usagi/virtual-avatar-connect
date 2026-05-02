@@ -223,10 +223,7 @@ async fn fire_runtime_mode_changed_flowgraph_hook(state: &SharedState, conf: &Co
 	let ev = TriggerEvent::new(&node_id)
 		.with_exec(exec_port)
 		.with_override("__content__", SocketValue::String(json_str))
-		.with_override(
-			"__source_actor__",
-			SocketValue::String("virtual-avatar-connect".into()),
-		)
+		.with_override("__source_actor__", SocketValue::String("virtual-avatar-connect".into()))
 		.with_override("__source_kind__", SocketValue::String("runtime_mode_changed".into()))
 		.with_override("__meta__", SocketValue::Json(json));
 	if let Err(e) = trigger.send(ev) {
@@ -260,11 +257,7 @@ pub async fn apply_runtime_mode_transition_full(
 	let (will_mutate, status_seq) = match crate::conf::build_mode_transition_plan(conf, current_slot.as_deref(), normalized.as_deref()) {
 		Ok(p) => {
 			let will_mutate = !p.noop;
-			let status_seq = if will_mutate {
-				begin_transition_status(state, p).await
-			} else {
-				0
-			};
+			let status_seq = if will_mutate { begin_transition_status(state, p).await } else { 0 };
 			(will_mutate, status_seq)
 		}
 		Err(msg) => return Err(ApplyRuntimeModeError::PlanFailed(msg)),
@@ -335,11 +328,7 @@ pub async fn apply_runtime_mode_transition_full(
 				)
 				.await;
 			}
-			let def = conf
-				.modes
-				.get(applied.current_effective_id.as_str())
-				.cloned()
-				.unwrap_or_default();
+			let def = conf.modes.get(applied.current_effective_id.as_str()).cloned().unwrap_or_default();
 			managed_reports = apply_managed_apps_mode_directive(state, &def.managed_apps).await;
 			if !managed_reports.is_empty() {
 				let tx = state.read().await.control_event_tx.clone();
@@ -389,10 +378,7 @@ pub async fn apply_runtime_mode_transition_full(
 		.await;
 	}
 
-	Ok(RuntimeModeTransitionOutcome {
-		applied,
-		managed_reports,
-	})
+	Ok(RuntimeModeTransitionOutcome { applied, managed_reports })
 }
 
 #[cfg(test)]
@@ -405,8 +391,7 @@ mod tests {
 
 	async fn mk_state(conf: &Conf) -> SharedState {
 		let audio = std::sync::Arc::new(Mutex::new(
-			crate::AudioSink::open_default()
-				.expect("default audio output (rodio) required for State::new in tests"),
+			crate::AudioSink::open_default().expect("default audio output (rodio) required for State::new in tests"),
 		));
 		let shutdown = ShutdownBroker::new();
 		State::new(conf, audio, shutdown).await.expect("State::new")

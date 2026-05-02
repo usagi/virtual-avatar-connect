@@ -32,7 +32,13 @@ impl NodeDescriptor for BranchNode {
 
 #[async_trait]
 impl PureNode for BranchNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _properties: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_properties: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		if !fired_exec.contains("exec_in") {
 			return Ok(NodeOutput::new());
 		}
@@ -73,7 +79,13 @@ impl NodeDescriptor for GateNode {
 
 #[async_trait]
 impl PureNode for GateNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _properties: &InputMap, inputs: &InputMap, fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_properties: &InputMap,
+		inputs: &InputMap,
+		fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		if !fired_exec.contains("exec_in") {
 			return Ok(NodeOutput::new());
 		}
@@ -122,7 +134,13 @@ impl NodeDescriptor for SequenceNode {
 
 #[async_trait]
 impl PureNode for SequenceNode {
-	async fn compute(&self, _host: &crate::flowgraph::node::PureEvalHost, _properties: &InputMap, _inputs: &InputMap, _fired_exec: &ExecFireSet) -> Result<NodeOutput, NodeExecError> {
+	async fn compute(
+		&self,
+		_host: &crate::flowgraph::node::PureEvalHost,
+		_properties: &InputMap,
+		_inputs: &InputMap,
+		_fired_exec: &ExecFireSet,
+	) -> Result<NodeOutput, NodeExecError> {
 		let mut out = NodeOutput::new();
 		for i in 1..=self.count {
 			out = out.fire_exec(&format!("exec_{i}"));
@@ -142,7 +160,10 @@ mod tests {
 		let mut fired = ExecFireSet::new();
 		fired.insert("exec_in");
 		let inputs: InputMap = [("cond".to_string(), SocketValue::Bool(true))].into_iter().collect();
-		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fired).await.unwrap();
+		let out = node
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fired)
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("then"));
 		assert!(!out.fired_exec.contains("else"));
 	}
@@ -153,7 +174,10 @@ mod tests {
 		let mut fired = ExecFireSet::new();
 		fired.insert("exec_in");
 		let inputs: InputMap = [("cond".to_string(), SocketValue::Bool(false))].into_iter().collect();
-		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fired).await.unwrap();
+		let out = node
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fired)
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("else"));
 		assert!(!out.fired_exec.contains("then"));
 	}
@@ -161,7 +185,15 @@ mod tests {
 	#[tokio::test]
 	async fn sequence_fires_all_outputs() {
 		let node = SequenceNode::new(3);
-		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &InputMap::new(), &ExecFireSet::new()).await.unwrap();
+		let out = node
+			.compute(
+				&crate::flowgraph::node::PureEvalHost::default(),
+				&InputMap::new(),
+				&InputMap::new(),
+				&ExecFireSet::new(),
+			)
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("exec_1"));
 		assert!(out.fired_exec.contains("exec_2"));
 		assert!(out.fired_exec.contains("exec_3"));
@@ -173,7 +205,10 @@ mod tests {
 		let mut fired = ExecFireSet::new();
 		fired.insert("exec_in");
 		let inputs: InputMap = [("open".into(), SocketValue::Bool(true))].into_iter().collect();
-		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fired).await.unwrap();
+		let out = node
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fired)
+			.await
+			.unwrap();
 		assert!(out.fired_exec.contains("exec_out"));
 	}
 
@@ -183,7 +218,10 @@ mod tests {
 		let mut fired = ExecFireSet::new();
 		fired.insert("exec_in");
 		let inputs: InputMap = [("open".into(), SocketValue::Bool(false))].into_iter().collect();
-		let out = node.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fired).await.unwrap();
+		let out = node
+			.compute(&crate::flowgraph::node::PureEvalHost::default(), &InputMap::new(), &inputs, &fired)
+			.await
+			.unwrap();
 		assert!(out.fired_exec.is_empty());
 	}
 }

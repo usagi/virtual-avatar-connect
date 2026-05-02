@@ -7,10 +7,7 @@ use crate::SharedState;
 
 /// 指定 ID の spec を引いて `RunWith` clone + 現在 status を返す共通前処理。
 /// 見つからなければ 404 を返す `HttpResponse` を Err 側に包む。
-pub(super) async fn lookup_entry(
-	state: &SharedState,
-	id: &str,
-) -> Result<(crate::conf::RunWith, ManagedAppStatus), HttpResponse> {
+pub(super) async fn lookup_entry(state: &SharedState, id: &str) -> Result<(crate::conf::RunWith, ManagedAppStatus), HttpResponse> {
 	// run_with は conf 側に置いてある。state 経由で conf を読むのは避け、ConfigReload が走ったときに齟齬が出ても
 	// ランタイム側 registry と同期する方針にしたい。ただし現状 conf は lib.rs のローカルで手放していて State 経由では
 	// 参照できないため、ここでは registry の spec の command / process_marker から近似再構成する:
@@ -42,10 +39,7 @@ pub(super) async fn lookup_entry(
 	Ok((run_with, status))
 }
 
-pub(super) async fn lookup_spec_status(
-	state: &SharedState,
-	id: &str,
-) -> Result<(ManagedAppSpec, ManagedAppStatus), HttpResponse> {
+pub(super) async fn lookup_spec_status(state: &SharedState, id: &str) -> Result<(ManagedAppSpec, ManagedAppStatus), HttpResponse> {
 	let registry = state.read().await.managed_apps.clone();
 	let r = registry.read().await;
 	let spec = r

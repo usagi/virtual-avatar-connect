@@ -52,7 +52,13 @@ pub(crate) async fn reload_runtime(state: &SharedState, root: &Path) -> (bool, V
 		let s = state.read().await;
 		let c = s.conf_source_path.as_ref().and_then(|p| crate::conf::Conf::new_noop_probe(p).ok());
 		let m = s.runtime_mode_id.read().ok().and_then(|g| g.clone());
-		(c, m, s.runtime_mode_id.clone(), s.runtime_paths.root.clone(), s.conf_source_path.clone())
+		(
+			c,
+			m,
+			s.runtime_mode_id.clone(),
+			s.runtime_paths.root.clone(),
+			s.conf_source_path.clone(),
+		)
 	};
 	let mut rt = FlowgraphRuntime::load_and_spawn(
 		root,

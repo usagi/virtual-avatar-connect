@@ -48,7 +48,11 @@ async fn resolve_spec_status(state: &SharedState, id: &str) -> Option<(ManagedAp
 	let registry = state.read().await.managed_apps.clone();
 	let r = registry.read().await;
 	let spec = r.find_spec(id).cloned()?;
-	let st = r.statuses.get(id).cloned().unwrap_or_else(|| crate::managed_app::ManagedAppStatus::unknown(id));
+	let st = r
+		.statuses
+		.get(id)
+		.cloned()
+		.unwrap_or_else(|| crate::managed_app::ManagedAppStatus::unknown(id));
 	Some((spec, st))
 }
 

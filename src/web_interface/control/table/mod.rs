@@ -45,9 +45,7 @@ use crate::conf::ControlTableQuickAdd;
 use crate::flowgraph::table::Table;
 use crate::web_interface::control::auth::ControlApiRuntime;
 
-use util::{
-	check_if_match, ensure_editable, err_json, find_entry, hex_encode, is_row_locked, map_to_row, read_table, write_table,
-};
+use util::{check_if_match, ensure_editable, err_json, find_entry, hex_encode, is_row_locked, map_to_row, read_table, write_table};
 
 // ============================================================================
 // DTO
