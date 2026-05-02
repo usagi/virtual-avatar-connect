@@ -875,6 +875,12 @@ Fixture test file に `state_snapshot_file` を追加し、`ProgramStateSnapshot
 `FlowgraphRuntime::export_live_state_snapshot()` は worker が無い場合は `None` を返し、worker がある場合は `loaded_state_snapshot` ではなく現在の state を `ProgramStateSnapshot` として返す。
 この段階では live state を取り出す内部 hook のみを固定し、Control API 保存、自動保存、reload 時自動 restore は後続で接続する。
 
+### LF-7as Live snapshot save Control API ✅
+
+`POST /flowgraph/state-snapshot/live/save` を追加し、起動中 worker の live state snapshot を profile-local snapshot file path へ `ProgramStateSnapshotFile` envelope として明示保存できるようにした。
+GUI client には DTO と API method を追加したが、この段階では GUI ボタン追加や自動保存には踏み込まない。
+worker 未起動、path 未設定、command channel close、書き込み失敗はそれぞれ Control API error として分離して返す。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
