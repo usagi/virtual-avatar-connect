@@ -869,6 +869,12 @@ Fixture test file に `state_snapshot_file` を追加し、`ProgramStateSnapshot
 `flowgraph.example/state-counter-file` では実際の `state.snapshot.json` から `flowgraph.state.int_counter` を復元し、restore report / state version / exported snapshot payload を既存 assertion で固定する。
 これで fixture の shorthand `[[state_snapshots]]` と永続化 envelope の両方を CI 向け fixture runner から検証できる。
 
+### LF-7ar Live worker state snapshot command ✅
+
+常駐 worker 内に move 済みの `FlowgraphProgram` へ command channel を追加し、runtime 側から live state snapshot を要求できるようにした。
+`FlowgraphRuntime::export_live_state_snapshot()` は worker が無い場合は `None` を返し、worker がある場合は `loaded_state_snapshot` ではなく現在の state を `ProgramStateSnapshot` として返す。
+この段階では live state を取り出す内部 hook のみを固定し、Control API 保存、自動保存、reload 時自動 restore は後続で接続する。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
