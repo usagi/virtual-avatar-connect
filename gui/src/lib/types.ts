@@ -1223,6 +1223,14 @@ export type FlowgraphReloadResponse = {
   node_count: number;
 };
 
+export type FlowgraphRestoreStateSnapshotResponse = {
+  root_dir: string;
+  path: string;
+  ok: boolean;
+  diagnostics: FlowgraphDiagnostic[];
+  node_count: number;
+};
+
 export type FlowgraphSaveLoadedStateSnapshotResponse = {
   path: string;
   snapshot_node_count: number;

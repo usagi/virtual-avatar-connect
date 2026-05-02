@@ -81,6 +81,7 @@ import {
   type FlowgraphWriteFileResponse,
   type FlowgraphOpenExternalResponse,
   type FlowgraphReloadResponse,
+  type FlowgraphRestoreStateSnapshotResponse,
   type FlowgraphSaveLoadedStateSnapshotResponse,
   type FragmentCopyRequest,
   type FragmentCopyResponse,
@@ -593,6 +594,13 @@ export const api = {
   flowgraphSaveLoadedStateSnapshot(): Promise<FlowgraphSaveLoadedStateSnapshotResponse> {
     return request<FlowgraphSaveLoadedStateSnapshotResponse>(
       "/flowgraph/state-snapshot/loaded/save",
+      { method: "POST" },
+    );
+  },
+  /** profile-local snapshot file envelope を明示 restore して reload する。自動 restore ではない。 */
+  flowgraphRestoreProfileLocalStateSnapshot(): Promise<FlowgraphRestoreStateSnapshotResponse> {
+    return request<FlowgraphRestoreStateSnapshotResponse>(
+      "/flowgraph/state-snapshot/profile-local/restore",
       { method: "POST" },
     );
   },
