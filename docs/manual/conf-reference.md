@@ -118,6 +118,7 @@ runtime には `loaded_state_snapshot` をその予定保存先へ `ProgramState
 `POST /flowgraph/state-snapshot/loaded/save` は同じ helper を呼び、worker 実行後の live state ではなく `loaded_state_snapshot` を明示保存します。
 GUI の Flowgraph Diagnostics でも `state_snapshot_file_path` がある場合に同 API を呼ぶ `save snapshot` 操作を表示します。
 `POST /flowgraph/state-snapshot/profile-local/restore` は `state_snapshot_file_path` の JSON envelope を明示 restore して Flowgraph runtime を reload / respawn します。
+GUI の Flowgraph Diagnostics でも同じ path 行に `restore snapshot` 操作を表示し、restore 後に diagnostics を再取得します。
 restore や snapshot file 読込に失敗した場合は `state-restore` diagnostic として報告されますが、Control API からの live state 保存/読込、profile-local persistence、migration、reload 時の自動 restore はまだ導入していません。
 
 ### 5.1 `[[control_api.tables]]` — Glossary / 汎用 Table の GUI 編集許可リスト (Phase φ / GRN)
