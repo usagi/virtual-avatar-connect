@@ -17,7 +17,9 @@ use crate::flowgraph::activation::{mode_group_orphan_diagnostics, TriggerGate};
 use crate::flowgraph::loader::{Diagnostic, FlowgraphFileActivationMeta, GraphCapabilitySummary, LoadedNodeMeta, Severity};
 use crate::flowgraph::node::PureEvalHost;
 use crate::flowgraph::node::TriggerHandle;
-use crate::flowgraph::{ProgramStateRestoreReport, ProgramStateSnapshot, ProgramStateSummary, StateSnapshotFileError};
+use crate::flowgraph::{
+	ProgramStateRestoreReport, ProgramStateSnapshot, ProgramStateSnapshotFile, ProgramStateSummary, StateSnapshotFileError,
+};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -102,6 +104,18 @@ impl FlowgraphRuntime {
 			profile_path,
 			&self.root_dir,
 		));
+	}
+
+	pub fn loaded_state_snapshot_file(&self) -> ProgramStateSnapshotFile {
+		ProgramStateSnapshotFile::new(self.loaded_state_snapshot.clone())
+	}
+
+	pub fn write_loaded_state_snapshot_file(&self) -> Result<Option<PathBuf>, StateSnapshotFileError> {
+		let Some(path) = self.state_snapshot_file_path.as_ref() else {
+			return Ok(None);
+		};
+		crate::flowgraph::write_state_snapshot_file(path, &self.loaded_state_snapshot_file())?;
+		Ok(Some(path.clone()))
 	}
 
 	/// `root_dir` を [`crate::flowgraph::load_flowgraph_dir`] でロードし、**program は drop 扱い**の
@@ -396,7 +410,7 @@ impl FlowgraphRuntime {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::flowgraph::{ProgramStateSnapshotFile, ProgramStateSnapshotNode, StateSnapshotFormat};
+	use crate::flowgraph::{ProgramStateSnapshotNode, StateSnapshotFormat};
 
 	fn state_counter_root() -> std::path::PathBuf {
 		std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -453,6 +467,38 @@ mod tests {
 		let text = path.to_string_lossy().replace('\\', "/");
 		assert!(text.starts_with("C:/vac/runtime/flowgraph-state/conf-local-"), "{text}");
 		assert!(text.ends_with("/state.snapshot.json"), "{text}");
+	}
+
+	#[test]
+	fn loaded_state_snapshot_file_wraps_loaded_snapshot() {
+		let root = state_counter_root();
+		let rt = FlowgraphRuntime::load(&root);
+		let file = rt.loaded_state_snapshot_file();
+
+		assert_eq!(file.snapshot, rt.loaded_state_snapshot);
+		assert_eq!(file.snapshot.snapshot_node_count, 1);
+		assert_eq!(file.snapshot.nodes[0].node, "main::counter");
+	}
+
+	#[test]
+	fn write_loaded_state_snapshot_file_uses_configured_path() {
+		let root = state_counter_root();
+		let snapshot_path = temp_snapshot_path("loaded-state.snapshot.json");
+		let mut rt = FlowgraphRuntime::load(&root);
+		rt.state_snapshot_file_path = Some(snapshot_path.clone());
+
+		let written = rt.write_loaded_state_snapshot_file().expect("write snapshot");
+		assert_eq!(written.as_deref(), Some(snapshot_path.as_path()));
+		let decoded = crate::flowgraph::read_state_snapshot_file(&snapshot_path).expect("read snapshot");
+		assert_eq!(decoded.snapshot, rt.loaded_state_snapshot);
+		let _ = std::fs::remove_file(snapshot_path);
+	}
+
+	#[test]
+	fn write_loaded_state_snapshot_file_without_path_is_noop() {
+		let root = state_counter_root();
+		let rt = FlowgraphRuntime::load(&root);
+		assert!(rt.write_loaded_state_snapshot_file().expect("noop").is_none());
 	}
 
 	#[test]
