@@ -13,6 +13,7 @@
   import { capabilityLabel } from "./effectMetadata";
 
   let savingStateSnapshot = $state(false);
+  let savingLiveStateSnapshot = $state(false);
   let restoringStateSnapshot = $state(false);
 
   async function onJump(d: FlowgraphDiagnostic) {
@@ -55,7 +56,7 @@
   }
 
   async function onSaveLoadedStateSnapshot() {
-    if (savingStateSnapshot) return;
+    if (savingStateSnapshot || savingLiveStateSnapshot) return;
     savingStateSnapshot = true;
     try {
       const resp = await api.flowgraphSaveLoadedStateSnapshot();
@@ -71,8 +72,26 @@
     }
   }
 
+  async function onSaveLiveStateSnapshot() {
+    if (savingLiveStateSnapshot || savingStateSnapshot) return;
+    savingLiveStateSnapshot = true;
+    try {
+      const resp = await api.flowgraphSaveLiveStateSnapshot();
+      toastStore.success(
+        "Live state snapshot を保存しました",
+        `${resp.snapshot_node_count} nodes -> ${resp.path}`,
+      );
+      await flowgraphStore.refreshDiagnostics();
+    } catch (error) {
+      toastStore.error("Live state snapshot 保存失敗", describeError(error));
+    } finally {
+      savingLiveStateSnapshot = false;
+    }
+  }
+
   async function onRestoreProfileLocalStateSnapshot() {
-    if (restoringStateSnapshot) return;
+    if (restoringStateSnapshot || savingStateSnapshot || savingLiveStateSnapshot)
+      return;
     restoringStateSnapshot = true;
     try {
       const resp = await api.flowgraphRestoreProfileLocalStateSnapshot();
@@ -286,10 +305,23 @@
             type="button"
             class="shrink-0 rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem] hover:bg-surface-100-900 disabled:opacity-50"
             title="loaded state snapshot を profile-local file に保存"
-            disabled={savingStateSnapshot || restoringStateSnapshot}
+            disabled={savingStateSnapshot ||
+              savingLiveStateSnapshot ||
+              restoringStateSnapshot}
             onclick={onSaveLoadedStateSnapshot}
           >
-            {savingStateSnapshot ? "saving" : "save snapshot"}
+            {savingStateSnapshot ? "saving" : "save loaded"}
+          </button>
+          <button
+            type="button"
+            class="shrink-0 rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem] hover:bg-surface-100-900 disabled:opacity-50"
+            title="live worker state snapshot を profile-local file に保存"
+            disabled={savingStateSnapshot ||
+              savingLiveStateSnapshot ||
+              restoringStateSnapshot}
+            onclick={onSaveLiveStateSnapshot}
+          >
+            {savingLiveStateSnapshot ? "saving" : "save live"}
           </button>
           <button
             type="button"
@@ -298,6 +330,7 @@
               ? "profile-local snapshot file がまだありません"
               : "profile-local snapshot file から明示 restore して reload"}
             disabled={savingStateSnapshot ||
+              savingLiveStateSnapshot ||
               restoringStateSnapshot ||
               stateSnapshotFileExists === false}
             onclick={onRestoreProfileLocalStateSnapshot}
