@@ -1251,6 +1251,12 @@ export type FlowgraphSaveLoadedStateSnapshotResponse = {
   written: boolean;
 };
 
+export type FlowgraphSaveLiveStateSnapshotResponse = {
+  path: string;
+  snapshot_node_count: number;
+  written: boolean;
+};
+
 // ---------------------------------------------------------------------------
 // Phase δ-7: Fragment Share / Export / Import DTOs
 // ---------------------------------------------------------------------------

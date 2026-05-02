@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 use crate::flowgraph::loader::{parse_flowgraph_file, Diagnostic, FlowgraphFile};
 use crate::flowgraph::quantity::{parse_unit, Quantity};
 use crate::flowgraph::registry::registry;
-use crate::flowgraph::{FlowgraphRuntime, StateSnapshotFileError};
+use crate::flowgraph::{FlowgraphRuntime, ProgramCommandError, StateSnapshotFileError};
 use crate::SharedState;
 
 use util::{
@@ -414,6 +414,89 @@ pub async fn post_save_loaded_state_snapshot(state: Data<SharedState>) -> impl R
 }
 
 // ============================================================================
+// POST /flowgraph/state-snapshot/live/save
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct SaveLiveStateSnapshotResponse {
+	pub path: String,
+	pub snapshot_node_count: usize,
+	pub written: bool,
+}
+
+#[derive(Debug)]
+enum SaveLiveStateSnapshotError {
+	PathUnset,
+	WorkerUnavailable,
+	CommandFailed(ProgramCommandError),
+	WriteFailed {
+		path: std::path::PathBuf,
+		error: StateSnapshotFileError,
+	},
+}
+
+async fn save_live_state_snapshot_response(rt: &FlowgraphRuntime) -> Result<SaveLiveStateSnapshotResponse, SaveLiveStateSnapshotError> {
+	let Some(path) = rt.state_snapshot_file_path.clone() else {
+		return Err(SaveLiveStateSnapshotError::PathUnset);
+	};
+	let Some(snapshot) = rt
+		.export_live_state_snapshot()
+		.await
+		.map_err(SaveLiveStateSnapshotError::CommandFailed)?
+	else {
+		return Err(SaveLiveStateSnapshotError::WorkerUnavailable);
+	};
+	let snapshot_node_count = snapshot.snapshot_node_count;
+	let file = crate::flowgraph::ProgramStateSnapshotFile::new(snapshot);
+	crate::flowgraph::write_state_snapshot_file(&path, &file)
+		.map_err(|error| SaveLiveStateSnapshotError::WriteFailed { path: path.clone(), error })?;
+	Ok(SaveLiveStateSnapshotResponse {
+		path: path.display().to_string().replace('\\', "/"),
+		snapshot_node_count,
+		written: true,
+	})
+}
+
+#[post("/flowgraph/state-snapshot/live/save")]
+pub async fn post_save_live_state_snapshot(state: Data<SharedState>) -> impl Responder {
+	let rt = {
+		let fg = state.read().await.flowgraph.clone();
+		let rt = fg.read().await.clone();
+		rt
+	};
+	let Some(rt) = rt else {
+		return err_json(
+			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+			"flowgraph_dir_unset",
+			"conf.flowgraph_dir が未設定です",
+		);
+	};
+	match save_live_state_snapshot_response(&rt).await {
+		Ok(response) => HttpResponse::Ok().json(response),
+		Err(SaveLiveStateSnapshotError::PathUnset) => err_json(
+			actix_web::http::StatusCode::CONFLICT,
+			"state_snapshot_file_path_unset",
+			"state snapshot file path が未設定です。profile-local snapshot path metadata を持つ runtime が必要です。",
+		),
+		Err(SaveLiveStateSnapshotError::WorkerUnavailable) => err_json(
+			actix_web::http::StatusCode::CONFLICT,
+			"flowgraph_worker_unavailable",
+			"live state snapshot を取得するには起動中の Flowgraph worker が必要です。",
+		),
+		Err(SaveLiveStateSnapshotError::CommandFailed(error)) => err_json(
+			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+			"state_snapshot_live_export_failed",
+			format!("live state snapshot の取得に失敗しました: {error}"),
+		),
+		Err(SaveLiveStateSnapshotError::WriteFailed { path, error }) => err_json(
+			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+			"state_snapshot_write_failed",
+			format!("state snapshot file の保存に失敗しました ({}): {error}", path.display()),
+		),
+	}
+}
+
+// ============================================================================
 // POST /flowgraph/file  （新規作成）
 // ============================================================================
 
@@ -790,6 +873,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 		.service(get_tree)
 		.service(get_diagnostics)
 		.service(post_save_loaded_state_snapshot)
+		.service(post_save_live_state_snapshot)
 		.service(post_restore_profile_local_state_snapshot)
 		.service(post_reload)
 		.service(fragment_zip::post_fragment_copy)
@@ -832,6 +916,12 @@ mod tests {
 		let dir = std::env::temp_dir().join(format!("vac-flowgraph-control-save-{label}-{}-{now_ms}", std::process::id()));
 		std::fs::create_dir_all(&dir).expect("create temp dir");
 		dir
+	}
+
+	fn state_counter_root() -> PathBuf {
+		std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+			.join("flowgraph.example")
+			.join("state-counter")
 	}
 
 	fn runtime_with_snapshot_path(path: Option<PathBuf>) -> FlowgraphRuntime {
@@ -889,6 +979,44 @@ mod tests {
 				assert_eq!(actual_path, path);
 			}
 			SaveLoadedStateSnapshotError::PathUnset => panic!("expected write failure"),
+		}
+	}
+
+	#[tokio::test]
+	async fn save_live_state_snapshot_response_reports_missing_path() {
+		let rt = runtime_with_snapshot_path(None);
+		let error = save_live_state_snapshot_response(&rt).await.expect_err("missing path");
+		assert!(matches!(error, SaveLiveStateSnapshotError::PathUnset));
+	}
+
+	#[tokio::test]
+	async fn save_live_state_snapshot_response_reports_missing_worker() {
+		let path = temp_dir("live-no-worker").join("profile").join("state.snapshot.json");
+		let rt = runtime_with_snapshot_path(Some(path));
+		let error = save_live_state_snapshot_response(&rt).await.expect_err("missing worker");
+		assert!(matches!(error, SaveLiveStateSnapshotError::WorkerUnavailable));
+	}
+
+	#[tokio::test]
+	async fn save_live_state_snapshot_response_writes_worker_snapshot_file() {
+		let path = temp_dir("live-ok").join("profile").join("state.snapshot.json");
+		let mut rt = FlowgraphRuntime::load_and_spawn(&state_counter_root(), std::sync::Weak::new(), None, None, None, None);
+		rt.state_snapshot_file_path = Some(path.clone());
+		rt.trigger()
+			.expect("trigger handle")
+			.send_exec("main::in", "__trigger__")
+			.expect("send trigger");
+
+		let response = save_live_state_snapshot_response(&rt).await.expect("save live snapshot");
+
+		assert!(response.path.ends_with("/profile/state.snapshot.json"));
+		assert_eq!(response.snapshot_node_count, 1);
+		assert!(response.written);
+		let file = crate::flowgraph::read_state_snapshot_file(&path).expect("read snapshot file");
+		assert_eq!(file.snapshot.nodes[0].version, 1);
+		assert_eq!(file.snapshot.nodes[0].value, serde_json::json!({ "value": 1 }));
+		if let Some(handle) = rt.handle.as_ref() {
+			handle.shutdown().await;
 		}
 	}
 

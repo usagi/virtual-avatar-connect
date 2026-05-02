@@ -83,6 +83,7 @@ import {
   type FlowgraphReloadResponse,
   type FlowgraphRestoreStateSnapshotResponse,
   type FlowgraphSaveLoadedStateSnapshotResponse,
+  type FlowgraphSaveLiveStateSnapshotResponse,
   type FragmentCopyRequest,
   type FragmentCopyResponse,
   type FragmentPasteRequest,
@@ -594,6 +595,13 @@ export const api = {
   flowgraphSaveLoadedStateSnapshot(): Promise<FlowgraphSaveLoadedStateSnapshotResponse> {
     return request<FlowgraphSaveLoadedStateSnapshotResponse>(
       "/flowgraph/state-snapshot/loaded/save",
+      { method: "POST" },
+    );
+  },
+  /** live worker state snapshot を profile-local snapshot file へ明示保存する。自動保存ではない。 */
+  flowgraphSaveLiveStateSnapshot(): Promise<FlowgraphSaveLiveStateSnapshotResponse> {
+    return request<FlowgraphSaveLiveStateSnapshotResponse>(
+      "/flowgraph/state-snapshot/live/save",
       { method: "POST" },
     );
   },
