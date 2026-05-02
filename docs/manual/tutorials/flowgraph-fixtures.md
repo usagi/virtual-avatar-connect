@@ -120,7 +120,12 @@ value = "hello"
 ## state restore / snapshot
 
 テスト定義の top-level `[[state_snapshots]]` は、trigger 実行前に復元する state snapshot です。
+永続化用 JSON envelope をそのまま fixture 入力にしたい場合は、テスト定義ファイルからの相対 path として `state_snapshot_file = "state.snapshot.json"` も指定できます。
 現時点で snapshot / restore 対応済みの node は `flowgraph.state.bool`、`flowgraph.state.int_counter`、`flowgraph.state.latch`、`flowgraph.state.accumulator`、`flowgraph.util.rate_limit` です。
+
+```toml
+state_snapshot_file = "state.snapshot.json"
+```
 
 ```toml
 [[state_snapshots]]
@@ -157,7 +162,8 @@ value = { value = 42 }
 `state_restore` は実行前 restore の観測結果、`state_snapshots` は trigger 実行後に export された snapshot です。
 時刻を含む state など payload が実行時に変わる node では、`[[tests.expect.state_snapshots]]` から `value` を省略して node / version / format だけを検証できます。
 同じ node への重複 restore entry や `snapshot_node_count` と payload 件数の不一致は、部分適用せず restore error として失敗します。
-永続化用の JSON snapshot file envelope は schema version 付きですが、fixture の top-level `[[state_snapshots]]` は人間が書きやすい restore shorthand として envelope なしの entry 配列を使います。
+`state_snapshot_file` は schema version 付きの永続化 envelope を読むため、file restore 経路そのものを fixture で固定できます。
+fixture の top-level `[[state_snapshots]]` は、人間が書きやすい restore shorthand として envelope なしの entry 配列を使います。
 
 ## mock IO
 
