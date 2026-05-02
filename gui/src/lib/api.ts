@@ -81,6 +81,7 @@ import {
  type FlowgraphWriteFileResponse,
  type FlowgraphOpenExternalResponse,
  type FlowgraphReloadResponse,
+ type FlowgraphSaveLoadedStateSnapshotResponse,
  type FragmentCopyRequest,
  type FragmentCopyResponse,
  type FragmentPasteRequest,
@@ -458,6 +459,10 @@ export const api = {
  /** 現在ランタイムが保持している診断 + node_meta を取得する。 */
  flowgraphDiagnostics(): Promise<FlowgraphDiagnosticsResponse> {
   return request<FlowgraphDiagnosticsResponse>('/flowgraph/diagnostics');
+ },
+ /** ロード直後 snapshot を profile-local snapshot file へ明示保存する。live worker state ではない。 */
+ flowgraphSaveLoadedStateSnapshot(): Promise<FlowgraphSaveLoadedStateSnapshotResponse> {
+  return request<FlowgraphSaveLoadedStateSnapshotResponse>('/flowgraph/state-snapshot/loaded/save', { method: 'POST' });
  },
  /** 新規ファイル作成（省略時は空 `[meta]` テンプレート）。 */
  flowgraphCreateFile(req: FlowgraphCreateFileRequest): Promise<FlowgraphWriteFileResponse> {

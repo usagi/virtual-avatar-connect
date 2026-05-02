@@ -331,6 +331,58 @@ pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 }
 
 // ============================================================================
+// POST /flowgraph/state-snapshot/loaded/save
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct SaveLoadedStateSnapshotResponse {
+	pub path: String,
+	pub snapshot_node_count: usize,
+	pub written: bool,
+}
+
+#[post("/flowgraph/state-snapshot/loaded/save")]
+pub async fn post_save_loaded_state_snapshot(state: Data<SharedState>) -> impl Responder {
+	let rt = {
+		let fg = state.read().await.flowgraph.clone();
+		let rt = fg.read().await.clone();
+		rt
+	};
+	let Some(rt) = rt else {
+		return err_json(
+			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+			"flowgraph_dir_unset",
+			"conf.flowgraph_dir が未設定です",
+		);
+	};
+	let Some(path) = rt.state_snapshot_file_path.clone() else {
+		return err_json(
+			actix_web::http::StatusCode::CONFLICT,
+			"state_snapshot_file_path_unset",
+			"state snapshot file path が未設定です。profile-local snapshot path metadata を持つ runtime が必要です。",
+		);
+	};
+	let snapshot_node_count = rt.loaded_state_snapshot.snapshot_node_count;
+	match rt.write_loaded_state_snapshot_file() {
+		Ok(Some(written_path)) => HttpResponse::Ok().json(SaveLoadedStateSnapshotResponse {
+			path: written_path.display().to_string().replace('\\', "/"),
+			snapshot_node_count,
+			written: true,
+		}),
+		Ok(None) => err_json(
+			actix_web::http::StatusCode::CONFLICT,
+			"state_snapshot_file_path_unset",
+			"state snapshot file path が未設定です。",
+		),
+		Err(error) => err_json(
+			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+			"state_snapshot_write_failed",
+			format!("state snapshot file の保存に失敗しました ({}): {error}", path.display()),
+		),
+	}
+}
+
+// ============================================================================
 // POST /flowgraph/file  （新規作成）
 // ============================================================================
 
@@ -642,6 +694,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 		.service(get_parse_unit)
 		.service(get_tree)
 		.service(get_diagnostics)
+		.service(post_save_loaded_state_snapshot)
 		.service(post_reload)
 		.service(fragment_zip::post_fragment_copy)
 		.service(fragment_zip::post_fragment_paste)
