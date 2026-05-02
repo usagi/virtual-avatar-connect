@@ -834,6 +834,12 @@ Flowgraph Diagnostics の `state_snapshot_file_path` 表示に `save snapshot` �
 `POST /flowgraph/state-snapshot/loaded/save` の保存処理を private helper に切り出し、response 生成・path 未設定・書き込み失敗の unit coverage を追加した。
 Actix state 全体や audio device 初期化に依存せず、profile-local snapshot file envelope が実際に書かれることを直接検証する。
 
+### LF-7al Profile-local snapshot restore Control API ✅
+
+`POST /flowgraph/state-snapshot/profile-local/restore` を追加し、現在 runtime metadata が示す `state_snapshot_file_path` の envelope から明示 restore した上で Flowgraph runtime を reload / respawn できるようにした。
+通常 reload と同じ bridge shutdown / worker shutdown / bridge respawn / `FlowgraphReloaded` 通知の経路を共有し、snapshot file 読込や restore に失敗した場合は HTTP エラーではなく `state-restore` diagnostic を含む reload 結果として返す。
+GUI client にも同 endpoint の DTO と API method を追加したが、この段階ではユーザー操作としての restore ボタンや自動 restore には踏み込まない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
