@@ -10,7 +10,7 @@
 //! アプリ終了時に `shutdown_tx.send(())` でワーカーを停止させる。
 
 use crate::flowgraph::activation::TriggerGate;
-use crate::flowgraph::engine::{create_trigger_bus, FlowgraphProgram};
+use crate::flowgraph::engine::{create_program_command_bus, create_trigger_bus, FlowgraphProgram, ProgramCommandHandle};
 use crate::flowgraph::loader::{Diagnostic, LoadedNodeMeta, Severity};
 use crate::flowgraph::node::{ExecCtx, PureEvalHost, TriggerHandle};
 use crate::state::State;
@@ -71,9 +71,10 @@ pub fn spawn_program(
 	audio_sink: Option<SharedAudioSink>,
 	trigger_gate: Option<Arc<TriggerGate>>,
 	pure_host: PureEvalHost,
-) -> (TriggerHandle, broadcast::Sender<()>, JoinHandle<()>) {
+) -> (TriggerHandle, ProgramCommandHandle, broadcast::Sender<()>, JoinHandle<()>) {
 	program.pure_host = pure_host;
 	let (trigger, rx) = create_trigger_bus();
+	let (command, command_rx) = create_program_command_bus();
 	let (shutdown_tx, mut shutdown_rx) = broadcast::channel::<()>(1);
 	let trigger_for_ctx = trigger.clone();
 	let join = tokio::spawn(async move {
@@ -91,7 +92,7 @@ pub fn spawn_program(
 			let _ = shutdown_rx.recv().await;
 		};
 		match program
-			.run_forever_with_bus(&mut ctx, trigger_for_ctx, rx, shutdown, trigger_gate)
+			.run_forever_with_bus_and_commands(&mut ctx, trigger_for_ctx, rx, Some(command_rx), shutdown, trigger_gate)
 			.await
 		{
 			Ok(run) => log::info!(
@@ -102,5 +103,5 @@ pub fn spawn_program(
 			Err(e) => log::error!("《Flowgraph》 ランタイムワーカー異常終了: {e:?}"),
 		}
 	});
-	(trigger, shutdown_tx, join)
+	(trigger, command, shutdown_tx, join)
 }

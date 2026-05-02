@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::future::Future;
 use thiserror::Error;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
 pub type NodeId = String;
 pub type PortName = String;
@@ -29,6 +29,53 @@ pub type PortName = String;
 pub fn create_trigger_bus() -> (TriggerHandle, mpsc::UnboundedReceiver<TriggerEvent>) {
 	let (tx, rx) = mpsc::unbounded_channel::<TriggerEvent>();
 	(TriggerHandle::new(tx), rx)
+}
+
+pub fn create_program_command_bus() -> (ProgramCommandHandle, mpsc::UnboundedReceiver<ProgramCommand>) {
+	let (tx, rx) = mpsc::unbounded_channel::<ProgramCommand>();
+	(ProgramCommandHandle::new(tx), rx)
+}
+
+pub enum ProgramCommand {
+	ExportStateSnapshot { respond_to: oneshot::Sender<ProgramStateSnapshot> },
+}
+
+#[derive(Clone)]
+pub struct ProgramCommandHandle {
+	sender: mpsc::UnboundedSender<ProgramCommand>,
+}
+
+impl std::fmt::Debug for ProgramCommandHandle {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("ProgramCommandHandle").finish_non_exhaustive()
+	}
+}
+
+impl ProgramCommandHandle {
+	pub fn new(sender: mpsc::UnboundedSender<ProgramCommand>) -> Self {
+		Self { sender }
+	}
+
+	pub async fn export_state_snapshot(&self) -> Result<ProgramStateSnapshot, ProgramCommandError> {
+		let (respond_to, response) = oneshot::channel();
+		self.sender
+			.send(ProgramCommand::ExportStateSnapshot { respond_to })
+			.map_err(|_| ProgramCommandError::ChannelClosed)?;
+		response.await.map_err(|_| ProgramCommandError::ChannelClosed)
+	}
+}
+
+#[derive(Debug, Error)]
+pub enum ProgramCommandError {
+	#[error("program command channel is closed")]
+	ChannelClosed,
+}
+
+async fn recv_program_command(command_rx: &mut Option<mpsc::UnboundedReceiver<ProgramCommand>>) -> Option<ProgramCommand> {
+	match command_rx {
+		Some(rx) => rx.recv().await,
+		None => std::future::pending().await,
+	}
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -310,7 +357,23 @@ impl FlowgraphProgram {
 		&mut self,
 		ctx: &mut ExecCtx,
 		handle: TriggerHandle,
+		rx: mpsc::UnboundedReceiver<TriggerEvent>,
+		shutdown: F,
+		trigger_gate: Option<std::sync::Arc<crate::flowgraph::activation::TriggerGate>>,
+	) -> Result<ProgramRun, NodeExecError>
+	where
+		F: Future<Output = ()>,
+	{
+		self.run_forever_with_bus_and_commands(ctx, handle, rx, None, shutdown, trigger_gate)
+			.await
+	}
+
+	pub async fn run_forever_with_bus_and_commands<F>(
+		&mut self,
+		ctx: &mut ExecCtx,
+		handle: TriggerHandle,
 		mut rx: mpsc::UnboundedReceiver<TriggerEvent>,
+		mut command_rx: Option<mpsc::UnboundedReceiver<ProgramCommand>>,
 		shutdown: F,
 		trigger_gate: Option<std::sync::Arc<crate::flowgraph::activation::TriggerGate>>,
 	) -> Result<ProgramRun, NodeExecError>
@@ -337,12 +400,25 @@ impl FlowgraphProgram {
 			   None => break,
 			  }
 			 }
+				 command = recv_program_command(&mut command_rx) => {
+				  if let Some(command) = command {
+				   self.handle_program_command(command);
+				  }
+				 }
 			}
 		}
 
 		ctx.trigger = None;
 		ctx.trigger_gate = None;
 		Ok(run)
+	}
+
+	fn handle_program_command(&self, command: ProgramCommand) {
+		match command {
+			ProgramCommand::ExportStateSnapshot { respond_to } => {
+				let _ = respond_to.send(self.export_state_snapshot());
+			}
+		}
 	}
 
 	/// 1 つの `TriggerEvent` を処理する。新しい generation を振り、対象ノードを発火。

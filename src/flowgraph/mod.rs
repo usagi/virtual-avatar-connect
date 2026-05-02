@@ -37,9 +37,9 @@ pub use activation::{
 };
 pub use config::{parse_offset_str, ConfigError as FlowgraphConfigError, FlowgraphInstanceConfig};
 pub use engine::{
-	BuildError, Edge, FlowgraphBuilder, FlowgraphProgram, NodeId, NodeInstance, PortName, PortRef, ProgramRun, ProgramStateNode,
-	ProgramStateRestoreNode, ProgramStateRestoreReport, ProgramStateSnapshot, ProgramStateSnapshotNode, ProgramStateSummary,
-	StateRestoreError,
+	BuildError, Edge, FlowgraphBuilder, FlowgraphProgram, NodeId, NodeInstance, PortName, PortRef, ProgramCommandError,
+	ProgramCommandHandle, ProgramRun, ProgramStateNode, ProgramStateRestoreNode, ProgramStateRestoreReport, ProgramStateSnapshot,
+	ProgramStateSnapshotNode, ProgramStateSummary, StateRestoreError,
 };
 pub use loader::{
 	file_activation_meta, load_file, load_flowgraph_dir, Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, LoadError, LoadReport,

@@ -18,7 +18,8 @@ use crate::flowgraph::loader::{Diagnostic, FlowgraphFileActivationMeta, GraphCap
 use crate::flowgraph::node::PureEvalHost;
 use crate::flowgraph::node::TriggerHandle;
 use crate::flowgraph::{
-	ProgramStateRestoreReport, ProgramStateSnapshot, ProgramStateSnapshotFile, ProgramStateSummary, StateSnapshotFileError,
+	ProgramCommandError, ProgramCommandHandle, ProgramStateRestoreReport, ProgramStateSnapshot, ProgramStateSnapshotFile,
+	ProgramStateSummary, StateSnapshotFileError,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -30,6 +31,7 @@ use tokio::task::JoinHandle;
 #[derive(Debug)]
 pub struct RuntimeHandle {
 	pub trigger: TriggerHandle,
+	pub command: ProgramCommandHandle,
 	pub shutdown_tx: broadcast::Sender<()>,
 	pub join: tokio::sync::Mutex<Option<JoinHandle<()>>>,
 }
@@ -364,11 +366,12 @@ impl FlowgraphRuntime {
 				runtime_mode: runtime_mode_id,
 				default_runtime_mode: conf.and_then(|c| c.default_runtime_mode.clone()),
 			};
-			let (trigger, shutdown_tx, join) =
+			let (trigger, command, shutdown_tx, join) =
 				crate::flowgraph::spawn::spawn_program(program, state_weak, audio_sink, gate.clone(), pure_host);
 			rt.trigger_gate = gate;
 			rt.handle = Some(Arc::new(RuntimeHandle {
 				trigger,
+				command,
 				shutdown_tx,
 				join: tokio::sync::Mutex::new(Some(join)),
 			}));
@@ -405,6 +408,13 @@ impl FlowgraphRuntime {
 	/// 外部ブリッジ（HTTP / Voice / Twitch ingress）が `TriggerEvent` を送る経路。
 	pub fn trigger(&self) -> Option<TriggerHandle> {
 		self.handle.as_ref().map(|h| h.trigger.clone())
+	}
+
+	pub async fn export_live_state_snapshot(&self) -> Result<Option<ProgramStateSnapshot>, ProgramCommandError> {
+		let Some(handle) = self.handle.as_ref() else {
+			return Ok(None);
+		};
+		handle.command.export_state_snapshot().await.map(Some)
 	}
 
 	/// RM-3: `runtime_mode` を反映して exec ゲートを再計算。ワーカーがいなければ何もしない。
@@ -462,6 +472,42 @@ mod tests {
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].node, "main::counter");
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].version, 0);
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].value, serde_json::json!({ "value": 0 }));
+	}
+
+	#[tokio::test]
+	async fn export_live_state_snapshot_without_worker_returns_none() {
+		let root = state_counter_root();
+		let rt = FlowgraphRuntime::load(&root);
+
+		let snapshot = rt.export_live_state_snapshot().await.expect("live snapshot request");
+
+		assert!(snapshot.is_none());
+	}
+
+	#[tokio::test]
+	async fn export_live_state_snapshot_reads_worker_state_after_trigger() {
+		let root = state_counter_root();
+		let rt = FlowgraphRuntime::load_and_spawn(&root, std::sync::Weak::new(), None, None, None, None);
+
+		assert!(rt.ok, "diagnostics: {:#?}", rt.diagnostics);
+		assert_eq!(rt.loaded_state_snapshot.nodes[0].value, serde_json::json!({ "value": 0 }));
+		rt.trigger()
+			.expect("trigger handle")
+			.send_exec("main::in", "__trigger__")
+			.expect("send trigger");
+		let snapshot = rt
+			.export_live_state_snapshot()
+			.await
+			.expect("live snapshot request")
+			.expect("live snapshot");
+
+		assert_eq!(snapshot.snapshot_node_count, 1);
+		assert_eq!(snapshot.nodes[0].node, "main::counter");
+		assert_eq!(snapshot.nodes[0].version, 1);
+		assert_eq!(snapshot.nodes[0].value, serde_json::json!({ "value": 1 }));
+		if let Some(handle) = rt.handle.as_ref() {
+			handle.shutdown().await;
+		}
 	}
 
 	#[test]
