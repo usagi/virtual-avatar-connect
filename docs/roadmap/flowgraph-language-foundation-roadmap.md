@@ -881,6 +881,12 @@ Fixture test file に `state_snapshot_file` を追加し、`ProgramStateSnapshot
 GUI client には DTO と API method を追加したが、この段階では GUI ボタン追加や自動保存には踏み込まない。
 worker 未起動、path 未設定、command channel close、書き込み失敗はそれぞれ Control API error として分離して返す。
 
+### LF-7at Live snapshot save GUI affordance ✅
+
+Flowgraph Diagnostics の profile-local snapshot file 行に `save live` 操作を追加し、GUI から `POST /flowgraph/state-snapshot/live/save` を呼べるようにした。
+既存の load-time snapshot 保存は `save loaded` として明示し、live worker state の保存操作と混同しないようにした。
+この段階では手動保存に留め、終了時・reload 前・定期 interval での自動保存には踏み込まない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
