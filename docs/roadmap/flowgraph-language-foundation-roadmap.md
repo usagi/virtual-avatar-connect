@@ -846,6 +846,12 @@ Flowgraph Diagnostics の `state_snapshot_file_path` 表示に `restore snapshot
 restore 成功時は node count と path を toast で返し、diagnostic 付き reload の場合は warning として表示してから tree / diagnostics / current file を再取得する。
 この UI も手動 restore の入口に留め、live worker state 保存や reload 時の自動 restore には踏み込まない。
 
+### LF-7an Snapshot file existence metadata ✅
+
+`GET /flowgraph/diagnostics` に `state_snapshot_file_exists` を追加し、profile-local snapshot file path がある場合にその envelope が実在するかを GUI から判定できるようにした。
+Flowgraph Diagnostics の `restore snapshot` 操作は file が未作成の場合に disabled になり、path 行には `(missing)` を表示する。
+この段階では手動 restore の操作性改善に留め、snapshot file の自動生成や reload 時の自動 restore はまだ接続しない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
