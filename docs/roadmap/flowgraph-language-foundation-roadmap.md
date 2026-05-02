@@ -840,6 +840,12 @@ Actix state 全体や audio device 初期化に依存せず、profile-local snap
 通常 reload と同じ bridge shutdown / worker shutdown / bridge respawn / `FlowgraphReloaded` 通知の経路を共有し、snapshot file 読込や restore に失敗した場合は HTTP エラーではなく `state-restore` diagnostic を含む reload 結果として返す。
 GUI client にも同 endpoint の DTO と API method を追加したが、この段階ではユーザー操作としての restore ボタンや自動 restore には踏み込まない。
 
+### LF-7am Profile-local snapshot restore GUI affordance ✅
+
+Flowgraph Diagnostics の `state_snapshot_file_path` 表示に `restore snapshot` 操作を追加し、GUI から `POST /flowgraph/state-snapshot/profile-local/restore` を呼べるようにした。
+restore 成功時は node count と path を toast で返し、diagnostic 付き reload の場合は warning として表示してから tree / diagnostics / current file を再取得する。
+この UI も手動 restore の入口に留め、live worker state 保存や reload 時の自動 restore には踏み込まない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
