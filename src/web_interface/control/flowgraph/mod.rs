@@ -304,6 +304,19 @@ pub struct DiagnosticsResponse {
 	pub inactive_exec_nodes: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct StateSnapshotFileStatus {
+	path: String,
+	exists: bool,
+}
+
+fn state_snapshot_file_status(rt: &FlowgraphRuntime) -> Option<StateSnapshotFileStatus> {
+	rt.state_snapshot_file_path.as_ref().map(|path| StateSnapshotFileStatus {
+		path: path.display().to_string().replace('\\', "/"),
+		exists: path.is_file(),
+	})
+}
+
 #[get("/flowgraph/diagnostics")]
 pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 	let fg = state.read().await.flowgraph.clone();
@@ -316,6 +329,7 @@ pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 		);
 	};
 	let inactive_exec_nodes = rt.trigger_gate.as_ref().map(|g| g.inactive_node_ids()).unwrap_or_default();
+	let state_snapshot_file = state_snapshot_file_status(rt);
 	HttpResponse::Ok().json(DiagnosticsResponse {
 		root_dir: rt.root_dir.display().to_string().replace('\\', "/"),
 		ok: rt.ok,
@@ -324,11 +338,8 @@ pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 		capability_summary: rt.capability_summary.clone(),
 		loaded_state_summary: rt.loaded_state_summary.clone(),
 		loaded_state_snapshot: rt.loaded_state_snapshot.clone(),
-		state_snapshot_file_path: rt
-			.state_snapshot_file_path
-			.as_ref()
-			.map(|path| path.display().to_string().replace('\\', "/")),
-		state_snapshot_file_exists: rt.state_snapshot_file_path.as_ref().map(|path| path.is_file()),
+		state_snapshot_file_path: state_snapshot_file.as_ref().map(|status| status.path.clone()),
+		state_snapshot_file_exists: state_snapshot_file.as_ref().map(|status| status.exists),
 		file_activation: rt.file_activation.clone(),
 		inactive_exec_nodes,
 	})
@@ -866,5 +877,34 @@ mod tests {
 			}
 			SaveLoadedStateSnapshotError::PathUnset => panic!("expected write failure"),
 		}
+	}
+
+	#[test]
+	fn state_snapshot_file_status_reports_none_without_path() {
+		let rt = runtime_with_snapshot_path(None);
+		assert_eq!(state_snapshot_file_status(&rt), None);
+	}
+
+	#[test]
+	fn state_snapshot_file_status_reports_missing_file() {
+		let path = temp_dir("status-missing").join("profile").join("state.snapshot.json");
+		let rt = runtime_with_snapshot_path(Some(path));
+
+		let status = state_snapshot_file_status(&rt).expect("status");
+
+		assert!(status.path.ends_with("/profile/state.snapshot.json"));
+		assert!(!status.exists);
+	}
+
+	#[test]
+	fn state_snapshot_file_status_reports_existing_file() {
+		let path = temp_dir("status-existing").join("profile").join("state.snapshot.json");
+		let rt = runtime_with_snapshot_path(Some(path.clone()));
+		rt.write_loaded_state_snapshot_file().expect("write snapshot");
+
+		let status = state_snapshot_file_status(&rt).expect("status");
+
+		assert!(status.path.ends_with("/profile/state.snapshot.json"));
+		assert!(status.exists);
 	}
 }
