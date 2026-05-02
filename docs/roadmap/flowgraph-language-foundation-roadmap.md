@@ -852,6 +852,11 @@ restore 成功時は node count と path を toast で返し、diagnostic 付き
 Flowgraph Diagnostics の `restore snapshot` 操作は file が未作成の場合に disabled になり、path 行には `(missing)` を表示する。
 この段階では手動 restore の操作性改善に留め、snapshot file の自動生成や reload 時の自動 restore はまだ接続しない。
 
+### LF-7ao Snapshot file status coverage ✅
+
+Diagnostics の `state_snapshot_file_path` / `state_snapshot_file_exists` 算出を private helper に切り出し、path 未設定・file missing・file existing の unit coverage を追加した。
+実際に `ProgramStateSnapshotFile` envelope を書いた場合に `exists = true` になることを検証し、GUI の restore disabled 判定の根拠を backend 側で固定した。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
