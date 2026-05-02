@@ -296,6 +296,8 @@ pub struct DiagnosticsResponse {
 	pub loaded_state_snapshot: crate::flowgraph::ProgramStateSnapshot,
 	/// LF-7: profile-local state snapshot file の予定保存先。自動 read/write はまだ行わない。
 	pub state_snapshot_file_path: Option<String>,
+	/// LF-7: `state_snapshot_file_path` が指す snapshot file envelope が存在するか。
+	pub state_snapshot_file_exists: Option<bool>,
 	/// RM-3: 各 flowgraph ファイルの mode 用メタ（`[meta].mode_groups` / `default_enabled`）。
 	pub file_activation: std::collections::HashMap<String, crate::flowgraph::FlowgraphFileActivationMeta>,
 	/// RM-3: exec が抑止されているノード ID。
@@ -326,6 +328,7 @@ pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 			.state_snapshot_file_path
 			.as_ref()
 			.map(|path| path.display().to_string().replace('\\', "/")),
+		state_snapshot_file_exists: rt.state_snapshot_file_path.as_ref().map(|path| path.is_file()),
 		file_activation: rt.file_activation.clone(),
 		inactive_exec_nodes,
 	})

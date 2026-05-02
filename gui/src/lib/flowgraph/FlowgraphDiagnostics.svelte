@@ -125,6 +125,9 @@
   const stateSnapshotFilePath = $derived(
     flowgraphStore.diagnostics?.state_snapshot_file_path,
   );
+  const stateSnapshotFileExists = $derived(
+    flowgraphStore.diagnostics?.state_snapshot_file_exists,
+  );
   const loadedStateNodes = $derived(loadedStateSummary?.nodes ?? []);
   const loadedSnapshotNodes = $derived(loadedStateSnapshot?.nodes ?? []);
 </script>
@@ -285,8 +288,10 @@
           <button
             type="button"
             class="shrink-0 rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem] hover:bg-surface-100-900 disabled:opacity-50"
-            title="profile-local snapshot file から明示 restore して reload"
-            disabled={savingStateSnapshot || restoringStateSnapshot}
+            title={stateSnapshotFileExists === false
+              ? "profile-local snapshot file がまだありません"
+              : "profile-local snapshot file から明示 restore して reload"}
+            disabled={savingStateSnapshot || restoringStateSnapshot || stateSnapshotFileExists === false}
             onclick={onRestoreProfileLocalStateSnapshot}
           >
             {restoringStateSnapshot ? "restoring" : "restore snapshot"}
@@ -296,6 +301,9 @@
             title={stateSnapshotFilePath}
           >
             state snapshot file {stateSnapshotFilePath}
+            {#if stateSnapshotFileExists === false}
+              <span class="opacity-70">(missing)</span>
+            {/if}
           </div>
         </div>
       {/if}
