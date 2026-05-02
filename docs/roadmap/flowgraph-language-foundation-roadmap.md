@@ -823,6 +823,12 @@ snapshot file の JSON parse / schema validation / count validation に失敗し
 response は書き込み先 path と snapshot node count を返し、path metadata が未設定の場合は conflict、書き込み失敗時は internal error として報告する。
 この段階では reload 直後の read-only snapshot 保存に留め、worker 実行後の live state export/import や自動永続化、自動 restore はまだ接続しない。
 
+### LF-7aj Loaded snapshot save GUI affordance ✅
+
+Flowgraph Diagnostics の `state_snapshot_file_path` 表示に `save snapshot` 操作を追加し、GUI から `POST /flowgraph/state-snapshot/loaded/save` を呼べるようにした。
+成功時は保存先 path と snapshot node count を toast で返し、失敗時は Control API error を軽量に表示する。
+この UI も Control API と同じく reload 直後の `loaded_state_snapshot` の明示保存だけを扱い、live worker state 保存や自動 restore には踏み込まない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
