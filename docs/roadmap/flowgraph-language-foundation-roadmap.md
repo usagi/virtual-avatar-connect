@@ -811,6 +811,12 @@ snapshot file の JSON parse / schema validation / count validation に失敗し
 `GET /flowgraph/diagnostics` と GUI diagnostics panel から同じ path を確認できるため、後続の save/load Control API や自動 restore がどのファイルを使うかを先に観測できる。
 この段階では path metadata の公開に留め、snapshot file の自動 read/write や live worker state export はまだ接続しない。
 
+### LF-7ah Loaded snapshot file write helper ✅
+
+`FlowgraphRuntime::loaded_state_snapshot_file()` / `write_loaded_state_snapshot_file()` を追加し、ロード直後に保持している `loaded_state_snapshot` を `ProgramStateSnapshotFile` envelope として予定保存先へ明示 write できるようにした。
+`state_snapshot_file_path` が未設定の場合は no-op として扱い、profile-local path metadata を持つ runtime だけが書き出し対象になる。
+この段階ではロード直後 snapshot の内部 helper に留め、worker 実行後の live state export や Control API save/load、自動永続化はまだ接続しない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
