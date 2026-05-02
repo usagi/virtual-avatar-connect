@@ -294,6 +294,8 @@ pub struct DiagnosticsResponse {
 	pub loaded_state_summary: crate::flowgraph::ProgramStateSummary,
 	/// LF-7: ロード直後に snapshot export できる state payload。worker 実行後の live state ではない。
 	pub loaded_state_snapshot: crate::flowgraph::ProgramStateSnapshot,
+	/// LF-7: 明示 restore 付き load の場合に、実際に restore された node の report。
+	pub loaded_state_restore_report: Option<crate::flowgraph::ProgramStateRestoreReport>,
 	/// LF-7: profile-local state snapshot file の予定保存先。自動 read/write はまだ行わない。
 	pub state_snapshot_file_path: Option<String>,
 	/// LF-7: `state_snapshot_file_path` が指す snapshot file envelope が存在するか。
@@ -338,6 +340,7 @@ pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 		capability_summary: rt.capability_summary.clone(),
 		loaded_state_summary: rt.loaded_state_summary.clone(),
 		loaded_state_snapshot: rt.loaded_state_snapshot.clone(),
+		loaded_state_restore_report: rt.loaded_state_restore_report.clone(),
 		state_snapshot_file_path: state_snapshot_file.as_ref().map(|status| status.path.clone()),
 		state_snapshot_file_exists: state_snapshot_file.as_ref().map(|status| status.exists),
 		file_activation: rt.file_activation.clone(),
@@ -688,6 +691,7 @@ pub struct RestoreStateSnapshotResponse {
 	pub ok: bool,
 	pub diagnostics: Vec<Diagnostic>,
 	pub node_count: usize,
+	pub restored_node_count: Option<usize>,
 }
 
 /// ディスクから Flowgraph を再ロードし、結果を保存 + `FlowgraphReloaded` イベント配信。
@@ -751,12 +755,20 @@ pub async fn post_restore_profile_local_state_snapshot(state: Data<SharedState>)
 		let rt = fg.read().await;
 		rt.as_ref().map(|r| r.node_meta.len()).unwrap_or(0)
 	};
+	let restored_node_count = {
+		let fg = state.read().await.flowgraph.clone();
+		let rt = fg.read().await;
+		rt.as_ref()
+			.and_then(|r| r.loaded_state_restore_report.as_ref())
+			.map(|report| report.restored_node_count)
+	};
 	HttpResponse::Ok().json(RestoreStateSnapshotResponse {
 		root_dir: root.display().to_string().replace('\\', "/"),
 		path: snapshot_path.display().to_string().replace('\\', "/"),
 		ok,
 		diagnostics,
 		node_count,
+		restored_node_count,
 	})
 }
 
@@ -831,6 +843,7 @@ mod tests {
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),
 			loaded_state_snapshot: snapshot(),
+			loaded_state_restore_report: None,
 			state_snapshot_file_path: path,
 			file_activation: HashMap::new(),
 			trigger_gate: None,

@@ -61,6 +61,8 @@ pub struct FlowgraphRuntime {
 	pub loaded_state_summary: ProgramStateSummary,
 	/// LF-7: ロード直後に snapshot export できる state payload。worker 実行後の live state ではない。
 	pub loaded_state_snapshot: ProgramStateSnapshot,
+	/// LF-7: 明示 restore 付き load の場合に、実際に restore された node の report。
+	pub loaded_state_restore_report: Option<ProgramStateRestoreReport>,
 	/// LF-7: profile-local state snapshot file の予定保存先。自動 read/write はまだ行わない。
 	pub state_snapshot_file_path: Option<PathBuf>,
 	/// RM-3: 各 flowgraph ファイル fq → mode 用メタ（`GET /flowgraph/diagnostics` 等で参照）。
@@ -82,6 +84,7 @@ impl Clone for FlowgraphRuntime {
 			capability_summary: self.capability_summary.clone(),
 			loaded_state_summary: self.loaded_state_summary.clone(),
 			loaded_state_snapshot: self.loaded_state_snapshot.clone(),
+			loaded_state_restore_report: self.loaded_state_restore_report.clone(),
 			state_snapshot_file_path: self.state_snapshot_file_path.clone(),
 			file_activation: self.file_activation.clone(),
 			trigger_gate: self.trigger_gate.clone(),
@@ -184,6 +187,7 @@ impl FlowgraphRuntime {
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),
 			loaded_state_snapshot: ProgramStateSnapshot::default(),
+			loaded_state_restore_report: None,
 			state_snapshot_file_path: None,
 			file_activation: HashMap::new(),
 			trigger_gate: None,
@@ -211,6 +215,7 @@ impl FlowgraphRuntime {
 					capability_summary: GraphCapabilitySummary::default(),
 					loaded_state_summary: ProgramStateSummary::default(),
 					loaded_state_snapshot: ProgramStateSnapshot::default(),
+					loaded_state_restore_report: None,
 					state_snapshot_file_path: None,
 					file_activation: HashMap::new(),
 					trigger_gate: None,
@@ -246,6 +251,7 @@ impl FlowgraphRuntime {
 								capability_summary,
 								loaded_state_summary: program.state_summary(),
 								loaded_state_snapshot: program.export_state_snapshot(),
+								loaded_state_restore_report: None,
 								state_snapshot_file_path: None,
 								file_activation,
 								trigger_gate: None,
@@ -259,6 +265,7 @@ impl FlowgraphRuntime {
 				};
 				let loaded_state_summary = program.state_summary();
 				let loaded_state_snapshot = program.export_state_snapshot();
+				let loaded_state_restore_report = state_restore.clone();
 				let has_nodes = !node_meta.is_empty();
 				let rt = Self {
 					root_dir: root_dir.to_path_buf(),
@@ -268,6 +275,7 @@ impl FlowgraphRuntime {
 					capability_summary,
 					loaded_state_summary,
 					loaded_state_snapshot,
+					loaded_state_restore_report,
 					state_snapshot_file_path: None,
 					file_activation,
 					trigger_gate: None,
@@ -284,6 +292,7 @@ impl FlowgraphRuntime {
 					capability_summary: GraphCapabilitySummary::default(),
 					loaded_state_summary: ProgramStateSummary::default(),
 					loaded_state_snapshot: ProgramStateSnapshot::default(),
+					loaded_state_restore_report: None,
 					state_snapshot_file_path: None,
 					file_activation: HashMap::new(),
 					trigger_gate: None,
@@ -376,6 +385,7 @@ impl FlowgraphRuntime {
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),
 			loaded_state_snapshot: ProgramStateSnapshot::default(),
+			loaded_state_restore_report: None,
 			state_snapshot_file_path: None,
 			file_activation: HashMap::new(),
 			trigger_gate: None,
@@ -512,6 +522,10 @@ mod tests {
 		assert_eq!(restore.restored_node_count, 1);
 		assert_eq!(restore.nodes[0].node, "main::counter");
 		assert_eq!(restore.nodes[0].version, 41);
+		assert_eq!(
+			rt.loaded_state_restore_report.as_ref().map(|report| report.restored_node_count),
+			Some(1)
+		);
 		assert!(program.is_some());
 		assert_eq!(rt.loaded_state_summary.nodes[0].node, "main::counter");
 		assert_eq!(rt.loaded_state_summary.nodes[0].version, 41);
@@ -530,6 +544,7 @@ mod tests {
 		assert!(!rt.ok);
 		assert!(program.is_none());
 		assert!(restore.is_none());
+		assert!(rt.loaded_state_restore_report.is_none());
 		assert!(rt.diagnostics.iter().any(|diagnostic| {
 			diagnostic.code == crate::flowgraph::DiagnosticCode::StateRestore && diagnostic.message.contains("feature mismatch")
 		}));
@@ -548,6 +563,10 @@ mod tests {
 		assert!(rt.ok, "diagnostics: {:#?}", rt.diagnostics);
 		assert!(program.is_some());
 		assert_eq!(restore.expect("restore report").restored_node_count, 1);
+		assert_eq!(
+			rt.loaded_state_restore_report.as_ref().map(|report| report.restored_node_count),
+			Some(1)
+		);
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].version, 42);
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].value, serde_json::json!({ "value": 42 }));
 		let _ = std::fs::remove_file(snapshot_path);
@@ -564,6 +583,7 @@ mod tests {
 		assert!(!rt.ok);
 		assert!(program.is_none());
 		assert!(restore.is_none());
+		assert!(rt.loaded_state_restore_report.is_none());
 		assert!(rt.diagnostics.iter().any(|diagnostic| {
 			diagnostic.code == crate::flowgraph::DiagnosticCode::StateRestore
 				&& diagnostic.message.contains("state snapshot file restore failed")
@@ -591,6 +611,10 @@ mod tests {
 
 		assert!(rt.ok, "diagnostics: {:#?}", rt.diagnostics);
 		assert!(rt.handle.is_some());
+		assert_eq!(
+			rt.loaded_state_restore_report.as_ref().map(|report| report.restored_node_count),
+			Some(1)
+		);
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].version, 43);
 		assert_eq!(rt.loaded_state_snapshot.nodes[0].value, serde_json::json!({ "value": 43 }));
 		if let Some(handle) = rt.handle.as_ref() {
@@ -617,6 +641,7 @@ mod tests {
 
 		assert!(!rt.ok);
 		assert!(rt.handle.is_none());
+		assert!(rt.loaded_state_restore_report.is_none());
 		assert!(rt.diagnostics.iter().any(|diagnostic| {
 			diagnostic.code == crate::flowgraph::DiagnosticCode::StateRestore
 				&& diagnostic.message.contains("state snapshot file restore failed")

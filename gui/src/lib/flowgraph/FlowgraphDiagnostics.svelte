@@ -79,7 +79,7 @@
       if (resp.ok) {
         toastStore.success(
           "State snapshot を restore しました",
-          `${resp.node_count} nodes <- ${resp.path}`,
+          `${resp.restored_node_count ?? 0} restored / ${resp.node_count} nodes <- ${resp.path}`,
         );
       } else {
         toastStore.warn(
@@ -121,6 +121,9 @@
   );
   const loadedStateSnapshot = $derived(
     flowgraphStore.diagnostics?.loaded_state_snapshot,
+  );
+  const loadedStateRestoreReport = $derived(
+    flowgraphStore.diagnostics?.loaded_state_restore_report,
   );
   const stateSnapshotFilePath = $derived(
     flowgraphStore.diagnostics?.state_snapshot_file_path,
@@ -226,6 +229,9 @@
             {loadedStateSummary.snapshot_supported_node_count}
             / restore-capable {loadedStateSummary.restore_supported_node_count} /
             snapshots {loadedStateSnapshot?.snapshot_node_count ?? 0}
+            {#if loadedStateRestoreReport}
+              / restored {loadedStateRestoreReport.restored_node_count}
+            {/if}
           </summary>
           <div class="mt-1 grid gap-1">
             {#each loadedStateNodes as node (node.node)}

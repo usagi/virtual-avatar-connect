@@ -1160,6 +1160,17 @@ export type FlowgraphProgramStateSnapshot = {
   nodes: FlowgraphProgramStateSnapshotNode[];
 };
 
+export type FlowgraphProgramStateRestoreNode = {
+  node: string;
+  feature: string;
+  version: number;
+};
+
+export type FlowgraphProgramStateRestoreReport = {
+  restored_node_count: number;
+  nodes: FlowgraphProgramStateRestoreNode[];
+};
+
 export type FlowgraphFileActivationMeta = {
   mode_groups: string[];
   default_enabled: boolean;
@@ -1187,6 +1198,7 @@ export type FlowgraphDiagnosticsResponse = {
   capability_summary: FlowgraphCapabilitySummary;
   loaded_state_summary: FlowgraphProgramStateSummary;
   loaded_state_snapshot: FlowgraphProgramStateSnapshot;
+  loaded_state_restore_report: FlowgraphProgramStateRestoreReport | null;
   state_snapshot_file_path: string | null;
   state_snapshot_file_exists: boolean | null;
   file_activation: Record<string, FlowgraphFileActivationMeta>;
@@ -1230,6 +1242,7 @@ export type FlowgraphRestoreStateSnapshotResponse = {
   ok: boolean;
   diagnostics: FlowgraphDiagnostic[];
   node_count: number;
+  restored_node_count: number | null;
 };
 
 export type FlowgraphSaveLoadedStateSnapshotResponse = {
