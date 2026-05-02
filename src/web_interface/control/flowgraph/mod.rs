@@ -20,7 +20,7 @@ mod reload;
 mod trigger;
 mod util;
 
-pub(crate) use reload::reload_runtime;
+pub(crate) use reload::{reload_runtime, reload_runtime_with_state_snapshot_file};
 
 use actix_web::web::{self, Data, Json};
 use actix_web::{delete, get, post, put, HttpResponse, Responder};
@@ -667,6 +667,15 @@ pub struct ReloadResponse {
 	pub node_count: usize,
 }
 
+#[derive(Debug, Serialize)]
+pub struct RestoreStateSnapshotResponse {
+	pub root_dir: String,
+	pub path: String,
+	pub ok: bool,
+	pub diagnostics: Vec<Diagnostic>,
+	pub node_count: usize,
+}
+
 /// ディスクから Flowgraph を再ロードし、結果を保存 + `FlowgraphReloaded` イベント配信。
 ///
 /// 外部エディタで `.flowgraph.toml` を直接編集した後に GUI から叩く用途を想定。
@@ -692,6 +701,52 @@ pub async fn post_reload(state: Data<SharedState>) -> impl Responder {
 }
 
 // ============================================================================
+// POST /flowgraph/state-snapshot/profile-local/restore
+// ============================================================================
+
+/// 現在 profile / flowgraph root に対応する snapshot file envelope を明示 restore して reload する。
+/// 自動 restore ではなく、ユーザー操作または外部ツールから叩く手動 API。
+#[post("/flowgraph/state-snapshot/profile-local/restore")]
+pub async fn post_restore_profile_local_state_snapshot(state: Data<SharedState>) -> impl Responder {
+	let (root, _) = match flowgraph_dir(&state).await {
+		Ok(v) => v,
+		Err(r) => return r,
+	};
+	let snapshot_path = {
+		let fg = state.read().await.flowgraph.clone();
+		let rt = fg.read().await;
+		let Some(rt) = rt.as_ref() else {
+			return err_json(
+				actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+				"flowgraph_dir_unset",
+				"conf.flowgraph_dir が未設定です",
+			);
+		};
+		let Some(path) = rt.state_snapshot_file_path.clone() else {
+			return err_json(
+				actix_web::http::StatusCode::CONFLICT,
+				"state_snapshot_file_path_unset",
+				"state snapshot file path が未設定です。profile-local snapshot path metadata を持つ runtime が必要です。",
+			);
+		};
+		path
+	};
+	let (ok, diagnostics) = reload_runtime_with_state_snapshot_file(&state, &root, &snapshot_path).await;
+	let node_count = {
+		let fg = state.read().await.flowgraph.clone();
+		let rt = fg.read().await;
+		rt.as_ref().map(|r| r.node_meta.len()).unwrap_or(0)
+	};
+	HttpResponse::Ok().json(RestoreStateSnapshotResponse {
+		root_dir: root.display().to_string().replace('\\', "/"),
+		path: snapshot_path.display().to_string().replace('\\', "/"),
+		ok,
+		diagnostics,
+		node_count,
+	})
+}
+
+// ============================================================================
 // Route registration
 // ============================================================================
 
@@ -709,6 +764,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 		.service(get_tree)
 		.service(get_diagnostics)
 		.service(post_save_loaded_state_snapshot)
+		.service(post_restore_profile_local_state_snapshot)
 		.service(post_reload)
 		.service(fragment_zip::post_fragment_copy)
 		.service(fragment_zip::post_fragment_paste)

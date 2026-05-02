@@ -14,6 +14,20 @@ use crate::SharedState;
 /// `flowgraph.ingress.web_input` は actix-web の route が起動時固定なので hot-swap 不可。
 /// 差分があれば `ControlEvent::RestartRecommended` で GUI にトースト。
 pub(crate) async fn reload_runtime(state: &SharedState, root: &Path) -> (bool, Vec<Diagnostic>) {
+	reload_runtime_inner(state, root, None).await
+}
+
+/// profile-local snapshot file envelope を明示 restore してから Flowgraph runtime を再構築する。
+/// 自動 persistence ではなく、Control API の手動 restore 操作用。
+pub(crate) async fn reload_runtime_with_state_snapshot_file(
+	state: &SharedState,
+	root: &Path,
+	snapshot_path: &Path,
+) -> (bool, Vec<Diagnostic>) {
+	reload_runtime_inner(state, root, Some(snapshot_path)).await
+}
+
+async fn reload_runtime_inner(state: &SharedState, root: &Path, snapshot_path: Option<&Path>) -> (bool, Vec<Diagnostic>) {
 	// ζ-3: 新 runtime は worker 付きで spawn する。state_weak / audio_sink は初回と同じ経路。
 	let (state_weak, audio_sink, fg, tx, channel_datum_tx, bridge_handles_arc) = {
 		let s = state.read().await;
@@ -60,14 +74,26 @@ pub(crate) async fn reload_runtime(state: &SharedState, root: &Path) -> (bool, V
 			s.conf_source_path.clone(),
 		)
 	};
-	let mut rt = FlowgraphRuntime::load_and_spawn(
-		root,
-		state_weak,
-		audio_sink,
-		conf_opt.as_ref(),
-		mode_for_gate.as_deref(),
-		Some(mode_arc),
-	);
+	let mut rt = if let Some(snapshot_path) = snapshot_path {
+		FlowgraphRuntime::load_and_spawn_with_state_snapshot_file(
+			root,
+			snapshot_path,
+			state_weak,
+			audio_sink,
+			conf_opt.as_ref(),
+			mode_for_gate.as_deref(),
+			Some(mode_arc),
+		)
+	} else {
+		FlowgraphRuntime::load_and_spawn(
+			root,
+			state_weak,
+			audio_sink,
+			conf_opt.as_ref(),
+			mode_for_gate.as_deref(),
+			Some(mode_arc),
+		)
+	};
 	if let Some(profile_path) = profile_path.as_ref() {
 		rt.set_profile_local_state_snapshot_path(&runtime_root, profile_path);
 	}
