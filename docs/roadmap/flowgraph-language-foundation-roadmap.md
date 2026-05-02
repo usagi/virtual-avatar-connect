@@ -857,6 +857,12 @@ Flowgraph Diagnostics の `restore snapshot` 操作は file が未作成の場�
 Diagnostics の `state_snapshot_file_path` / `state_snapshot_file_exists` 算出を private helper に切り出し、path 未設定・file missing・file existing の unit coverage を追加した。
 実際に `ProgramStateSnapshotFile` envelope を書いた場合に `exists = true` になることを検証し、GUI の restore disabled 判定の根拠を backend 側で固定した。
 
+### LF-7ap Loaded state restore report metadata ✅
+
+明示 restore 付き load / spawn の `ProgramStateRestoreReport` を `FlowgraphRuntime.loaded_state_restore_report` として保持し、`GET /flowgraph/diagnostics` と profile-local restore API response から restore node count を確認できるようにした。
+GUI Diagnostics では loaded state summary と restore 成功 toast に restored count を表示する。
+この段階では restore 結果の観測性改善に留め、live worker state export/import や reload 時の自動 restore には踏み込まない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
