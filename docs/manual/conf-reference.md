@@ -115,7 +115,8 @@ runtime loader には明示的な load-time restore helper があり、raw snaps
 worker spawn 経路にも snapshot file envelope を明示指定する内部 helper があり、復元後の state を持つ program をそのまま起動できます。
 `GET /flowgraph/diagnostics` は `state_snapshot_file_path` で現在の profile / flowgraph root に対応する予定保存先を返します。
 runtime には `loaded_state_snapshot` をその予定保存先へ `ProgramStateSnapshotFile` envelope として明示 write する内部 helper があります。
-restore や snapshot file 読込に失敗した場合は `state-restore` diagnostic として報告されますが、Control API からの保存/読込、profile-local persistence、migration、reload 時の自動 restore はまだ導入していません。
+`POST /flowgraph/state-snapshot/loaded/save` は同じ helper を呼び、worker 実行後の live state ではなく `loaded_state_snapshot` を明示保存します。
+restore や snapshot file 読込に失敗した場合は `state-restore` diagnostic として報告されますが、Control API からの live state 保存/読込、profile-local persistence、migration、reload 時の自動 restore はまだ導入していません。
 
 ### 5.1 `[[control_api.tables]]` — Glossary / 汎用 Table の GUI 編集許可リスト (Phase φ / GRN)
 
