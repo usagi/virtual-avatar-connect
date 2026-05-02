@@ -1,0 +1,36 @@
+state_snapshot_file = "state.snapshot.json"
+
+[[triggers]]
+node = "main::in"
+
+[[tests]]
+name = "int counter snapshot file is restored and exported"
+
+[tests.expect]
+node_count = 2
+trigger_count = 1
+trace_count = 0
+effect_count = 0
+state_restore_count = 1
+state_snapshot_count = 1
+
+[[tests.expect.state_versions]]
+node = "main::counter"
+version = 42
+
+[[tests.expect.state_restores]]
+node = "main::counter"
+feature = "flowgraph.state.int_counter"
+version = 41
+
+[[tests.expect.state_snapshots]]
+node = "main::counter"
+version = 42
+format = "json"
+value = { value = 42 }
+
+[[tests.expect.stored_values]]
+node = "main::counter"
+port = "value"
+ty = "int"
+value = 42

@@ -12,7 +12,7 @@ use crate::flowgraph::node::{
 use crate::flowgraph::socket::{from_toml_value, SocketType};
 use crate::flowgraph::{
 	load_flowgraph_dir, FlowgraphProgram, LoadError, NodeExecError, ProgramRun, ProgramStateRestoreReport, ProgramStateSnapshot,
-	ProgramStateSnapshotNode, StateRestoreError, StateSnapshotFormat,
+	ProgramStateSnapshotNode, StateRestoreError, StateSnapshotFileError, StateSnapshotFormat,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -58,6 +58,10 @@ pub enum FixtureError {
 		field: String,
 		reason: String,
 	},
+	StateSnapshotFile {
+		path: PathBuf,
+		error: StateSnapshotFileError,
+	},
 	StateRestore(StateRestoreError),
 }
 
@@ -97,6 +101,9 @@ impl std::fmt::Display for FixtureError {
 				"state snapshot parse failed: {} state_snapshots#{index} field={field}: {reason}",
 				path.display()
 			),
+			FixtureError::StateSnapshotFile { path, error } => {
+				write!(f, "state snapshot file load failed: {}: {error}", path.display())
+			}
 			FixtureError::StateRestore(e) => write!(f, "state restore failed: {e}"),
 		}
 	}
@@ -231,6 +238,8 @@ pub struct FixtureTestResult {
 struct FixtureTestFile {
 	#[serde(default)]
 	mocks: FixtureMockSpec,
+	#[serde(default)]
+	state_snapshot_file: Option<String>,
 	#[serde(default)]
 	state_snapshots: Vec<FixtureStateSnapshotSpec>,
 	#[serde(default)]
@@ -914,6 +923,12 @@ fn default_http_mock_status() -> i64 {
 fn build_initial_state_snapshot(declared_tests: &[ParsedFixtureTestFile]) -> Result<ProgramStateSnapshot, FixtureError> {
 	let mut nodes = Vec::new();
 	for file in declared_tests {
+		if let Some(snapshot_file) = &file.parsed.state_snapshot_file {
+			let path = resolve_fixture_relative_path(&file.path, snapshot_file);
+			let snapshot_file = crate::flowgraph::read_state_snapshot_file(&path)
+				.map_err(|error| FixtureError::StateSnapshotFile { path: path.clone(), error })?;
+			nodes.extend(snapshot_file.snapshot.nodes);
+		}
 		for (index, snapshot) in file.parsed.state_snapshots.iter().enumerate() {
 			let format = parse_state_snapshot_format(&snapshot.format).map_err(|reason| FixtureError::StateSnapshotValue {
 				path: file.path.clone(),
@@ -935,6 +950,14 @@ fn build_initial_state_snapshot(declared_tests: &[ParsedFixtureTestFile]) -> Res
 		snapshot_node_count: nodes.len(),
 		nodes,
 	})
+}
+
+fn resolve_fixture_relative_path(test_file: &Path, path: &str) -> PathBuf {
+	let path = PathBuf::from(path);
+	if path.is_absolute() {
+		return path;
+	}
+	test_file.parent().unwrap_or_else(|| Path::new(".")).join(path)
 }
 
 fn fixture_state_restore_report(report: ProgramStateRestoreReport) -> FixtureStateRestoreReport {
@@ -1435,14 +1458,14 @@ mod tests {
 		let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("flowgraph.example");
 		let report = run_fixture_suite_report(&dir).await.expect("report");
 		assert!(report.ok, "errors: {:?}", report.errors);
-		assert_eq!(report.fixture_count, 13);
+		assert_eq!(report.fixture_count, 14);
 		assert_eq!(report.failed_fixtures, 0);
-		assert_eq!(report.test_count, 13);
+		assert_eq!(report.test_count, 14);
 		assert_eq!(report.failed_tests, 0);
-		assert_eq!(report.trigger_count, 12);
+		assert_eq!(report.trigger_count, 13);
 		assert_eq!(report.effect_count, 8);
-		assert_eq!(report.state_restore_count, 4);
-		assert_eq!(report.state_snapshot_count, 5);
+		assert_eq!(report.state_restore_count, 5);
+		assert_eq!(report.state_snapshot_count, 6);
 	}
 
 	#[tokio::test]
@@ -1523,6 +1546,22 @@ mod tests {
 	#[tokio::test]
 	async fn state_counter_snapshot_declared_test_passes() {
 		let dir = example_dir("state-counter");
+		let report = run_fixture_once_report(&dir).await.expect("report");
+		assert!(report.ok, "report: {:?}", report.tests);
+		assert_eq!(report.state_restore.restored_node_count, 1);
+		assert_eq!(report.state_restore.nodes[0].node, "main::counter");
+		assert_eq!(report.state_restore.nodes[0].version, 41);
+		assert_eq!(report.state_versions, vec![("main::counter".into(), 42)]);
+		assert_eq!(report.state_snapshots.len(), 1);
+		assert_eq!(report.state_snapshots[0].node, "main::counter");
+		assert_eq!(report.state_snapshots[0].format, "json");
+		assert_eq!(report.state_snapshots[0].value, serde_json::json!({ "value": 42 }));
+		assert_eq!(report.failed_tests, 0);
+	}
+
+	#[tokio::test]
+	async fn state_counter_file_snapshot_declared_test_passes() {
+		let dir = example_dir("state-counter-file");
 		let report = run_fixture_once_report(&dir).await.expect("report");
 		assert!(report.ok, "report: {:?}", report.tests);
 		assert_eq!(report.state_restore.restored_node_count, 1);

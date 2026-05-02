@@ -1,0 +1,18 @@
+[meta]
+title = "State Counter Snapshot File"
+description = "Minimal state.int_counter fixture for state snapshot file restore assertions."
+tags = ["example", "state", "snapshot", "fixture"]
+
+[[nodes]]
+id = "in"
+feature = "flowgraph.ingress.web_input"
+position = [80, 160]
+
+[[nodes]]
+id = "counter"
+feature = "flowgraph.state.int_counter"
+position = [320, 160]
+
+[[edges]]
+from = "in:exec_out"
+to = "counter:increment"
