@@ -817,6 +817,12 @@ snapshot file の JSON parse / schema validation / count validation に失敗し
 `state_snapshot_file_path` が未設定の場合は no-op として扱い、profile-local path metadata を持つ runtime だけが書き出し対象になる。
 この段階ではロード直後 snapshot の内部 helper に留め、worker 実行後の live state export や Control API save/load、自動永続化はまだ接続しない。
 
+### LF-7ai Loaded snapshot save Control API ✅
+
+`POST /flowgraph/state-snapshot/loaded/save` を追加し、現在 runtime metadata が保持している `loaded_state_snapshot` を profile-local snapshot file path へ明示保存できるようにした。
+response は書き込み先 path と snapshot node count を返し、path metadata が未設定の場合は conflict、書き込み失敗時は internal error として報告する。
+この段階では reload 直後の read-only snapshot 保存に留め、worker 実行後の live state export/import や自動永続化、自動 restore はまだ接続しない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
