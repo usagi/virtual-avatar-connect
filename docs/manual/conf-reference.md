@@ -114,6 +114,7 @@ profile-local snapshot の保存先は `<runtime_dir>/flowgraph-state/<profile-s
 runtime loader には明示的な load-time restore helper があり、raw snapshot payload または state snapshot file envelope から復元できます。
 worker spawn 経路にも snapshot file envelope を明示指定する内部 helper があり、復元後の state を持つ program をそのまま起動できます。
 `GET /flowgraph/diagnostics` は `state_snapshot_file_path` で現在の profile / flowgraph root に対応する予定保存先を返します。
+同じ応答の `state_snapshot_file_exists` は、その path に snapshot file envelope が存在するかを返します。
 runtime には `loaded_state_snapshot` をその予定保存先へ `ProgramStateSnapshotFile` envelope として明示 write する内部 helper があります。
 `POST /flowgraph/state-snapshot/loaded/save` は同じ helper を呼び、worker 実行後の live state ではなく `loaded_state_snapshot` を明示保存します。
 GUI の Flowgraph Diagnostics でも `state_snapshot_file_path` がある場合に同 API を呼ぶ `save snapshot` 操作を表示します。
