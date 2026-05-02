@@ -29,6 +29,7 @@ use serde::{Deserialize, Serialize};
 use crate::flowgraph::loader::{parse_flowgraph_file, Diagnostic, FlowgraphFile};
 use crate::flowgraph::quantity::{parse_unit, Quantity};
 use crate::flowgraph::registry::registry;
+use crate::flowgraph::{FlowgraphRuntime, StateSnapshotFileError};
 use crate::SharedState;
 
 use util::{
@@ -341,6 +342,31 @@ pub struct SaveLoadedStateSnapshotResponse {
 	pub written: bool,
 }
 
+#[derive(Debug)]
+enum SaveLoadedStateSnapshotError {
+	PathUnset,
+	WriteFailed {
+		path: std::path::PathBuf,
+		error: StateSnapshotFileError,
+	},
+}
+
+fn save_loaded_state_snapshot_response(rt: &FlowgraphRuntime) -> Result<SaveLoadedStateSnapshotResponse, SaveLoadedStateSnapshotError> {
+	let Some(path) = rt.state_snapshot_file_path.clone() else {
+		return Err(SaveLoadedStateSnapshotError::PathUnset);
+	};
+	let snapshot_node_count = rt.loaded_state_snapshot.snapshot_node_count;
+	match rt.write_loaded_state_snapshot_file() {
+		Ok(Some(written_path)) => Ok(SaveLoadedStateSnapshotResponse {
+			path: written_path.display().to_string().replace('\\', "/"),
+			snapshot_node_count,
+			written: true,
+		}),
+		Ok(None) => Err(SaveLoadedStateSnapshotError::PathUnset),
+		Err(error) => Err(SaveLoadedStateSnapshotError::WriteFailed { path, error }),
+	}
+}
+
 #[post("/flowgraph/state-snapshot/loaded/save")]
 pub async fn post_save_loaded_state_snapshot(state: Data<SharedState>) -> impl Responder {
 	let rt = {
@@ -355,26 +381,14 @@ pub async fn post_save_loaded_state_snapshot(state: Data<SharedState>) -> impl R
 			"conf.flowgraph_dir が未設定です",
 		);
 	};
-	let Some(path) = rt.state_snapshot_file_path.clone() else {
-		return err_json(
+	match save_loaded_state_snapshot_response(&rt) {
+		Ok(response) => HttpResponse::Ok().json(response),
+		Err(SaveLoadedStateSnapshotError::PathUnset) => err_json(
 			actix_web::http::StatusCode::CONFLICT,
 			"state_snapshot_file_path_unset",
 			"state snapshot file path が未設定です。profile-local snapshot path metadata を持つ runtime が必要です。",
-		);
-	};
-	let snapshot_node_count = rt.loaded_state_snapshot.snapshot_node_count;
-	match rt.write_loaded_state_snapshot_file() {
-		Ok(Some(written_path)) => HttpResponse::Ok().json(SaveLoadedStateSnapshotResponse {
-			path: written_path.display().to_string().replace('\\', "/"),
-			snapshot_node_count,
-			written: true,
-		}),
-		Ok(None) => err_json(
-			actix_web::http::StatusCode::CONFLICT,
-			"state_snapshot_file_path_unset",
-			"state snapshot file path が未設定です。",
 		),
-		Err(error) => err_json(
+		Err(SaveLoadedStateSnapshotError::WriteFailed { path, error }) => err_json(
 			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
 			"state_snapshot_write_failed",
 			format!("state snapshot file の保存に失敗しました ({}): {error}", path.display()),
@@ -707,4 +721,91 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 		.service(put_file)
 		.service(delete_file)
 		.service(get_file);
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::flowgraph::loader::GraphCapabilitySummary;
+	use crate::flowgraph::{ProgramStateSnapshot, ProgramStateSnapshotNode, ProgramStateSummary, StateSnapshotFormat};
+	use std::collections::HashMap;
+	use std::path::PathBuf;
+	use std::time::{SystemTime, UNIX_EPOCH};
+
+	fn snapshot() -> ProgramStateSnapshot {
+		ProgramStateSnapshot {
+			snapshot_node_count: 1,
+			nodes: vec![ProgramStateSnapshotNode {
+				node: "main::counter".into(),
+				feature: "flowgraph.state.int_counter".into(),
+				version: 1,
+				format: StateSnapshotFormat::Json,
+				value: serde_json::json!({ "value": 7 }),
+			}],
+		}
+	}
+
+	fn temp_dir(label: &str) -> PathBuf {
+		let now_ms = SystemTime::now().duration_since(UNIX_EPOCH).expect("time").as_millis();
+		let dir = std::env::temp_dir().join(format!("vac-flowgraph-control-save-{label}-{}-{now_ms}", std::process::id()));
+		std::fs::create_dir_all(&dir).expect("create temp dir");
+		dir
+	}
+
+	fn runtime_with_snapshot_path(path: Option<PathBuf>) -> FlowgraphRuntime {
+		FlowgraphRuntime {
+			root_dir: PathBuf::from("flowgraph.example"),
+			ok: true,
+			diagnostics: vec![],
+			node_meta: HashMap::new(),
+			capability_summary: GraphCapabilitySummary::default(),
+			loaded_state_summary: ProgramStateSummary::default(),
+			loaded_state_snapshot: snapshot(),
+			state_snapshot_file_path: path,
+			file_activation: HashMap::new(),
+			trigger_gate: None,
+			handle: None,
+		}
+	}
+
+	#[test]
+	fn save_loaded_state_snapshot_response_writes_snapshot_file() {
+		let path = temp_dir("ok").join("profile").join("state.snapshot.json");
+		let rt = runtime_with_snapshot_path(Some(path.clone()));
+
+		let response = save_loaded_state_snapshot_response(&rt).expect("save snapshot");
+
+		assert!(response.path.ends_with("/profile/state.snapshot.json"));
+		assert_eq!(response.snapshot_node_count, 1);
+		assert!(response.written);
+		let file = crate::flowgraph::read_state_snapshot_file(&path).expect("read snapshot file");
+		assert_eq!(file.snapshot, rt.loaded_state_snapshot);
+	}
+
+	#[test]
+	fn save_loaded_state_snapshot_response_reports_missing_path() {
+		let rt = runtime_with_snapshot_path(None);
+		let error = save_loaded_state_snapshot_response(&rt).expect_err("missing path");
+		assert!(matches!(error, SaveLoadedStateSnapshotError::PathUnset));
+	}
+
+	#[test]
+	fn save_loaded_state_snapshot_response_reports_write_failure() {
+		let parent_file = temp_dir("write-failed").join("not-a-directory");
+		std::fs::write(&parent_file, "occupied").expect("create parent file");
+		let path = parent_file.join("state.snapshot.json");
+		let rt = runtime_with_snapshot_path(Some(path.clone()));
+
+		let error = save_loaded_state_snapshot_response(&rt).expect_err("write failure");
+
+		match error {
+			SaveLoadedStateSnapshotError::WriteFailed {
+				path: actual_path,
+				error: _,
+			} => {
+				assert_eq!(actual_path, path);
+			}
+			SaveLoadedStateSnapshotError::PathUnset => panic!("expected write failure"),
+		}
+	}
 }
