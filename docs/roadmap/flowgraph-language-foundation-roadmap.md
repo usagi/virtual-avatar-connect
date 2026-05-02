@@ -863,6 +863,12 @@ Diagnostics の `state_snapshot_file_path` / `state_snapshot_file_exists` 算出
 GUI Diagnostics では loaded state summary と restore 成功 toast に restored count を表示する。
 この段階では restore 結果の観測性改善に留め、live worker state export/import や reload 時の自動 restore には踏み込まない。
 
+### LF-7aq Fixture state snapshot file restore coverage ✅
+
+Fixture test file に `state_snapshot_file` を追加し、`ProgramStateSnapshotFile` JSON envelope を trigger 実行前 restore payload として読めるようにした。
+`flowgraph.example/state-counter-file` では実際の `state.snapshot.json` から `flowgraph.state.int_counter` を復元し、restore report / state version / exported snapshot payload を既存 assertion で固定する。
+これで fixture の shorthand `[[state_snapshots]]` と永続化 envelope の両方を CI 向け fixture runner から検証できる。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
