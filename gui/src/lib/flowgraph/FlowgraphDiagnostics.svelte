@@ -13,6 +13,7 @@
   import { capabilityLabel } from "./effectMetadata";
 
   let savingStateSnapshot = $state(false);
+  let restoringStateSnapshot = $state(false);
 
   async function onJump(d: FlowgraphDiagnostic) {
     if (!d.file) return;
@@ -67,6 +68,36 @@
       toastStore.error("State snapshot 保存失敗", describeError(error));
     } finally {
       savingStateSnapshot = false;
+    }
+  }
+
+  async function onRestoreProfileLocalStateSnapshot() {
+    if (restoringStateSnapshot) return;
+    restoringStateSnapshot = true;
+    try {
+      const resp = await api.flowgraphRestoreProfileLocalStateSnapshot();
+      if (resp.ok) {
+        toastStore.success(
+          "State snapshot を restore しました",
+          `${resp.node_count} nodes <- ${resp.path}`,
+        );
+      } else {
+        toastStore.warn(
+          "State snapshot restore に診断があります",
+          `${resp.diagnostics.length} 件 -> ${resp.path}`,
+        );
+      }
+      await Promise.all([
+        flowgraphStore.refreshTree(),
+        flowgraphStore.refreshDiagnostics(),
+        flowgraphStore.currentFq
+          ? flowgraphStore.openFile(flowgraphStore.currentFq)
+          : Promise.resolve(),
+      ]);
+    } catch (error) {
+      toastStore.error("State snapshot restore 失敗", describeError(error));
+    } finally {
+      restoringStateSnapshot = false;
     }
   }
 
@@ -246,10 +277,19 @@
             type="button"
             class="shrink-0 rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem] hover:bg-surface-100-900 disabled:opacity-50"
             title="loaded state snapshot を profile-local file に保存"
-            disabled={savingStateSnapshot}
+            disabled={savingStateSnapshot || restoringStateSnapshot}
             onclick={onSaveLoadedStateSnapshot}
           >
             {savingStateSnapshot ? "saving" : "save snapshot"}
+          </button>
+          <button
+            type="button"
+            class="shrink-0 rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem] hover:bg-surface-100-900 disabled:opacity-50"
+            title="profile-local snapshot file から明示 restore して reload"
+            disabled={savingStateSnapshot || restoringStateSnapshot}
+            onclick={onRestoreProfileLocalStateSnapshot}
+          >
+            {restoringStateSnapshot ? "restoring" : "restore snapshot"}
           </button>
           <div
             class="min-w-0 truncate font-mono text-[0.65rem] opacity-60"
