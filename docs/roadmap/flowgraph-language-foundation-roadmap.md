@@ -829,6 +829,11 @@ Flowgraph Diagnostics の `state_snapshot_file_path` 表示に `save snapshot` �
 成功時は保存先 path と snapshot node count を toast で返し、失敗時は Control API error を軽量に表示する。
 この UI も Control API と同じく reload 直後の `loaded_state_snapshot` の明示保存だけを扱い、live worker state 保存や自動 restore には踏み込まない。
 
+### LF-7ak Loaded snapshot save response coverage ✅
+
+`POST /flowgraph/state-snapshot/loaded/save` の保存処理を private helper に切り出し、response 生成・path 未設定・書き込み失敗の unit coverage を追加した。
+Actix state 全体や audio device 初期化に依存せず、profile-local snapshot file envelope が実際に書かれることを直接検証する。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
