@@ -291,7 +291,9 @@
             title={stateSnapshotFileExists === false
               ? "profile-local snapshot file がまだありません"
               : "profile-local snapshot file から明示 restore して reload"}
-            disabled={savingStateSnapshot || restoringStateSnapshot || stateSnapshotFileExists === false}
+            disabled={savingStateSnapshot ||
+              restoringStateSnapshot ||
+              stateSnapshotFileExists === false}
             onclick={onRestoreProfileLocalStateSnapshot}
           >
             {restoringStateSnapshot ? "restoring" : "restore snapshot"}
