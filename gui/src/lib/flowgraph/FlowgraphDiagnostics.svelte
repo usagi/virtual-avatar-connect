@@ -5,9 +5,14 @@
    * - `flowgraphStore.diagnostics?.diagnostics` を severity 別に色分けして表示。
    * - 行クリックで該当ファイルを `store.openFile` で開き、該当ノードを選択する（可能なら）。
    */
+  import { api } from "../api";
   import { flowgraphStore } from "../flowgraphStore.svelte";
+  import { toastStore } from "../toasts.svelte";
+  import { ControlApiError } from "../types";
   import type { FlowgraphDiagnostic, FlowgraphSeverity } from "../types";
   import { capabilityLabel } from "./effectMetadata";
+
+  let savingStateSnapshot = $state(false);
 
   async function onJump(d: FlowgraphDiagnostic) {
     if (!d.file) return;
@@ -38,6 +43,31 @@
 
   function formatJson(value: unknown): string {
     return JSON.stringify(value);
+  }
+
+  function describeError(error: unknown): string {
+    if (error instanceof ControlApiError) {
+      return `${error.status} ${error.statusText}`;
+    }
+    if (error instanceof Error) return error.message;
+    return String(error);
+  }
+
+  async function onSaveLoadedStateSnapshot() {
+    if (savingStateSnapshot) return;
+    savingStateSnapshot = true;
+    try {
+      const resp = await api.flowgraphSaveLoadedStateSnapshot();
+      toastStore.success(
+        "State snapshot を保存しました",
+        `${resp.snapshot_node_count} nodes -> ${resp.path}`,
+      );
+      await flowgraphStore.refreshDiagnostics();
+    } catch (error) {
+      toastStore.error("State snapshot 保存失敗", describeError(error));
+    } finally {
+      savingStateSnapshot = false;
+    }
   }
 
   const diags = $derived(flowgraphStore.diagnostics?.diagnostics ?? []);
@@ -211,11 +241,22 @@
         </details>
       {/if}
       {#if stateSnapshotFilePath}
-        <div
-          class="mt-1 truncate font-mono text-[0.65rem] opacity-60"
-          title={stateSnapshotFilePath}
-        >
-          state snapshot file {stateSnapshotFilePath}
+        <div class="mt-1 flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            class="shrink-0 rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem] hover:bg-surface-100-900 disabled:opacity-50"
+            title="loaded state snapshot を profile-local file に保存"
+            disabled={savingStateSnapshot}
+            onclick={onSaveLoadedStateSnapshot}
+          >
+            {savingStateSnapshot ? "saving" : "save snapshot"}
+          </button>
+          <div
+            class="min-w-0 truncate font-mono text-[0.65rem] opacity-60"
+            title={stateSnapshotFilePath}
+          >
+            state snapshot file {stateSnapshotFilePath}
+          </div>
         </div>
       {/if}
     </div>
