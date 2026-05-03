@@ -930,6 +930,11 @@ node signature / library signature / schema から manual と GUI catalog を生
 `docs/manual/node-catalog.md` の生成器に Metadata Index を追加し、effectful / stateful node、capability group、snapshot / restore support を manual から逆引きできるようにした。
 各 node section の metadata line だけでなく、目的別 index も同じ registry metadata から生成することで、GUI catalog と manual catalog の分類語彙を揃えた。
 
+### LF-8c Generated catalog reading guide ✅
+
+`docs/manual/node-catalog.md` の冒頭に Reading This Catalog セクションを生成し、通常 Index / Metadata Index / 各 node section の Metadata line の読み分けを manual 内で説明できるようにした。
+guide 自体も生成器に含め、LF-8b の逆引き index が手書き説明とずれないよう `node_catalog_md_up_to_date` の bless 対象に含めた。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
