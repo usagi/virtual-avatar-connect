@@ -304,6 +304,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Bytes From Base64** — Base64 string を bytes にデコードする。失敗時はエラー halt。
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `text` | `string` | — |  |
@@ -316,6 +318,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Bytes Length** — bytes の byte length を返す。
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `bytes` | `bytes` | — |  |
@@ -327,6 +331,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.bytes.to_base64`
 
 **Bytes To Base64** — bytes を Base64 string にエンコードする。
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -341,6 +347,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.channel.emit`
 
 **Channel Emit** — State.channel_data に ChannelDatum を push。WS クライアント / browser-output に届く終端ノード。`content` / `channel` / `source_actor` は `String`。`Quantity` を配線した場合は engine 側で`"{value} {unit}"` 形式に自動文字列化される。単位を含めたくない場合は手前で`flowgraph.util.format` (include_unit=false) か `flowgraph.unit.strip` を挟む。
+
+**Metadata:** contract: inputs=5 / outputs=3 / properties=2 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -367,6 +375,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Command Match** — prefix 付きコマンド文字列を verb + args にパースして exec を分岐
 
+**Metadata:** contract: inputs=3 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -384,6 +394,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.command.set`
 
 **Command Set** — command_name に一致する set を sets プロパティから引き、pre → channel_contents → post の順でチャンネルへ push する
+
+**Metadata:** contract: inputs=2 / outputs=4 / properties=3 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -409,6 +421,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Equal** — Json 値同士を比較
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `json` | — |  |
@@ -421,6 +435,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.compare.float_gt`
 
 **Float >**
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -435,6 +451,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float <**
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `float` | — |  |
@@ -447,6 +465,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.compare.int_ge`
 
 **Int >=**
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -461,6 +481,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Int >**
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `int` | — |  |
@@ -473,6 +495,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.compare.int_le`
 
 **Int <=**
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -487,6 +511,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Int <**
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `int` | — |  |
@@ -499,6 +525,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.compare.neq`
 
 **Not Equal**
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -515,6 +543,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Bool → String**
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `bool` | — |  |
@@ -526,6 +556,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.convert.float_to_int`
 
 **Float → Int** — 切り捨て（trunc）
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -539,6 +571,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float → String**
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `float` | — |  |
@@ -550,6 +584,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.convert.int_to_float`
 
 **Int → Float**
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -563,6 +599,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Int → String**
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `int` | — |  |
@@ -575,6 +613,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **String → Float** — パース失敗はエラー halt
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `string` | — |  |
@@ -586,6 +626,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.convert.string_to_int`
 
 **String → Int** — パース失敗はエラー halt
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -601,6 +643,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **DateTime + Duration** — Add a duration (Quantity<time>) to a DateTime. Dimensionless Quantity (Float の ξ-3 coerce 経由) は「秒」と解釈される。次元不一致 (例: length) は error。
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `datetime` | `datetime` | — |  |
@@ -613,6 +657,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.datetime.diff`
 
 **DateTime - DateTime** — Compute `lhs - rhs` as a Quantity<time> (unit: seconds, nanosecond precision). 結果は正負 OK。`flowgraph.unit.convert` で ms / us / ns に変換可能。
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -627,6 +673,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **DateTime -> Epoch ms** — Return Unix epoch milliseconds as a Quantity (unit: ms, dim: time). Negative for pre-1970 timestamps. 他の時間単位へは `flowgraph.unit.convert` で変換。
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `datetime` | `datetime` | — |  |
@@ -638,6 +686,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.datetime.format`
 
 **DateTime Format** — Format a DateTime as a string. `rfc3339`: `"2026-04-24T12:34:56.123Z"` 形式 (UTC または `timezone` 指定時は offset 表示)。 `iso8601_compact`: `"20260424T123456Z"` 形式 (ファイル名向け)。 `unix_seconds` / `unix_millis`: 整数文字列。 `custom`: `custom_format` プロパティの strftime パターンを適用 (jiff::Zoned::strftime)。
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=3 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -657,6 +707,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Epoch ms -> DateTime** — Construct a DateTime from Unix epoch milliseconds. Quantity<time> (任意の時間単位) は SI 秒 → ms に正規化されて受理される。 Dimensionless Quantity (Float の ξ-3 coerce 経由) は「ms の数値」として解釈される。
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `millis` | `quantity` | — |  |
@@ -669,6 +721,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **DateTime Now** — Emit the current wall-clock time as a DateTime (UTC absolute, nanosecond precision). 非決定性 (呼び出しごとに異なる結果) なので、すなゆく sample する用途では状態化ノード (prev_value 等) と組み合わせること。
 
+**Metadata:** contract: inputs=0 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Output | Type | Note |
 |---|---|---|
 | `datetime` | `datetime` |  |
@@ -676,6 +730,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.datetime.parse`
 
 **DateTime Parse** — Parse an RFC3339 / ISO 8601 string into a DateTime. Accepts both aware ("...Z" / "...+09:00") and naive ("2026-04-24T12:34:56") inputs. Naive 入力は `default_timezone` プロパティ (空なら UTC) で解釈される。`require_timezone = true` のときは naive を拒否する strict モード。
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=2 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -694,6 +750,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **DateTime - Duration** — Subtract a duration (Quantity<time>) from a DateTime. Dimensionless Quantity は「秒」と解釈される (ξ-3 coerce)。
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `datetime` | `datetime` | — |  |
@@ -706,6 +764,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.datetime.try_parse`
 
 **DateTime Try Parse** — Parse a datetime string and return failure as result<datetime> instead of halting.
+
+**Metadata:** contract: inputs=1 / outputs=4 / properties=2 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -729,6 +789,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Easing apply** — Map a scalar t (conventionally in [0, 1]) through an easing curve. Single node with a `curve` enum property (19 variants: linear, quad/cubic/sine/expo/elastic/bounce × in/out/inout). `clamp_t = true` (default) clamps input to [0, 1] before evaluation — set false to let elastic/bounce overshoot naturally.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=2 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `t` | `float` | — |  |
@@ -748,6 +810,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Branch** — cond が true なら then を、false なら else を発火
 
+**Metadata:** contract: inputs=2 / outputs=2 / properties=0 / exec_in=yes / exec_out=yes; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -761,6 +825,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.flow.gate`
 
 **Gate** — open=true の間だけ exec を通す（ステートレス）
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=yes / exec_out=yes; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -776,6 +842,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.glossary.forget`
 
 **Glossary Forget** — Glossary Table から source (+ replacement) 一致行を削除。mode=latest/all/exact、is_locked 保護
+
+**Metadata:** contract: inputs=5 / outputs=7 / properties=0 / exec_in=yes / exec_out=yes; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -798,6 +866,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.glossary.learn`
 
 **Glossary Learn** — Glossary Table に 11 カラムエントリを append。同値エントリは duplicate 検出して no-op
+
+**Metadata:** contract: inputs=10 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -824,6 +894,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Glossary Match** — Glossary Table で text を照合し、一致エントリと captures を取り出す。exec 分岐可能。Stateful
 
+**Metadata:** contract: inputs=3 / outputs=6 / properties=2 / exec_in=yes / exec_out=yes; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=unsupported; restore=unsupported; migration=`none`; persistence=`none`
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -848,6 +920,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Glossary Replace** — Glossary Table（11 カラム）で content を literal(AC) + regex 統合で逐次置換。Stateful（AC/Regex キャッシュ）
 
+**Metadata:** contract: inputs=2 / outputs=2 / properties=0 / exec_in=no / exec_out=no; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=unsupported; restore=unsupported; migration=`none`; persistence=`none`
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `content` | `string` | — |  |
@@ -863,6 +937,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.http.request`
 
 **HTTP Request** — 汎用 HTTP request。method / headers / JSON body / timeout / retry_count を指定できる。
+
+**Metadata:** contract: inputs=8 / outputs=8 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -891,6 +967,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.ingress.channel_subscribe`
 
 **Channel Subscribe Ingress** — V1 `State.channel_data` への push を監視し、channels / is_final / source_actor フィルタを通過した ChannelDatum を TriggerEvent として流し込む。channel.emit の対称入口で、既存 Processor 時代の channel_from 駆動パイプラインを Flowgraph で再現する基盤。
+
+**Metadata:** contract: inputs=6 / outputs=6 / properties=6 / exec_in=yes / exec_out=yes; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -923,6 +1001,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **OSC UDP Ingress** — 汎用 OSC（UDP データグラム）を受信し、ingress echo で下流へ流す。`content` は Base64、`content_bytes` は bytes。`__meta__.profile` は `osc_udp`。
 
+**Metadata:** contract: inputs=6 / outputs=6 / properties=2 / exec_in=yes / exec_out=yes; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `__trigger__` | `exec` (in) | — |  |
@@ -949,6 +1029,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.ingress.twitch`
 
 **Twitch Ingress** — Twitch チャット / EventSub 経由の入力
+
+**Metadata:** contract: inputs=5 / outputs=5 / properties=8 / exec_in=yes / exec_out=yes; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -980,6 +1062,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.ingress.twitch_eventsub`
 
 **Twitch EventSub Ingress** — Twitch EventSub (WebSocket) の通知を受ける Flowgraph-native ingress。`token_key` で conf.twitch.token_keys の OAuth トークンを引き、`event_types` に挙げた sub_type を購読する。`payload` は生 event JSON、`meta` はサブスクリプション情報を含む補助マップ。
+
+**Metadata:** contract: inputs=7 / outputs=7 / properties=5 / exec_in=yes / exec_out=yes; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1013,6 +1097,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **VMC UDP Ingress** — VMC 互換の生 UDP を受信し、各データグラムを ingress echo で下流へ流す。`content` は Base64 文字列、`content_bytes` は bytes。
 
+**Metadata:** contract: inputs=6 / outputs=6 / properties=2 / exec_in=yes / exec_out=yes; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `__trigger__` | `exec` (in) | — |  |
@@ -1039,6 +1125,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.ingress.voice`
 
 **Voice Ingress** — 音声認識（Vosk / Whisper）経由の入力
+
+**Metadata:** contract: inputs=5 / outputs=5 / properties=7 / exec_in=yes / exec_out=yes; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1070,6 +1158,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Web Input Ingress** — HTTP エンドポイント経由の入力（V1 の /input/* 相当）
 
+**Metadata:** contract: inputs=5 / outputs=5 / properties=4 / exec_in=yes / exec_out=yes; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `__trigger__` | `exec` (in) | — |  |
@@ -1099,6 +1189,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **JSON Get** — ドットパス（foo.bar[0].baz 等）で値を抜き出す。存在しない場合は Null
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `json` | — |  |
@@ -1112,6 +1204,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **JSON Parse** — String を JSON にパース（失敗時はエラー halt）
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `text` | `string` | — |  |
@@ -1123,6 +1217,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.json.stringify`
 
 **JSON Stringify** — Json → String（pretty=true で整形出力）
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1136,6 +1232,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.json.try_parse`
 
 **JSON Try Parse** — String を JSON にパースし、失敗を result<json> として返す。
+
+**Metadata:** contract: inputs=1 / outputs=4 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1154,6 +1252,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Library Input** — Phase λ v0: 単一 string 境界（プロパティ value）。将来は接続駆動の動的ポートを予定。
 
+**Metadata:** contract: inputs=0 / outputs=1 / properties=1 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Output | Type | Note |
 |---|---|---|
 | `value` | `string` |  |
@@ -1166,6 +1266,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Library Output** — Phase λ v0: 単一 string 境界（入力 value を受ける）。将来は外向き動的ポートを予定。
 
+**Metadata:** contract: inputs=1 / outputs=0 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `string` | — |  |
@@ -1175,6 +1277,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.list.get`
 
 **List Get** — index が範囲外なら Json::Null
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1189,6 +1293,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **List Is Empty**
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `items` | `list<json>` | — |  |
@@ -1200,6 +1306,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.list.len`
 
 **List Length**
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1215,6 +1323,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Bool Literal** — BoolLiteralNode literal
 
+**Metadata:** contract: inputs=0 / outputs=1 / properties=1 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Output | Type | Note |
 |---|---|---|
 | `value` | `bool` |  |
@@ -1226,6 +1336,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.literal.float`
 
 **Float Literal** — FloatLiteralNode literal
+
+**Metadata:** contract: inputs=0 / outputs=1 / properties=1 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Output | Type | Note |
 |---|---|---|
@@ -1239,6 +1351,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Int Literal** — IntLiteralNode literal
 
+**Metadata:** contract: inputs=0 / outputs=1 / properties=1 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Output | Type | Note |
 |---|---|---|
 | `value` | `int` |  |
@@ -1251,6 +1365,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **JSON Literal** — JsonLiteralNode literal
 
+**Metadata:** contract: inputs=0 / outputs=1 / properties=1 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Output | Type | Note |
 |---|---|---|
 | `value` | `json` |  |
@@ -1262,6 +1378,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.literal.string`
 
 **String Literal** — StringLiteralNode literal
+
+**Metadata:** contract: inputs=0 / outputs=1 / properties=1 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Output | Type | Note |
 |---|---|---|
@@ -1277,6 +1395,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **And**
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `bool` | — |  |
@@ -1290,6 +1410,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Not**
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `bool` | — |  |
@@ -1301,6 +1423,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.logic.or`
 
 **Or**
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1314,6 +1438,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.logic.xor`
 
 **Xor**
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1330,6 +1456,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Map Get** — キーが存在しない場合は Json::Null
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `m` | `map<json>` | — |  |
@@ -1343,6 +1471,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Map Has**
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `m` | `map<json>` | — |  |
@@ -1355,6 +1485,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.map.keys`
 
 **Map Keys**
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1370,6 +1502,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float abs** — Absolute value. Unit is preserved (abs(-5 m) = 5 m). NaN input yields NaN output.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1381,6 +1515,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.abs_int`
 
 **Int abs** — Integer absolute value. i64::MIN overflow is handled via wrapping_abs (returns i64::MIN).
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1394,6 +1530,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float acos** — Inverse cosine. Input dimensionless. Output Angle (rad). |x| > 1 yields NaN.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1405,6 +1543,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.acosh`
 
 **Float acosh** — Inverse hyperbolic cosine. Input must be dimensionless. x < 1 yields NaN (std::f64).
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1418,6 +1558,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float asin** — Inverse sine. Input dimensionless. Output Angle (rad). |x| > 1 yields NaN (std::f64).
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1429,6 +1571,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.asinh`
 
 **Float asinh** — Inverse hyperbolic sine. Input must be dimensionless. Defined for all real x.
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1442,6 +1586,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float atan** — Inverse tangent. Input dimensionless. Output Angle (rad) in (-π/2, π/2).
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1453,6 +1599,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.atan2`
 
 **Float atan2** — Two-argument arctangent. y and x must share a dimension (so their ratio is dimensionless). Output is Angle (rad) in (-π, π].
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1467,6 +1615,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float atanh** — Inverse hyperbolic tangent. Input must be dimensionless. |x| ≥ 1 yields ±inf/NaN (std::f64).
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1479,6 +1629,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float ceil** — Smallest integer ≥ x (f64::ceil). Unit is preserved.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1490,6 +1642,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.clamp_float`
 
 **Float clamp** — Clamp value to [lo, hi] on Quantity. All three inputs must share a dimension. If lo > hi after unit-normalizing into value's unit, they are swapped. Result unit follows the value input.
+
+**Metadata:** contract: inputs=3 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1505,6 +1659,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Int clamp** — Clamp value to [lo, hi]. If lo > hi, they are swapped before clamping.
 
+**Metadata:** contract: inputs=3 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `int` | — |  |
@@ -1519,6 +1675,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float cos** — Cosine. Input is Angle (rad/deg) or dimensionless (treated as radians). Output is dimensionless.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1530,6 +1688,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.cosh`
 
 **Float cosh** — Hyperbolic cosine. Input must be dimensionless.
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1543,6 +1703,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float deg → rad** — Convert degrees to radians. Angle-dimensioned input is converted via flowgraph.unit.convert semantics. Dimensionless input is scaled by π/180 and tagged with rad unit. Other dimensions are rejected.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1555,6 +1717,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float exp** — e^x. Input must be dimensionless.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1566,6 +1730,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.float_add`
 
 **Float +** — Quantity addition. Dimension mismatch is an error. ΔK + K(abs) is allowed; K + K is rejected.
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1580,6 +1746,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float /** — Quantity division. Dimensions are composed (m / s = m·s⁻¹). Absolute-temperature division and division by zero are rejected.
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `quantity` | — |  |
@@ -1592,6 +1760,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.float_mul`
 
 **Float *** — Quantity multiplication. Dimensions are composed (m * s = m·s). Absolute-temperature multiplication is rejected.
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1606,6 +1776,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float -** — Quantity subtraction. Dimension mismatch is an error. K - K yields ΔK.
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `quantity` | — |  |
@@ -1619,6 +1791,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float floor** — Largest integer ≤ x (f64::floor). Unit is preserved.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1630,6 +1804,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.int_add`
 
 **Int +**
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1644,6 +1820,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Int /**
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `int` | — |  |
@@ -1656,6 +1834,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.int_max`
 
 **Int max**
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1670,6 +1850,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Int min**
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `int` | — |  |
@@ -1682,6 +1864,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.int_mod`
 
 **Int %**
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1696,6 +1880,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Int ***
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `int` | — |  |
@@ -1709,6 +1895,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Int -**
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `int` | — |  |
@@ -1721,6 +1909,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.inverse_lerp`
 
 **Float inverse_lerp** — Inverse of lerp: (v - a) / (b - a). All three inputs share a dimension. If a == b (after unit normalization), returns 0.0. Result is dimensionless.
+
+**Metadata:** contract: inputs=3 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1736,6 +1926,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float lerp** — Linear interpolation: a + (b - a) * t. a and b share a dimension; t is dimensionless. t is not clamped (extrapolation allowed). Result unit follows a.
 
+**Metadata:** contract: inputs=3 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `quantity` | — |  |
@@ -1750,6 +1942,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float ln** — Natural logarithm. Input must be dimensionless. x ≤ 0 yields -inf/NaN per std::f64.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1761,6 +1955,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.log10`
 
 **Float log10** — Base-10 logarithm. Input must be dimensionless.
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1774,6 +1970,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float log2** — Base-2 logarithm. Input must be dimensionless.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1785,6 +1983,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.max_float`
 
 **Float max** — Maximum of two same-dimension Quantity values. Result keeps A's unit. NaN follows f64::max semantics.
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1799,6 +1999,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float min** — Minimum of two same-dimension Quantity values. Result keeps A's unit. NaN follows f64::min semantics (NaN propagates to other operand).
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `quantity` | — |  |
@@ -1812,6 +2014,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Normalize angle [0, 360) deg** — Normalize Angle into [0, 360) degrees. 1357.33 → 277.33. Angle-dim input is converted to deg first; dimensionless is treated as deg.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1823,6 +2027,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.normalize_angle_deg_signed`
 
 **Normalize angle [-180, 180) deg** — Normalize Angle into [-180, +180) degrees. 277.33 → -82.67. Angle-dim input is converted to deg first; dimensionless is treated as deg.
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1836,6 +2042,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Normalize angle [0, 2π) rad** — Normalize Angle into [0, 2π) radians. Angle-dim input is converted to rad first; dimensionless is treated as rad.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1848,6 +2056,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Normalize angle [-π, π) rad** — Normalize Angle into [-π, +π) radians. Angle-dim input is converted to rad first; dimensionless is treated as rad.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1859,6 +2069,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.pow`
 
 **Float pow** — base^exp. Both base and exp must be dimensionless (general Quantity pow requires an integer exponent for dimension algebra; for that use flowgraph.unit.* + custom). NaN and ±inf follow f64::powf semantics.
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1873,6 +2085,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float rad → deg** — Convert radians to degrees. Angle-dimensioned input is converted via flowgraph.unit.convert semantics. Dimensionless input is scaled by 180/π and tagged with deg unit. Other dimensions are rejected.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1884,6 +2098,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.remap`
 
 **Float remap** — Remap value from [in_lo, in_hi] to [out_lo, out_hi]. value/in_lo/in_hi share a dimension; out_lo/out_hi share another dimension. If in_lo == in_hi, out_lo is returned. Result unit follows out_lo.
+
+**Metadata:** contract: inputs=5 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1901,6 +2117,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float round** — Round half away from zero (f64::round std default). Unit is preserved.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1912,6 +2130,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.sign_float`
 
 **Float sign** — Sign classifier: -1 / 0 / +1 (value only, unit preserved). NaN yields 0. Note: the SI meaning of a unit-bearing sign is unusual but kept for pass-through consistency.
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1925,6 +2145,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Int sign** — Integer sign: -1 for x<0, 0 for x==0, +1 for x>0.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `int` | — |  |
@@ -1936,6 +2158,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.sin`
 
 **Float sin** — Sine. Input is Angle (rad/deg) or dimensionless (treated as radians for pre-ξ compatibility). Output is dimensionless.
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1949,6 +2173,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float sinh** — Hyperbolic sine. Input must be dimensionless (hyperbolic functions take unitless arguments in their SI-compatible form).
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1960,6 +2186,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.smoothstep`
 
 **Float smoothstep** — GLSL smoothstep: t = clamp((x - edge0) / (edge1 - edge0), 0, 1); returns t*t*(3 - 2*t). All three inputs share a dimension. If edge0 == edge1, returns 0.0. Result is dimensionless in [0, 1].
+
+**Metadata:** contract: inputs=3 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -1975,6 +2203,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float sqrt** — Square root. Dimension-aware: sqrt(m²) = m, sqrt(m²/s²) = m/s. All atom exponents must be even (the current type system only represents integer dimensions), so sqrt(m) is rejected — use flowgraph.unit.strip first if that was intentional. Absolute temperature (K) is rejected. Negative value yields NaN.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1987,6 +2217,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Float tan** — Tangent. Input is Angle (rad/deg) or dimensionless (treated as radians). Output is dimensionless. ±(π/2) yields large finite values per std::f64.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `quantity` | — |  |
@@ -1998,6 +2230,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.math.tanh`
 
 **Float tanh** — Hyperbolic tangent. Input must be dimensionless.
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2013,6 +2247,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Mode Equals** — 実効 Runtime Mode が expected と一致するか（前後空白は無視）。未上書き時は default_runtime_mode 相当と比較。
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `expected` | `string` | — |  |
@@ -2025,6 +2261,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Mode Get** — 現在の実効 Runtime Mode ID。Control API で上書きした値。未上書き時は conf.default_runtime_mode に従う（空のことあり）。
 
+**Metadata:** contract: inputs=0 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Output | Type | Note |
 |---|---|---|
 | `mode` | `string` |  |
@@ -2032,6 +2270,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.mode.transit`
 
 **Mode Transit** — 指定 mode へ Runtime Mode を切り替える（`State.runtime_mode_id` + TriggerGate 再計算）。`mode` が空なら default_runtime_mode 相当。`State` 未接続・conf 再読込失敗・未知 mode では on_reject。
+
+**Metadata:** contract: inputs=3 / outputs=4 / properties=1 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2056,6 +2296,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Motion: Filter OSC Messages** — `osc_messages` を `address_prefix` と `address_substring`（両方省略可）でフィルタする。入出力は `motion_frame`（`json` へ coerce 可）
 
+**Metadata:** contract: inputs=3 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `frame` | `motion_frame` | — |  |
@@ -2070,6 +2312,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Motion: Map Numeric Args** — 各 `osc_messages[].args` の JSON 数値を再帰的に `float_scale` 倍する。入出力は `motion_frame`（`json` へ coerce 可）
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `frame` | `motion_frame` | — |  |
@@ -2082,6 +2326,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.motion.vmc_parse`
 
 **Motion: VMC OSC Parse** — UDP ペイロードを OSC として解釈し、[`MotionFrame`]（`motion_frame`）を出力。`payload` bytes が非空なら優先し、空なら互換用 `payload_b64` を読む。`json` へ接続時は自動変換
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2098,6 +2344,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Perlin 1D** — 1D Perlin noise at coordinate `t` with integer `seed` (cached Perlin per seed).
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `t` | `float` | — |  |
@@ -2110,6 +2358,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.noise.perlin_2d`
 
 **Perlin 2D** — 2D Perlin noise at `(x, y)` with integer `seed`.
+
+**Metadata:** contract: inputs=3 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2126,6 +2376,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.obs.get_current_program_scene`
 
 **OBS: Get Current Program Scene** — OBS WebSocket v5 の `GetCurrentProgramScene` を呼び、現在の番組シーン名を返す。
+
+**Metadata:** contract: inputs=4 / outputs=8 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `obs_control`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2148,6 +2400,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.obs.request`
 
 **OBS: Request** — OBS WebSocket v5 に 1 request を送る汎用ノード。OBS 側で WebSocket Server を有効化しておく。
+
+**Metadata:** contract: inputs=6 / outputs=7 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `obs_control`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2172,6 +2426,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **OBS: Set Current Program Scene** — OBS WebSocket v5 の `SetCurrentProgramScene` を呼び、現在の番組シーンを切り替える。
 
+**Metadata:** contract: inputs=5 / outputs=7 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `obs_control`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2193,6 +2449,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.obs.set_scene_item_enabled`
 
 **OBS: Set Scene Item Enabled** — OBS WebSocket v5 の `SetSceneItemEnabled` を呼び、scene item の表示/非表示を切り替える。`scene_item_id` が負なら `source_name` から ID を解決する。
+
+**Metadata:** contract: inputs=8 / outputs=8 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `obs_control`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2220,6 +2478,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **OBS: Start Record** — OBS WebSocket v5 の `StartRecord` を呼び、録画を開始する。
 
+**Metadata:** contract: inputs=4 / outputs=7 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `obs_control`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2240,6 +2500,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.obs.start_stream`
 
 **OBS: Start Stream** — OBS WebSocket v5 の `StartStream` を呼び、配信を開始する。
+
+**Metadata:** contract: inputs=4 / outputs=7 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `obs_control`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2262,6 +2524,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **OBS: Stop Record** — OBS WebSocket v5 の `StopRecord` を呼び、録画を停止する。
 
+**Metadata:** contract: inputs=4 / outputs=7 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `obs_control`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2283,6 +2547,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **OBS: Stop Stream** — OBS WebSocket v5 の `StopStream` を呼び、配信を停止する。
 
+**Metadata:** contract: inputs=4 / outputs=7 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `obs_control`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2303,6 +2569,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.obs.trigger_studio_mode_transition`
 
 **OBS: Trigger Studio Mode Transition** — OBS WebSocket v5 の `TriggerStudioModeTransition` を呼び、Studio Mode の transition を実行する。
+
+**Metadata:** contract: inputs=4 / outputs=7 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `obs_control`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2327,6 +2595,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **OCR Recognize** — 画像ソースから文字列を OCR 抽出する（Windows のみ）
 
+**Metadata:** contract: inputs=5 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `desktop_capture`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2348,6 +2618,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.osc.send`
 
 **OSC: UDP Send** — 単一 OSC メッセージを UDP で送信する。args は JSON 配列（数値・文字列・真偽・null・ネスト配列）
+
+**Metadata:** contract: inputs=5 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2371,6 +2643,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Process: Kill** — pid または name_filter に一致する process を終了する。
 
+**Metadata:** contract: inputs=5 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `process_control`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2392,6 +2666,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Process: Running** — pid または name_filter で process の生存状態を確認する。
 
+**Metadata:** contract: inputs=4 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `process_control`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2411,6 +2687,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.process.spawn`
 
 **Process: Spawn** — 外部 process を起動する。shell は介さず command + args を直接実行する。
+
+**Metadata:** contract: inputs=7 / outputs=8 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `process_control`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2437,6 +2715,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Process: Wait** — 指定 pid が終了するまで polling で待つ。exit_code は未取得時 -1。
 
+**Metadata:** contract: inputs=4 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `process_control`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2459,6 +2739,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Random normal** — Gaussian sample (Box–Muller) with given mean and stddev. stddev must be non-negative; 0 yields mean.
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `mean` | `float` | — |  |
@@ -2472,6 +2754,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Random uniform (float)** — Uniform random float in [lo, hi) half-open interval.
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `lo` | `float` | — |  |
@@ -2484,6 +2768,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.random.uniform_int`
 
 **Random uniform (int)** — Uniform random integer in [lo, hi] inclusive.
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2500,6 +2786,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Regex Replace** — 正規表現ルール（{pattern, replacement}）で content を逐次置換する
 
+**Metadata:** contract: inputs=2 / outputs=2 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `content` | `string` | — |  |
@@ -2515,6 +2803,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.screenshot.capture`
 
 **Screenshot Capture** — ウィンドウ/デスクトップのスクリーンショットを PNG data URL として取得
+
+**Metadata:** contract: inputs=7 / outputs=8 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `desktop_capture`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2543,6 +2833,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Accumulator** — push で input を List に蓄積、clear で空に戻す
 
+**Metadata:** contract: inputs=3 / outputs=4 / properties=0 / exec_in=yes / exec_out=yes; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=explicit/json; restore=explicit; migration=`none`; persistence=`none`
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `push` | `exec` (in) | — |  |
@@ -2560,6 +2852,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Bool State** — set_true/set_false/toggle でブール値を切り替える
 
+**Metadata:** contract: inputs=3 / outputs=2 / properties=0 / exec_in=yes / exec_out=yes; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=explicit/json; restore=explicit; migration=`none`; persistence=`none`
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `set_true` | `exec` (in) | — |  |
@@ -2574,6 +2868,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.state.int_counter`
 
 **Int Counter** — step だけ増減/リセット可能な整数カウンタ
+
+**Metadata:** contract: inputs=5 / outputs=2 / properties=0 / exec_in=yes / exec_out=yes; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=explicit/json; restore=explicit; migration=`none`; persistence=`none`
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2592,6 +2888,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Latch** — exec_in で input を保持。以後 value 出力は保持値を返す
 
+**Metadata:** contract: inputs=2 / outputs=3 / properties=0 / exec_in=yes / exec_out=yes; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=explicit/json; restore=explicit; migration=`none`; persistence=`none`
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2609,6 +2907,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **String Concat** — a と b を連結
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `string` | — |  |
@@ -2621,6 +2921,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.string.contains`
 
 **String Contains**
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2635,6 +2937,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **String Join** — List<String> を sep で連結
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `parts` | `list<string>` | — |  |
@@ -2648,6 +2952,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **String Length** — UTF-8 文字数（chars().count()）
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `s` | `string` | — |  |
@@ -2659,6 +2965,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.string.replace`
 
 **String Replace** — pattern (リテラル) を replacement に全置換
+
+**Metadata:** contract: inputs=3 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2673,6 +2981,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.string.split`
 
 **String Split** — sep で split して List<String> を返す
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2689,6 +2999,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **System: CPU Usage** — sysinfo で全体 CPU 使用率と logical CPU ごとの使用率を取得する。
 
+**Metadata:** contract: inputs=1 / outputs=4 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2704,6 +3016,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **System: Load Average** — OS の load average を取得する。未対応OSでは sysinfo の値をそのまま返す。
 
+**Metadata:** contract: inputs=1 / outputs=4 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2718,6 +3032,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.system.memory`
 
 **System: Memory** — sysinfo で RAM / swap の使用量を byte 単位で取得する。
+
+**Metadata:** contract: inputs=1 / outputs=7 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2737,6 +3053,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **System: Process List** — sysinfo で process 一覧を JSON 配列として取得する。name_filter と limit で絞り込める。
 
+**Metadata:** contract: inputs=3 / outputs=3 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2755,6 +3073,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Table From JSON** — List<Json> (object の配列) を Table に変換。スキーマは先頭 object から推論
 
+**Metadata:** contract: inputs=1 / outputs=2 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `json` | `list<json>` | `[]` |  |
@@ -2767,6 +3087,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.table.load_tsv`
 
 **Table Load TSV** — TSV ファイルを Table に読み込む（auto / headerful / legacy_loose）。Effectful
+
+**Metadata:** contract: inputs=3 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `file_read`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2787,6 +3109,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Table To JSON** — Table を List<Json> (object の配列) に変換
 
+**Metadata:** contract: inputs=1 / outputs=2 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `table` | `table` | `[]` |  |
@@ -2799,6 +3123,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.table.write_tsv`
 
 **Table Write TSV** — Table を TSV ファイルに書き出す（atomic rename）。Effectful
+
+**Metadata:** contract: inputs=3 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `file_write`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2820,6 +3146,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Translate (GAS)** — Google Apps Script 経由の翻訳 API 呼び出し
 
+**Metadata:** contract: inputs=5 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2840,6 +3168,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.translate.libre`
 
 **Translate (LibreTranslate)** — LibreTranslate REST API (/translate) を叩く
+
+**Metadata:** contract: inputs=5 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2863,6 +3193,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.tts.speak`
 
 **TTS: Speak** — engine 入力で選んだ TTS ドライバに text を合成させ、VAC 共有 audio_sink で再生する。save_path 指定時は WAV も保存。
+
+**Metadata:** contract: inputs=10 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `audio_output`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2892,6 +3224,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Twitch: Run Ad** — Helix POST /channels/commercial で広告を実行する。length_seconds は通常 30/60/90/120/150/180。
 
+**Metadata:** contract: inputs=6 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2912,6 +3246,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.twitch.ban`
 
 **Twitch: Ban User** — Helix POST /moderation/bans（永久 ban）。`duration` なしで送る。timeout は `twitch.timeout` ノードを使うこと
+
+**Metadata:** contract: inputs=8 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2935,6 +3271,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.twitch.channel_info_update`
 
 **Twitch: Update Channel Info** — Helix PATCH /channels で配信タイトル、カテゴリ、言語、タグを更新する。空入力は送信しない。
+
+**Metadata:** contract: inputs=9 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -2960,6 +3298,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Twitch: Clear Chat** — Helix DELETE /moderation/chat でチャット全体または指定messageを削除する。
 
+**Metadata:** contract: inputs=7 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -2981,6 +3321,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.twitch.chat_send`
 
 **Twitch: Chat Send** — Helix POST /chat/messages でチャット送信。max_chars/strip_substrings は optional で V1 互換。レート制限は flowgraph.util.rate_limit を上流に挿入して実現する
+
+**Metadata:** contract: inputs=9 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3006,6 +3348,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.twitch.chat_settings_update`
 
 **Twitch: Update Chat Settings** — Helix PATCH /chat/settings で emote/subscriber/follower/slow/unique chat などの設定を更新する。接続された入力だけ送信する。
+
+**Metadata:** contract: inputs=15 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3037,6 +3381,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Twitch: Create Clip** — Helix POST /clips で現在の配信からclip作成を開始する。
 
+**Metadata:** contract: inputs=6 / outputs=7 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -3060,6 +3406,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Twitch: Get Token** — conf.twitch で定義された token_key から保存済み OAuth トークンを取り出し、on_success / on_failure で分岐する
 
+**Metadata:** contract: inputs=2 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`, `credential_access`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -3077,6 +3425,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.twitch.goals_get`
 
 **Twitch: Get Goals** — Helix GET /goals でチャンネルのcreator goals一覧を取得する。
+
+**Metadata:** contract: inputs=5 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3098,6 +3448,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.twitch.poll_create`
 
 **Twitch: Create Poll** — Helix POST /polls でpollを作成する。choices は文字列配列または {title} 配列。
+
+**Metadata:** contract: inputs=10 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3125,6 +3477,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Twitch: End Poll** — Helix PATCH /polls でpollを終了する。status は TERMINATED または ARCHIVED。
 
+**Metadata:** contract: inputs=7 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -3146,6 +3500,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.twitch.prediction_create`
 
 **Twitch: Create Prediction** — Helix POST /predictions でChannel Points predictionを作成する。outcomes は文字列配列または {title} 配列。
+
+**Metadata:** contract: inputs=8 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3171,6 +3527,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Twitch: End Prediction** — Helix PATCH /predictions でpredictionを LOCKED / RESOLVED / CANCELED にする。RESOLVED は winning_outcome_id 必須。
 
+**Metadata:** contract: inputs=8 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -3194,6 +3552,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Twitch: Cancel Raid** — Helix DELETE /raids で保留中の raid をキャンセルする。
 
+**Metadata:** contract: inputs=5 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -3213,6 +3573,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.twitch.raid_start`
 
 **Twitch: Start Raid** — Helix POST /raids で raid を開始する。実際のraidはTwitch側の90秒カウントダウン後に行われる。
+
+**Metadata:** contract: inputs=6 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3234,6 +3596,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.twitch.shield_mode_update`
 
 **Twitch: Update Shield Mode** — Helix PUT /moderation/shield_mode で Shield Mode を有効化/無効化する。
+
+**Metadata:** contract: inputs=7 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3257,6 +3621,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Twitch: Create Stream Marker** — Helix POST /streams/markers で配信マーカーを追加する。
 
+**Metadata:** contract: inputs=6 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -3278,6 +3644,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.twitch.timeout`
 
 **Twitch: Timeout User** — Helix POST /moderation/bans（時間制限 ban）。`duration_secs` は 1..=1209600（最大 2 週間）。永久 ban は `twitch.ban`
+
+**Metadata:** contract: inputs=9 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3303,6 +3671,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Twitch: User ID by Login** — Helix GET /users?login=... で login から user_id を解決する
 
+**Metadata:** contract: inputs=5 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -3322,6 +3692,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.twitch.validate_token`
 
 **Twitch: Validate Token** — GET https://id.twitch.tv/oauth2/validate で token 所有者の user_id / login / client_id を取得する
+
+**Metadata:** contract: inputs=3 / outputs=7 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`, `twitch_api`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3345,6 +3717,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Unit Assign** — Attach a unit to a dimensionless Float and produce a Quantity.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=1 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `float` | — |  |
@@ -3360,6 +3734,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.unit.convert`
 
 **Unit Convert** — Convert a Quantity to the target unit. Errors if dimensions differ or K/ΔK semantics mismatch.
+
+**Metadata:** contract: inputs=1 / outputs=1 / properties=1 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3377,6 +3753,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Dimension -> String** — Return the canonical dimension string (e.g. "L·T^-2").
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `quantity` | — |  |
@@ -3389,6 +3767,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Unit -> String** — Return the canonical unit string (e.g. "m/s^2", "Hz").
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `quantity` | — |  |
@@ -3400,6 +3780,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.unit.same_dimension`
 
 **Same Dimension?** — True iff both inputs carry the same physical dimension.
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3414,6 +3796,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Unit Strip** — Explicit escape hatch: discard the unit and emit the raw numeric value as Float.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `quantity` | — |  |
@@ -3426,6 +3810,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Unit -> JSON** — Serialize Quantity to JSON with `value`, `unit`, `dimension` fields (internal form).
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `quantity` | — |  |
@@ -3437,6 +3823,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.unit.try_parse`
 
 **Unit Try Parse** — Parse a quantity string and return failure as result<quantity> instead of halting.
+
+**Metadata:** contract: inputs=1 / outputs=4 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3455,6 +3843,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Debounce** — After `value` JSON stops changing for `deadtime_ms`, updates `value_out` to the stable value. Each change restarts the timer (`ctx.trigger` + `__resume__`). Requires `run_forever` for async debounce.
 
+**Metadata:** contract: inputs=4 / outputs=1 / properties=0 / exec_in=yes / exec_out=no; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=unsupported; restore=unsupported; migration=`none`; persistence=`none`
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `json` | `null` |  |
@@ -3469,6 +3859,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.util.delay`
 
 **Delay** — exec_in 発火で value を保持し、delay_ms 後に exec_out を発火
+
+**Metadata:** contract: inputs=5 / outputs=2 / properties=0 / exec_in=yes / exec_out=yes; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=unsupported; restore=unsupported; migration=`none`; persistence=`none`
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3486,6 +3878,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.util.edge_detect`
 
 **Edge detect** — On each `exec_in`, compares `value` to the previous sample and may fire `on_edge` with `edge_type` (`rising` / `falling`). Property `mode`: `rising` | `falling` | `both` (default). Pull-only reads return the last `edge_type` string (initially empty). Wire `exec_in` together with the signal you sample (e.g. `state.bool` `changed` exec).
+
+**Metadata:** contract: inputs=2 / outputs=2 / properties=1 / exec_in=yes / exec_out=yes; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=unsupported; restore=unsupported; migration=`none`; persistence=`none`
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3505,6 +3899,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Format Quantity** — Quantity → String with explicit include_unit / precision / unit_override control. Default output is "{value} {unit}" matching the engine-level Quantity → String coerce.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=3 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `quantity` | — |  |
@@ -3523,6 +3919,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Log** — value 入力を trace に書き出し exec_out を発火。`Quantity` を流した場合は engine 側で `"{value} {unit}"` 形式に自動文字列化される（dimensionless は数値のみ）。精度や単位の ON/OFF を制御したい場合は `flowgraph.util.format` を挟む。
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `trace_write`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -3536,6 +3934,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Previous value** — Each time `value` is evaluated, outputs `prev`: the **previous** input JSON. First sample: `prev` equals the current `value`.
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=unsupported; restore=unsupported; migration=`none`; persistence=`none`
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `json` | `null` |  |
@@ -3547,6 +3947,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.util.rate_limit`
 
 **Rate Limit** — N 回 / X ms のトークンバケットで exec_in をゲートする（超過時は on_deny）
+
+**Metadata:** contract: inputs=3 / outputs=3 / properties=0 / exec_in=yes / exec_out=yes; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=explicit/json; restore=explicit; migration=`none`; persistence=`none`
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3564,6 +3966,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Sample & hold** — While `sample_exec` fires, captures the current `value` JSON into `held`. Between samples, `held` stays constant.
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=yes / exec_out=no; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=unsupported; restore=unsupported; migration=`none`; persistence=`none`
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `sample_exec` | `exec` (in) | — |  |
@@ -3577,6 +3981,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Throttle** — Leading-edge throttle on JSON `value`: when the value **differs** from the last emitted one, emit immediately only if at least `interval_ms` has passed since the last emit; otherwise drop the update. Identical consecutive values are passed through without resetting the timer.
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=unsupported; restore=unsupported; migration=`none`; persistence=`none`
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `value` | `json` | `null` |  |
@@ -3589,6 +3995,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.util.timer_interval`
 
 **Timer Interval** — Periodic timer: while `enabled` and `run_forever` trigger bus is active, fires `on_tick` every `interval_sec` (min 0.01s, sleep min 10ms). Outputs `count` (total ticks) and `elapsed_sec` (wall time since previous tick, or `interval_sec` on first tick). Stale wakeups are dropped. `execute()` one-shot mode does not arm (same as `util.delay`).
+
+**Metadata:** contract: inputs=4 / outputs=3 / properties=0 / exec_in=yes / exec_out=yes; effect: `stateful`; capabilities: —; state: stateful; scope=`node_instance`; storage=`volatile`; lifetime=`program_instance`; reload=reinitialized; snapshot=unsupported; restore=unsupported; migration=`none`; persistence=`none`
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3609,6 +4017,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Vec2 add** — Componentwise vec2 addition
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `json` | — |  |
@@ -3621,6 +4031,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.vec2.distance`
 
 **Vec2 distance** — Euclidean distance between two vec2s
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3635,6 +4047,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Vec2 dot** — Vec2 dot product (returns scalar)
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `json` | — |  |
@@ -3648,6 +4062,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Vec2 length** — Euclidean magnitude of a vec2: sqrt(x^2 + y^2)
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `v` | `json` | — |  |
@@ -3659,6 +4075,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.vec2.lerp`
 
 **Vec2 lerp** — Componentwise linear interpolation: a + (b - a) * t for 2-vectors. t is not clamped.
+
+**Metadata:** contract: inputs=3 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3674,6 +4092,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Vec2 make** — Pack 2 floats into a JSON array [x, y]
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `float` | — |  |
@@ -3687,6 +4107,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Vec2 normalize** — Scale a vec2 to unit length. Zero vector returns [0, 0] (not an error).
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `v` | `json` | — |  |
@@ -3698,6 +4120,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.vec2.scale`
 
 **Vec2 scale** — Multiply every component of a 2-vector by scalar `k`
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3712,6 +4136,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Vec2 sub** — Componentwise vec2 subtraction
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `json` | — |  |
@@ -3724,6 +4150,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.vec2.unpack`
 
 **Vec2 unpack** — Unpack a 2-component JSON array into separate Float outputs
+
+**Metadata:** contract: inputs=1 / outputs=2 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3738,6 +4166,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Vec3 add** — Componentwise vec3 addition
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `json` | — |  |
@@ -3750,6 +4180,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.vec3.distance`
 
 **Vec3 distance** — Euclidean distance between two vec3s
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3764,6 +4196,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Vec3 dot** — Vec3 dot product (returns scalar)
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `json` | — |  |
@@ -3777,6 +4211,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Vec3 length** — Euclidean magnitude of a vec3: sqrt(x^2 + y^2 + z^2)
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `v` | `json` | — |  |
@@ -3788,6 +4224,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.vec3.lerp`
 
 **Vec3 lerp** — Componentwise linear interpolation: a + (b - a) * t for 3-vectors. t is not clamped.
+
+**Metadata:** contract: inputs=3 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3803,6 +4241,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Vec3 make** — Pack 3 floats into a JSON array [x, y, z]
 
+**Metadata:** contract: inputs=3 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `x` | `float` | — |  |
@@ -3817,6 +4257,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Vec3 normalize** — Scale a vec3 to unit length. Zero vector returns [0, 0, 0] (not an error).
 
+**Metadata:** contract: inputs=1 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `v` | `json` | — |  |
@@ -3828,6 +4270,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.vec3.scale`
 
 **Vec3 scale** — Multiply every component of a 3-vector by scalar `k`
+
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3842,6 +4286,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Vec3 sub** — Componentwise vec3 subtraction
 
+**Metadata:** contract: inputs=2 / outputs=1 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `a` | `json` | — |  |
@@ -3854,6 +4300,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.vec3.unpack`
 
 **Vec3 unpack** — Unpack a 3-component JSON array into separate Float outputs
+
+**Metadata:** contract: inputs=1 / outputs=3 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3871,6 +4319,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **VMC: Extract BlendShape** — `MotionFrame` から `/VMC/Ext/Blend/Val` を探し、JSON と型付きの `found/name/value` を返す。無ければ JSON は null、typed output は既定値。
 
+**Metadata:** contract: inputs=2 / outputs=4 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `frame` | `motion_frame` | — |  |
@@ -3886,6 +4336,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.vmc.extract_bone_pos`
 
 **VMC: Extract Bone Pos** — `MotionFrame` から `/VMC/Ext/Bone/Pos` を探し、JSON と型付きの `found/bone/px/py/pz/rx/ry/rz/rw` を返す。無ければ JSON は null、typed output は既定値。
+
+**Metadata:** contract: inputs=2 / outputs=10 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3909,6 +4361,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **VMC: Extract Root Pos** — `MotionFrame` から `/VMC/Ext/Root/Pos` を探し、JSON と型付きの `found/bone/px/py/pz/rx/ry/rz/rw` を返す。無ければ JSON は null、typed output は既定値。
 
+**Metadata:** contract: inputs=1 / outputs=10 / properties=0 / exec_in=no / exec_out=no; effect: `pure`; capabilities: —; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `frame` | `motion_frame` | — |  |
@@ -3930,6 +4384,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **VMC: Send Bone Pos** — VMC `/VMC/Ext/Bone/Pos` を 1 回 UDP 送信。`position` は [x,y,z]、`rotation` は [qx,qy,qz,qw] の JSON 配列
 
+**Metadata:** contract: inputs=6 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -3950,6 +4406,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.vmc.send_root_pos`
 
 **VMC: Send Root Pos** — VMC `/VMC/Ext/Root/Pos` を 1 回 UDP 送信（骨名は常に `root`）。`position` / `rotation` は JSON 配列
+
+**Metadata:** contract: inputs=5 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -3973,6 +4431,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **VRChat: Avatar Parameter (Bool)** — OSC `/avatar/parameters/<name>` に bool を 1 つ送信
 
+**Metadata:** contract: inputs=5 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -3992,6 +4452,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.vrchat.avatar_parameter_float`
 
 **VRChat: Avatar Parameter (Float)** — OSC `/avatar/parameters/<name>` に float を 1 つ送信（VRChat OSC Avatar Parameters）
+
+**Metadata:** contract: inputs=5 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -4013,6 +4475,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **VRChat: Avatar Parameter (Int)** — OSC `/avatar/parameters/<name>` に int を 1 つ送信
 
+**Metadata:** contract: inputs=5 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -4032,6 +4496,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.vrchat.chatbox_input`
 
 **VRChat: Chatbox Input** — `/chatbox/input` に (text, send_immediately, play_notification_sfx)。テキストは最大 144 文字に切り詰め
+
+**Metadata:** contract: inputs=6 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -4054,6 +4520,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **VRChat: Chatbox Typing** — `/chatbox/typing` に bool を 1 つ送信
 
+**Metadata:** contract: inputs=4 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `network`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -4074,6 +4542,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.window.close`
 
 **Window: Close** — 対象ウィンドウへ WM_CLOSE を送る。
+
+**Metadata:** contract: inputs=5 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `window_control`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -4096,6 +4566,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Window: Enum** — トップレベルウィンドウ一覧を Table として取得する。Windows first。
 
+**Metadata:** contract: inputs=5 / outputs=5 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `window_control`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -4115,6 +4587,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.window.foreground`
 
 **Window: Foreground** — 対象ウィンドウを前面化する。
+
+**Metadata:** contract: inputs=5 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `window_control`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -4137,6 +4611,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Window: Maximize** — 対象ウィンドウを最大化する。
 
+**Metadata:** contract: inputs=5 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `window_control`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -4158,6 +4634,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Window: Minimize** — 対象ウィンドウを最小化する。
 
+**Metadata:** contract: inputs=5 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `window_control`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -4178,6 +4656,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.window.move`
 
 **Window: Move** — 対象ウィンドウの左上座標を変更する。
+
+**Metadata:** contract: inputs=7 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `window_control`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -4202,6 +4682,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Window: Pseudo Fullscreen** — 対象ウィンドウの表示状態を保存して最大化する first slice。
 
+**Metadata:** contract: inputs=5 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `window_control`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -4223,6 +4705,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 **Window: Pseudo Fullscreen Exit** — pseudo_fullscreen 前の表示状態を復元する。
 
+**Metadata:** contract: inputs=5 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `window_control`; state: stateless
+
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
@@ -4243,6 +4727,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.window.resize`
 
 **Window: Resize** — 対象ウィンドウのサイズを変更する。
+
+**Metadata:** contract: inputs=7 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `window_control`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|
@@ -4266,6 +4752,8 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ### `flowgraph.window.restore`
 
 **Window: Restore** — 対象ウィンドウを通常表示へ戻す。
+
+**Metadata:** contract: inputs=5 / outputs=6 / properties=0 / exec_in=yes / exec_out=yes; effect: `effectful`; capabilities: `window_control`; state: stateless
 
 | Input | Type | Default | Note |
 |---|---|---|---|

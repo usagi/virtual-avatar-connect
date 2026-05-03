@@ -11,6 +11,8 @@
 
 use crate::flowgraph::node::{NodeSpec, PortDirection, PortSpec, PropertySpec};
 use crate::flowgraph::registry::NodeRegistry;
+use crate::flowgraph::FlowgraphStateModel;
+use serde::Serialize;
 use std::collections::BTreeMap;
 
 /// NodeRegistry の内容から `docs/manual/node-catalog.md` 相当の文字列を生成する。
@@ -49,20 +51,21 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 	for (category, specs) in &by_category {
 		out.push_str(&format!("## {}\n\n", category));
 		for spec in specs {
-			render_node(&mut out, spec);
+			render_node(&mut out, registry, spec);
 		}
 	}
 
 	out
 }
 
-fn render_node(out: &mut String, spec: &NodeSpec) {
+fn render_node(out: &mut String, registry: &NodeRegistry, spec: &NodeSpec) {
 	out.push_str(&format!("### `{}`\n\n", spec.feature));
 	out.push_str(&format!("**{}**", spec.title));
 	if let Some(desc) = &spec.description {
 		out.push_str(&format!(" — {}", desc));
 	}
-	out.push_str("\n\n");
+	out.push_str("\n");
+	render_node_metadata(out, registry, spec);
 
 	// Inputs
 	let inputs: Vec<&PortSpec> = spec.inputs.iter().collect();
@@ -108,6 +111,81 @@ fn render_node(out: &mut String, spec: &NodeSpec) {
 		}
 		out.push('\n');
 	}
+}
+
+fn render_node_metadata(out: &mut String, registry: &NodeRegistry, spec: &NodeSpec) {
+	let effect_class = registry.effect_class(&spec.feature).unwrap_or("unknown");
+	let capabilities = registry.capabilities(&spec.feature);
+	let state_model = registry
+		.state_model(&spec.feature)
+		.unwrap_or_else(|| FlowgraphStateModel::for_effect_class(effect_class));
+
+	out.push_str(&format!(
+		"\n**Metadata:** contract: {}; effect: `{}`; capabilities: {}; state: {}\n\n",
+		contract_summary(spec),
+		effect_class,
+		capability_summary(&capabilities),
+		state_summary(&state_model),
+	));
+}
+
+fn contract_summary(spec: &NodeSpec) -> String {
+	let has_exec_input = spec.inputs.iter().any(|p| p.is_exec);
+	let has_exec_output = spec.outputs.iter().any(|p| p.is_exec);
+	format!(
+		"inputs={} / outputs={} / properties={} / exec_in={} / exec_out={}",
+		spec.inputs.len(),
+		spec.outputs.len(),
+		spec.properties.len(),
+		if has_exec_input { "yes" } else { "no" },
+		if has_exec_output { "yes" } else { "no" },
+	)
+}
+
+fn capability_summary(capabilities: &[&str]) -> String {
+	if capabilities.is_empty() {
+		"—".into()
+	} else {
+		capabilities.iter().map(|cap| format!("`{}`", cap)).collect::<Vec<_>>().join(", ")
+	}
+}
+
+fn state_summary(model: &FlowgraphStateModel) -> String {
+	if !model.stateful {
+		return "stateless".into();
+	}
+	let snapshot = if model.snapshot_supported {
+		format!("{}/{}", json_label(&model.snapshot_policy), json_label(&model.snapshot_format))
+	} else {
+		"unsupported".into()
+	};
+	let restore = if model.restore_supported {
+		json_label(&model.restore_policy)
+	} else {
+		"unsupported".into()
+	};
+	format!(
+		"stateful; scope=`{}`; storage=`{}`; lifetime=`{}`; reload={}; snapshot={}; restore={}; migration=`{}`; persistence=`{}`",
+		json_label(&model.scope),
+		json_label(&model.storage),
+		json_label(&model.lifetime),
+		if model.reinitialized_on_reload {
+			"reinitialized"
+		} else {
+			"preserved"
+		},
+		snapshot,
+		restore,
+		json_label(&model.migration_policy),
+		json_label(&model.persistence_policy),
+	)
+}
+
+fn json_label<T: Serialize>(value: &T) -> String {
+	serde_json::to_value(value)
+		.ok()
+		.and_then(|value| value.as_str().map(str::to_string))
+		.unwrap_or_else(|| "?".into())
 }
 
 fn port_type(p: &PortSpec) -> String {
@@ -214,5 +292,14 @@ mod docs_tests {
 			let diff_hint = "BLESS_NODE_CATALOG=1 で再生成してください。";
 			panic!("docs/manual/node-catalog.md が registry と不一致。{diff_hint}");
 		}
+	}
+
+	#[test]
+	fn node_catalog_md_includes_lf_metadata() {
+		let rendered = render_node_catalog_md(&default_registry());
+		assert!(rendered.contains("**Metadata:** contract: inputs="));
+		assert!(rendered.contains("effect: `effectful`"));
+		assert!(rendered.contains("capabilities: `trace_write`"));
+		assert!(rendered.contains("snapshot=explicit/json"));
 	}
 }
