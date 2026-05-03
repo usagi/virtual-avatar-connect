@@ -90,7 +90,11 @@
   }
 
   async function onRestoreProfileLocalStateSnapshot() {
-    if (restoringStateSnapshot || savingStateSnapshot || savingLiveStateSnapshot)
+    if (
+      restoringStateSnapshot ||
+      savingStateSnapshot ||
+      savingLiveStateSnapshot
+    )
       return;
     restoringStateSnapshot = true;
     try {
