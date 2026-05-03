@@ -57,7 +57,11 @@
   }
 
   async function onSaveLoadedStateSnapshot() {
-    if (savingStateSnapshot || savingLiveStateSnapshot || reloadingPreservingState)
+    if (
+      savingStateSnapshot ||
+      savingLiveStateSnapshot ||
+      reloadingPreservingState
+    )
       return;
     savingStateSnapshot = true;
     try {
@@ -75,7 +79,11 @@
   }
 
   async function onSaveLiveStateSnapshot() {
-    if (savingLiveStateSnapshot || savingStateSnapshot || reloadingPreservingState)
+    if (
+      savingLiveStateSnapshot ||
+      savingStateSnapshot ||
+      reloadingPreservingState
+    )
       return;
     savingLiveStateSnapshot = true;
     try {
