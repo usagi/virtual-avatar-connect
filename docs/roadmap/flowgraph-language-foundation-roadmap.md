@@ -910,6 +910,11 @@ Diagnostics panel の `reload keep state` も同 helper を呼ぶように寄せ
 Flowgraph Store の通常 reload / state-preserving reload が `mutating` を立てるようにし、reload 中の save / reload 二重実行を GUI 全体で抑制できるようにした。
 Flowgraph Studio の `Reload keeping live state` command と toolbar button は `state_snapshot_file_path` metadata がある runtime でのみ有効化し、path 未設定時は API error に到達する前に GUI 上で unavailable として示す。
 
+### LF-7ay State-preserving reload Studio E2E coverage ✅
+
+Playwright の Flowgraph Studio layout spec に state-preserving reload の toolbar / command palette coverage を追加し、fixture runtime で `Reload + state` と `Reload keeping live state` が明示操作として有効になることを固定した。
+これにより通常 reload と state-preserving reload を分けた Studio 導線が、Svelte の UI reflow や command palette 変更で消えないことを E2E から検知できる。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
