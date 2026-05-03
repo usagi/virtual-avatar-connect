@@ -893,6 +893,12 @@ Flowgraph Diagnostics の profile-local snapshot file 行に `save live` 操作�
 通常の `POST /flowgraph/reload` の挙動は変えず、state 保持 reload は明示 API として分離する。
 GUI client には DTO と API method を追加したが、この段階では GUI ボタン追加や通常 reload への自動統合には踏み込まない。
 
+### LF-7av State-preserving reload GUI affordance ✅
+
+Flowgraph Diagnostics の profile-local snapshot file 行に `reload keep state` 操作を追加し、GUI から `POST /flowgraph/reload/preserve-state` を呼べるようにした。
+成功時は saved / restored node count と snapshot path を toast で返し、reload 後に tree / diagnostics / current file を再取得する。
+この段階では明示操作に留め、通常 reload ボタンの挙動変更や reload 前自動保存には踏み込まない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
