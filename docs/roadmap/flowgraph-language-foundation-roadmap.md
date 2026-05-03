@@ -920,6 +920,11 @@ Playwright の Flowgraph Studio layout spec に state-preserving reload の tool
 node signature / library signature / schema から manual と GUI catalog を生成する。
 ノードが増えた後に手書き docs が破綻しないための基盤。
 
+### LF-8a Node catalog LF metadata generation ✅
+
+`docs/manual/node-catalog.md` の生成器に LF-1 contract summary、LF-2 effect / capability metadata、LF-7 state model summary を追加し、Control API / GUI catalog が読む machine-readable metadata を manual 生成物にも投影した。
+`node_catalog_md_up_to_date` の bless 経路で catalog を再生成し、compact metadata line が出力されることを unit test で固定した。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
