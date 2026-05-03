@@ -925,6 +925,11 @@ node signature / library signature / schema から manual と GUI catalog を生
 `docs/manual/node-catalog.md` の生成器に LF-1 contract summary、LF-2 effect / capability metadata、LF-7 state model summary を追加し、Control API / GUI catalog が読む machine-readable metadata を manual 生成物にも投影した。
 `node_catalog_md_up_to_date` の bless 経路で catalog を再生成し、compact metadata line が出力されることを unit test で固定した。
 
+### LF-8b Node catalog metadata indexes ✅
+
+`docs/manual/node-catalog.md` の生成器に Metadata Index を追加し、effectful / stateful node、capability group、snapshot / restore support を manual から逆引きできるようにした。
+各 node section の metadata line だけでなく、目的別 index も同じ registry metadata から生成することで、GUI catalog と manual catalog の分類語彙を揃えた。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
