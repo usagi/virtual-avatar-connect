@@ -46,6 +46,7 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 		}
 	}
 	out.push('\n');
+	render_metadata_index(&mut out, registry, &by_category);
 
 	// Sections
 	for (category, specs) in &by_category {
@@ -56,6 +57,70 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 	}
 
 	out
+}
+
+fn render_metadata_index(out: &mut String, registry: &NodeRegistry, by_category: &BTreeMap<String, Vec<NodeSpec>>) {
+	let specs: Vec<&NodeSpec> = by_category.values().flat_map(|items| items.iter()).collect();
+	let mut effectful = Vec::new();
+	let mut stateful = Vec::new();
+	let mut by_capability: BTreeMap<String, Vec<&NodeSpec>> = BTreeMap::new();
+	let mut snapshot_supported = Vec::new();
+	let mut restore_supported = Vec::new();
+
+	for spec in specs {
+		match registry.effect_class(&spec.feature).unwrap_or("unknown") {
+			"effectful" => effectful.push(spec),
+			"stateful" => stateful.push(spec),
+			_ => {}
+		}
+		for cap in registry.capabilities(&spec.feature) {
+			by_capability.entry(cap.to_string()).or_default().push(spec);
+		}
+		if let Some(model) = registry.state_model(&spec.feature) {
+			if model.snapshot_supported {
+				snapshot_supported.push(spec);
+			}
+			if model.restore_supported {
+				restore_supported.push(spec);
+			}
+		}
+	}
+
+	out.push_str("## Metadata Index\n\n");
+	out.push_str("### Effect Classes\n\n");
+	out.push_str(&format!("- **effectful** ({}): {}\n", effectful.len(), feature_links(&effectful)));
+	out.push_str(&format!("- **stateful** ({}): {}\n\n", stateful.len(), feature_links(&stateful)));
+	out.push_str("### Capability Groups\n\n");
+	if by_capability.is_empty() {
+		out.push_str("- —\n\n");
+	} else {
+		for (capability, specs) in by_capability {
+			out.push_str(&format!("- **{}** ({}): {}\n", capability, specs.len(), feature_links(&specs)));
+		}
+		out.push('\n');
+	}
+	out.push_str("### Snapshot / Restore Support\n\n");
+	out.push_str(&format!(
+		"- **snapshot** ({}): {}\n",
+		snapshot_supported.len(),
+		feature_links(&snapshot_supported),
+	));
+	out.push_str(&format!(
+		"- **restore** ({}): {}\n\n",
+		restore_supported.len(),
+		feature_links(&restore_supported),
+	));
+}
+
+fn feature_links(specs: &[&NodeSpec]) -> String {
+	if specs.is_empty() {
+		return "—".into();
+	}
+	specs
+		.iter()
+		.map(|spec| format!("[`{}`](#{})", spec.feature, anchor(&spec.feature)))
+		.collect::<Vec<_>>()
+		.join(", ")
 }
 
 fn render_node(out: &mut String, registry: &NodeRegistry, spec: &NodeSpec) {
@@ -297,6 +362,9 @@ mod docs_tests {
 	#[test]
 	fn node_catalog_md_includes_lf_metadata() {
 		let rendered = render_node_catalog_md(&default_registry());
+		assert!(rendered.contains("## Metadata Index"));
+		assert!(rendered.contains("- **trace_write**"));
+		assert!(rendered.contains("### Snapshot / Restore Support"));
 		assert!(rendered.contains("**Metadata:** contract: inputs="));
 		assert!(rendered.contains("effect: `effectful`"));
 		assert!(rendered.contains("capabilities: `trace_write`"));
