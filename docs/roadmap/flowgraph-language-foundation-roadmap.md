@@ -887,6 +887,12 @@ Flowgraph Diagnostics の profile-local snapshot file 行に `save live` 操作�
 既存の load-time snapshot 保存は `save loaded` として明示し、live worker state の保存操作と混同しないようにした。
 この段階では手動保存に留め、終了時・reload 前・定期 interval での自動保存には踏み込まない。
 
+### LF-7au State-preserving reload Control API ✅
+
+`POST /flowgraph/reload/preserve-state` を追加し、起動中 worker の live state snapshot を profile-local snapshot file path へ保存してから、同じ file envelope で reload / restore できるようにした。
+通常の `POST /flowgraph/reload` の挙動は変えず、state 保持 reload は明示 API として分離する。
+GUI client には DTO と API method を追加したが、この段階では GUI ボタン追加や通常 reload への自動統合には踏み込まない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
