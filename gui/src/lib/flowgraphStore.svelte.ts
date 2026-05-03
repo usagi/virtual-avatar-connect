@@ -960,6 +960,8 @@ class FlowgraphStore {
   }
 
   async reloadFromDisk(): Promise<void> {
+    if (this.mutating) return;
+    this.mutating = true;
     try {
       const resp = await api.flowgraphReload();
       if (resp.ok) toastStore.success("Reloaded", `${resp.node_count} ノード`);
@@ -969,10 +971,14 @@ class FlowgraphStore {
       if (this.currentFq) await this.openFile(this.currentFq);
     } catch (e) {
       toastStore.error("Reload 失敗", describeError(e));
+    } finally {
+      this.mutating = false;
     }
   }
 
   async reloadPreservingState(): Promise<void> {
+    if (this.mutating) return;
+    this.mutating = true;
     try {
       const resp = await api.flowgraphReloadPreservingState();
       if (resp.ok) {
@@ -990,6 +996,8 @@ class FlowgraphStore {
       if (this.currentFq) await this.openFile(this.currentFq);
     } catch (e) {
       toastStore.error("State-preserving reload 失敗", describeError(e));
+    } finally {
+      this.mutating = false;
     }
   }
 

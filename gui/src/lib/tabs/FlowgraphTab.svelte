@@ -145,6 +145,10 @@
   const fileCount = $derived(flowgraphStore.tree?.files.length ?? 0);
   const nodeCount = $derived(flowgraphStore.draftNodes?.length ?? 0);
   const edgeCount = $derived(flowgraphStore.draftEdges?.length ?? 0);
+  const canReloadPreservingState = $derived(
+    Boolean(flowgraphStore.diagnostics?.state_snapshot_file_path) &&
+      !flowgraphStore.mutating,
+  );
   const workspaceGridStyle = $derived(
     `grid-template-columns: ${filePaneWidth}px minmax(34rem, 1fr) ${inspectorPaneWidth}px;`,
   );
@@ -243,7 +247,7 @@
       label: "Reload keeping live state",
       description:
         "Save live state, then reload and restore from the profile-local snapshot file.",
-      disabled: flowgraphStore.mutating,
+      disabled: !canReloadPreservingState,
       run: onReloadPreservingState,
     },
     {
@@ -500,8 +504,10 @@
     <button
       type="button"
       class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800 disabled:opacity-40"
-      title="live state を保存してから再ロード"
-      disabled={flowgraphStore.mutating}
+      title={flowgraphStore.diagnostics?.state_snapshot_file_path
+        ? "live state を保存してから再ロード"
+        : "profile-local snapshot path metadata がまだありません"}
+      disabled={!canReloadPreservingState}
       onclick={onReloadPreservingState}
     >
       Reload + state
