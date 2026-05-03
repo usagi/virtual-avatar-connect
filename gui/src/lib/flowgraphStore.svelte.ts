@@ -829,6 +829,24 @@ class FlowgraphStore {
   }
  }
 
+ async reloadPreservingState(): Promise<void> {
+  try {
+   const resp = await api.flowgraphReloadPreservingState();
+   if (resp.ok) {
+    toastStore.success(
+     'Live state を保持して reload しました',
+     `${resp.saved_node_count} saved / ${resp.restored_node_count ?? 0} restored -> ${resp.path}`,
+    );
+   } else {
+    toastStore.warn('State-preserving reload に診断があります', `${resp.diagnostics.length} 件 -> ${resp.path}`);
+   }
+   await Promise.all([this.refreshTree(), this.refreshDiagnostics()]);
+   if (this.currentFq) await this.openFile(this.currentFq);
+  } catch (e) {
+   toastStore.error('State-preserving reload 失敗', describeError(e));
+  }
+ }
+
  // -------------------------------------------------------------------------
  // Fragment share / export / import (δ-7)
  // -------------------------------------------------------------------------

@@ -206,6 +206,13 @@ type StudioCommand = {
    run: onReload,
   },
   {
+   id: 'reload_preserve_state',
+   label: 'Reload keeping live state',
+   description: 'Save live state, then reload and restore from the profile-local snapshot file.',
+   disabled: flowgraphStore.mutating,
+   run: onReloadPreservingState,
+  },
+  {
    id: 'save',
    label: 'Save current file',
    description: 'Write the current Flowgraph file to disk.',
@@ -286,6 +293,10 @@ type StudioCommand = {
 
  async function onReload() {
   await flowgraphStore.reloadFromDisk();
+ }
+
+ async function onReloadPreservingState() {
+  await flowgraphStore.reloadPreservingState();
  }
 
  async function onSave() {
@@ -408,6 +419,15 @@ type StudioCommand = {
    onclick={onReload}
   >
    Reload
+  </button>
+  <button
+   type="button"
+   class="rounded border border-surface-300-700 px-3 py-1 text-xs hover:bg-surface-200-800 disabled:opacity-40"
+   title="live state を保存してから再ロード"
+   disabled={flowgraphStore.mutating}
+   onclick={onReloadPreservingState}
+  >
+   Reload + state
   </button>
   <button
    type="button"
