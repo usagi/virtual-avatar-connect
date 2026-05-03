@@ -36,6 +36,12 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 	out.push_str("$env:BLESS_NODE_CATALOG=\"1\"; cargo test --lib node_catalog_md_up_to_date\n");
 	out.push_str("```\n\n");
 	out.push_str("> 型の表記: `bool` / `int` / `float` / `string` / `bytes` / `json` / `list<T>` / `map<T>` / `exec`\n\n");
+	out.push_str("## Reading This Catalog\n\n");
+	out.push_str("- **Index**: category ごとの通常一覧。feature 名から node 詳細へ移動するための入口です。\n");
+	out.push_str("- **Metadata Index**: effect / capability / snapshot support から node を逆引きするための一覧です。GUI catalog と同じ registry metadata から生成します。\n");
+	out.push_str(
+		"- 各 node section の **Metadata** line は contract summary、effect class、capability、state model を compact に示します。\n\n",
+	);
 
 	// Index
 	out.push_str("## Index\n\n");
@@ -362,6 +368,8 @@ mod docs_tests {
 	#[test]
 	fn node_catalog_md_includes_lf_metadata() {
 		let rendered = render_node_catalog_md(&default_registry());
+		assert!(rendered.contains("## Reading This Catalog"));
+		assert!(rendered.contains("GUI catalog と同じ registry metadata"));
 		assert!(rendered.contains("## Metadata Index"));
 		assert!(rendered.contains("- **trace_write**"));
 		assert!(rendered.contains("### Snapshot / Restore Support"));

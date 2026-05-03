@@ -10,6 +10,12 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 > 型の表記: `bool` / `int` / `float` / `string` / `bytes` / `json` / `list<T>` / `map<T>` / `exec`
 
+## Reading This Catalog
+
+- **Index**: category ごとの通常一覧。feature 名から node 詳細へ移動するための入口です。
+- **Metadata Index**: effect / capability / snapshot support から node を逆引きするための一覧です。GUI catalog と同じ registry metadata から生成します。
+- 各 node section の **Metadata** line は contract summary、effect class、capability、state model を compact に示します。
+
 ## Index
 
 - **bytes**
