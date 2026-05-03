@@ -121,6 +121,7 @@ runtime には `loaded_state_snapshot` をその予定保存先へ `ProgramState
 `POST /flowgraph/state-snapshot/live/save` は起動中 worker から現在の live state snapshot を取得し、同じ profile-local snapshot file path へ明示保存します。
 `POST /flowgraph/reload/preserve-state` は live state snapshot を同 path へ保存してから、その file envelope を使って reload / restore します。
 GUI の Flowgraph Diagnostics でも `state_snapshot_file_path` がある場合に loaded snapshot 保存用の `save loaded`、live snapshot 保存用の `save live`、live state 保持 reload 用の `reload keep state` を表示します。
+Flowgraph Studio の toolbar / command palette からも通常 reload とは別に live state 保持 reload を明示実行できます。
 `POST /flowgraph/state-snapshot/profile-local/restore` は `state_snapshot_file_path` の JSON envelope を明示 restore して Flowgraph runtime を reload / respawn します。
 GUI の Flowgraph Diagnostics でも同じ path 行に `restore snapshot` 操作を表示し、restore 後に diagnostics を再取得します。
 restore や snapshot file 読込に失敗した場合は `state-restore` diagnostic として報告されますが、profile-local persistence、migration、通常 reload 時の自動 restore はまだ導入していません。
