@@ -30,6 +30,7 @@ test.describe('GUI redesign: Flowgraph Studio layout', () => {
   const dialog = page.getByRole('dialog', { name: 'Command Palette' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', { name: /Reload from disk/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Reload keeping live state/ })).toBeEnabled();
   await expect(dialog.getByRole('button', { name: /Undo/ })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /Duplicate selection/ })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /Save current file/ })).toBeVisible();
@@ -38,6 +39,20 @@ test.describe('GUI redesign: Flowgraph Studio layout', () => {
   await expect(dialog.getByRole('button', { name: /Insert/ }).first()).toBeVisible();
   await dialog.getByRole('button', { name: 'Close' }).click();
   await expect(dialog).toBeHidden();
+ });
+
+ test('Flowgraph Studio exposes explicit state-preserving reload action', async ({ page }) => {
+  await page.goto(`/gui/${tokenQuery()}#flowgraph`);
+
+  const main = page.getByRole('main');
+  await expect(main.getByRole('button', { name: 'Reload + state' })).toBeEnabled({
+   timeout: 15_000,
+  });
+
+  await main.getByRole('button', { name: 'Commands' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Command Palette' });
+  await dialog.getByPlaceholder('Search commands or node catalog').fill('state');
+  await expect(dialog.getByRole('button', { name: /Reload keeping live state/ })).toBeEnabled();
  });
 
  test('Flowgraph Studio shows node effect metadata in the palette', async ({ page }) => {
