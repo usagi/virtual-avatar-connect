@@ -15,6 +15,7 @@
   let savingStateSnapshot = $state(false);
   let savingLiveStateSnapshot = $state(false);
   let restoringStateSnapshot = $state(false);
+  let reloadingPreservingState = $state(false);
 
   async function onJump(d: FlowgraphDiagnostic) {
     if (!d.file) return;
@@ -56,7 +57,8 @@
   }
 
   async function onSaveLoadedStateSnapshot() {
-    if (savingStateSnapshot || savingLiveStateSnapshot) return;
+    if (savingStateSnapshot || savingLiveStateSnapshot || reloadingPreservingState)
+      return;
     savingStateSnapshot = true;
     try {
       const resp = await api.flowgraphSaveLoadedStateSnapshot();
@@ -73,7 +75,8 @@
   }
 
   async function onSaveLiveStateSnapshot() {
-    if (savingLiveStateSnapshot || savingStateSnapshot) return;
+    if (savingLiveStateSnapshot || savingStateSnapshot || reloadingPreservingState)
+      return;
     savingLiveStateSnapshot = true;
     try {
       const resp = await api.flowgraphSaveLiveStateSnapshot();
@@ -89,11 +92,48 @@
     }
   }
 
+  async function onReloadPreservingState() {
+    if (
+      reloadingPreservingState ||
+      restoringStateSnapshot ||
+      savingStateSnapshot ||
+      savingLiveStateSnapshot
+    )
+      return;
+    reloadingPreservingState = true;
+    try {
+      const resp = await api.flowgraphReloadPreservingState();
+      if (resp.ok) {
+        toastStore.success(
+          "Live state を保持して reload しました",
+          `${resp.saved_node_count} saved / ${resp.restored_node_count ?? 0} restored -> ${resp.path}`,
+        );
+      } else {
+        toastStore.warn(
+          "State-preserving reload に診断があります",
+          `${resp.diagnostics.length} 件 -> ${resp.path}`,
+        );
+      }
+      await Promise.all([
+        flowgraphStore.refreshTree(),
+        flowgraphStore.refreshDiagnostics(),
+        flowgraphStore.currentFq
+          ? flowgraphStore.openFile(flowgraphStore.currentFq)
+          : Promise.resolve(),
+      ]);
+    } catch (error) {
+      toastStore.error("State-preserving reload 失敗", describeError(error));
+    } finally {
+      reloadingPreservingState = false;
+    }
+  }
+
   async function onRestoreProfileLocalStateSnapshot() {
     if (
       restoringStateSnapshot ||
       savingStateSnapshot ||
-      savingLiveStateSnapshot
+      savingLiveStateSnapshot ||
+      reloadingPreservingState
     )
       return;
     restoringStateSnapshot = true;
@@ -311,7 +351,8 @@
             title="loaded state snapshot を profile-local file に保存"
             disabled={savingStateSnapshot ||
               savingLiveStateSnapshot ||
-              restoringStateSnapshot}
+              restoringStateSnapshot ||
+              reloadingPreservingState}
             onclick={onSaveLoadedStateSnapshot}
           >
             {savingStateSnapshot ? "saving" : "save loaded"}
@@ -322,10 +363,23 @@
             title="live worker state snapshot を profile-local file に保存"
             disabled={savingStateSnapshot ||
               savingLiveStateSnapshot ||
-              restoringStateSnapshot}
+              restoringStateSnapshot ||
+              reloadingPreservingState}
             onclick={onSaveLiveStateSnapshot}
           >
             {savingLiveStateSnapshot ? "saving" : "save live"}
+          </button>
+          <button
+            type="button"
+            class="shrink-0 rounded border border-surface-300-700 px-1.5 py-0.5 text-[0.65rem] hover:bg-surface-100-900 disabled:opacity-50"
+            title="live state snapshot を保存してから reload / restore"
+            disabled={savingStateSnapshot ||
+              savingLiveStateSnapshot ||
+              restoringStateSnapshot ||
+              reloadingPreservingState}
+            onclick={onReloadPreservingState}
+          >
+            {reloadingPreservingState ? "reloading" : "reload keep state"}
           </button>
           <button
             type="button"
@@ -336,6 +390,7 @@
             disabled={savingStateSnapshot ||
               savingLiveStateSnapshot ||
               restoringStateSnapshot ||
+              reloadingPreservingState ||
               stateSnapshotFileExists === false}
             onclick={onRestoreProfileLocalStateSnapshot}
           >
