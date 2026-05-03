@@ -768,6 +768,17 @@ pub struct ReloadResponse {
 }
 
 #[derive(Debug, Serialize)]
+pub struct ReloadPreservingStateResponse {
+	pub root_dir: String,
+	pub path: String,
+	pub ok: bool,
+	pub diagnostics: Vec<Diagnostic>,
+	pub node_count: usize,
+	pub saved_node_count: usize,
+	pub restored_node_count: Option<usize>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct RestoreStateSnapshotResponse {
 	pub root_dir: String,
 	pub path: String,
@@ -798,6 +809,89 @@ pub async fn post_reload(state: Data<SharedState>) -> impl Responder {
 		ok,
 		diagnostics,
 		node_count,
+	})
+}
+
+/// 起動中 worker の live state を profile-local snapshot file へ保存してから、同じ snapshot file で reload / restore する。
+/// 通常 reload の挙動は変えず、ユーザー操作または外部ツールが明示的に選ぶ state-preserving reload。
+#[post("/flowgraph/reload/preserve-state")]
+pub async fn post_reload_preserving_state(state: Data<SharedState>) -> impl Responder {
+	let (root, _) = match flowgraph_dir(&state).await {
+		Ok(v) => v,
+		Err(r) => return r,
+	};
+	let rt = {
+		let fg = state.read().await.flowgraph.clone();
+		let rt = fg.read().await.clone();
+		rt
+	};
+	let Some(rt) = rt else {
+		return err_json(
+			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+			"flowgraph_dir_unset",
+			"conf.flowgraph_dir が未設定です",
+		);
+	};
+	let snapshot_path = match rt.state_snapshot_file_path.clone() {
+		Some(path) => path,
+		None => {
+			return err_json(
+				actix_web::http::StatusCode::CONFLICT,
+				"state_snapshot_file_path_unset",
+				"state snapshot file path が未設定です。profile-local snapshot path metadata を持つ runtime が必要です。",
+			)
+		}
+	};
+	let save_response = match save_live_state_snapshot_response(&rt).await {
+		Ok(response) => response,
+		Err(SaveLiveStateSnapshotError::PathUnset) => {
+			return err_json(
+				actix_web::http::StatusCode::CONFLICT,
+				"state_snapshot_file_path_unset",
+				"state snapshot file path が未設定です。profile-local snapshot path metadata を持つ runtime が必要です。",
+			)
+		}
+		Err(SaveLiveStateSnapshotError::WorkerUnavailable) => {
+			return err_json(
+				actix_web::http::StatusCode::CONFLICT,
+				"flowgraph_worker_unavailable",
+				"state-preserving reload には起動中の Flowgraph worker が必要です。",
+			)
+		}
+		Err(SaveLiveStateSnapshotError::CommandFailed(error)) => {
+			return err_json(
+				actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+				"state_snapshot_live_export_failed",
+				format!("live state snapshot の取得に失敗しました: {error}"),
+			)
+		}
+		Err(SaveLiveStateSnapshotError::WriteFailed { path, error }) => {
+			return err_json(
+				actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+				"state_snapshot_write_failed",
+				format!("state snapshot file の保存に失敗しました ({}): {error}", path.display()),
+			)
+		}
+	};
+	let (ok, diagnostics) = reload_runtime_with_state_snapshot_file(&state, &root, &snapshot_path).await;
+	let (node_count, restored_node_count) = {
+		let fg = state.read().await.flowgraph.clone();
+		let rt = fg.read().await;
+		let node_count = rt.as_ref().map(|r| r.node_meta.len()).unwrap_or(0);
+		let restored_node_count = rt
+			.as_ref()
+			.and_then(|r| r.loaded_state_restore_report.as_ref())
+			.map(|report| report.restored_node_count);
+		(node_count, restored_node_count)
+	};
+	HttpResponse::Ok().json(ReloadPreservingStateResponse {
+		root_dir: root.display().to_string().replace('\\', "/"),
+		path: save_response.path,
+		ok,
+		diagnostics,
+		node_count,
+		saved_node_count: save_response.snapshot_node_count,
+		restored_node_count,
 	})
 }
 
@@ -874,6 +968,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 		.service(get_diagnostics)
 		.service(post_save_loaded_state_snapshot)
 		.service(post_save_live_state_snapshot)
+		.service(post_reload_preserving_state)
 		.service(post_restore_profile_local_state_snapshot)
 		.service(post_reload)
 		.service(fragment_zip::post_fragment_copy)

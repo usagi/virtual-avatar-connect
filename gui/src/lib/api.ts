@@ -81,6 +81,7 @@ import {
   type FlowgraphWriteFileResponse,
   type FlowgraphOpenExternalResponse,
   type FlowgraphReloadResponse,
+  type FlowgraphReloadPreservingStateResponse,
   type FlowgraphRestoreStateSnapshotResponse,
   type FlowgraphSaveLoadedStateSnapshotResponse,
   type FlowgraphSaveLiveStateSnapshotResponse,
@@ -655,6 +656,13 @@ export const api = {
     return request<FlowgraphReloadResponse>("/flowgraph/reload", {
       method: "POST",
     });
+  },
+  /** live worker state を保存してから同じ snapshot file で reload / restore する。自動 reload ではない。 */
+  flowgraphReloadPreservingState(): Promise<FlowgraphReloadPreservingStateResponse> {
+    return request<FlowgraphReloadPreservingStateResponse>(
+      "/flowgraph/reload/preserve-state",
+      { method: "POST" },
+    );
   },
   // --- Fragment copy / paste (δ-7) ---
   /** 指定した範囲を fragment TOML に切り出す。scope=nodes / file / folder / mixed をサポート。 */
