@@ -899,6 +899,12 @@ Flowgraph Diagnostics の profile-local snapshot file 行に `reload keep state`
 成功時は saved / restored node count と snapshot path を toast で返し、reload 後に tree / diagnostics / current file を再取得する。
 この段階では明示操作に留め、通常 reload ボタンの挙動変更や reload 前自動保存には踏み込まない。
 
+### LF-7aw State-preserving reload studio command ✅
+
+Flowgraph Store に state-preserving reload helper を追加し、Flowgraph Studio の toolbar と command palette から通常 reload とは別に `reload/preserve-state` を実行できるようにした。
+Diagnostics panel の `reload keep state` も同 helper を呼ぶように寄せ、tree / diagnostics / current file 再取得と toast 表示の重複を減らした。
+通常 reload は引き続き state を保持しない explicit reload のまま残し、自動保存や暗黙 restore にはまだ踏み込まない。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
