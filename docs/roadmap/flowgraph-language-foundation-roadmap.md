@@ -905,6 +905,11 @@ Flowgraph Store に state-preserving reload helper を追加し、Flowgraph Stud
 Diagnostics panel の `reload keep state` も同 helper を呼ぶように寄せ、tree / diagnostics / current file 再取得と toast 表示の重複を減らした。
 通常 reload は引き続き state を保持しない explicit reload のまま残し、自動保存や暗黙 restore にはまだ踏み込まない。
 
+### LF-7ax Reload state command guard ✅
+
+Flowgraph Store の通常 reload / state-preserving reload が `mutating` を立てるようにし、reload 中の save / reload 二重実行を GUI 全体で抑制できるようにした。
+Flowgraph Studio の `Reload keeping live state` command と toolbar button は `state_snapshot_file_path` metadata がある runtime でのみ有効化し、path 未設定時は API error に到達する前に GUI 上で unavailable として示す。
+
 ### LF-8 Documentation Generation
 
 node signature / library signature / schema から manual と GUI catalog を生成する。
