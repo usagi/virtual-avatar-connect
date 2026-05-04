@@ -1065,6 +1065,11 @@ metadata line の本数が合っていても、generator 変更で一部 field �
 Control API catalog enrichment 経路で生成した `effect_class` / `capabilities` / `control_triggerable` / `state_model` metadata と、generated manual catalog の summary / capability index が一致することを unit test で固定した。
 manual catalog が `NodeRegistry` を直接読む一方で GUI / Control API catalog は JSON enrichment を通るため、どちらか片方の metadata vocabulary だけが変わる regression を検知できる。
 
+### LF-8ad Control API / manual node metadata parity guard ✅
+
+Control API catalog enrichment 経路で各 node に注入される `contract.summary` / `effect_class` / `capabilities` / `control_triggerable` / `state_model` と、generated manual catalog の各 node `Metadata` line が一致することを unit test で固定した。
+summary 件数だけでなく node 単位の表示値も Control API catalog と照合するため、特定 node だけ metadata 表示が古くなる regression を検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
