@@ -90,6 +90,7 @@ impl SocketType {
 	/// - 原始型: `"bool" / "int" / "float" / "string" / "json" / "exec"`
 	/// - `"list<T>"` / `"map<T>"` / `"map<string, T>"`（後者互換記法）
 	/// - `"dictionary<string, T>"`（将来語彙の parser alias。canonical は `map<T>`）
+	/// - `"collection<T>"`（将来語彙の parser alias。canonical は `list<T>`）
 	/// - `"option<T>"` / `"result<T>"`
 	pub fn parse(s: &str) -> Result<Self, TypeParseError> {
 		parse_type(s.trim())
@@ -341,6 +342,8 @@ pub enum TypeParseError {
 	UnbalancedBracket(String),
 	#[error("list<T> の要素型が空: '{0}'")]
 	EmptyListInner(String),
+	#[error("collection<T> の要素型が空: '{0}'")]
+	EmptyCollectionInner(String),
 	#[error("map の value 型が空: '{0}'")]
 	EmptyMapInner(String),
 	#[error("map の key 型は string のみ許容: '{0}'")]
@@ -374,11 +377,18 @@ fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
 		"motion_frame" => return Ok(SocketType::MotionFrame),
 		_ => {}
 	}
-	// 複合型: list<T> / map<T> / map<string, T> / dictionary<string, T> / option<T> / result<T>
+	// 複合型: list<T> / collection<T> / map<T> / map<string, T> / dictionary<string, T> / option<T> / result<T>
 	if let Some(inner) = strip_generic(s, "list")? {
 		let inner = inner.trim();
 		if inner.is_empty() {
 			return Err(TypeParseError::EmptyListInner(s.to_string()));
+		}
+		return Ok(SocketType::List(Box::new(parse_type(inner)?)));
+	}
+	if let Some(inner) = strip_generic(s, "collection")? {
+		let inner = inner.trim();
+		if inner.is_empty() {
+			return Err(TypeParseError::EmptyCollectionInner(s.to_string()));
 		}
 		return Ok(SocketType::List(Box::new(parse_type(inner)?)));
 	}
@@ -1055,6 +1065,10 @@ mod tests {
 			SocketType::parse("dictionary<string, list<quantity>>").unwrap(),
 			SocketType::Map(Box::new(SocketType::List(Box::new(SocketType::Quantity))))
 		);
+		assert_eq!(
+			SocketType::parse("collection<option<string>>").unwrap(),
+			SocketType::List(Box::new(SocketType::Option(Box::new(SocketType::String))))
+		);
 	}
 
 	#[test]
@@ -1093,6 +1107,10 @@ mod tests {
 	fn parse_rejects_unknown() {
 		assert!(matches!(SocketType::parse("unknown"), Err(TypeParseError::UnknownPrimitive(_))));
 		assert!(matches!(SocketType::parse("list<>"), Err(TypeParseError::EmptyListInner(_))));
+		assert!(matches!(
+			SocketType::parse("collection<>"),
+			Err(TypeParseError::EmptyCollectionInner(_))
+		));
 		assert!(matches!(
 			SocketType::parse("dictionary<string>"),
 			Err(TypeParseError::EmptyDictionaryValue(_))

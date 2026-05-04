@@ -1502,6 +1502,13 @@ mod tests {
 		assert_eq!(dictionary_expr.name, "map");
 		assert_eq!(dictionary_expr.args[0].name, "string");
 		assert_eq!(dictionary_expr.args[1].name, "list");
+
+		let collection_response = parse_socket_type_response("collection<option<string>>");
+		assert!(collection_response.valid);
+		assert_eq!(collection_response.canonical_type.as_deref(), Some("list<option<string>>"));
+		let collection_expr = collection_response.type_expr.expect("collection expr");
+		assert_eq!(collection_expr.name, "list");
+		assert_eq!(collection_expr.args[0].name, "option");
 	}
 
 	#[test]
