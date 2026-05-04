@@ -130,5 +130,10 @@ properties.value = "hi"
 		report.graph_signature.files[0].package_version.as_deref(),
 		Some("1.2.3-alpha.1+build.5")
 	);
+	assert_eq!(report.package_manifests.len(), 1);
+	assert_eq!(report.package_manifests[0].source_fq, "main");
+	assert_eq!(report.package_manifests[0].id.as_deref(), Some("example.version"));
+	assert_eq!(report.package_manifests[0].version.as_deref(), Some("1.2.3-alpha.1+build.5"));
+	assert_eq!(report.package_manifests[0].exports, vec!["main".to_string()]);
 	let _ = std::fs::remove_dir_all(&root);
 }

@@ -1238,6 +1238,13 @@ export type FlowgraphSignature = {
   boundary_outputs: FlowgraphSignaturePort[];
 };
 
+export type FlowgraphPackageManifestSummary = {
+  source_fq: string;
+  id?: string;
+  version?: string;
+  exports: string[];
+};
+
 export type FlowgraphDiagnosticsResponse = {
   root_dir: string;
   ok: boolean;
@@ -1246,6 +1253,7 @@ export type FlowgraphDiagnosticsResponse = {
   node_meta: Record<string, FlowgraphLoadedNodeMeta>;
   capability_summary: FlowgraphCapabilitySummary;
   graph_signature: FlowgraphSignature;
+  package_manifests: FlowgraphPackageManifestSummary[];
   loaded_state_summary: FlowgraphProgramStateSummary;
   loaded_state_snapshot: FlowgraphProgramStateSnapshot;
   loaded_state_restore_report: FlowgraphProgramStateRestoreReport | null;

@@ -184,6 +184,8 @@ pub struct LoadReport {
 	pub node_meta: std::collections::HashMap<String, LoadedNodeMeta>,
 	/// LF-1: graph-as-node / library signature の入口となる read-only graph signature。
 	pub graph_signature: GraphSignature,
+	/// LF-4: `[package]` manifest を file ごとに集約した read-only package catalog。
+	pub package_manifests: Vec<PackageManifestSummary>,
 	/// LF-2: graph 全体が要求する capability の集計。policy enforcement ではなく read-only metadata。
 	pub capability_summary: GraphCapabilitySummary,
 	/// RM-3: 各 `.flowgraph.toml` の fq → `[meta]` の mode 系メタ（省略時は既定）。
@@ -195,11 +197,23 @@ impl std::fmt::Debug for LoadReport {
 		f.debug_struct("LoadReport")
 			.field("nodes", &self.node_meta.keys().collect::<Vec<_>>())
 			.field("graph_signature", &self.graph_signature)
+			.field("package_manifests", &self.package_manifests)
 			.field("capability_summary", &self.capability_summary)
 			.field("file_activation", &self.file_activation.keys().collect::<Vec<_>>())
 			.field("diagnostics", &self.diagnostics)
 			.finish()
 	}
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PackageManifestSummary {
+	pub source_fq: String,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub id: Option<String>,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub version: Option<String>,
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub exports: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]

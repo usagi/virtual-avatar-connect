@@ -14,7 +14,9 @@
 //! - アプリ終了時は `shutdown()` でワーカーを停止。
 
 use crate::flowgraph::activation::{mode_group_orphan_diagnostics, TriggerGate};
-use crate::flowgraph::loader::{Diagnostic, FlowgraphFileActivationMeta, GraphCapabilitySummary, GraphSignature, LoadedNodeMeta, Severity};
+use crate::flowgraph::loader::{
+	Diagnostic, FlowgraphFileActivationMeta, GraphCapabilitySummary, GraphSignature, LoadedNodeMeta, PackageManifestSummary, Severity,
+};
 use crate::flowgraph::node::PureEvalHost;
 use crate::flowgraph::node::TriggerHandle;
 use crate::flowgraph::{
@@ -59,6 +61,8 @@ pub struct FlowgraphRuntime {
 	pub node_meta: HashMap<String, LoadedNodeMeta>,
 	/// LF-1: graph-as-node / library signature の入口となる read-only graph signature。
 	pub graph_signature: GraphSignature,
+	/// LF-4: `[package]` manifest catalog。lockfile / tooling の read-only entry point。
+	pub package_manifests: Vec<PackageManifestSummary>,
 	/// LF-2: graph 全体の capability summary。GUI と policy preview 用の read-only metadata。
 	pub capability_summary: GraphCapabilitySummary,
 	/// LF-7: ロード直後の stateful node summary。worker 実行後の live state ではない。
@@ -86,6 +90,7 @@ impl Clone for FlowgraphRuntime {
 			diagnostics: self.diagnostics.clone(),
 			node_meta: self.node_meta.clone(),
 			graph_signature: self.graph_signature.clone(),
+			package_manifests: self.package_manifests.clone(),
 			capability_summary: self.capability_summary.clone(),
 			loaded_state_summary: self.loaded_state_summary.clone(),
 			loaded_state_snapshot: self.loaded_state_snapshot.clone(),
@@ -190,6 +195,7 @@ impl FlowgraphRuntime {
 			)],
 			node_meta: HashMap::new(),
 			graph_signature: GraphSignature::default(),
+			package_manifests: Vec::new(),
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),
 			loaded_state_snapshot: ProgramStateSnapshot::default(),
@@ -219,6 +225,7 @@ impl FlowgraphRuntime {
 					)],
 					node_meta: HashMap::new(),
 					graph_signature: GraphSignature::default(),
+					package_manifests: Vec::new(),
 					capability_summary: GraphCapabilitySummary::default(),
 					loaded_state_summary: ProgramStateSummary::default(),
 					loaded_state_snapshot: ProgramStateSnapshot::default(),
@@ -239,6 +246,7 @@ impl FlowgraphRuntime {
 					mut diagnostics,
 					node_meta,
 					graph_signature,
+					package_manifests,
 					capability_summary,
 					file_activation,
 					..
@@ -257,6 +265,7 @@ impl FlowgraphRuntime {
 								diagnostics,
 								node_meta,
 								graph_signature,
+								package_manifests,
 								capability_summary,
 								loaded_state_summary: program.state_summary(),
 								loaded_state_snapshot: program.export_state_snapshot(),
@@ -282,6 +291,7 @@ impl FlowgraphRuntime {
 					diagnostics,
 					node_meta,
 					graph_signature,
+					package_manifests,
 					capability_summary,
 					loaded_state_summary,
 					loaded_state_snapshot,
@@ -300,6 +310,7 @@ impl FlowgraphRuntime {
 					diagnostics,
 					node_meta: HashMap::new(),
 					graph_signature: GraphSignature::default(),
+					package_manifests: Vec::new(),
 					capability_summary: GraphCapabilitySummary::default(),
 					loaded_state_summary: ProgramStateSummary::default(),
 					loaded_state_snapshot: ProgramStateSnapshot::default(),
@@ -395,6 +406,7 @@ impl FlowgraphRuntime {
 			diagnostics: Vec::new(),
 			node_meta: HashMap::new(),
 			graph_signature: GraphSignature::default(),
+			package_manifests: Vec::new(),
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),
 			loaded_state_snapshot: ProgramStateSnapshot::default(),

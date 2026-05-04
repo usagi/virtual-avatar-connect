@@ -8,7 +8,7 @@
 
 use crate::flowgraph::loader::diagnostic::{
 	Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, GraphCapabilitySummary, GraphSignature, GraphSignatureFile,
-	GraphSignaturePort, GraphSignatureTrigger, LoadError, LoadReport, LoadedNodeMeta, Severity,
+	GraphSignaturePort, GraphSignatureTrigger, LoadError, LoadReport, LoadedNodeMeta, PackageManifestSummary, Severity,
 };
 use crate::flowgraph::loader::reference::parse_port_ref;
 use crate::flowgraph::node::{InputMap, NodeSpec, PortSpec};
@@ -559,6 +559,7 @@ impl BuildContext {
 		})?;
 
 		let capability_summary = crate::flowgraph::loader::diagnostic::GraphCapabilitySummary::from_node_meta(reg, &node_meta);
+		let package_manifests = build_package_manifest_summary(&self.files);
 		let graph_signature = build_graph_signature(
 			reg,
 			&self.files,
@@ -575,10 +576,28 @@ impl BuildContext {
 			diagnostics,
 			node_meta,
 			graph_signature,
+			package_manifests,
 			capability_summary,
 			file_activation,
 		})
 	}
+}
+
+fn build_package_manifest_summary(files: &[(String, PathBuf, FlowgraphFile)]) -> Vec<PackageManifestSummary> {
+	let mut manifests: Vec<PackageManifestSummary> = files
+		.iter()
+		.filter_map(|(fq, _, file)| {
+			let package = file.package.as_ref()?;
+			Some(PackageManifestSummary {
+				source_fq: fq.clone(),
+				id: package.id.clone(),
+				version: package.version.clone(),
+				exports: package.exports.clone(),
+			})
+		})
+		.collect();
+	manifests.sort_by(|a, b| a.source_fq.cmp(&b.source_fq));
+	manifests
 }
 
 fn build_graph_signature(
