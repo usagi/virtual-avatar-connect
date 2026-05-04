@@ -533,6 +533,12 @@ validated package catalog から local package dependency DAG の dependency-fir
 order は同一 flowgraph root に存在する package id だけを対象にし、依存先が依存元より先に現れる deterministic metadata として lockfile / resolver tooling の足場にする。
 まだ resolver execution、transitive closure object、external registry fetch、lockfile write は行わず、既存 diagnostics API で観測できる read-only order に留める。
 
+### LF-4k Package lock preview metadata ✅
+
+`package_dependency_order` と validated package catalog から `package_lock_preview` を生成し、dependency-first の lockfile candidate entries を diagnostics API / GUI DTO へ公開した。
+各 entry は package id、version、source fq、direct dependency requirements だけを持つ read-only metadata で、将来の lockfile writer が使う最小 envelope とする。
+まだファイル書き込み、hash / content digest、external registry pinning、transitive closure object は扱わず、runtime diagnostics で観測できる preview に留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
