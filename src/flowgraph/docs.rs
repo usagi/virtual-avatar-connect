@@ -194,10 +194,10 @@ fn render_node(out: &mut String, registry: &NodeRegistry, spec: &NodeSpec) {
 		for p in &inputs {
 			out.push_str(&format!(
 				"| `{}` | {} | {} | {} |\n",
-				p.name,
-				port_type(p),
-				port_default(p),
-				port_note(p),
+				table_cell(&p.name),
+				table_cell(&port_type(p)),
+				table_cell(&port_default(p)),
+				table_cell(&port_note(p)),
 			));
 		}
 		out.push('\n');
@@ -209,7 +209,12 @@ fn render_node(out: &mut String, registry: &NodeRegistry, spec: &NodeSpec) {
 		out.push_str("| Output | Type | Note |\n");
 		out.push_str("|---|---|---|\n");
 		for p in &outputs {
-			out.push_str(&format!("| `{}` | {} | {} |\n", p.name, port_type(p), port_note(p),));
+			out.push_str(&format!(
+				"| `{}` | {} | {} |\n",
+				table_cell(&p.name),
+				table_cell(&port_type(p)),
+				table_cell(&port_note(p)),
+			));
 		}
 		out.push('\n');
 	}
@@ -221,11 +226,11 @@ fn render_node(out: &mut String, registry: &NodeRegistry, spec: &NodeSpec) {
 		for p in &spec.properties {
 			out.push_str(&format!(
 				"| `{}` | `{}` | `{}` | {} | {} |\n",
-				p.name,
-				p.ty,
-				property_default(p),
+				table_cell(&p.name),
+				table_cell(&p.ty.to_string()),
+				table_cell(&property_default(p)),
 				if p.required { "✔" } else { "" },
-				p.description.as_deref().unwrap_or(""),
+				table_cell(p.description.as_deref().unwrap_or("")),
 			));
 		}
 		out.push('\n');
@@ -353,6 +358,10 @@ fn compact_json(v: &serde_json::Value) -> String {
 	serde_json::to_string(v).unwrap_or_else(|_| "?".into())
 }
 
+fn table_cell(s: &str) -> String {
+	s.replace('\n', " ").replace('\r', " ").replace('|', "\\|")
+}
+
 fn anchor(feature: &str) -> String {
 	// GitHub-style anchor: lowercase, replace non-alnum with `-`, then collapse `-`.
 	let mut s = String::with_capacity(feature.len());
@@ -427,5 +436,10 @@ mod docs_tests {
 		assert!(rendered.contains("effect: `effectful`"));
 		assert!(rendered.contains("capabilities: `trace_write`"));
 		assert!(rendered.contains("snapshot=explicit/json"));
+	}
+
+	#[test]
+	fn markdown_table_cells_escape_pipes_and_newlines() {
+		assert_eq!(table_cell("a|b\nc\rd"), "a\\|b c d");
 	}
 }
