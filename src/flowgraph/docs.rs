@@ -639,6 +639,16 @@ mod docs_tests {
 	}
 
 	#[test]
+	fn node_catalog_metadata_lines_keep_expected_fields() {
+		let rendered = render_node_catalog_md(&default_registry());
+		for line in rendered.lines().filter(|line| line.starts_with("**Metadata:**")) {
+			for field in ["contract:", "; effect: `", "; capabilities:", "; trigger:", "; state:"] {
+				assert!(line.contains(field), "metadata line should include {field}: {line}");
+			}
+		}
+	}
+
+	#[test]
 	fn node_catalog_categories_cover_registry_once() {
 		let registry = default_registry();
 		let rendered = render_node_catalog_md(&registry);
