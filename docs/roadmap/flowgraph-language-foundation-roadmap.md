@@ -762,6 +762,12 @@ field 単位の `field_record_refs` と schema 単位の `record_refs` を併せ
 `option<record<x>>` など generic 内の参照も `record_refs` と同じ収集経路で扱い、未定義参照は従来通り別 warning とする。
 現段階では recursive schema を loader error にはせず、GUI / docs / package tooling が循環を観測できる read-only lint に留める。
 
+### LF-5v Record schema dependency order metadata ✅
+
+`type_schema_dependency_order[]` を LoadReport / diagnostics API / graph signature / GUI DTO に追加し、schema dependency graph の dependency-first order を read-only 公開した。
+`record_refs` と同じ dependency graph から生成し、schema docs generator や package tooling が依存先 schema を先に処理できる。
+cycle がある場合も loader warning と併用し、metadata は重複なし deterministic order として返す。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
