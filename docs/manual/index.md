@@ -11,6 +11,7 @@ v2 では「チャンネル名で繋ぐ v1 プロセッサー列」から **Flow
 ## 目次
 
 ### はじめに
+
 - [Quickstart](./quickstart.md) — v2 の初回起動から「発話 → 字幕 → TTS」まで 5 分で動かす
 - [conf.toml リファレンス](./conf-reference.md) — v2 配布 `conf.toml` のキー一覧
 - [Node Catalog](./node-catalog.md) — 組み込みノードの全ポート・全プロパティ、effect / capability / state metadata の逆引き（自動生成）

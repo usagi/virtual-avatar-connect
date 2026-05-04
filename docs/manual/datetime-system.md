@@ -62,26 +62,26 @@ default_timezone = "+09:00"   # 空 / 未指定 / "Z" / "UTC" は UTC
 
 ## よくあるパターン
 
-1. **「今」を RFC3339 文字列にしたい**  
+1. **「今」を RFC3339 文字列にしたい**
    `datetime.now` → `datetime.format`（`format = rfc3339`、UTC 表示なら `timezone` 空）
 
-2. **「この時刻から何秒経ったか」**  
+2. **「この時刻から何秒経ったか」**
    過去の `datetime` を保持 → `datetime.now` と `diff` → 秒 `quantity` → 必要なら `flowgraph.unit.convert` で `ms`
 
-3. **外部から来た「タイムゾーン無し」文字列**  
+3. **外部から来た「タイムゾーン無し」文字列**
    `parse` の **`default_timezone`** をアプリの想定（例: `+09:00`）に合わせる。厳密に **必ずゾーン付きしか受け付けたくない**場合は `require_timezone = true`
 
 ---
 
 ## FAQ
 
-- **Q. `DateTime` は serde / JSON では何になる？**  
+- **Q. `DateTime` は serde / JSON では何になる？**
   **RFC3339 文字列**（UTC は `Z` 終端）。`SocketValue` の wire も同方針です。
 
-- **Q. なぜ IANA タイムゾーンはまだ使えない？**  
+- **Q. なぜ IANA タイムゾーンはまだ使えない？**
   v0 では **固定オフセットのみ**にして、DST や tzdb 起因の**暗黙の解釈差**を型システムの外に出さないため。将来の π+ で検討。
 
-- **Q. chrono はまだ使われている？**  
+- **Q. chrono はまだ使われている？**
   直接依存は削除済み。**間接的に** 一部 crate（例: Twitch クライアント）経由で残る可能性があります。Flowgraph / アプリの日時表現の正本は **jiff** です。
 
 ---
