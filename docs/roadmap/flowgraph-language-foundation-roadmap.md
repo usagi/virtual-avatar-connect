@@ -1005,6 +1005,11 @@ GUI catalog と manual catalog の発火可否語彙を揃え、現時点で明�
 Control API contract JSON に含まれる port enum (`closed_string_variants`) と property choices を generated manual catalog の Note 欄へ投影した。
 TTS engine の閉集合 input や datetime / easing / signal 系 property choices を manual から確認できるようにし、GUI catalog と manual catalog の選択肢 metadata を揃えた。
 
+### LF-8r Enum metadata coverage guard ✅
+
+`NodeRegistry::all_specs()` を走査し、port の `closed_string_variants` と property `choices` が generated manual catalog の Note 欄に出力されることを unit test で固定した。
+今後 node choices が増えた場合、Control API / GUI catalog だけに選択肢が出て manual から抜ける regression を docs test で検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
