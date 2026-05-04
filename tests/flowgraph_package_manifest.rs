@@ -279,6 +279,57 @@ properties.value = "hi"
 }
 
 #[test]
+fn package_dependency_version_mismatch_is_not_cycle_edge() {
+	let root = tmp_root("dependency-version-mismatch-not-cycle-edge");
+	write(
+		&root.join("a.flowgraph.toml"),
+		r#"[package]
+id = "example.a"
+version = "1.0.0"
+exports = ["a"]
+
+[package.dependencies]
+"example.b" = "2.0.0"
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "a"
+"#,
+	);
+	write(
+		&root.join("b.flowgraph.toml"),
+		r#"[package]
+id = "example.b"
+version = "1.0.0"
+exports = ["b"]
+
+[package.dependencies]
+"example.a" = "*"
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "b"
+"#,
+	);
+
+	let err = load_flowgraph_dir(&root).expect_err("dependency version mismatch");
+	assert!(
+		err.errors()
+			.any(|diagnostic| diagnostic.code == DiagnosticCode::InvalidPackageManifest),
+		"{:#?}",
+		err.diagnostics
+	);
+	assert!(
+		!err.diagnostics.iter().any(|diagnostic| diagnostic.message.contains("閉路")),
+		"{:#?}",
+		err.diagnostics
+	);
+	let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
 fn package_dependency_cycle_returns_error() {
 	let root = tmp_root("dependency-cycle");
 	write(

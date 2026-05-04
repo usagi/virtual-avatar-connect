@@ -331,6 +331,7 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 					.with_file(path.clone())
 					.with_hint(format!("[package].dependencies.{dependency_id}")),
 				);
+				continue;
 			}
 			if let Some(package_id) = package_id {
 				package_dependencies
