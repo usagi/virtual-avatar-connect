@@ -1030,6 +1030,11 @@ Generated catalog 冒頭の型表記一覧を固定文字列から `NodeRegistry
 `render_node_catalog_md` の出力が CR を含まない LF-only であり、末尾改行を持つことを unit test で固定した。
 Windows checkout / formatter / bless 経路の違いで generated catalog の改行方針が揺れる regression を docs test で検知できる。
 
+### LF-8w Generated anchor link resolution guard ✅
+
+Generated catalog 内の `](#...)` anchor link target が、`NodeRegistry::features()` 由来の feature heading anchor に解決できることを unit test で固定した。
+Metadata Index や通常 Index の link 生成を変更した際、存在しない section へ飛ぶ manual link regression を docs test で検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
