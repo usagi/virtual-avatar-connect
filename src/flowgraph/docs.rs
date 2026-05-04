@@ -615,6 +615,18 @@ mod docs_tests {
 	}
 
 	#[test]
+	fn node_catalog_feature_sections_are_not_duplicated() {
+		let registry = default_registry();
+		let rendered = render_node_catalog_md(&registry);
+		let section_count = rendered.lines().filter(|line| line.starts_with("### `flowgraph.")).count();
+		assert_eq!(
+			section_count,
+			registry.features().len(),
+			"generated catalog should contain exactly one detail section per registry feature"
+		);
+	}
+
+	#[test]
 	fn generated_catalog_anchor_links_resolve_to_registry_features() {
 		let registry = default_registry();
 		let rendered = render_node_catalog_md(&registry);
