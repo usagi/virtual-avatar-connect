@@ -233,6 +233,10 @@ fn socket_value_to_json(v: &SocketValue) -> serde_json::Value {
 			let obj: serde_json::Map<String, serde_json::Value> = m.iter().map(|(k, v)| (k.clone(), socket_value_to_json(v))).collect();
 			serde_json::Value::Object(obj)
 		}
+		SocketValue::Option(value) => value
+			.as_ref()
+			.map(|value| socket_value_to_json(value))
+			.unwrap_or(serde_json::Value::Null),
 		SocketValue::Result(result) => {
 			let mut obj = serde_json::Map::new();
 			obj.insert("ok".into(), serde_json::Value::Bool(result.ok));

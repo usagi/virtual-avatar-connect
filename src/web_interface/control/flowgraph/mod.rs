@@ -1487,6 +1487,13 @@ mod tests {
 		assert_eq!(expr.args[1].name, "list");
 		assert_eq!(expr.args[1].args[0].name, "json");
 		assert!(response.error.is_none());
+
+		let option_response = parse_socket_type_response("option<list<string>>");
+		assert!(option_response.valid);
+		assert_eq!(option_response.canonical_type.as_deref(), Some("option<list<string>>"));
+		let option_expr = option_response.type_expr.expect("option expr");
+		assert_eq!(option_expr.name, "option");
+		assert_eq!(option_expr.args[0].name, "list");
 	}
 
 	#[test]
@@ -1512,6 +1519,12 @@ mod tests {
 		let rejected = socket_type_compatibility_response("string", "quantity");
 		assert!(rejected.valid);
 		assert_eq!(rejected.compatible, Some(false));
+
+		let option = socket_type_compatibility_response("option<list<float>>", "option<list<quantity>>");
+		assert!(option.valid);
+		assert_eq!(option.compatible, Some(true));
+		assert_eq!(option.from_type_expr.as_ref().expect("from expr").name, "option");
+		assert_eq!(option.to_type_expr.as_ref().expect("to expr").args[0].name, "list");
 	}
 
 	#[test]

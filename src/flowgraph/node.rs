@@ -171,6 +171,10 @@ impl SocketValueRepr {
 					m.iter().map(|(k, v)| (k.clone(), SocketValueRepr::from_value(v).0)).collect();
 				serde_json::Value::Object(obj)
 			}
+			SocketValue::Option(value) => value
+				.as_ref()
+				.map(|value| SocketValueRepr::from_value(value).0)
+				.unwrap_or(serde_json::Value::Null),
 			SocketValue::Result(result) => {
 				let mut obj = serde_json::Map::new();
 				obj.insert("ok".into(), serde_json::Value::Bool(result.ok));
@@ -222,6 +226,8 @@ pub(crate) fn json_to_socket_value(ty: &SocketType, v: &serde_json::Value) -> Op
 			}
 			Some(SocketValue::Map(out))
 		}
+		(SocketType::Option(_), J::Null) => Some(SocketValue::Option(None)),
+		(SocketType::Option(inner), value) => json_to_socket_value(inner, value).map(|value| SocketValue::Option(Some(Box::new(value)))),
 		(SocketType::Result(inner), J::Object(obj)) => {
 			let ok = obj.get("ok")?.as_bool()?;
 			let value = match obj.get("value") {

@@ -33,6 +33,7 @@ fn sv_to_json(v: &SocketValue) -> JsonValue {
 		SocketValue::Json(j) => j.clone(),
 		SocketValue::List(xs) => JsonValue::Array(xs.iter().map(sv_to_json).collect()),
 		SocketValue::Map(m) => JsonValue::Object(m.iter().map(|(k, v)| (k.clone(), sv_to_json(v))).collect()),
+		SocketValue::Option(value) => value.as_ref().map(|value| sv_to_json(value)).unwrap_or(JsonValue::Null),
 		SocketValue::Result(result) => {
 			let mut obj = serde_json::Map::new();
 			obj.insert("ok".into(), JsonValue::Bool(result.ok));

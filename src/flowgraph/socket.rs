@@ -30,6 +30,9 @@ pub enum SocketType {
 	Json,
 	List(Box<SocketType>),
 	Map(Box<SocketType>),
+	/// 値が存在しない可能性を明示する型（LF-5j）。
+	/// Wire 表現は `null` または inner 型の値。
+	Option(Box<SocketType>),
 	/// recoverable error を第一級値として運ぶ型（LF-6a）。
 	/// Wire 表現は `{ ok, value?, error?, code? }` の JSON object。
 	Result(Box<SocketType>),
@@ -69,6 +72,7 @@ impl SocketType {
 			SocketType::Json => Some(SocketValue::Json(serde_json::Value::Null)),
 			SocketType::List(_) => Some(SocketValue::List(Vec::new())),
 			SocketType::Map(_) => Some(SocketValue::Map(BTreeMap::new())),
+			SocketType::Option(_) => Some(SocketValue::Option(None)),
 			SocketType::Result(_) => Some(SocketValue::Result(FlowResult::err(""))),
 			SocketType::Exec => None,
 			SocketType::Table => Some(SocketValue::Table(Table::empty())),
@@ -84,7 +88,7 @@ impl SocketType {
 	/// 型表記文字列をパース。
 	///
 	/// - 原始型: `"bool" / "int" / "float" / "string" / "json" / "exec"`
-	/// - `"list<T>"` / `"map<T>"` / `"map<string, T>"`（後者互換記法）/ `"result<T>"`
+	/// - `"list<T>"` / `"map<T>"` / `"map<string, T>"`（後者互換記法）/ `"option<T>"` / `"result<T>"`
 	pub fn parse(s: &str) -> Result<Self, TypeParseError> {
 		parse_type(s.trim())
 	}
@@ -123,6 +127,7 @@ impl SocketType {
 			(Json, MotionFrame) | (MotionFrame, Json) => true,
 			(List(a), List(b)) => a.compatible_with(b),
 			(Map(a), Map(b)) => a.compatible_with(b),
+			(Option(a), Option(b)) => a.compatible_with(b),
 			(Result(a), Result(b)) => a.compatible_with(b),
 			(a, b) => a == b,
 		}
@@ -161,6 +166,7 @@ impl SocketTypeExpr {
 		match ty {
 			SocketType::List(inner) => Self::generic("list", ty, vec![inner.type_expr()]),
 			SocketType::Map(inner) => Self::generic("map", ty, vec![SocketType::String.type_expr(), inner.type_expr()]),
+			SocketType::Option(inner) => Self::generic("option", ty, vec![inner.type_expr()]),
 			SocketType::Result(inner) => Self::generic("result", ty, vec![inner.type_expr()]),
 			_ => Self::primitive(ty),
 		}
@@ -243,6 +249,13 @@ pub fn coerce_to_type(value: SocketValue, target: &SocketType) -> Result<SocketV
 			}
 			Ok(SocketValue::Map(out))
 		}
+		(SocketValue::Option(value), SocketType::Option(inner)) => {
+			let value = match value {
+				Some(value) => Some(Box::new(coerce_to_type(*value, inner)?)),
+				None => None,
+			};
+			Ok(SocketValue::Option(value))
+		}
 		(SocketValue::Result(result), SocketType::Result(inner)) => {
 			let result = result.coerce_value_to(inner).map_err(CoerceError::ResultValueError)?;
 			Ok(SocketValue::Result(result))
@@ -286,6 +299,7 @@ impl fmt::Display for SocketType {
 			SocketType::Json => f.write_str("json"),
 			SocketType::List(inner) => write!(f, "list<{inner}>"),
 			SocketType::Map(inner) => write!(f, "map<{inner}>"),
+			SocketType::Option(inner) => write!(f, "option<{inner}>"),
 			SocketType::Result(inner) => write!(f, "result<{inner}>"),
 			SocketType::Exec => f.write_str("exec"),
 			SocketType::Table => f.write_str("table"),
@@ -329,6 +343,8 @@ pub enum TypeParseError {
 	EmptyMapInner(String),
 	#[error("map の key 型は string のみ許容: '{0}'")]
 	InvalidMapKey(String),
+	#[error("option<T> の value 型が空: '{0}'")]
+	EmptyOptionInner(String),
 	#[error("result<T> の value 型が空: '{0}'")]
 	EmptyResultInner(String),
 }
@@ -352,7 +368,7 @@ fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
 		"motion_frame" => return Ok(SocketType::MotionFrame),
 		_ => {}
 	}
-	// 複合型: list<T> / map<T> / map<string, T>
+	// 複合型: list<T> / map<T> / map<string, T> / option<T> / result<T>
 	if let Some(inner) = strip_generic(s, "list")? {
 		let inner = inner.trim();
 		if inner.is_empty() {
@@ -381,6 +397,13 @@ fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
 		}
 		// "map<T>" 短縮記法
 		return Ok(SocketType::Map(Box::new(parse_type(inner)?)));
+	}
+	if let Some(inner) = strip_generic(s, "option")? {
+		let inner = inner.trim();
+		if inner.is_empty() {
+			return Err(TypeParseError::EmptyOptionInner(s.to_string()));
+		}
+		return Ok(SocketType::Option(Box::new(parse_type(inner)?)));
 	}
 	if let Some(inner) = strip_generic(s, "result")? {
 		let inner = inner.trim();
@@ -492,6 +515,8 @@ pub enum SocketValue {
 	List(Vec<SocketValue>),
 	/// key は常に String（spec §2.1）。
 	Map(BTreeMap<String, SocketValue>),
+	/// `option<T>` の値。`None` は wire 上の `null`。
+	Option(Option<Box<SocketValue>>),
 	/// `result<T>` の値。`ok=false` の場合、`value` は通常 `None`。
 	Result(FlowResult),
 	/// 汎用表形式データ（η フェーズ追加）。Arc 共有 + COW mutation。
@@ -526,6 +551,7 @@ impl SocketValue {
 				let inner = m.values().next().map(|v| v.type_of()).unwrap_or(SocketType::Json);
 				SocketType::Map(Box::new(inner))
 			}
+			SocketValue::Option(value) => SocketType::Option(Box::new(value.as_ref().map(|v| v.type_of()).unwrap_or(SocketType::Json))),
 			SocketValue::Result(result) => SocketType::Result(Box::new(result.value_type().unwrap_or(SocketType::Json))),
 			SocketValue::Table(_) => SocketType::Table,
 			SocketValue::Quantity(_) => SocketType::Quantity,
@@ -615,6 +641,15 @@ impl SocketValue {
 			}),
 		}
 	}
+	pub fn as_option(&self) -> Result<Option<&SocketValue>, ValueCastError> {
+		match self {
+			SocketValue::Option(v) => Ok(v.as_deref()),
+			_ => Err(ValueCastError::Mismatch {
+				expected: "option",
+				actual: self.type_of(),
+			}),
+		}
+	}
 	pub fn as_table(&self) -> Result<&Table, ValueCastError> {
 		match self {
 			SocketValue::Table(t) => Ok(t),
@@ -669,6 +704,7 @@ impl SocketValue {
 			| (SocketValue::MotionFrame(_), SocketType::MotionFrame) => true,
 			(SocketValue::List(xs), SocketType::List(inner)) => xs.iter().all(|v| v.matches(inner)),
 			(SocketValue::Map(m), SocketType::Map(inner)) => m.values().all(|v| v.matches(inner)),
+			(SocketValue::Option(value), SocketType::Option(inner)) => value.as_ref().map(|v| v.matches(inner)).unwrap_or(true),
 			(SocketValue::Result(result), SocketType::Result(inner)) => result.value_matches(inner),
 			_ => false,
 		}
@@ -719,6 +755,7 @@ pub fn from_toml_value(expected: &SocketType, v: &toml::Value) -> Result<SocketV
 			}
 			Ok(SocketValue::Map(out))
 		}
+		(SocketType::Option(inner), value) => from_toml_value(inner, value).map(|value| SocketValue::Option(Some(Box::new(value)))),
 		(SocketType::Result(inner), toml::Value::Table(tbl)) => result_from_toml_table(inner, tbl).map(SocketValue::Result),
 		(SocketType::Quantity, toml::Value::Float(f)) => Ok(SocketValue::Quantity(Quantity::dimensionless(*f))),
 		(SocketType::Quantity, toml::Value::Integer(i)) => Ok(SocketValue::Quantity(Quantity::dimensionless(*i as f64))),
@@ -988,23 +1025,30 @@ mod tests {
 			SocketType::parse("result<list<string>>").unwrap(),
 			SocketType::Result(Box::new(SocketType::List(Box::new(SocketType::String))))
 		);
+		assert_eq!(
+			SocketType::parse("option<map<string, json>>").unwrap(),
+			SocketType::Option(Box::new(SocketType::Map(Box::new(SocketType::Json))))
+		);
 	}
 
 	#[test]
 	fn type_expr_describes_generic_shape() {
-		let ty = SocketType::Result(Box::new(SocketType::List(Box::new(SocketType::Map(Box::new(SocketType::Json))))));
+		let ty = SocketType::Result(Box::new(SocketType::Option(Box::new(SocketType::List(Box::new(SocketType::Map(
+			Box::new(SocketType::Json),
+		)))))));
 		let expr = ty.type_expr();
 		assert_eq!(expr.kind, SocketTypeExprKind::Generic);
 		assert_eq!(expr.name, "result");
-		assert_eq!(expr.display, "result<list<map<json>>>");
-		assert_eq!(expr.args[0].name, "list");
-		assert_eq!(expr.args[0].args[0].name, "map");
-		assert_eq!(expr.args[0].args[0].args[0].name, "string");
-		assert_eq!(expr.args[0].args[0].args[1].name, "json");
+		assert_eq!(expr.display, "result<option<list<map<json>>>>");
+		assert_eq!(expr.args[0].name, "option");
+		assert_eq!(expr.args[0].args[0].name, "list");
+		assert_eq!(expr.args[0].args[0].args[0].name, "map");
+		assert_eq!(expr.args[0].args[0].args[0].args[0].name, "string");
+		assert_eq!(expr.args[0].args[0].args[0].args[1].name, "json");
 
 		let json = serde_json::to_value(&expr).unwrap();
 		assert_eq!(json["kind"].as_str(), Some("generic"));
-		assert_eq!(json["args"][0]["args"][0]["args"].as_array().unwrap().len(), 2);
+		assert_eq!(json["args"][0]["args"][0]["args"][0]["args"].as_array().unwrap().len(), 2);
 	}
 
 	#[test]
@@ -1019,15 +1063,19 @@ mod tests {
 	fn parse_rejects_unknown() {
 		assert!(matches!(SocketType::parse("unknown"), Err(TypeParseError::UnknownPrimitive(_))));
 		assert!(matches!(SocketType::parse("list<>"), Err(TypeParseError::EmptyListInner(_))));
+		assert!(matches!(SocketType::parse("option<>"), Err(TypeParseError::EmptyOptionInner(_))));
 		assert!(matches!(SocketType::parse("result<>"), Err(TypeParseError::EmptyResultInner(_))));
 	}
 
 	#[test]
 	fn type_display_roundtrip() {
-		let t = SocketType::List(Box::new(SocketType::Map(Box::new(SocketType::String))));
-		let s = t.to_string();
-		assert_eq!(s, "list<map<string>>");
-		assert_eq!(SocketType::parse(&s).unwrap(), t);
+		for t in [
+			SocketType::List(Box::new(SocketType::Map(Box::new(SocketType::String)))),
+			SocketType::Option(Box::new(SocketType::List(Box::new(SocketType::Quantity)))),
+		] {
+			let s = t.to_string();
+			assert_eq!(SocketType::parse(&s).unwrap(), t);
+		}
 	}
 
 	#[test]
@@ -1061,6 +1109,12 @@ mod tests {
 		let result = SocketValue::Result(FlowResult::ok(SocketValue::String("ok".into())));
 		assert!(result.matches(&SocketType::Result(Box::new(SocketType::String))));
 		assert!(!result.matches(&SocketType::Result(Box::new(SocketType::Int))));
+
+		let none = SocketValue::Option(None);
+		assert!(none.matches(&SocketType::Option(Box::new(SocketType::String))));
+		let some = SocketValue::Option(Some(Box::new(SocketValue::String("ok".into()))));
+		assert!(some.matches(&SocketType::Option(Box::new(SocketType::String))));
+		assert!(!some.matches(&SocketType::Option(Box::new(SocketType::Int))));
 	}
 
 	#[test]
@@ -1107,6 +1161,28 @@ mod tests {
 		let default = ty.default_value().unwrap();
 		assert_eq!(default.type_of(), SocketType::Result(Box::new(SocketType::Json)));
 		assert!(default.matches(&ty));
+	}
+
+	#[test]
+	fn option_type_roundtrip_default_and_toml() {
+		let ty = SocketType::Option(Box::new(SocketType::String));
+		assert_eq!(ty.to_string(), "option<string>");
+		assert_eq!(SocketType::parse("option<string>").unwrap(), ty);
+		assert_eq!(serde_json::to_string(&ty).unwrap(), "\"option<string>\"");
+		let default = ty.default_value().unwrap();
+		assert_eq!(default, SocketValue::Option(None));
+		assert!(default.matches(&ty));
+
+		let toml_some_empty = toml::Value::String(String::new());
+		assert_eq!(
+			from_toml_value(&ty, &toml_some_empty).unwrap(),
+			SocketValue::Option(Some(Box::new(SocketValue::String(String::new()))))
+		);
+		let toml_some = toml::Value::String("hello".into());
+		assert_eq!(
+			from_toml_value(&ty, &toml_some).unwrap(),
+			SocketValue::Option(Some(Box::new(SocketValue::String("hello".into()))))
+		);
 	}
 
 	#[test]
