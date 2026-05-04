@@ -575,6 +575,12 @@ envelope は `kind = "vac.flowgraph.package_lock"`, `schema_version = 1`, `diges
 response は保存先 path、aggregate digest、entry count、written flag を返し、保存 payload は LF-4p の `PackageLockFile` envelope を使う。
 まだ If-Match 更新、既存 lockfile との差分確認、external resolver metadata は扱わず、local preview の explicit write API に留める。
 
+### LF-4r Package lockfile status API ✅
+
+`GET /api/v1/control/flowgraph/package-lock` を追加し、flowgraph root 直下の `flowgraph.lock.json` の存在、保存済み digest、現在 preview digest、一致状態、entry count、validated lockfile payload を読めるようにした。
+lockfile が未作成の場合は `exists = false`、parse / validation 失敗時は `exists = true` と `error` を返し、GUI や外部 tooling が stale / broken lockfile を区別できるようにする。
+まだ If-Match 更新、diff payload、load-time warning は扱わず、保存済み lockfile と現在 preview の read-only status surface に留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
