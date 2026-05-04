@@ -98,6 +98,7 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 
 `GET /api/v1/control/flowgraph/diagnostics` は、ロード診断に加えて Flowgraph の signature / capability / state metadata を返します。
 `GET /api/v1/control/flowgraph/signature` は、同じ `graph_signature` JSON だけを返します。
+`GET /api/v1/control/flowgraph/package-lock` は、flowgraph root 直下の `flowgraph.lock.json` を読み、保存済み digest と現在の preview digest が一致するかを返します。
 `GET /api/v1/control/flowgraph/package-lock-preview` は、`digest`, `entries`, `entry_count` だけを返す read-only package lock preview API です。
 `POST /api/v1/control/flowgraph/package-lock-preview/save` は、現在の package lock preview を flowgraph root 直下の `flowgraph.lock.json` に保存します。
 package lockfile の JSON envelope は `kind = "vac.flowgraph.package_lock"`, `schema_version = 1`, `digest`, `entry_count`, `entries` を持ち、既定ファイル名は `flowgraph.lock.json` です。

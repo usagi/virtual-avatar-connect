@@ -472,6 +472,78 @@ pub async fn post_save_package_lock_preview(state: Data<SharedState>) -> impl Re
 }
 
 // ============================================================================
+// GET /flowgraph/package-lock
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct PackageLockStatusResponse {
+	pub path: String,
+	pub exists: bool,
+	pub preview_digest: Option<String>,
+	pub lock_digest: Option<String>,
+	pub matches_preview: Option<bool>,
+	pub entry_count: Option<usize>,
+	pub file: Option<PackageLockFile>,
+	pub error: Option<String>,
+}
+
+fn package_lock_status_response(rt: &FlowgraphRuntime) -> PackageLockStatusResponse {
+	let path = rt.root_dir.join(crate::flowgraph::FLOWGRAPH_PACKAGE_LOCK_FILE_NAME);
+	let path_text = path.display().to_string().replace('\\', "/");
+	let preview_digest = rt.package_lock_preview_digest.clone();
+	match crate::flowgraph::read_package_lock_file(&path) {
+		Ok(file) => {
+			let lock_digest = file.digest.clone();
+			let matches_preview = Some(lock_digest == preview_digest);
+			PackageLockStatusResponse {
+				path: path_text,
+				exists: true,
+				preview_digest,
+				lock_digest,
+				matches_preview,
+				entry_count: Some(file.entry_count),
+				file: Some(file),
+				error: None,
+			}
+		}
+		Err(PackageLockFileError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => PackageLockStatusResponse {
+			path: path_text,
+			exists: false,
+			preview_digest,
+			lock_digest: None,
+			matches_preview: None,
+			entry_count: None,
+			file: None,
+			error: None,
+		},
+		Err(error) => PackageLockStatusResponse {
+			path: path_text,
+			exists: true,
+			preview_digest,
+			lock_digest: None,
+			matches_preview: None,
+			entry_count: None,
+			file: None,
+			error: Some(error.to_string()),
+		},
+	}
+}
+
+#[get("/flowgraph/package-lock")]
+pub async fn get_package_lock(state: Data<SharedState>) -> impl Responder {
+	let fg = state.read().await.flowgraph.clone();
+	let rt = fg.read().await;
+	let Some(rt) = rt.as_ref() else {
+		return err_json(
+			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+			"flowgraph_dir_unset",
+			"conf.flowgraph_dir が未設定です",
+		);
+	};
+	HttpResponse::Ok().json(package_lock_status_response(rt))
+}
+
+// ============================================================================
 // POST /flowgraph/state-snapshot/loaded/save
 // ============================================================================
 
@@ -1091,6 +1163,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 		.service(get_diagnostics)
 		.service(get_signature)
 		.service(get_package_lock_preview)
+		.service(get_package_lock)
 		.service(post_save_package_lock_preview)
 		.service(post_save_loaded_state_snapshot)
 		.service(post_save_live_state_snapshot)
@@ -1251,6 +1324,54 @@ mod tests {
 		let decoded = crate::flowgraph::read_package_lock_file(root.join(crate::flowgraph::FLOWGRAPH_PACKAGE_LOCK_FILE_NAME))
 			.expect("read package lock");
 		assert_eq!(decoded.entries[0].id, "example.pkg");
+		let _ = std::fs::remove_dir_all(root);
+	}
+
+	#[test]
+	fn package_lock_status_response_reports_missing_file() {
+		let root = temp_dir("package-lock-missing");
+		let mut rt = runtime_with_snapshot_path(None);
+		rt.root_dir = root.clone();
+		rt.package_lock_preview_digest = Some("b3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into());
+
+		let response = package_lock_status_response(&rt);
+
+		assert!(response.path.ends_with("/flowgraph.lock.json"));
+		assert!(!response.exists);
+		assert_eq!(response.preview_digest, rt.package_lock_preview_digest);
+		assert_eq!(response.matches_preview, None);
+		assert!(response.file.is_none());
+		assert!(response.error.is_none());
+		let _ = std::fs::remove_dir_all(root);
+	}
+
+	#[test]
+	fn package_lock_status_response_compares_saved_digest() {
+		let root = temp_dir("package-lock-status");
+		let mut rt = runtime_with_snapshot_path(None);
+		rt.root_dir = root.clone();
+		rt.package_lock_preview_digest = Some("b3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into());
+		rt.package_lock_preview = vec![PackageLockEntry {
+			id: "example.pkg".into(),
+			version: Some("1.0.0".into()),
+			source_fq: "main".into(),
+			source_digest: "b3:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789".into(),
+			digest: "b3:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210".into(),
+			dependencies: BTreeMap::new(),
+		}];
+		save_package_lock_preview_response(&rt).expect("save package lock");
+
+		let response = package_lock_status_response(&rt);
+
+		assert!(response.exists);
+		assert_eq!(response.lock_digest, rt.package_lock_preview_digest);
+		assert_eq!(response.matches_preview, Some(true));
+		assert_eq!(response.entry_count, Some(1));
+		assert_eq!(response.file.as_ref().expect("file").entries[0].id, "example.pkg");
+
+		rt.package_lock_preview_digest = Some("b3:1111111111111111111111111111111111111111111111111111111111111111".into());
+		let stale = package_lock_status_response(&rt);
+		assert_eq!(stale.matches_preview, Some(false));
 		let _ = std::fs::remove_dir_all(root);
 	}
 

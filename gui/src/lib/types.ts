@@ -1290,6 +1290,24 @@ export type FlowgraphSavePackageLockPreviewResponse = {
   written: boolean;
 };
 
+export type FlowgraphPackageLockStatusResponse = {
+  path: string;
+  exists: boolean;
+  preview_digest: string | null;
+  lock_digest: string | null;
+  matches_preview: boolean | null;
+  entry_count: number | null;
+  file: {
+    kind: string;
+    schema_version: number;
+    created_at_unix_ms: number;
+    digest: string | null;
+    entry_count: number;
+    entries: FlowgraphPackageLockEntry[];
+  } | null;
+  error: string | null;
+};
+
 export type FlowgraphCreateFileRequest = {
   fq: string;
   initial_toml?: string;
