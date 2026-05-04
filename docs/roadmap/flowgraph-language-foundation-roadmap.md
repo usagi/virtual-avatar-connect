@@ -485,6 +485,12 @@ Directory loader が `[package].exports` を検査し、空エントリや flowg
 Export 先が存在する場合はロードを継続し、`graph_signature.files[].package_exports` に同じ値を保持する。
 まだ package id syntax、version compatibility、exported port-by-port contract、dependency resolution は扱わず、graph-as-node / package tooling が依存できる最小の存在保証だけを固定する。
 
+### LF-4c Package manifest shape guard ✅
+
+`[package]` が存在する場合は `id` を必須にし、空 id を `invalid-package-manifest` として拒否するようにした。
+`exports` は正規化後の fq で重複検査し、`main` と `./main.flowgraph.toml` のように同じ対象を二重に公開する manifest を loader error にする。
+package id の文字種・namespace 予約・semver policy はまだ固定せず、破壊的変更期間に合わせて最小の構造保証だけを先に置く。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
