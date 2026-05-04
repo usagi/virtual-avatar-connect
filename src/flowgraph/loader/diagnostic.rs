@@ -227,6 +227,12 @@ pub struct GraphSignatureFile {
 	pub description: Option<String>,
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub library_id: Option<String>,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub package_id: Option<String>,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub package_version: Option<String>,
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub package_exports: Vec<String>,
 	pub mode_groups: Vec<String>,
 	pub default_enabled: bool,
 }

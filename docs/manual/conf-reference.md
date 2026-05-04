@@ -98,6 +98,7 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 
 `GET /api/v1/control/flowgraph/diagnostics` は、ロード診断に加えて Flowgraph の signature / capability / state metadata を返します。
 `GET /api/v1/control/flowgraph/signature` は、同じ `graph_signature` JSON だけを返します。
+`*.flowgraph.toml` は任意の top-level `[package]` を読めます。現在のフィールドは `id`, `version`, `exports` で、`graph_signature.files[]` の `package_id`, `package_version`, `package_exports` として公開されます。
 state 関連の値は reload 直後の read-only snapshot であり、worker 実行後の live state ではありません。
 
 - `graph_signature`: graph-as-node / library signature の入口となる read-only boundary metadata。

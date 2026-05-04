@@ -28,6 +28,8 @@ pub struct FlowgraphFile {
 	#[serde(default)]
 	pub meta: Option<FileMeta>,
 	#[serde(default)]
+	pub package: Option<FlowgraphPackageManifest>,
+	#[serde(default)]
 	pub nodes: Vec<NodeEntry>,
 	#[serde(default)]
 	pub edges: Vec<EdgeEntry>,
@@ -37,6 +39,16 @@ pub struct FlowgraphFile {
 	/// Phase υ: GUI 上の編集グループ。engine 実行には影響しない。
 	#[serde(default)]
 	pub groups: Vec<FlowgraphGroupDef>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct FlowgraphPackageManifest {
+	#[serde(default)]
+	pub id: Option<String>,
+	#[serde(default)]
+	pub version: Option<String>,
+	#[serde(default)]
+	pub exports: Vec<String>,
 }
 
 /// TOML `[[enums]]` 1 行相当。
@@ -588,6 +600,9 @@ fn build_graph_signature(
 				title: file.meta.as_ref().and_then(|meta| meta.title.clone()),
 				description: file.meta.as_ref().and_then(|meta| meta.description.clone()),
 				library_id: file.meta.as_ref().and_then(normalized_library_id),
+				package_id: file.package.as_ref().and_then(|package| package.id.clone()),
+				package_version: file.package.as_ref().and_then(|package| package.version.clone()),
+				package_exports: file.package.as_ref().map(|package| package.exports.clone()).unwrap_or_default(),
 				mode_groups: activation.mode_groups,
 				default_enabled: activation.default_enabled,
 			}
@@ -791,6 +806,11 @@ mod tests {
 			[meta]
 			title = "test"
 
+			[package]
+			id = "example.echo"
+			version = "0.1.0"
+			exports = ["main"]
+
 			[[nodes]]
 			id = "lit"
 			feature = "flowgraph.literal.string"
@@ -798,6 +818,10 @@ mod tests {
 		"#;
 		let f = parse_flowgraph_file(src, None).unwrap();
 		assert_eq!(f.meta.unwrap().title.unwrap(), "test");
+		let package = f.package.unwrap();
+		assert_eq!(package.id.as_deref(), Some("example.echo"));
+		assert_eq!(package.version.as_deref(), Some("0.1.0"));
+		assert_eq!(package.exports, vec!["main".to_string()]);
 		assert_eq!(f.nodes.len(), 1);
 		assert_eq!(f.nodes[0].id, "lit");
 		assert_eq!(f.nodes[0].feature, "flowgraph.literal.string");
@@ -1134,6 +1158,11 @@ mod tests {
 				name = "demo"
 				version = "1.2.3"
 
+				[package]
+				id = "example.signature"
+				version = "0.2.0"
+				exports = ["demo/main"]
+
 				[[nodes]]
 				id = "in"
 				feature = "flowgraph.ingress.web_input"
@@ -1164,6 +1193,9 @@ mod tests {
 		assert_eq!(sig.files[0].fq, "demo/main");
 		assert_eq!(sig.files[0].title.as_deref(), Some("Signature Demo"));
 		assert_eq!(sig.files[0].library_id.as_deref(), Some("vac::demo::1_2_3"));
+		assert_eq!(sig.files[0].package_id.as_deref(), Some("example.signature"));
+		assert_eq!(sig.files[0].package_version.as_deref(), Some("0.2.0"));
+		assert_eq!(sig.files[0].package_exports, vec!["demo/main".to_string()]);
 
 		let trigger = sig
 			.external_triggers

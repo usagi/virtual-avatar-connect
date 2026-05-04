@@ -287,6 +287,7 @@ fn paste_single_fragment_file_fresh(
 ) -> Result<(), PasteError> {
 	let mut doc = FlowgraphFile {
 		meta: ff.meta.clone(),
+		package: None,
 		nodes: Vec::new(),
 		edges: Vec::new(),
 		enums: Vec::new(),

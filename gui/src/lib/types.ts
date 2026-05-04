@@ -1194,6 +1194,9 @@ export type FlowgraphSignatureFile = {
   title?: string;
   description?: string;
   library_id?: string;
+  package_id?: string;
+  package_version?: string;
+  package_exports: string[];
   mode_groups: string[];
   default_enabled: boolean;
 };
