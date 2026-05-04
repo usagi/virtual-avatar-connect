@@ -935,6 +935,11 @@ node signature / library signature / schema から manual と GUI catalog を生
 `docs/manual/node-catalog.md` の冒頭に Reading This Catalog セクションを生成し、通常 Index / Metadata Index / 各 node section の Metadata line の読み分けを manual 内で説明できるようにした。
 guide 自体も生成器に含め、LF-8b の逆引き index が手書き説明とずれないよう `node_catalog_md_up_to_date` の bless 対象に含めた。
 
+### LF-8d Generated catalog summary counts ✅
+
+`docs/manual/node-catalog.md` の冒頭に Generated Summary table を生成し、node / category / effectful / stateful / capability group / snapshot support / restore support の件数を registry 由来で確認できるようにした。
+manual 冒頭の summary、Metadata Index、各 node section の metadata line が同じ source から生成されるため、GUI catalog と manual catalog の分類ずれを検知しやすくなった。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
