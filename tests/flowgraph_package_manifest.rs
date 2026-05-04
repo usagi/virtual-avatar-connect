@@ -173,6 +173,14 @@ properties.value = "tooling"
 	assert_eq!(main_manifest.exports, vec!["main".to_string()]);
 	assert_eq!(main_manifest.dependencies.get("example.dep").map(String::as_str), Some("2.0.0"));
 	assert_eq!(main_manifest.dependencies.get("example.tooling").map(String::as_str), Some("*"));
+	assert_eq!(
+		report.package_dependency_order,
+		vec![
+			"example.dep".to_string(),
+			"example.tooling".to_string(),
+			"example.version".to_string()
+		]
+	);
 	let _ = std::fs::remove_dir_all(&root);
 }
 

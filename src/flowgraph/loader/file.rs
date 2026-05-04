@@ -562,6 +562,7 @@ impl BuildContext {
 
 		let capability_summary = crate::flowgraph::loader::diagnostic::GraphCapabilitySummary::from_node_meta(reg, &node_meta);
 		let package_manifests = build_package_manifest_summary(&self.files);
+		let package_dependency_order = build_package_dependency_order(&package_manifests);
 		let graph_signature = build_graph_signature(
 			reg,
 			&self.files,
@@ -579,6 +580,7 @@ impl BuildContext {
 			node_meta,
 			graph_signature,
 			package_manifests,
+			package_dependency_order,
 			capability_summary,
 			file_activation,
 		})
@@ -601,6 +603,50 @@ fn build_package_manifest_summary(files: &[(String, PathBuf, FlowgraphFile)]) ->
 		.collect();
 	manifests.sort_by(|a, b| a.source_fq.cmp(&b.source_fq));
 	manifests
+}
+
+fn build_package_dependency_order(package_manifests: &[PackageManifestSummary]) -> Vec<String> {
+	let known_ids: BTreeSet<String> = package_manifests.iter().filter_map(|manifest| manifest.id.clone()).collect();
+	let mut dependencies_by_id: BTreeMap<String, Vec<String>> = BTreeMap::new();
+	for manifest in package_manifests {
+		let Some(id) = manifest.id.as_ref() else {
+			continue;
+		};
+		let dependencies = manifest
+			.dependencies
+			.keys()
+			.filter(|dependency_id| known_ids.contains(*dependency_id))
+			.cloned()
+			.collect();
+		dependencies_by_id.insert(id.clone(), dependencies);
+	}
+
+	fn visit(
+		id: &str,
+		dependencies_by_id: &BTreeMap<String, Vec<String>>,
+		visiting: &mut BTreeSet<String>,
+		visited: &mut BTreeSet<String>,
+		order: &mut Vec<String>,
+	) {
+		if visited.contains(id) || !visiting.insert(id.to_string()) {
+			return;
+		}
+		for dependency_id in dependencies_by_id.get(id).into_iter().flatten() {
+			visit(dependency_id, dependencies_by_id, visiting, visited, order);
+		}
+		visiting.remove(id);
+		if visited.insert(id.to_string()) {
+			order.push(id.to_string());
+		}
+	}
+
+	let mut visiting: BTreeSet<String> = BTreeSet::new();
+	let mut visited: BTreeSet<String> = BTreeSet::new();
+	let mut order: Vec<String> = Vec::new();
+	for id in dependencies_by_id.keys() {
+		visit(id, &dependencies_by_id, &mut visiting, &mut visited, &mut order);
+	}
+	order
 }
 
 fn build_graph_signature(

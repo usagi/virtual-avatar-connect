@@ -186,6 +186,8 @@ pub struct LoadReport {
 	pub graph_signature: GraphSignature,
 	/// LF-4: `[package]` manifest を file ごとに集約した read-only package catalog。
 	pub package_manifests: Vec<PackageManifestSummary>,
+	/// LF-4: local package dependency DAG の dependency-first order。
+	pub package_dependency_order: Vec<String>,
 	/// LF-2: graph 全体が要求する capability の集計。policy enforcement ではなく read-only metadata。
 	pub capability_summary: GraphCapabilitySummary,
 	/// RM-3: 各 `.flowgraph.toml` の fq → `[meta]` の mode 系メタ（省略時は既定）。
@@ -198,6 +200,7 @@ impl std::fmt::Debug for LoadReport {
 			.field("nodes", &self.node_meta.keys().collect::<Vec<_>>())
 			.field("graph_signature", &self.graph_signature)
 			.field("package_manifests", &self.package_manifests)
+			.field("package_dependency_order", &self.package_dependency_order)
 			.field("capability_summary", &self.capability_summary)
 			.field("file_activation", &self.file_activation.keys().collect::<Vec<_>>())
 			.field("diagnostics", &self.diagnostics)
