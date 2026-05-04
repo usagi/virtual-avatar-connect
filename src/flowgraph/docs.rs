@@ -38,7 +38,7 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 	out.push_str("# or:\n");
 	out.push_str("$env:BLESS_NODE_CATALOG=\"1\"; cargo test --lib node_catalog_md_up_to_date\n");
 	out.push_str("```\n\n");
-	out.push_str("> 型の表記: `bool` / `int` / `float` / `string` / `bytes` / `json` / `list<T>` / `map<T>` / `exec`\n\n");
+	out.push_str(&format!("> 型の表記: {}\n\n", type_labels(&by_category)));
 	out.push_str("## Reading This Catalog\n\n");
 	out.push_str("- **Index**: category ごとの通常一覧。feature 名から node 詳細へ移動するための入口です。\n");
 	out.push_str("- **Metadata Index**: effect / capability / control trigger / snapshot support から node を逆引きするための一覧です。GUI catalog と同じ registry metadata から生成します。\n");
@@ -187,6 +187,19 @@ fn feature_links(specs: &[&NodeSpec]) -> String {
 		.map(|spec| format!("[`{}`](#{})", spec.feature, anchor(&spec.feature)))
 		.collect::<Vec<_>>()
 		.join(", ")
+}
+
+fn type_labels(by_category: &BTreeMap<String, Vec<NodeSpec>>) -> String {
+	let mut labels = std::collections::BTreeSet::new();
+	for spec in by_category.values().flat_map(|items| items.iter()) {
+		for port in spec.inputs.iter().chain(spec.outputs.iter()) {
+			labels.insert(port.ty.to_string());
+		}
+		for property in &spec.properties {
+			labels.insert(property.ty.to_string());
+		}
+	}
+	labels.into_iter().map(|label| format!("`{label}`")).collect::<Vec<_>>().join(" / ")
 }
 
 fn render_node(out: &mut String, registry: &NodeRegistry, spec: &NodeSpec) {
@@ -468,6 +481,9 @@ mod docs_tests {
 	fn node_catalog_md_includes_lf_metadata() {
 		let rendered = render_node_catalog_md(&default_registry());
 		assert!(rendered.contains("## Reading This Catalog"));
+		assert!(rendered.contains("`datetime`"));
+		assert!(rendered.contains("`quantity`"));
+		assert!(rendered.contains("`table`"));
 		assert!(rendered.contains("GUI catalog と同じ registry metadata"));
 		assert!(rendered.contains("`enum:` / `choices:`"));
 		assert!(rendered.contains("## Generated Summary"));

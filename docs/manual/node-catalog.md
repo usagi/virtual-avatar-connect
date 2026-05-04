@@ -10,7 +10,7 @@ VAC v2 Flowgraph の組み込みノード一覧。**本ファイルは自動生�
 $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ```
 
-> 型の表記: `bool` / `int` / `float` / `string` / `bytes` / `json` / `list<T>` / `map<T>` / `exec`
+> 型の表記: `bool` / `bytes` / `datetime` / `exec` / `float` / `int` / `json` / `list<json>` / `list<list<string>>` / `list<string>` / `map<json>` / `motion_frame` / `quantity` / `result<bool>` / `result<datetime>` / `result<int>` / `result<json>` / `result<quantity>` / `result<string>` / `result<table>` / `string` / `table`
 
 ## Reading This Catalog
 
