@@ -615,6 +615,31 @@ mod docs_tests {
 	}
 
 	#[test]
+	fn generated_catalog_anchor_links_resolve_to_registry_features() {
+		let registry = default_registry();
+		let rendered = render_node_catalog_md(&registry);
+		let feature_anchors = registry
+			.features()
+			.into_iter()
+			.map(|feature| anchor(&feature))
+			.collect::<std::collections::BTreeSet<_>>();
+
+		let mut rest = rendered.as_str();
+		while let Some(start) = rest.find("](#") {
+			rest = &rest[start + 3..];
+			let Some(end) = rest.find(')') else {
+				panic!("unterminated generated catalog anchor link");
+			};
+			let target = &rest[..end];
+			assert!(
+				feature_anchors.contains(target),
+				"generated catalog anchor target does not resolve: {target}"
+			);
+			rest = &rest[end + 1..];
+		}
+	}
+
+	#[test]
 	fn node_catalog_enum_metadata_covers_all_registry_choices() {
 		let registry = default_registry();
 		let rendered = render_node_catalog_md(&registry);
