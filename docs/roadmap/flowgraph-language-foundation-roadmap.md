@@ -666,6 +666,12 @@ WASM は Flowgraph の主表現ではなく、module / package system の実行�
 `map<T>` は key が `string` 固定である現行仕様を `args = [string, T]` として表現し、将来の `dictionary<K,V>` / `record` / generic UI が同じ shape を読めるようにする。
 node catalog の `contract.*[]` と `graph_signature` の port surface に `type_expr` を追加し、GUI / docs / tooling が型文字列の ad hoc parse に依存しなくても generic 型を観測できる。
 
+### LF-5f Node catalog port type expression metadata ✅
+
+LF-5e の `type_expr` を node catalog の top-level `inputs[]` / `outputs[]` / `properties[]` にも追加した。
+既存の `ty` 文字列は維持し、GUI は palette / inspector の通常 DTO から直接 generic 型構造を読める。
+`contract.*[]` と top-level spec の両方で同じ `SocketTypeExpr` 形状を返すことで、表示用途と library signature 用途が同じ read model を共有できる。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
