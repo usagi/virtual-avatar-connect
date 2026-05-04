@@ -7,6 +7,7 @@
 
 use crate::flowgraph::loader::diagnostic::{Diagnostic, DiagnosticCode, LoadError, LoadReport, Severity};
 use crate::flowgraph::loader::file::{parse_flowgraph_file, BuildContext, FlowgraphFile};
+use crate::flowgraph::package_lock_file::{read_package_lock_file, PackageLockFileError, FLOWGRAPH_PACKAGE_LOCK_FILE_NAME};
 use crate::flowgraph::registry::registry;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -398,6 +399,29 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 	diagnostics
 }
 
+fn package_lock_file_diagnostics(root: &Path, report: &LoadReport) -> Vec<Diagnostic> {
+	let path = root.join(FLOWGRAPH_PACKAGE_LOCK_FILE_NAME);
+	match read_package_lock_file(&path) {
+		Ok(file) if file.digest == report.package_lock_preview_digest => Vec::new(),
+		Ok(file) => vec![Diagnostic::warning(
+			DiagnosticCode::PackageLockFile,
+			format!(
+				"flowgraph.lock.json の digest が現在の package lock preview と一致しません: saved={:?}, preview={:?}",
+				file.digest, report.package_lock_preview_digest
+			),
+		)
+		.with_file(path)
+		.with_hint("package-lock")],
+		Err(PackageLockFileError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+		Err(error) => vec![Diagnostic::warning(
+			DiagnosticCode::PackageLockFile,
+			format!("flowgraph.lock.json の読み込みまたは検証に失敗しました: {error}"),
+		)
+		.with_file(path)
+		.with_hint("package-lock")],
+	}
+}
+
 /// 指定パスが `*.flowgraph.toml`（`.disabled` は除外）か。
 pub fn is_flowgraph_file(p: &Path) -> bool {
 	let name = match p.file_name().and_then(|s| s.to_str()) {
@@ -552,10 +576,12 @@ pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 		known_file_fqs,
 	};
 	let mut report = ctx.build(registry())?;
+	let mut package_lock_diags = package_lock_file_diagnostics(root, &report);
 	// パース時の warning を合流
 	let mut all = parse_diags;
 	all.append(&mut lib_diags);
 	all.append(&mut package_diags);
+	all.append(&mut package_lock_diags);
 	all.append(&mut report.diagnostics);
 	report.diagnostics = all;
 	Ok(report)

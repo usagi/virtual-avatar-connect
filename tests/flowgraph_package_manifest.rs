@@ -202,6 +202,56 @@ properties.value = "tooling"
 }
 
 #[test]
+fn package_lockfile_stale_returns_warning() {
+	let root = tmp_root("stale-lockfile");
+	write(
+		&root.join("main.flowgraph.toml"),
+		r#"[package]
+id = "example.main"
+version = "1.0.0"
+exports = ["main"]
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "hi"
+"#,
+	);
+	write(
+		&root.join("flowgraph.lock.json"),
+		r#"{
+  "kind": "vac.flowgraph.package_lock",
+  "schema_version": 1,
+  "created_at_unix_ms": 1234,
+  "digest": "b3:1111111111111111111111111111111111111111111111111111111111111111",
+	"entry_count": 1,
+	"entries": [
+		{
+			"id": "example.main",
+			"version": "1.0.0",
+			"source_fq": "main",
+			"source_digest": "b3:2222222222222222222222222222222222222222222222222222222222222222",
+			"digest": "b3:3333333333333333333333333333333333333333333333333333333333333333",
+			"dependencies": {}
+		}
+	]
+}
+"#,
+	);
+
+	let report = load_flowgraph_dir(&root).expect("stale lockfile warning only");
+	assert!(
+		report
+			.diagnostics
+			.iter()
+			.any(|diagnostic| diagnostic.code == DiagnosticCode::PackageLockFile),
+		"{:#?}",
+		report.diagnostics
+	);
+	let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
 fn package_invalid_dependency_returns_error() {
 	let root = tmp_root("invalid-dependency");
 	write(

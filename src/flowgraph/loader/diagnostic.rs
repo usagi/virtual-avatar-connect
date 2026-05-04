@@ -61,6 +61,8 @@ pub enum DiagnosticCode {
 	LibraryDependencyCycle,
 	/// LF-4: `[package]` manifest が不正（空 id / 不明 export fq 等）。
 	InvalidPackageManifest,
+	/// LF-4: `flowgraph.lock.json` が stale または不正。
+	PackageLockFile,
 	/// RM-3: `[meta].mode_groups` など activation メタが不正（空のグループ名など）。
 	InvalidModeMetadata,
 	/// RM-3: `[meta].mode_groups` の名前が、いかなる `[modes].flowgraph_groups` でも使われていない。
