@@ -627,6 +627,18 @@ mod docs_tests {
 	}
 
 	#[test]
+	fn node_catalog_feature_sections_all_include_metadata_line() {
+		let registry = default_registry();
+		let rendered = render_node_catalog_md(&registry);
+		let metadata_count = rendered.lines().filter(|line| line.starts_with("**Metadata:** contract: ")).count();
+		assert_eq!(
+			metadata_count,
+			registry.features().len(),
+			"generated catalog should contain exactly one metadata line per registry feature"
+		);
+	}
+
+	#[test]
 	fn node_catalog_categories_cover_registry_once() {
 		let registry = default_registry();
 		let rendered = render_node_catalog_md(&registry);
