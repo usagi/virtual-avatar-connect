@@ -23,7 +23,7 @@ mod util;
 pub(crate) use reload::{reload_runtime, reload_runtime_with_state_snapshot_file};
 
 use actix_web::web::{self, Data, Json};
-use actix_web::{delete, get, post, put, HttpResponse, Responder};
+use actix_web::{delete, get, post, put, HttpRequest, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 
 use crate::flowgraph::loader::{parse_flowgraph_file, Diagnostic, FlowgraphFile};
@@ -425,14 +425,76 @@ pub struct SavePackageLockPreviewResponse {
 
 #[derive(Debug)]
 enum SavePackageLockPreviewError {
+	BadIfMatch {
+		raw: String,
+	},
+	OptimisticLockFailed {
+		current_digest: Option<String>,
+	},
+	ReadCurrentFailed {
+		path: std::path::PathBuf,
+		error: PackageLockFileError,
+	},
 	WriteFailed {
 		path: std::path::PathBuf,
 		error: PackageLockFileError,
 	},
 }
 
-fn save_package_lock_preview_response(rt: &FlowgraphRuntime) -> Result<SavePackageLockPreviewResponse, SavePackageLockPreviewError> {
+fn package_lock_if_match_hex(raw: &str) -> Option<String> {
+	let hex_part = raw.trim().trim_matches('"').trim_start_matches("b3:");
+	if hex_part.len() == 64 && hex_part.chars().all(|ch| ch.is_ascii_hexdigit()) {
+		Some(hex_part.to_ascii_lowercase())
+	} else {
+		None
+	}
+}
+
+fn package_lock_digest_hex(digest: &str) -> Option<String> {
+	let hex_part = digest.trim().trim_start_matches("b3:");
+	if hex_part.len() == 64 && hex_part.chars().all(|ch| ch.is_ascii_hexdigit()) {
+		Some(hex_part.to_ascii_lowercase())
+	} else {
+		None
+	}
+}
+
+fn check_package_lock_if_match(path: &std::path::Path, if_match: Option<&str>) -> Result<(), SavePackageLockPreviewError> {
+	let Some(raw) = if_match else {
+		return Ok(());
+	};
+	let Some(expected_hex) = package_lock_if_match_hex(raw) else {
+		return Err(SavePackageLockPreviewError::BadIfMatch { raw: raw.to_string() });
+	};
+	match crate::flowgraph::read_package_lock_file(path) {
+		Ok(file) => {
+			let current_digest = file.digest.clone();
+			if current_digest
+				.as_deref()
+				.and_then(package_lock_digest_hex)
+				.is_some_and(|current_hex| current_hex.eq_ignore_ascii_case(&expected_hex))
+			{
+				Ok(())
+			} else {
+				Err(SavePackageLockPreviewError::OptimisticLockFailed { current_digest })
+			}
+		}
+		Err(PackageLockFileError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
+			Err(SavePackageLockPreviewError::OptimisticLockFailed { current_digest: None })
+		}
+		Err(error) => Err(SavePackageLockPreviewError::ReadCurrentFailed {
+			path: path.to_path_buf(),
+			error,
+		}),
+	}
+}
+
+fn save_package_lock_preview_response(
+	rt: &FlowgraphRuntime,
+	if_match: Option<&str>,
+) -> Result<SavePackageLockPreviewResponse, SavePackageLockPreviewError> {
 	let path = rt.root_dir.join(crate::flowgraph::FLOWGRAPH_PACKAGE_LOCK_FILE_NAME);
+	check_package_lock_if_match(&path, if_match)?;
 	let file = PackageLockFile::new(rt.package_lock_preview_digest.clone(), rt.package_lock_preview.clone());
 	let entry_count = file.entry_count;
 	let digest = file.digest.clone();
@@ -448,7 +510,7 @@ fn save_package_lock_preview_response(rt: &FlowgraphRuntime) -> Result<SavePacka
 }
 
 #[post("/flowgraph/package-lock-preview/save")]
-pub async fn post_save_package_lock_preview(state: Data<SharedState>) -> impl Responder {
+pub async fn post_save_package_lock_preview(state: Data<SharedState>, req: HttpRequest) -> impl Responder {
 	let rt = {
 		let fg = state.read().await.flowgraph.clone();
 		let rt = fg.read().await.clone();
@@ -461,8 +523,39 @@ pub async fn post_save_package_lock_preview(state: Data<SharedState>) -> impl Re
 			"conf.flowgraph_dir が未設定です",
 		);
 	};
-	match save_package_lock_preview_response(&rt) {
+	let if_match = match req.headers().get("If-Match") {
+		Some(value) => match value.to_str() {
+			Ok(raw) => Some(raw),
+			Err(_) => {
+				return err_json(
+					actix_web::http::StatusCode::BAD_REQUEST,
+					"bad_if_match",
+					"If-Match ヘッダが ASCII ではありません",
+				)
+			}
+		},
+		None => None,
+	};
+	match save_package_lock_preview_response(&rt, if_match) {
 		Ok(response) => HttpResponse::Ok().json(response),
+		Err(SavePackageLockPreviewError::BadIfMatch { raw }) => err_json(
+			actix_web::http::StatusCode::BAD_REQUEST,
+			"bad_if_match",
+			format!("If-Match は `b3:<64 hex>` 形式です。got='{raw}'"),
+		),
+		Err(SavePackageLockPreviewError::OptimisticLockFailed { current_digest }) => err_json(
+			actix_web::http::StatusCode::CONFLICT,
+			"optimistic_lock_failed",
+			match current_digest {
+				Some(digest) => format!("If-Match 不一致: 現在の package lock digest は {digest}"),
+				None => "If-Match 不一致: package lockfile は未作成です".to_string(),
+			},
+		),
+		Err(SavePackageLockPreviewError::ReadCurrentFailed { path, error }) => err_json(
+			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+			"package_lock_read_failed",
+			format!("package lockfile の読み込みに失敗しました ({}): {error}", path.display()),
+		),
 		Err(SavePackageLockPreviewError::WriteFailed { path, error }) => err_json(
 			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
 			"package_lock_write_failed",
@@ -1316,7 +1409,7 @@ mod tests {
 			dependencies: BTreeMap::new(),
 		}];
 
-		let response = save_package_lock_preview_response(&rt).expect("save package lock");
+		let response = save_package_lock_preview_response(&rt, None).expect("save package lock");
 
 		assert!(response.path.ends_with("/flowgraph.lock.json"));
 		assert_eq!(response.entry_count, 1);
@@ -1359,7 +1452,7 @@ mod tests {
 			digest: "b3:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210".into(),
 			dependencies: BTreeMap::new(),
 		}];
-		save_package_lock_preview_response(&rt).expect("save package lock");
+		save_package_lock_preview_response(&rt, None).expect("save package lock");
 
 		let response = package_lock_status_response(&rt);
 
@@ -1372,6 +1465,43 @@ mod tests {
 		rt.package_lock_preview_digest = Some("b3:1111111111111111111111111111111111111111111111111111111111111111".into());
 		let stale = package_lock_status_response(&rt);
 		assert_eq!(stale.matches_preview, Some(false));
+		let _ = std::fs::remove_dir_all(root);
+	}
+
+	#[test]
+	fn save_package_lock_preview_response_honors_if_match() {
+		let root = temp_dir("package-lock-if-match");
+		let mut rt = runtime_with_snapshot_path(None);
+		rt.root_dir = root.clone();
+		rt.package_lock_preview_digest = Some("b3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into());
+		rt.package_lock_preview = vec![PackageLockEntry {
+			id: "example.pkg".into(),
+			version: Some("1.0.0".into()),
+			source_fq: "main".into(),
+			source_digest: "b3:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789".into(),
+			digest: "b3:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210".into(),
+			dependencies: BTreeMap::new(),
+		}];
+
+		let missing = save_package_lock_preview_response(&rt, Some("b3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"))
+			.expect_err("missing lock should conflict");
+		assert!(matches!(
+			missing,
+			SavePackageLockPreviewError::OptimisticLockFailed { current_digest: None }
+		));
+
+		save_package_lock_preview_response(&rt, None).expect("initial save");
+		save_package_lock_preview_response(&rt, Some("\"b3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\""))
+			.expect("matching if-match");
+
+		let stale = save_package_lock_preview_response(&rt, Some("b3:1111111111111111111111111111111111111111111111111111111111111111"))
+			.expect_err("stale if-match");
+		assert!(matches!(
+			stale,
+			SavePackageLockPreviewError::OptimisticLockFailed { current_digest: Some(_) }
+		));
+		let bad = save_package_lock_preview_response(&rt, Some("not-a-digest")).expect_err("bad if-match");
+		assert!(matches!(bad, SavePackageLockPreviewError::BadIfMatch { .. }));
 		let _ = std::fs::remove_dir_all(root);
 	}
 
