@@ -545,6 +545,12 @@ order は同一 flowgraph root に存在する package id だけを対象にし�
 digest は `b3:<64 hex>` 形式で、lockfile writer や GUI が preview entry の変更検知に使える最小単位にする。
 まだ package source content digest、registry artifact digest、lockfile write、If-Match 型の更新 API は扱わず、manifest-derived preview entry の deterministic digest に留める。
 
+### LF-4m Package lock preview aggregate digest ✅
+
+`package_lock_preview_digest` を追加し、dependency-first order の package lock preview 全体を `b3:<64 hex>` で識別できるようにした。
+aggregate digest は ordered entry id と entry digest だけから計算し、preview の順序や entry identity が変わったときに安定して変化する。
+まだ lockfile 書き込み、optimistic update API、package content digest は扱わず、diagnostics API で読める preview 全体の変更検知 metadata に留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
