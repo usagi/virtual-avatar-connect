@@ -447,6 +447,62 @@ mod docs_tests {
 	}
 
 	#[test]
+	fn node_catalog_summary_counts_match_registry() {
+		let registry = default_registry();
+		let specs = registry.all_specs();
+		let categories = specs
+			.iter()
+			.map(|spec| spec.category.as_str())
+			.collect::<std::collections::BTreeSet<_>>()
+			.len();
+		let effectful = specs
+			.iter()
+			.filter(|spec| registry.effect_class(&spec.feature) == Some("effectful"))
+			.count();
+		let stateful = specs
+			.iter()
+			.filter(|spec| registry.effect_class(&spec.feature) == Some("stateful"))
+			.count();
+		let capability_groups = specs
+			.iter()
+			.flat_map(|spec| registry.capabilities(&spec.feature))
+			.collect::<std::collections::BTreeSet<_>>()
+			.len();
+		let snapshot_supported = specs
+			.iter()
+			.filter(|spec| {
+				registry
+					.state_model(&spec.feature)
+					.map(|model| model.snapshot_supported)
+					.unwrap_or(false)
+			})
+			.count();
+		let restore_supported = specs
+			.iter()
+			.filter(|spec| {
+				registry
+					.state_model(&spec.feature)
+					.map(|model| model.restore_supported)
+					.unwrap_or(false)
+			})
+			.count();
+
+		let rendered = render_node_catalog_md(&registry);
+		for (metric, count) in [
+			("Nodes", specs.len()),
+			("Categories", categories),
+			("Effectful nodes", effectful),
+			("Stateful nodes", stateful),
+			("Capability groups", capability_groups),
+			("Snapshot-supported nodes", snapshot_supported),
+			("Restore-supported nodes", restore_supported),
+		] {
+			let row = format!("| {metric} | {count} |");
+			assert!(rendered.contains(&row), "missing generated summary row: {row}");
+		}
+	}
+
+	#[test]
 	fn node_catalog_anchors_are_unique() {
 		let registry = default_registry();
 		let mut seen = std::collections::BTreeMap::new();
