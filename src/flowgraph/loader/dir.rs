@@ -13,6 +13,9 @@ use std::path::{Path, PathBuf};
 
 fn normalize_library_use_fq(s: &str) -> String {
 	let mut t = s.trim().replace('\\', "/");
+	while let Some(stripped) = t.strip_prefix("./") {
+		t = stripped.to_string();
+	}
 	if let Some(stripped) = t.strip_suffix(".flowgraph.toml") {
 		t = stripped.to_string();
 	}
@@ -126,14 +129,15 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 			continue;
 		};
 
-		if package.id.as_deref().is_some_and(|id| id.trim().is_empty()) {
+		if package.id.as_deref().is_none_or(|id| id.trim().is_empty()) {
 			diagnostics.push(
-				Diagnostic::error(DiagnosticCode::InvalidPackageManifest, "[package].id が空です")
+				Diagnostic::error(DiagnosticCode::InvalidPackageManifest, "[package].id が未指定または空です")
 					.with_file(path.clone())
 					.with_hint("[package].id"),
 			);
 		}
 
+		let mut seen_exports: HashSet<String> = HashSet::new();
 		for export in &package.exports {
 			let target = normalize_library_use_fq(export);
 			if target.is_empty() {
@@ -141,6 +145,17 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 					Diagnostic::error(DiagnosticCode::InvalidPackageManifest, "[package].exports に空エントリ")
 						.with_file(path.clone())
 						.with_hint(format!("[package].exports / {export:?}")),
+				);
+				continue;
+			}
+			if !seen_exports.insert(target.clone()) {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidPackageManifest,
+						format!("[package].exports に重複: '{target}'"),
+					)
+					.with_file(path.clone())
+					.with_hint(export.clone()),
 				);
 				continue;
 			}
@@ -581,6 +596,55 @@ properties.value = "hi"
 "#,
 		);
 		let err = load_flowgraph_dir(&root).expect_err("unknown package export");
+		assert!(
+			err.errors().any(|d| d.code == DiagnosticCode::InvalidPackageManifest),
+			"{:#?}",
+			err.diagnostics
+		);
+		let _ = std::fs::remove_dir_all(&root);
+	}
+
+	#[test]
+	fn package_missing_id_returns_error() {
+		let root = tmp_root();
+		write(
+			&root.join("main.flowgraph.toml"),
+			r#"[package]
+exports = ["main"]
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "hi"
+
+"#,
+		);
+		let err = load_flowgraph_dir(&root).expect_err("missing package id");
+		assert!(
+			err.errors().any(|d| d.code == DiagnosticCode::InvalidPackageManifest),
+			"{:#?}",
+			err.diagnostics
+		);
+		let _ = std::fs::remove_dir_all(&root);
+	}
+
+	#[test]
+	fn package_duplicate_exports_return_error() {
+		let root = tmp_root();
+		write(
+			&root.join("main.flowgraph.toml"),
+			r#"[package]
+id = "example.duplicate"
+exports = ["main", "./main.flowgraph.toml"]
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "hi"
+
+"#,
+		);
+		let err = load_flowgraph_dir(&root).expect_err("duplicate package exports");
 		assert!(
 			err.errors().any(|d| d.code == DiagnosticCode::InvalidPackageManifest),
 			"{:#?}",
