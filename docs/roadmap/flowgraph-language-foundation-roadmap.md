@@ -940,6 +940,11 @@ guide 自体も生成器に含め、LF-8b の逆引き index が手書き説明�
 `docs/manual/node-catalog.md` の冒頭に Generated Summary table を生成し、node / category / effectful / stateful / capability group / snapshot support / restore support の件数を registry 由来で確認できるようにした。
 manual 冒頭の summary、Metadata Index、各 node section の metadata line が同じ source から生成されるため、GUI catalog と manual catalog の分類ずれを検知しやすくなった。
 
+### LF-8e Generated catalog table escaping ✅
+
+`docs/manual/node-catalog.md` の生成器で Markdown table cell の `|` / 改行を escape し、port default や説明文に table delimiter が混ざっても generated catalog の表構造が壊れないようにした。
+escaping helper は unit test で固定し、今後 node description / JSON default が増えた場合も catalog bless 時に同じ ruleset で安定生成できるようにした。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
