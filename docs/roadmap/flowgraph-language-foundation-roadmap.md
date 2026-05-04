@@ -696,6 +696,12 @@ FlowgraphCanvas の edge validation が、node catalog に `type_expr` がある
 wire 表現は `null` または inner 型の値とし、JSON / TOML 復元、default value、type expression、recursive compatibility / coerce に対応した。
 `option<T>` は GUI / tooling 向け parser API と compatibility API からも同じ形で観測できる。
 
+### LF-5k `dictionary<string,T>` parser alias ✅
+
+将来の汎用 key-value 型語彙へ寄せる準備として、`dictionary<string,T>` を `map<T>` と同じ意味の parser alias として受理するようにした。
+現ランタイムでは key が `string` 固定なので、canonical type / type_expr は従来通り `map<T>` / `args=[string,T]` を返す。
+`dictionary<int,T>` のような非 string key は明示エラーにし、将来 `dictionary<K,V>` を本実装するときの互換境界を残す。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
