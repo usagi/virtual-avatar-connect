@@ -975,6 +975,11 @@ PowerShell script 本体も LF / trailing newline を固定し、Windows 作業�
 Generated Summary table の node / category / effectful / stateful / capability group / snapshot / restore 件数が、`NodeRegistry` から計算した値と一致することを unit test で固定した。
 今後 registry metadata や summary 生成ロジックを変更した際、見出しだけ残って件数が stale になる regression を docs test で検知できる。
 
+### LF-8l Metadata index count guard ✅
+
+Metadata Index の effect class、capability group、snapshot / restore support の各件数が、`NodeRegistry` から計算した逆引き件数と一致することを unit test で固定した。
+Generated Summary と Metadata Index の両方を同じ registry source から検証し、manual の目的別 index が stale な分類件数を出す regression を検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
