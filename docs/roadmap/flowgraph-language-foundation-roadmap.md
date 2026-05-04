@@ -945,6 +945,11 @@ manual 冒頭の summary、Metadata Index、各 node section の metadata line �
 `docs/manual/node-catalog.md` の生成器で Markdown table cell の `|` / 改行を escape し、port default や説明文に table delimiter が混ざっても generated catalog の表構造が壊れないようにした。
 escaping helper は unit test で固定し、今後 node description / JSON default が増えた場合も catalog bless 時に同じ ruleset で安定生成できるようにした。
 
+### LF-8f Generated catalog anchor stability ✅
+
+`docs/manual/node-catalog.md` の Index / Metadata Index が参照する feature-derived anchor について、現行 registry 全体で衝突しないことを unit test で固定した。
+今後 feature 名の追加や alias 整理で GitHub-style anchor が衝突した場合、manual link が壊れる前に docs test で検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
