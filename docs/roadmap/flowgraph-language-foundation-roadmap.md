@@ -989,4 +989,4 @@ Generated Summary と Metadata Index の両方を同じ registry source から�
 - [~] LF-5 Generic / Type Parameter
 - [~] LF-6 Error Model
 - [~] LF-7 Persistence / State Model
-- [ ] LF-8 Documentation Generation
+- [~] LF-8 Documentation Generation
