@@ -970,6 +970,11 @@ Manual index と quickstart の Node Catalog 導線を更新し、従来の port
 `node_catalog_md_up_to_date` の missing / mismatch panic hint を `./scripts/bless-node-catalog.ps1` 優先に更新し、失敗時に開発者が repository-local script へ直行できるようにした。
 PowerShell script 本体も LF / trailing newline を固定し、Windows 作業コピーでも repository の LF 方針と再生成 workflow がずれないようにした。
 
+### LF-8k Generated summary count guard ✅
+
+Generated Summary table の node / category / effectful / stateful / capability group / snapshot / restore 件数が、`NodeRegistry` から計算した値と一致することを unit test で固定した。
+今後 registry metadata や summary 生成ロジックを変更した際、見出しだけ残って件数が stale になる regression を docs test で検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
