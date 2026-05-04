@@ -672,6 +672,12 @@ LF-5e の `type_expr` を node catalog の top-level `inputs[]` / `outputs[]` / 
 既存の `ty` 文字列は維持し、GUI は palette / inspector の通常 DTO から直接 generic 型構造を読める。
 `contract.*[]` と top-level spec の両方で同じ `SocketTypeExpr` 形状を返すことで、表示用途と library signature 用途が同じ read model を共有できる。
 
+### LF-5g Socket type parser validation API ✅
+
+`GET /flowgraph/parse-socket-type?text=...` を追加し、GUI / 外部 tooling がサーバと同じ `SocketType::parse` で generic 型文字列を検証できるようにした。
+成功時は canonical type string と `SocketTypeExpr` を返し、`map<string, list<json>>` のような互換表記を `map<list<json>>` へ正規化して観測できる。
+失敗時は `valid=false` と parse error を返すだけに留め、まだ custom node editor や loader enforcement には接続しない。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
