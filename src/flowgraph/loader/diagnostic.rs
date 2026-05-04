@@ -289,6 +289,8 @@ pub struct GraphSignaturePort {
 	pub port: String,
 	pub label: String,
 	pub ty: String,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub type_expr: Option<crate::flowgraph::socket::SocketTypeExpr>,
 	pub direction: String,
 	pub exec: bool,
 	pub optional: bool,

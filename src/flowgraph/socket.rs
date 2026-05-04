@@ -89,6 +89,11 @@ impl SocketType {
 		parse_type(s.trim())
 	}
 
+	/// LF-5: 既存の型文字列表現を壊さず、generic type を構造化して読むための metadata。
+	pub fn type_expr(&self) -> SocketTypeExpr {
+		SocketTypeExpr::from_socket_type(self)
+	}
+
 	/// エッジ接続の際に 2 つの型が「互換」か判定する。`self` (upstream) が
 	/// `other` (downstream) に流し込めるなら `true`。
 	///
@@ -120,6 +125,62 @@ impl SocketType {
 			(Map(a), Map(b)) => a.compatible_with(b),
 			(Result(a), Result(b)) => a.compatible_with(b),
 			(a, b) => a == b,
+		}
+	}
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SocketTypeExprKind {
+	Primitive,
+	Generic,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SocketTypeExpr {
+	pub kind: SocketTypeExprKind,
+	pub name: String,
+	pub display: String,
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub args: Vec<SocketTypeExpr>,
+}
+
+impl Default for SocketTypeExpr {
+	fn default() -> Self {
+		Self {
+			kind: SocketTypeExprKind::Primitive,
+			name: String::new(),
+			display: String::new(),
+			args: Vec::new(),
+		}
+	}
+}
+
+impl SocketTypeExpr {
+	pub fn from_socket_type(ty: &SocketType) -> Self {
+		match ty {
+			SocketType::List(inner) => Self::generic("list", ty, vec![inner.type_expr()]),
+			SocketType::Map(inner) => Self::generic("map", ty, vec![SocketType::String.type_expr(), inner.type_expr()]),
+			SocketType::Result(inner) => Self::generic("result", ty, vec![inner.type_expr()]),
+			_ => Self::primitive(ty),
+		}
+	}
+
+	fn primitive(ty: &SocketType) -> Self {
+		Self {
+			kind: SocketTypeExprKind::Primitive,
+			name: ty.to_string(),
+			display: ty.to_string(),
+			args: Vec::new(),
+		}
+	}
+
+	fn generic(name: &str, ty: &SocketType, args: Vec<SocketTypeExpr>) -> Self {
+		Self {
+			kind: SocketTypeExprKind::Generic,
+			name: name.to_string(),
+			display: ty.to_string(),
+			args,
 		}
 	}
 }
@@ -927,6 +988,23 @@ mod tests {
 			SocketType::parse("result<list<string>>").unwrap(),
 			SocketType::Result(Box::new(SocketType::List(Box::new(SocketType::String))))
 		);
+	}
+
+	#[test]
+	fn type_expr_describes_generic_shape() {
+		let ty = SocketType::Result(Box::new(SocketType::List(Box::new(SocketType::Map(Box::new(SocketType::Json))))));
+		let expr = ty.type_expr();
+		assert_eq!(expr.kind, SocketTypeExprKind::Generic);
+		assert_eq!(expr.name, "result");
+		assert_eq!(expr.display, "result<list<map<json>>>");
+		assert_eq!(expr.args[0].name, "list");
+		assert_eq!(expr.args[0].args[0].name, "map");
+		assert_eq!(expr.args[0].args[0].args[0].name, "string");
+		assert_eq!(expr.args[0].args[0].args[1].name, "json");
+
+		let json = serde_json::to_value(&expr).unwrap();
+		assert_eq!(json["kind"].as_str(), Some("generic"));
+		assert_eq!(json["args"][0]["args"][0]["args"].as_array().unwrap().len(), 2);
 	}
 
 	#[test]

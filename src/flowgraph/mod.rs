@@ -56,7 +56,7 @@ pub use package_lock_file::{
 };
 pub use registry::{default_registry, registry, NodeRegistry};
 pub use runtime::{shared_flowgraph_new, FlowgraphRuntime, RuntimeHandle, SharedFlowgraph};
-pub use socket::{SocketType, SocketValue, TypeParseError, ValueCastError};
+pub use socket::{SocketType, SocketTypeExpr, SocketTypeExprKind, SocketValue, TypeParseError, ValueCastError};
 pub use state_model::{
 	FlowgraphStateModel, StateLifetime, StateMigrationPolicy, StatePersistencePolicy, StateRestorePolicy, StateScope, StateSnapshotFormat,
 	StateSnapshotPolicy, StateStorage,

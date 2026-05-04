@@ -882,6 +882,13 @@ export type FlowgraphDiagnostic = {
 /** SocketType 文字列（`"bool" | "int" | "float" | "string" | "json" | "exec" | "list<...>" | "map<...>"`）。 */
 export type FlowgraphSocketType = string;
 
+export type FlowgraphSocketTypeExpr = {
+  kind: "primitive" | "generic";
+  name: string;
+  display: string;
+  args?: FlowgraphSocketTypeExpr[];
+};
+
 export type FlowgraphPortDirection = "input" | "output";
 
 export type FlowgraphPortSpec = {
@@ -907,6 +914,7 @@ export type FlowgraphContractPort = {
   name: string;
   label?: string;
   type: FlowgraphSocketType;
+  type_expr?: FlowgraphSocketTypeExpr;
   direction: FlowgraphPortDirection;
   exec: boolean;
   optional: boolean;
@@ -919,6 +927,7 @@ export type FlowgraphContractProperty = {
   name: string;
   label?: string;
   type: FlowgraphSocketType;
+  type_expr?: FlowgraphSocketTypeExpr;
   default?: unknown;
   required: boolean;
   validator?: string;
@@ -1207,6 +1216,7 @@ export type FlowgraphSignaturePort = {
   port: string;
   label: string;
   ty: string;
+  type_expr?: FlowgraphSocketTypeExpr;
   direction: "input" | "output";
   exec: boolean;
   optional: boolean;

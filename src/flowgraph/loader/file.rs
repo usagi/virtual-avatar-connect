@@ -860,6 +860,7 @@ fn graph_signature_port(node: &str, feature: &str, port: &PortSpec) -> GraphSign
 		port: port.name.clone(),
 		label: port.label.clone(),
 		ty: port.ty.to_string(),
+		type_expr: Some(port.ty.type_expr()),
 		direction: match port.direction {
 			crate::flowgraph::node::PortDirection::Input => "input".into(),
 			crate::flowgraph::node::PortDirection::Output => "output".into(),
@@ -1392,6 +1393,32 @@ mod tests {
 			.boundary_outputs
 			.iter()
 			.any(|port| port.node == "demo/main::log" && port.port == "exec_out" && port.exec));
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
+	fn graph_signature_ports_include_lf5_type_expr() {
+		let path = write_tmp(
+			"signature-type-expr.flowgraph.toml",
+			r#"
+				[[nodes]]
+				id = "get"
+				feature = "flowgraph.map.get"
+			"#,
+		);
+		let report = load_file(&path, Some("demo")).expect("load");
+		let port = report
+			.graph_signature
+			.boundary_inputs
+			.iter()
+			.find(|port| port.node == "demo::get" && port.port == "m")
+			.expect("map input boundary port");
+		let expr = port.type_expr.as_ref().expect("type_expr");
+		assert_eq!(port.ty, "map<json>");
+		assert_eq!(expr.name, "map");
+		assert_eq!(expr.display, "map<json>");
+		assert_eq!(expr.args[0].name, "string");
+		assert_eq!(expr.args[1].name, "json");
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
