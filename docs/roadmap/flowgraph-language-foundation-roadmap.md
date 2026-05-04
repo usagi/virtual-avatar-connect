@@ -1040,6 +1040,11 @@ Metadata Index や通常 Index の link 生成を変更した際、存在しな�
 Generated catalog の feature detail section 数が `NodeRegistry::features()` の件数と一致することを unit test で固定した。
 通常 Index / Metadata Index の coverage guard が「抜け」を検知するのに加えて、generator refactor で同じ node section が重複出力される regression も検知できる。
 
+### LF-8y Generated category coverage guard ✅
+
+`NodeRegistry::all_specs()` 由来の category が、generated catalog の通常 Index と詳細 category section にそれぞれ 1 回ずつ出ることを unit test で固定した。
+feature 単位の coverage / uniqueness guard に加えて、カテゴリ再編や generator refactor で category 見出しが抜ける・重複する regression を検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
