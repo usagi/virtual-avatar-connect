@@ -610,4 +610,72 @@ mod tests {
 			assert_eq!(state_model["persistence_policy"].as_str(), Some("none"));
 		}
 	}
+
+	#[test]
+	fn generated_manual_catalog_summary_matches_control_api_catalog_metadata() {
+		use crate::flowgraph::docs::render_node_catalog_md;
+		use crate::flowgraph::registry::registry;
+
+		let reg = registry();
+		let values: Vec<serde_json::Value> = reg
+			.all_specs()
+			.iter()
+			.map(|spec| {
+				let mut value = serde_json::to_value(spec).unwrap();
+				enrich_node_catalog_spec_json(reg, &mut value);
+				value
+			})
+			.collect();
+
+		let effectful = values
+			.iter()
+			.filter(|value| value["effect_class"].as_str() == Some("effectful"))
+			.count();
+		let stateful = values
+			.iter()
+			.filter(|value| value["effect_class"].as_str() == Some("stateful"))
+			.count();
+		let control_triggerable = values
+			.iter()
+			.filter(|value| value["control_triggerable"].as_bool() == Some(true))
+			.count();
+		let snapshot_supported = values
+			.iter()
+			.filter(|value| value["state_model"]["snapshot_supported"].as_bool() == Some(true))
+			.count();
+		let restore_supported = values
+			.iter()
+			.filter(|value| value["state_model"]["restore_supported"].as_bool() == Some(true))
+			.count();
+		let mut by_capability = std::collections::BTreeMap::<String, usize>::new();
+		for value in &values {
+			for capability in value["capabilities"].as_array().into_iter().flatten() {
+				let capability = capability.as_str().expect("capability should be a string");
+				*by_capability.entry(capability.to_string()).or_default() += 1;
+			}
+		}
+
+		let rendered = render_node_catalog_md(reg);
+		for row in [
+			format!("| Effectful nodes | {effectful} |"),
+			format!("| Stateful nodes | {stateful} |"),
+			format!("| Capability groups | {} |", by_capability.len()),
+			format!("| Control-triggerable nodes | {control_triggerable} |"),
+			format!("| Snapshot-supported nodes | {snapshot_supported} |"),
+			format!("| Restore-supported nodes | {restore_supported} |"),
+		] {
+			assert!(
+				rendered.contains(&row),
+				"manual catalog summary should match Control API metadata: {row}"
+			);
+		}
+
+		for (capability, count) in by_capability {
+			let row = format!("- **{capability}** ({count}):");
+			assert!(
+				rendered.contains(&row),
+				"manual capability index should match Control API metadata: {row}"
+			);
+		}
+	}
 }
