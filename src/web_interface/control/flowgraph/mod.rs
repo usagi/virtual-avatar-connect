@@ -351,6 +351,20 @@ pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 	})
 }
 
+#[get("/flowgraph/signature")]
+pub async fn get_signature(state: Data<SharedState>) -> impl Responder {
+	let fg = state.read().await.flowgraph.clone();
+	let rt = fg.read().await;
+	let Some(rt) = rt.as_ref() else {
+		return err_json(
+			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+			"flowgraph_dir_unset",
+			"conf.flowgraph_dir が未設定です",
+		);
+	};
+	HttpResponse::Ok().json(rt.graph_signature.clone())
+}
+
 // ============================================================================
 // POST /flowgraph/state-snapshot/loaded/save
 // ============================================================================
@@ -969,6 +983,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 		.service(get_parse_unit)
 		.service(get_tree)
 		.service(get_diagnostics)
+		.service(get_signature)
 		.service(post_save_loaded_state_snapshot)
 		.service(post_save_live_state_snapshot)
 		.service(post_reload_preserving_state)

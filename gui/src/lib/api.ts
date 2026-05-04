@@ -76,6 +76,7 @@ import {
   type FlowgraphTreeResponse,
   type FlowgraphFileResponse,
   type FlowgraphDiagnosticsResponse,
+  type FlowgraphSignature,
   type FlowgraphCreateFileRequest,
   type FlowgraphPutFileRequest,
   type FlowgraphWriteFileResponse,
@@ -591,6 +592,10 @@ export const api = {
   /** 現在ランタイムが保持している診断 + node_meta を取得する。 */
   flowgraphDiagnostics(): Promise<FlowgraphDiagnosticsResponse> {
     return request<FlowgraphDiagnosticsResponse>("/flowgraph/diagnostics");
+  },
+  /** 現在ランタイムが保持している graph signature だけを取得する。 */
+  flowgraphSignature(): Promise<FlowgraphSignature> {
+    return request<FlowgraphSignature>("/flowgraph/signature");
   },
   /** ロード直後 snapshot を profile-local snapshot file へ明示保存する。live worker state ではない。 */
   flowgraphSaveLoadedStateSnapshot(): Promise<FlowgraphSaveLoadedStateSnapshotResponse> {

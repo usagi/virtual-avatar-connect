@@ -201,7 +201,8 @@
         {#if graphSignature}
           <span class="font-mono text-[0.65rem] opacity-55">
             signature files {graphSignature.file_count} / edges {graphSignature.edge_count}
-            / triggers {graphSignature.external_triggers.length} / boundary {graphSignature.boundary_inputs.length}:{graphSignature.boundary_outputs.length}
+            / triggers {graphSignature.external_triggers.length} / boundary {graphSignature
+              .boundary_inputs.length}:{graphSignature.boundary_outputs.length}
           </span>
         {/if}
         {#if capabilityCounts.length > 0}

@@ -96,7 +96,8 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 
 #### Flowgraph Diagnostics API（LF-7）
 
-`GET /api/v1/control/flowgraph/diagnostics` は、ロード診断に加えて Flowgraph の capability / state metadata を返します。
+`GET /api/v1/control/flowgraph/diagnostics` は、ロード診断に加えて Flowgraph の signature / capability / state metadata を返します。
+`GET /api/v1/control/flowgraph/signature` は、同じ `graph_signature` JSON だけを返します。
 state 関連の値は reload 直後の read-only snapshot であり、worker 実行後の live state ではありません。
 
 - `graph_signature`: graph-as-node / library signature の入口となる read-only boundary metadata。
