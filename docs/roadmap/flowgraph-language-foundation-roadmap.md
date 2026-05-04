@@ -960,6 +960,11 @@ escaping helper は unit test で固定し、今後 node description / JSON defa
 Manual index と quickstart の Node Catalog 導線を更新し、従来の port / property spec だけでなく effect / capability / state metadata の逆引きにも使えることを明示した。
 生成 catalog 側に追加した Generated Summary / Metadata Index の入口を、ユーザーが最初に読む manual page から辿れるようにした。
 
+### LF-8i Contributor generated catalog guidance ✅
+
+`CONTRIBUTING.md` に `docs/manual/node-catalog.md` が自動生成ファイルであることと、node spec / metadata 変更時に `./scripts/bless-node-catalog.ps1` を実行して生成差分を含めることを追記した。
+既存 manual 内の古い `BLESS_NODE_CATALOG=1 cargo test` 参照も bless script に寄せ、開発者向けの再生成導線を統一した。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
