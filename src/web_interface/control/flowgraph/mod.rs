@@ -396,6 +396,8 @@ pub struct DiagnosticsResponse {
 	pub package_lock_preview: Vec<crate::flowgraph::loader::PackageLockEntry>,
 	/// LF-5: `[[types]]` named schema metadata catalog。
 	pub type_schemas: Vec<crate::flowgraph::loader::TypeSchemaSummary>,
+	/// LF-5: record schema dependency graph の dependency-first order。
+	pub type_schema_dependency_order: Vec<String>,
 	/// LF-4: package lock preview 全体の stable digest。
 	pub package_lock_preview_digest: Option<String>,
 	/// LF-7: ロード直後の stateful node summary。worker 実行後の live state ではない。
@@ -451,6 +453,7 @@ pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 		package_dependency_order: rt.package_dependency_order.clone(),
 		package_lock_preview: rt.package_lock_preview.clone(),
 		type_schemas: rt.type_schemas.clone(),
+		type_schema_dependency_order: rt.type_schema_dependency_order.clone(),
 		package_lock_preview_digest: rt.package_lock_preview_digest.clone(),
 		loaded_state_summary: rt.loaded_state_summary.clone(),
 		loaded_state_snapshot: rt.loaded_state_snapshot.clone(),
@@ -1468,6 +1471,7 @@ mod tests {
 			package_dependency_order: Vec::new(),
 			package_lock_preview: Vec::new(),
 			type_schemas: Vec::new(),
+			type_schema_dependency_order: Vec::new(),
 			package_lock_preview_digest: None,
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),

@@ -1246,6 +1246,7 @@ export type FlowgraphSignature = {
   required_capabilities: string[];
   files: FlowgraphSignatureFile[];
   type_schemas: FlowgraphTypeSchemaSummary[];
+  type_schema_dependency_order: string[];
   external_triggers: FlowgraphSignatureTrigger[];
   boundary_inputs: FlowgraphSignaturePort[];
   boundary_outputs: FlowgraphSignaturePort[];
@@ -1292,6 +1293,7 @@ export type FlowgraphDiagnosticsResponse = {
   package_dependency_order: string[];
   package_lock_preview: FlowgraphPackageLockEntry[];
   type_schemas: FlowgraphTypeSchemaSummary[];
+  type_schema_dependency_order: string[];
   package_lock_preview_digest: string | null;
   loaded_state_summary: FlowgraphProgramStateSummary;
   loaded_state_snapshot: FlowgraphProgramStateSnapshot;

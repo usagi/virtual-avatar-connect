@@ -414,6 +414,7 @@ impl BuildContext {
 		let known_type_schema_ids: BTreeSet<String> = type_schemas.iter().map(|schema| schema.id.clone()).collect();
 		validate_type_schema_field_refs(&self.files, &known_type_schema_ids, &mut diagnostics);
 		validate_type_schema_cycles(&self.files, &known_type_schema_ids, &mut diagnostics);
+		let type_schema_dependency_order = build_type_schema_dependency_order(&type_schemas);
 		let file_activation: HashMap<String, FlowgraphFileActivationMeta> =
 			self.files.iter().map(|(fq, _, f)| (fq.clone(), file_activation_meta(f))).collect();
 
@@ -677,6 +678,7 @@ impl BuildContext {
 			reg,
 			&self.files,
 			&type_schemas,
+			&type_schema_dependency_order,
 			&node_meta,
 			&node_specs,
 			&connected_inputs,
@@ -694,6 +696,7 @@ impl BuildContext {
 			package_dependency_order,
 			package_lock_preview,
 			type_schemas,
+			type_schema_dependency_order,
 			package_lock_preview_digest,
 			capability_summary,
 			file_activation,
@@ -938,6 +941,44 @@ fn validate_type_schema_cycles(
 	}
 }
 
+fn build_type_schema_dependency_order(type_schemas: &[TypeSchemaSummary]) -> Vec<String> {
+	let graph: BTreeMap<String, BTreeSet<String>> = type_schemas
+		.iter()
+		.map(|schema| (schema.id.clone(), schema.record_refs.iter().cloned().collect()))
+		.collect();
+	let mut visiting = BTreeSet::new();
+	let mut visited = BTreeSet::new();
+	let mut order = Vec::new();
+
+	fn visit(
+		schema_id: &str,
+		graph: &BTreeMap<String, BTreeSet<String>>,
+		visiting: &mut BTreeSet<String>,
+		visited: &mut BTreeSet<String>,
+		order: &mut Vec<String>,
+	) {
+		if visited.contains(schema_id) || !visiting.insert(schema_id.to_string()) {
+			return;
+		}
+		if let Some(dependencies) = graph.get(schema_id) {
+			for dependency in dependencies {
+				if graph.contains_key(dependency) {
+					visit(dependency, graph, visiting, visited, order);
+				}
+			}
+		}
+		visiting.remove(schema_id);
+		if visited.insert(schema_id.to_string()) {
+			order.push(schema_id.to_string());
+		}
+	}
+
+	for schema_id in graph.keys() {
+		visit(schema_id, &graph, &mut visiting, &mut visited, &mut order);
+	}
+	order
+}
+
 fn build_package_dependency_order(package_manifests: &[PackageManifestSummary]) -> Vec<String> {
 	let known_ids: BTreeSet<String> = package_manifests.iter().filter_map(|manifest| manifest.id.clone()).collect();
 	let mut dependencies_by_id: BTreeMap<String, Vec<String>> = BTreeMap::new();
@@ -1077,6 +1118,7 @@ fn build_graph_signature(
 	reg: &NodeRegistry,
 	files: &[(String, PathBuf, FlowgraphFile)],
 	type_schemas: &[TypeSchemaSummary],
+	type_schema_dependency_order: &[String],
 	node_meta: &HashMap<String, LoadedNodeMeta>,
 	node_specs: &HashMap<String, NodeSpec>,
 	connected_inputs: &BTreeSet<(String, String)>,
@@ -1170,6 +1212,7 @@ fn build_graph_signature(
 		required_capabilities: capability_summary.capabilities.clone(),
 		files: files_meta,
 		type_schemas: type_schemas.to_vec(),
+		type_schema_dependency_order: type_schema_dependency_order.to_vec(),
 		external_triggers,
 		boundary_inputs,
 		boundary_outputs,
@@ -1757,6 +1800,47 @@ mod tests {
 	}
 
 	#[test]
+	fn load_type_schema_dependency_order_metadata() {
+		let path = write_tmp(
+			"schema-order.flowgraph.toml",
+			r#"
+				[[types]]
+				id = "app.event"
+
+				[types.fields]
+				payload = "record<app.payload>"
+
+				[[types]]
+				id = "app.payload"
+
+				[types.fields]
+				user = "record<app.user>"
+
+				[[types]]
+				id = "app.user"
+
+				[types.fields]
+				name = "string"
+
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "x"
+			"#,
+		);
+		let report = load_file(&path, None).expect("load");
+		assert_eq!(
+			report.type_schema_dependency_order,
+			vec!["app.user".to_string(), "app.payload".to_string(), "app.event".to_string()]
+		);
+		assert_eq!(
+			report.graph_signature.type_schema_dependency_order,
+			report.type_schema_dependency_order
+		);
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
 	fn load_warns_on_record_schema_dependency_cycles() {
 		let path = write_tmp(
 			"schema-cycle.flowgraph.toml",
@@ -1947,6 +2031,10 @@ mod tests {
 		);
 		let report = load_file(&path, Some("demo/schema")).expect("load");
 		assert_eq!(report.graph_signature.type_schemas, report.type_schemas);
+		assert_eq!(
+			report.graph_signature.type_schema_dependency_order,
+			report.type_schema_dependency_order
+		);
 		assert_eq!(report.graph_signature.type_schemas[0].id, "twitch.event");
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}

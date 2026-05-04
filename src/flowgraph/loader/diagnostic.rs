@@ -197,6 +197,8 @@ pub struct LoadReport {
 	pub package_lock_preview: Vec<PackageLockEntry>,
 	/// LF-5: `[[types]]` named schema metadata catalog。
 	pub type_schemas: Vec<TypeSchemaSummary>,
+	/// LF-5: record schema dependency graph の dependency-first order。
+	pub type_schema_dependency_order: Vec<String>,
 	/// LF-4: package lock preview 全体の stable digest。空 preview では `None`。
 	pub package_lock_preview_digest: Option<String>,
 	/// LF-2: graph 全体が要求する capability の集計。policy enforcement ではなく read-only metadata。
@@ -214,6 +216,7 @@ impl std::fmt::Debug for LoadReport {
 			.field("package_dependency_order", &self.package_dependency_order)
 			.field("package_lock_preview", &self.package_lock_preview)
 			.field("type_schemas", &self.type_schemas)
+			.field("type_schema_dependency_order", &self.type_schema_dependency_order)
 			.field("package_lock_preview_digest", &self.package_lock_preview_digest)
 			.field("capability_summary", &self.capability_summary)
 			.field("file_activation", &self.file_activation.keys().collect::<Vec<_>>())
@@ -283,6 +286,8 @@ pub struct GraphSignature {
 	pub files: Vec<GraphSignatureFile>,
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub type_schemas: Vec<TypeSchemaSummary>,
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub type_schema_dependency_order: Vec<String>,
 	pub external_triggers: Vec<GraphSignatureTrigger>,
 	pub boundary_inputs: Vec<GraphSignaturePort>,
 	pub boundary_outputs: Vec<GraphSignaturePort>,
