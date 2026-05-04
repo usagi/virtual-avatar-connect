@@ -678,6 +678,12 @@ LF-5e の `type_expr` を node catalog の top-level `inputs[]` / `outputs[]` / 
 成功時は canonical type string と `SocketTypeExpr` を返し、`map<string, list<json>>` のような互換表記を `map<list<json>>` へ正規化して観測できる。
 失敗時は `valid=false` と parse error を返すだけに留め、まだ custom node editor や loader enforcement には接続しない。
 
+### LF-5h Socket type compatibility validation API ✅
+
+`GET /flowgraph/socket-type-compatibility?from=...&to=...` を追加し、GUI / tooling がサーバと同じ `SocketType::compatible_with` で型接続可否を検証できるようにした。
+成功時は canonical type string、両側の `SocketTypeExpr`、`compatible` を返し、`list<float> -> list<quantity>` のような再帰的 compatibility も同じ rule で観測できる。
+現段階では read-only validation API に留め、FlowgraphCanvas の live edge validation への置き換えや async debounce は後続に送る。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
