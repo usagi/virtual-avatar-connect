@@ -720,6 +720,12 @@ Stage 5 Record / Schema Type への足場として、`record<schema_id>` を `So
 LF-5n では `kind = "record"`、`description`、`fields` の read-only catalog に留め、空 id / 重複 id / unsupported kind を loader diagnostic として返す。
 標準ノードや custom node が `record<schema_id>` を宣言したとき、対応する `[[types]]` が無い場合は warning diagnostic を返す足場も追加した。
 
+### LF-5o `[[types]].fields` socket type validation ✅
+
+`[[types]].fields` の値をサーバ共通の `SocketType::parse` で検証し、未定義 primitive や壊れた generic 表記を loader diagnostic として返すようにした。
+field 名の空白 / 空 field も `InvalidTypeDefinition` として扱い、schema metadata の typo を loader 時点で検出できる。
+まだ実データの structural validation は行わず、record schema catalog の品質を先に固める。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
