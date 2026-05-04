@@ -42,8 +42,8 @@ pub use engine::{
 	ProgramStateSnapshotNode, ProgramStateSummary, StateRestoreError,
 };
 pub use loader::{
-	file_activation_meta, load_file, load_flowgraph_dir, Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, LoadError, LoadReport,
-	LoadedNodeMeta, Severity,
+	file_activation_meta, load_file, load_flowgraph_dir, Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, GraphSignature,
+	GraphSignatureFile, GraphSignaturePort, GraphSignatureTrigger, LoadError, LoadReport, LoadedNodeMeta, Severity,
 };
 pub use node::{
 	EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeImpl, NodeOutput, NodeSpec, OutputMap, PortDirection,

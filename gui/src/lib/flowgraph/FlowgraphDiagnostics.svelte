@@ -158,6 +158,7 @@
   const capabilitySummary = $derived(
     flowgraphStore.diagnostics?.capability_summary,
   );
+  const graphSignature = $derived(flowgraphStore.diagnostics?.graph_signature);
   const capabilityCounts = $derived(
     Object.entries(capabilitySummary?.capability_counts ?? {}).map(
       ([capability, count]) => ({
@@ -197,6 +198,12 @@
           / state {capabilitySummary.stateful_node_count} / snapshots {capabilitySummary.snapshot_supported_state_node_count}
           / restores {capabilitySummary.restore_supported_state_node_count}
         </span>
+        {#if graphSignature}
+          <span class="font-mono text-[0.65rem] opacity-55">
+            signature files {graphSignature.file_count} / edges {graphSignature.edge_count}
+            / triggers {graphSignature.external_triggers.length} / boundary {graphSignature.boundary_inputs.length}:{graphSignature.boundary_outputs.length}
+          </span>
+        {/if}
         {#if capabilityCounts.length > 0}
           <span class="opacity-50">capabilities</span>
           {#each capabilityCounts as item (item.capability)}

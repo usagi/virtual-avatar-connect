@@ -5,7 +5,7 @@
 //! **ロード＋純粋グラフのスモーク**向け。
 
 use crate::flowgraph::engine::create_trigger_bus;
-use crate::flowgraph::loader::GraphCapabilitySummary;
+use crate::flowgraph::loader::{GraphCapabilitySummary, GraphSignature};
 use crate::flowgraph::node::{
 	EffectMocks, ExecCtx, FileReadMockResponse, FileWriteMockResponse, HttpMockResponse, SocketValueRepr, TriggerEvent,
 };
@@ -23,6 +23,7 @@ use std::time::Duration;
 /// ロードに成功したときの結果。
 pub struct FixtureLoadOk {
 	pub program: FlowgraphProgram,
+	pub graph_signature: GraphSignature,
 	pub capability_summary: GraphCapabilitySummary,
 }
 
@@ -162,6 +163,7 @@ pub struct FixtureRunReport {
 	pub root: String,
 	pub generation: u64,
 	pub node_count: usize,
+	pub graph_signature: GraphSignature,
 	pub capability_summary: GraphCapabilitySummary,
 	pub mock_count: usize,
 	pub mocks: Vec<FixtureMockSummary>,
@@ -475,6 +477,7 @@ pub fn load_fixture_program(root: &Path) -> Result<FixtureLoadOk, FixtureError> 
 	let report = load_flowgraph_dir(root).map_err(FixtureError::Load)?;
 	Ok(FixtureLoadOk {
 		program: report.program,
+		graph_signature: report.graph_signature,
 		capability_summary: report.capability_summary,
 	})
 }
@@ -489,6 +492,7 @@ pub async fn load_and_execute_once(root: &Path) -> Result<ProgramRun, FixtureErr
 pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, FixtureError> {
 	let mut fixture = load_fixture_program(root)?;
 	let node_count = fixture.program.node_ids().count();
+	let graph_signature = fixture.graph_signature.clone();
 	let capability_summary = fixture.capability_summary.clone();
 	let declared_tests = read_declared_tests(root)?;
 	let initial_state_snapshot = build_initial_state_snapshot(&declared_tests)?;
@@ -506,6 +510,7 @@ pub async fn run_fixture_once_report(root: &Path) -> Result<FixtureRunReport, Fi
 	let mut report = make_report(
 		root,
 		node_count,
+		graph_signature,
 		capability_summary,
 		run,
 		ctx,
@@ -727,6 +732,7 @@ fn trigger_history_from_event(delay_ms: u64, event: &TriggerEvent) -> FixtureTri
 fn make_report(
 	root: &Path,
 	node_count: usize,
+	graph_signature: GraphSignature,
 	capability_summary: GraphCapabilitySummary,
 	run: ProgramRun,
 	ctx: ExecCtx,
@@ -805,6 +811,7 @@ fn make_report(
 		root: root.display().to_string(),
 		generation,
 		node_count,
+		graph_signature,
 		capability_summary,
 		mock_count: mocks.len(),
 		mocks,
@@ -2259,6 +2266,7 @@ node_count = 1
 			root: "test".into(),
 			generation: 1,
 			node_count: 1,
+			graph_signature: GraphSignature::default(),
 			capability_summary: GraphCapabilitySummary::default(),
 			mock_count: 0,
 			mocks: Vec::new(),

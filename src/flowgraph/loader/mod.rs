@@ -29,8 +29,8 @@ pub mod file;
 pub mod reference;
 
 pub use diagnostic::{
-	Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, GraphCapabilityNode, GraphCapabilitySummary, GraphStateNode, LoadError,
-	LoadReport, LoadedNodeMeta, Severity,
+	Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, GraphCapabilityNode, GraphCapabilitySummary, GraphSignature,
+	GraphSignatureFile, GraphSignaturePort, GraphSignatureTrigger, GraphStateNode, LoadError, LoadReport, LoadedNodeMeta, Severity,
 };
 pub use dir::{fq_path_of_file, is_flowgraph_file, load_flowgraph_dir, walk_flowgraph_dir};
 pub use file::{

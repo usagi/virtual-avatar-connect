@@ -1189,6 +1189,52 @@ export type FlowgraphCapabilitySummary = {
   state_nodes: FlowgraphStateNode[];
 };
 
+export type FlowgraphSignatureFile = {
+  fq: string;
+  title?: string;
+  description?: string;
+  library_id?: string;
+  mode_groups: string[];
+  default_enabled: boolean;
+};
+
+export type FlowgraphSignaturePort = {
+  node: string;
+  feature: string;
+  port: string;
+  label: string;
+  ty: string;
+  direction: "input" | "output";
+  exec: boolean;
+  optional: boolean;
+  multi: boolean;
+};
+
+export type FlowgraphSignatureTrigger = {
+  node: string;
+  feature: string;
+  trigger_kind: "ingress" | "control" | string;
+  exec_inputs: string[];
+  data_inputs: FlowgraphSignaturePort[];
+};
+
+export type FlowgraphSignature = {
+  version: number;
+  kind: "flowgraph" | string;
+  file_count: number;
+  node_count: number;
+  edge_count: number;
+  effectful_node_count: number;
+  stateful_node_count: number;
+  snapshot_supported_state_node_count: number;
+  restore_supported_state_node_count: number;
+  required_capabilities: string[];
+  files: FlowgraphSignatureFile[];
+  external_triggers: FlowgraphSignatureTrigger[];
+  boundary_inputs: FlowgraphSignaturePort[];
+  boundary_outputs: FlowgraphSignaturePort[];
+};
+
 export type FlowgraphDiagnosticsResponse = {
   root_dir: string;
   ok: boolean;
@@ -1196,6 +1242,7 @@ export type FlowgraphDiagnosticsResponse = {
   /** `fq_name` → 定義元メタ。 */
   node_meta: Record<string, FlowgraphLoadedNodeMeta>;
   capability_summary: FlowgraphCapabilitySummary;
+  graph_signature: FlowgraphSignature;
   loaded_state_summary: FlowgraphProgramStateSummary;
   loaded_state_snapshot: FlowgraphProgramStateSnapshot;
   loaded_state_restore_report: FlowgraphProgramStateRestoreReport | null;

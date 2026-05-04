@@ -290,6 +290,8 @@ pub struct DiagnosticsResponse {
 	pub node_meta: std::collections::HashMap<String, crate::flowgraph::loader::LoadedNodeMeta>,
 	/// LF-2: graph 全体が要求する capability summary。
 	pub capability_summary: crate::flowgraph::loader::GraphCapabilitySummary,
+	/// LF-1: graph-as-node / library signature の入口となる read-only graph signature。
+	pub graph_signature: crate::flowgraph::loader::GraphSignature,
 	/// LF-7: ロード直後の stateful node summary。worker 実行後の live state ではない。
 	pub loaded_state_summary: crate::flowgraph::ProgramStateSummary,
 	/// LF-7: ロード直後に snapshot export できる state payload。worker 実行後の live state ではない。
@@ -338,6 +340,7 @@ pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 		diagnostics: rt.diagnostics.clone(),
 		node_meta: rt.node_meta.clone(),
 		capability_summary: rt.capability_summary.clone(),
+		graph_signature: rt.graph_signature.clone(),
 		loaded_state_summary: rt.loaded_state_summary.clone(),
 		loaded_state_snapshot: rt.loaded_state_snapshot.clone(),
 		loaded_state_restore_report: rt.loaded_state_restore_report.clone(),
@@ -987,7 +990,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::flowgraph::loader::GraphCapabilitySummary;
+	use crate::flowgraph::loader::{GraphCapabilitySummary, GraphSignature};
 	use crate::flowgraph::{ProgramStateSnapshot, ProgramStateSnapshotNode, ProgramStateSummary, StateSnapshotFormat};
 	use std::collections::HashMap;
 	use std::path::PathBuf;
@@ -1025,6 +1028,7 @@ mod tests {
 			ok: true,
 			diagnostics: vec![],
 			node_meta: HashMap::new(),
+			graph_signature: GraphSignature::default(),
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),
 			loaded_state_snapshot: snapshot(),

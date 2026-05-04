@@ -180,6 +180,8 @@ pub struct LoadReport {
 	pub diagnostics: Vec<Diagnostic>,
 	/// 解決済みノード（`fq_name` → 定義元ファイル / feature）。GUI / debug 用メタ情報。
 	pub node_meta: std::collections::HashMap<String, LoadedNodeMeta>,
+	/// LF-1: graph-as-node / library signature の入口となる read-only graph signature。
+	pub graph_signature: GraphSignature,
 	/// LF-2: graph 全体が要求する capability の集計。policy enforcement ではなく read-only metadata。
 	pub capability_summary: GraphCapabilitySummary,
 	/// RM-3: 各 `.flowgraph.toml` の fq → `[meta]` の mode 系メタ（省略時は既定）。
@@ -190,11 +192,65 @@ impl std::fmt::Debug for LoadReport {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.debug_struct("LoadReport")
 			.field("nodes", &self.node_meta.keys().collect::<Vec<_>>())
+			.field("graph_signature", &self.graph_signature)
 			.field("capability_summary", &self.capability_summary)
 			.field("file_activation", &self.file_activation.keys().collect::<Vec<_>>())
 			.field("diagnostics", &self.diagnostics)
 			.finish()
 	}
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct GraphSignature {
+	pub version: u32,
+	pub kind: String,
+	pub file_count: usize,
+	pub node_count: usize,
+	pub edge_count: usize,
+	pub effectful_node_count: usize,
+	pub stateful_node_count: usize,
+	pub snapshot_supported_state_node_count: usize,
+	pub restore_supported_state_node_count: usize,
+	pub required_capabilities: Vec<String>,
+	pub files: Vec<GraphSignatureFile>,
+	pub external_triggers: Vec<GraphSignatureTrigger>,
+	pub boundary_inputs: Vec<GraphSignaturePort>,
+	pub boundary_outputs: Vec<GraphSignaturePort>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct GraphSignatureFile {
+	pub fq: String,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub title: Option<String>,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub description: Option<String>,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub library_id: Option<String>,
+	pub mode_groups: Vec<String>,
+	pub default_enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct GraphSignaturePort {
+	pub node: String,
+	pub feature: String,
+	pub port: String,
+	pub label: String,
+	pub ty: String,
+	pub direction: String,
+	pub exec: bool,
+	pub optional: bool,
+	pub multi: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct GraphSignatureTrigger {
+	pub node: String,
+	pub feature: String,
+	pub trigger_kind: String,
+	pub exec_inputs: Vec<String>,
+	pub data_inputs: Vec<GraphSignaturePort>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]

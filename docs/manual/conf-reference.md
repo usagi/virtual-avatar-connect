@@ -99,6 +99,10 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 `GET /api/v1/control/flowgraph/diagnostics` は、ロード診断に加えて Flowgraph の capability / state metadata を返します。
 state 関連の値は reload 直後の read-only snapshot であり、worker 実行後の live state ではありません。
 
+- `graph_signature`: graph-as-node / library signature の入口となる read-only boundary metadata。
+- `graph_signature.files[]`: Flowgraph file fq、title / description、normalized library id、mode activation metadata。
+- `graph_signature.external_triggers[]`: `flowgraph.ingress.*` と control-triggerable node の外部 trigger surface。
+- `graph_signature.boundary_inputs[]` / `boundary_outputs[]`: edge で内部接続されていない port surface。
 - `capability_summary.stateful_node_count`: graph 内の stateful node 数。
 - `capability_summary.snapshot_supported_state_node_count`: graph 内で snapshot export に対応する stateful node 数。
 - `capability_summary.restore_supported_state_node_count`: graph 内で snapshot restore に対応する stateful node 数。

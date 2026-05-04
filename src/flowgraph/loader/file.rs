@@ -7,15 +7,16 @@
 //! 「1 ファイル限定」のショートカット。多ファイル統合は [`super::dir::load_flowgraph_dir`]。
 
 use crate::flowgraph::loader::diagnostic::{
-	Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, LoadError, LoadReport, LoadedNodeMeta, Severity,
+	Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, GraphCapabilitySummary, GraphSignature, GraphSignatureFile,
+	GraphSignaturePort, GraphSignatureTrigger, LoadError, LoadReport, LoadedNodeMeta, Severity,
 };
 use crate::flowgraph::loader::reference::parse_port_ref;
-use crate::flowgraph::node::{InputMap, NodeSpec};
+use crate::flowgraph::node::{InputMap, NodeSpec, PortSpec};
 use crate::flowgraph::registry::{registry, NodeRegistry};
 use crate::flowgraph::socket::{from_toml_value, SocketValue};
 use crate::flowgraph::{FlowgraphBuilder, FlowgraphProgram, PortRef};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 // ---------------------------------------------------------------------
@@ -378,6 +379,9 @@ impl BuildContext {
 
 		// Pass 2: エッジ解決
 		let ctx_files: HashSet<String> = self.known_file_fqs.clone();
+		let mut connected_inputs: BTreeSet<(String, String)> = BTreeSet::new();
+		let mut connected_outputs: BTreeSet<(String, String)> = BTreeSet::new();
+		let mut edge_count = 0;
 		for (file_fq, file_path, file) in &self.files {
 			let resolve_ctx = crate::flowgraph::loader::reference::ResolveContext {
 				current_file_fq: file_fq.clone(),
@@ -520,6 +524,9 @@ impl BuildContext {
 
 				let from_pr = PortRef::new(from_fq_name, parsed_from.port.clone());
 				let to_pr = PortRef::new(to_fq_name, parsed_to.port.clone());
+				connected_outputs.insert((from_pr.node.clone(), from_pr.port.clone()));
+				connected_inputs.insert((to_pr.node.clone(), to_pr.port.clone()));
+				edge_count += 1;
 				if is_exec {
 					builder.connect_exec(from_pr, to_pr);
 				} else {
@@ -540,14 +547,140 @@ impl BuildContext {
 		})?;
 
 		let capability_summary = crate::flowgraph::loader::diagnostic::GraphCapabilitySummary::from_node_meta(reg, &node_meta);
+		let graph_signature = build_graph_signature(
+			reg,
+			&self.files,
+			&node_meta,
+			&node_specs,
+			&connected_inputs,
+			&connected_outputs,
+			edge_count,
+			&capability_summary,
+		);
 
 		Ok(LoadReport {
 			program,
 			diagnostics,
 			node_meta,
+			graph_signature,
 			capability_summary,
 			file_activation,
 		})
+	}
+}
+
+fn build_graph_signature(
+	reg: &NodeRegistry,
+	files: &[(String, PathBuf, FlowgraphFile)],
+	node_meta: &HashMap<String, LoadedNodeMeta>,
+	node_specs: &HashMap<String, NodeSpec>,
+	connected_inputs: &BTreeSet<(String, String)>,
+	connected_outputs: &BTreeSet<(String, String)>,
+	edge_count: usize,
+	capability_summary: &GraphCapabilitySummary,
+) -> GraphSignature {
+	let mut files_meta: Vec<GraphSignatureFile> = files
+		.iter()
+		.map(|(fq, _, file)| {
+			let activation = file_activation_meta(file);
+			GraphSignatureFile {
+				fq: fq.clone(),
+				title: file.meta.as_ref().and_then(|meta| meta.title.clone()),
+				description: file.meta.as_ref().and_then(|meta| meta.description.clone()),
+				library_id: file.meta.as_ref().and_then(normalized_library_id),
+				mode_groups: activation.mode_groups,
+				default_enabled: activation.default_enabled,
+			}
+		})
+		.collect();
+	files_meta.sort_by(|a, b| a.fq.cmp(&b.fq));
+
+	let mut node_ids: Vec<&String> = node_specs.keys().collect();
+	node_ids.sort();
+	let mut boundary_inputs = Vec::new();
+	let mut boundary_outputs = Vec::new();
+	let mut external_triggers = Vec::new();
+	for node in node_ids {
+		let Some(spec) = node_specs.get(node) else {
+			continue;
+		};
+		let Some(meta) = node_meta.get(node) else {
+			continue;
+		};
+
+		for port in &spec.inputs {
+			if !connected_inputs.contains(&(node.clone(), port.name.clone())) {
+				boundary_inputs.push(graph_signature_port(node, &meta.feature, port));
+			}
+		}
+		for port in &spec.outputs {
+			if !connected_outputs.contains(&(node.clone(), port.name.clone())) {
+				boundary_outputs.push(graph_signature_port(node, &meta.feature, port));
+			}
+		}
+
+		let trigger_kind = if reg.is_control_triggerable(&meta.feature) {
+			Some("control")
+		} else if meta.feature.starts_with("flowgraph.ingress.") {
+			Some("ingress")
+		} else {
+			None
+		};
+		if let Some(trigger_kind) = trigger_kind {
+			let exec_inputs = spec
+				.inputs
+				.iter()
+				.filter(|port| port.is_exec)
+				.map(|port| port.name.clone())
+				.collect();
+			let data_inputs = spec
+				.inputs
+				.iter()
+				.filter(|port| !port.is_exec)
+				.map(|port| graph_signature_port(node, &meta.feature, port))
+				.collect();
+			external_triggers.push(GraphSignatureTrigger {
+				node: node.clone(),
+				feature: meta.feature.clone(),
+				trigger_kind: trigger_kind.into(),
+				exec_inputs,
+				data_inputs,
+			});
+		}
+	}
+
+	GraphSignature {
+		version: 1,
+		kind: "flowgraph".into(),
+		file_count: files_meta.len(),
+		node_count: node_meta.len(),
+		edge_count,
+		effectful_node_count: capability_summary.effectful_node_count,
+		stateful_node_count: capability_summary.stateful_node_count,
+		snapshot_supported_state_node_count: capability_summary.snapshot_supported_state_node_count,
+		restore_supported_state_node_count: capability_summary.restore_supported_state_node_count,
+		required_capabilities: capability_summary.capabilities.clone(),
+		files: files_meta,
+		external_triggers,
+		boundary_inputs,
+		boundary_outputs,
+	}
+}
+
+fn graph_signature_port(node: &str, feature: &str, port: &PortSpec) -> GraphSignaturePort {
+	GraphSignaturePort {
+		node: node.to_string(),
+		feature: feature.to_string(),
+		port: port.name.clone(),
+		label: port.label.clone(),
+		ty: port.ty.to_string(),
+		direction: match port.direction {
+			crate::flowgraph::node::PortDirection::Input => "input".into(),
+			crate::flowgraph::node::PortDirection::Output => "output".into(),
+		},
+		exec: port.is_exec,
+		optional: port.optional,
+		multi: port.multi,
 	}
 }
 
@@ -987,6 +1120,75 @@ mod tests {
 		let act = report.file_activation.get("demo").expect("fq key").clone();
 		assert_eq!(act.mode_groups, vec!["assistant".to_string(), "rss".to_string()]);
 		assert!(!act.default_enabled);
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
+	fn load_report_includes_graph_signature() {
+		let path = write_tmp(
+			"signature.flowgraph.toml",
+			r#"
+				[meta]
+				title = "Signature Demo"
+				author = "VAC"
+				name = "demo"
+				version = "1.2.3"
+
+				[[nodes]]
+				id = "in"
+				feature = "flowgraph.ingress.web_input"
+
+				[[nodes]]
+				id = "log"
+				feature = "flowgraph.util.log"
+
+				[[edges]]
+				from = "in:exec_out"
+				to = "log:exec_in"
+
+				[[edges]]
+				from = "in:content"
+				to = "log:value"
+			"#,
+		);
+		let report = load_file(&path, Some("demo/main")).expect("load");
+		let sig = &report.graph_signature;
+
+		assert_eq!(sig.version, 1);
+		assert_eq!(sig.kind, "flowgraph");
+		assert_eq!(sig.file_count, 1);
+		assert_eq!(sig.node_count, 2);
+		assert_eq!(sig.edge_count, 2);
+		assert_eq!(sig.effectful_node_count, report.capability_summary.effectful_node_count);
+		assert_eq!(sig.required_capabilities, report.capability_summary.capabilities);
+		assert_eq!(sig.files[0].fq, "demo/main");
+		assert_eq!(sig.files[0].title.as_deref(), Some("Signature Demo"));
+		assert_eq!(sig.files[0].library_id.as_deref(), Some("vac::demo::1_2_3"));
+
+		let trigger = sig
+			.external_triggers
+			.iter()
+			.find(|trigger| trigger.node == "demo/main::in")
+			.expect("ingress trigger signature");
+		assert_eq!(trigger.trigger_kind, "ingress");
+		assert_eq!(trigger.exec_inputs, vec!["__trigger__".to_string()]);
+		assert!(trigger
+			.data_inputs
+			.iter()
+			.any(|port| port.port == "__content__" && port.ty == "string"));
+
+		assert!(sig
+			.boundary_inputs
+			.iter()
+			.any(|port| port.node == "demo/main::in" && port.port == "__trigger__" && port.exec));
+		assert!(!sig
+			.boundary_inputs
+			.iter()
+			.any(|port| port.node == "demo/main::log" && port.port == "value"));
+		assert!(sig
+			.boundary_outputs
+			.iter()
+			.any(|port| port.node == "demo/main::log" && port.port == "exec_out" && port.exec));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
