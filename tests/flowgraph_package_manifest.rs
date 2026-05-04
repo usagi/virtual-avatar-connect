@@ -80,3 +80,55 @@ properties.value = "bye"
 	);
 	let _ = std::fs::remove_dir_all(&root);
 }
+
+#[test]
+fn package_invalid_version_returns_error() {
+	let root = tmp_root("invalid-version");
+	write(
+		&root.join("main.flowgraph.toml"),
+		r#"[package]
+id = "example.version"
+version = "1.02.0"
+exports = ["main"]
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "hi"
+"#,
+	);
+
+	let err = load_flowgraph_dir(&root).expect_err("invalid package version");
+	assert!(
+		err.errors()
+			.any(|diagnostic| diagnostic.code == DiagnosticCode::InvalidPackageManifest),
+		"{:#?}",
+		err.diagnostics
+	);
+	let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn package_semver_prerelease_and_build_loads() {
+	let root = tmp_root("valid-version");
+	write(
+		&root.join("main.flowgraph.toml"),
+		r#"[package]
+id = "example.version"
+version = "1.2.3-alpha.1+build.5"
+exports = ["main"]
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "hi"
+"#,
+	);
+
+	let report = load_flowgraph_dir(&root).expect("valid package version");
+	assert_eq!(
+		report.graph_signature.files[0].package_version.as_deref(),
+		Some("1.2.3-alpha.1+build.5")
+	);
+	let _ = std::fs::remove_dir_all(&root);
+}

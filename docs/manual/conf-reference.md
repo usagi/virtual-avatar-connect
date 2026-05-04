@@ -99,7 +99,7 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 `GET /api/v1/control/flowgraph/diagnostics` は、ロード診断に加えて Flowgraph の signature / capability / state metadata を返します。
 `GET /api/v1/control/flowgraph/signature` は、同じ `graph_signature` JSON だけを返します。
 `*.flowgraph.toml` は任意の top-level `[package]` を読めます。現在のフィールドは `id`, `version`, `exports` で、`graph_signature.files[]` の `package_id`, `package_version`, `package_exports` として公開されます。
-`[package].id` は必須で、`example.pkg-name` のような lowercase dot-separated identifier です。同一 flowgraph root 内で package id は重複できません。`[package].exports` は flowgraph ルート内に存在する fq を指定します。空エントリ、未知 fq、正規化後に重複する fq は `invalid-package-manifest` としてロードエラーになります。
+`[package].id` は必須で、`example.pkg-name` のような lowercase dot-separated identifier です。同一 flowgraph root 内で package id は重複できません。`[package].version` は任意ですが、書く場合は SemVer 形式です。`[package].exports` は flowgraph ルート内に存在する fq を指定します。空エントリ、未知 fq、正規化後に重複する fq は `invalid-package-manifest` としてロードエラーになります。
 state 関連の値は reload 直後の read-only snapshot であり、worker 実行後の live state ではありません。
 
 - `graph_signature`: graph-as-node / library signature の入口となる read-only boundary metadata。

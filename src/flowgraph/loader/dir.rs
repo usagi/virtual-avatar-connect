@@ -35,8 +35,42 @@ fn package_id_is_valid(id: &str) -> bool {
 			&& chars.all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '_' || ch == '-')
 	})
 }
+fn package_version_is_valid(version: &str) -> bool {
+	if version != version.trim() || version.is_empty() {
+		return false;
+	}
+	let (without_build, build) = match version.split_once('+') {
+		Some((head, tail)) => (head, Some(tail)),
+		None => (version, None),
+	};
+	if build.is_some_and(|build| !semver_identifiers_are_valid(build, true)) {
+		return false;
+	}
+	let (core, pre) = match without_build.split_once('-') {
+		Some((head, tail)) => (head, Some(tail)),
+		None => (without_build, None),
+	};
+	if pre.is_some_and(|pre| !semver_identifiers_are_valid(pre, false)) {
+		return false;
+	}
+	let parts: Vec<&str> = core.split('.').collect();
+	parts.len() == 3 && parts.iter().all(|part| semver_number_is_valid(part))
+}
 
-/// `[meta].library_uses` の参照先検証と閉路検出（エラー時はロード失敗）。
+fn semver_number_is_valid(part: &str) -> bool {
+	!part.is_empty() && part.chars().all(|ch| ch.is_ascii_digit()) && (part == "0" || !part.starts_with('0'))
+}
+
+fn semver_identifiers_are_valid(identifiers: &str, allow_numeric_leading_zero: bool) -> bool {
+	!identifiers.is_empty()
+		&& identifiers.split('.').all(|identifier| {
+			!identifier.is_empty()
+				&& identifier.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-')
+				&& (allow_numeric_leading_zero || !identifier.chars().all(|ch| ch.is_ascii_digit()) || semver_number_is_valid(identifier))
+		})
+}
+
+/// `[meta`].library_uses` の参照先検証と閉路検出（エラー時はロード失敗）。
 fn library_use_dependency_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], known: &HashSet<String>) -> Vec<Diagnostic> {
 	let mut diagnostics: Vec<Diagnostic> = Vec::new();
 	let mut adj: HashMap<String, Vec<String>> = HashMap::new();
@@ -172,6 +206,18 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 			}
 		}
 
+		if let Some(version) = package.version.as_deref() {
+			if !package_version_is_valid(version) {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidPackageManifest,
+						format!("[package].version '{version}' は SemVer ではありません"),
+					)
+					.with_file(path.clone())
+					.with_hint("[package].version"),
+				);
+			}
+		}
 		let mut seen_exports: HashSet<String> = HashSet::new();
 		for export in &package.exports {
 			let target = normalize_library_use_fq(export);
