@@ -32,25 +32,45 @@
  import '@xyflow/svelte/dist/style.css';
  import { flowgraphStore, parsePortRef } from '../flowgraphStore.svelte';
  import { toastStore } from '../toasts.svelte';
- import type { FlowgraphNodeSpec } from '../types';
+ import type { FlowgraphNodeSpec, FlowgraphSocketTypeExpr } from '../types';
  import FlowgraphNodeCard from './FlowgraphNodeCard.svelte';
  import FlowgraphGroupFrame from './FlowgraphGroupFrame.svelte';
  import FlowgraphAutoFit from './FlowgraphAutoFit.svelte';
  import FlowgraphPaneDropBridge from './FlowgraphPaneDropBridge.svelte';
 
- /** engine の `SocketType::compatible_with` + Phase λ `closed_string_variants` に概ね整合。 */
+ function socketTypeExprCompatible(outExpr: FlowgraphSocketTypeExpr, inExpr: FlowgraphSocketTypeExpr): boolean {
+  if (outExpr.display === inExpr.display) return true;
+  if (outExpr.name === 'float' && inExpr.name === 'quantity') return true;
+  if (outExpr.name === 'quantity' && inExpr.name === 'float') return true;
+  if (outExpr.name === 'quantity' && inExpr.name === 'string') return true;
+  if (outExpr.name === 'string' && inExpr.name === 'datetime') return true;
+  if (outExpr.name === 'datetime' && inExpr.name === 'string') return true;
+  if (outExpr.name === 'json' && inExpr.name === 'motion_frame') return true;
+  if (outExpr.name === 'motion_frame' && inExpr.name === 'json') return true;
+  if (outExpr.kind !== 'generic' || inExpr.kind !== 'generic') return false;
+  if (outExpr.name !== inExpr.name) return false;
+  const outArgs = outExpr.args ?? [];
+  const inArgs = inExpr.args ?? [];
+  return outArgs.length === inArgs.length && outArgs.every((arg, index) => socketTypeExprCompatible(arg, inArgs[index]));
+ }
+
+ /** engine の `SocketType::compatible_with` + Phase λ `closed_string_variants` に整合。 */
  function portsWireCompatible(
   outTy: string,
   inTy: string,
   outClosed?: string[] | null,
   inClosed?: string[] | null,
+  outExpr?: FlowgraphSocketTypeExpr,
+  inExpr?: FlowgraphSocketTypeExpr,
  ): boolean {
-  let ok = false;
-  if (outTy === inTy) ok = true;
-  else if (outTy === 'json' || inTy === 'json') ok = true;
-  else if ((outTy === 'float' && inTy === 'quantity') || (outTy === 'quantity' && inTy === 'float')) ok = true;
-  else if (outTy === 'quantity' && inTy === 'string') ok = true;
-  else if ((outTy === 'string' && inTy === 'datetime') || (outTy === 'datetime' && inTy === 'string')) ok = true;
+  let ok = outExpr && inExpr ? socketTypeExprCompatible(outExpr, inExpr) : false;
+  if (!outExpr || !inExpr) {
+   if (outTy === inTy) ok = true;
+   else if (outTy === 'json' || inTy === 'json') ok = true;
+   else if ((outTy === 'float' && inTy === 'quantity') || (outTy === 'quantity' && inTy === 'float')) ok = true;
+   else if (outTy === 'quantity' && inTy === 'string') ok = true;
+   else if ((outTy === 'string' && inTy === 'datetime') || (outTy === 'datetime' && inTy === 'string')) ok = true;
+  }
   if (!ok) return false;
   if (outTy === 'string' && inTy === 'string' && inClosed?.length && outClosed?.length) {
    if (!outClosed.every((v) => inClosed.includes(v))) return false;
@@ -165,7 +185,14 @@
     fromSpec &&
     toSpec &&
     !isExec &&
-    !portsWireCompatible(fromSpec.ty, toSpec.ty, fromSpec.closed_string_variants, toSpec.closed_string_variants);
+   !portsWireCompatible(
+    fromSpec.ty,
+    toSpec.ty,
+    fromSpec.closed_string_variants,
+    toSpec.closed_string_variants,
+    fromSpec.type_expr,
+    toSpec.type_expr,
+   );
    let style: string | undefined;
    if (isExec) style = 'stroke: rgb(249 115 22); stroke-width: 2;';
    else if (typeMismatch) style = 'stroke: rgb(239 68 68); stroke-width: 2; stroke-dasharray: 5 4;';
@@ -187,7 +214,7 @@
   portName: string,
   dir: 'input' | 'output',
  ):
-  | { is_exec: boolean; ty: string; closed_string_variants?: string[] | null }
+   | { is_exec: boolean; ty: string; type_expr?: FlowgraphSocketTypeExpr; closed_string_variants?: string[] | null }
   | undefined {
   const node = flowgraphStore.draftNodes?.find((n) => n.id === nodeId);
   if (!node) return undefined;
@@ -199,6 +226,7 @@
    ? {
       is_exec: p.is_exec,
       ty: p.ty,
+      type_expr: p.type_expr,
       closed_string_variants: p.closed_string_variants,
      }
    : undefined;
@@ -240,6 +268,8 @@
     inSpec.ty,
     outSpec.closed_string_variants,
     inSpec.closed_string_variants,
+   outSpec.type_expr,
+   inSpec.type_expr,
    )
   )
    return;
