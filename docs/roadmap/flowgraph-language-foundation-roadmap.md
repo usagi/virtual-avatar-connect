@@ -18,14 +18,14 @@ VAC Flowgraph を汎用プログラミング言語に近づけるための基礎
 
 `record`, `table schema`, node signature, library signature を統一する契約システム。
 
-### 目的
+### LF-1 目的
 
 - `json` 逃げを減らす
 - Table / SQLite / Google Sheets / JSON / TOML / OBS template を同じ schema 語彙で扱う
 - Graph-as-node の input / output contract を検証できるようにする
 - GUI が port / row / record の構造を理解し、補完・警告・フォーム生成できるようにする
 
-### 対象
+### LF-1 対象
 
 - `[types]` による named record schema
 - `table<schema>` または Table metadata による row schema
@@ -33,7 +33,7 @@ VAC Flowgraph を汎用プログラミング言語に近づけるための基礎
 - library signature の生成・検証
 - schema migration / compatibility rule
 
-### 初期実装方針
+### LF-1 初期実装方針
 
 - v0 は named `record` と Table column schema の明文化から始める
 - runtime 値は既存 `serde_json::Value` / `Table` を活かし、schema validation を外側に足す
@@ -58,14 +58,14 @@ VAC Flowgraph を汎用プログラミング言語に近づけるための基礎
 
 Pure / Stateful / Effectful の大分類に加えて、具体的な権限と effect kind を扱う。
 
-### 目的
+### LF-2 目的
 
 - file / process / network / db / notification / OBS / Twitch を安全に扱う
 - Flowgraph 単位、library 単位、node 単位で必要権限を見える化する
 - GUI が危険な操作を事前に表示し、ユーザーが理解して許可できるようにする
 - 常駐アプリとして mode ごとの許可・抑制を扱えるようにする
 
-### effect kind 候補
+### LF-2 effect kind 候補
 
 - `file_read`
 - `file_write`
@@ -80,7 +80,7 @@ Pure / Stateful / Effectful の大分類に加えて、具体的な権限と eff
 - `twitch_api`
 - `credential_access`
 
-### 初期実装方針
+### LF-2 初期実装方針
 
 - node catalog に `effects` / `capabilities` metadata を追加する
 - loader は graph 全体の required capability summary を生成する
@@ -143,14 +143,14 @@ GUI の Modes タブでも preview を表示する。
 
 Flowgraph を「プログラム」として扱うための検証と観測。
 
-### 目的
+### LF-3 目的
 
 - graph 単位の fixture test を書けるようにする
 - node / subgraph / library の入出力を再現可能に検証する
 - external I/O を mock capability で差し替える
 - 常駐 runtime の trigger / data pull / effect boundary を追跡する
 
-### Testing
+### LF-3 Testing
 
 - `*.flowgraph.test.toml` または `[tests]` section
 - fixture input / expected output
@@ -159,7 +159,7 @@ Flowgraph を「プログラム」として扱うための検証と観測。
 - deterministic time / random seed
 - CI で headless 実行できる test runner
 
-### Debugger
+### LF-3 Debugger
 
 - run graph once with fixture input
 - trigger selected node with inputs
@@ -170,7 +170,7 @@ Flowgraph を「プログラム」として扱うための検証と観測。
 - show effect boundary
 - export trace bundle
 
-### 初期実装方針
+### LF-3 初期実装方針
 
 - まず CLI test runner と trace JSON export
 - 次に GUI の watch / trigger history / data pull tree
@@ -1070,6 +1070,12 @@ manual catalog が `NodeRegistry` を直接読む一方で GUI / Control API cat
 Control API catalog enrichment 経路で各 node に注入される `contract.summary` / `effect_class` / `capabilities` / `control_triggerable` / `state_model` と、generated manual catalog の各 node `Metadata` line が一致することを unit test で固定した。
 summary 件数だけでなく node 単位の表示値も Control API catalog と照合するため、特定 node だけ metadata 表示が古くなる regression を検知できる。
 
+### LF-8ae Documentation generation foundation closure ✅
+
+LF-8 の現スコープを、`NodeRegistry` / `NodeSpec` 由来の generated manual catalog と Control API / GUI catalog metadata の同期基盤として完了扱いにした。
+node signature 由来の contract、effect / capability、control trigger、state model、port enum / property choices、type label、summary / metadata index、生成手順、LF-only / anchor / ordering / parity guard は docs test で固定済み。
+`library signature` と schema 由来の追加ドキュメント生成は、LF-1 Schema / Contract と LF-4 Module / Package System で実体が固まった後の後続作業へ送る。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
@@ -1079,4 +1085,4 @@ summary 件数だけでなく node 単位の表示値も Control API catalog と
 - [~] LF-5 Generic / Type Parameter
 - [~] LF-6 Error Model
 - [~] LF-7 Persistence / State Model
-- [~] LF-8 Documentation Generation
+- [x] LF-8 Documentation Generation

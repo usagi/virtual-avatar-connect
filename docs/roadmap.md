@@ -372,7 +372,7 @@ Flowgraph を汎用プログラミング言語へ近づけるための基礎整�
 - [ ] LF-5 Generic / Type Parameter。`list<T>` / `dictionary<K,V>` / `result<T>` の型束縛。
 - [ ] LF-6 Error Model。`result<T>` / `on_error` / fatal diagnostics / retry policy の統一。
 - [ ] LF-7 Persistence / State Model。state 寿命、reload、profile scope、snapshot / migration。
-- [ ] LF-8 Documentation Generation。signature / schema から manual と GUI catalog を生成する。
+- [x] LF-8 Documentation Generation。`NodeRegistry` / `NodeSpec` 由来の generated manual catalog と Control API / GUI catalog metadata の同期基盤を完了。`library signature` / schema 由来の追加生成は LF-1 / LF-4 後続へ送る。
 
 ### Phase ν+（TBD）: E2E 拡張
 
