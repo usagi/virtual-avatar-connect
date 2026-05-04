@@ -336,6 +336,13 @@ struct FixtureExpect {
 	node_count: Option<usize>,
 	mock_count: Option<usize>,
 	trigger_count: Option<usize>,
+	graph_signature_file_count: Option<usize>,
+	graph_signature_edge_count: Option<usize>,
+	graph_signature_trigger_count: Option<usize>,
+	graph_signature_boundary_input_count: Option<usize>,
+	graph_signature_boundary_output_count: Option<usize>,
+	#[serde(default)]
+	graph_signature_required_capabilities: Vec<String>,
 	trace_count: Option<usize>,
 	trace: Option<Vec<String>>,
 	#[serde(default)]
@@ -1007,6 +1014,56 @@ fn evaluate_test_case(path: &Path, index: usize, case: &FixtureTestCase, report:
 	if let Some(expected) = case.expect.trigger_count {
 		if report.trigger_count != expected {
 			failures.push(format!("trigger_count: expected {expected}, actual {}", report.trigger_count));
+		}
+	}
+	if let Some(expected) = case.expect.graph_signature_file_count {
+		if report.graph_signature.file_count != expected {
+			failures.push(format!(
+				"graph_signature_file_count: expected {expected}, actual {}",
+				report.graph_signature.file_count
+			));
+		}
+	}
+	if let Some(expected) = case.expect.graph_signature_edge_count {
+		if report.graph_signature.edge_count != expected {
+			failures.push(format!(
+				"graph_signature_edge_count: expected {expected}, actual {}",
+				report.graph_signature.edge_count
+			));
+		}
+	}
+	if let Some(expected) = case.expect.graph_signature_trigger_count {
+		if report.graph_signature.external_triggers.len() != expected {
+			failures.push(format!(
+				"graph_signature_trigger_count: expected {expected}, actual {}",
+				report.graph_signature.external_triggers.len()
+			));
+		}
+	}
+	if let Some(expected) = case.expect.graph_signature_boundary_input_count {
+		if report.graph_signature.boundary_inputs.len() != expected {
+			failures.push(format!(
+				"graph_signature_boundary_input_count: expected {expected}, actual {}",
+				report.graph_signature.boundary_inputs.len()
+			));
+		}
+	}
+	if let Some(expected) = case.expect.graph_signature_boundary_output_count {
+		if report.graph_signature.boundary_outputs.len() != expected {
+			failures.push(format!(
+				"graph_signature_boundary_output_count: expected {expected}, actual {}",
+				report.graph_signature.boundary_outputs.len()
+			));
+		}
+	}
+	for expected in &case.expect.graph_signature_required_capabilities {
+		if !report
+			.graph_signature
+			.required_capabilities
+			.iter()
+			.any(|capability| capability == expected)
+		{
+			failures.push(format!("graph_signature_required_capabilities: missing {expected}"));
 		}
 	}
 	if let Some(expected) = case.expect.trace_count {

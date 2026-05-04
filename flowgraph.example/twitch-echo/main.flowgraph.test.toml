@@ -22,6 +22,9 @@ name = "twitch ingress trigger"
 [tests.expect]
 node_count = 2
 trigger_count = 1
+graph_signature_file_count = 1
+graph_signature_edge_count = 2
+graph_signature_trigger_count = 1
 trace_count = 1
 trace = ["log: hello fixture"]
 

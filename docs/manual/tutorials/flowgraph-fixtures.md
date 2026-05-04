@@ -35,6 +35,7 @@ cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-root flowgraph.ex
 JSON 出力では suite 全体の成否、fixture 件数、失敗件数、各 fixture の report を返します。
 `test_count` / `failed_tests` / `trigger_count` / `effect_count` / `state_restore_count` / `state_snapshot_count` も suite 直下に出るため、CI やスクリプト側で全 report を走査せずに要約を読めます。
 各 fixture report には `capability_summary` と `graph_signature` も含まれるため、テスト対象 graph が要求する file / network などの capability と、外部 trigger / 未接続 boundary port の surface も同じ JSON で確認できます。
+`[tests.expect]` では `graph_signature_file_count` / `graph_signature_edge_count` / `graph_signature_trigger_count` / `graph_signature_boundary_input_count` / `graph_signature_boundary_output_count` / `graph_signature_required_capabilities` で、graph の公開面が意図せず変わっていないかを固定できます。
 
 ```powershell
 cargo run --bin virtual-avatar-connect-cli -- --flowgraph-test-root flowgraph.example --flowgraph-test-json
@@ -56,6 +57,9 @@ name = "single smoke"
 [test.expect]
 node_count = 2
 trigger_count = 1
+graph_signature_file_count = 1
+graph_signature_edge_count = 2
+graph_signature_trigger_count = 1
 trace_count = 2
 effect_count = 1
 
