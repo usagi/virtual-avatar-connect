@@ -252,6 +252,47 @@ properties.value = "hi"
 }
 
 #[test]
+fn package_lockfile_invalid_returns_warning() {
+	let root = tmp_root("invalid-lockfile");
+	write(
+		&root.join("main.flowgraph.toml"),
+		r#"[package]
+id = "example.main"
+version = "1.0.0"
+exports = ["main"]
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "hi"
+"#,
+	);
+	write(
+		&root.join("flowgraph.lock.json"),
+		r#"{
+  "kind": "wrong.kind",
+  "schema_version": 1,
+  "created_at_unix_ms": 1234,
+  "digest": null,
+  "entry_count": 0,
+  "entries": []
+}
+"#,
+	);
+
+	let report = load_flowgraph_dir(&root).expect("invalid lockfile warning only");
+	assert!(
+		report
+			.diagnostics
+			.iter()
+			.any(|diagnostic| diagnostic.code == DiagnosticCode::PackageLockFile),
+		"{:#?}",
+		report.diagnostics
+	);
+	let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
 fn package_invalid_dependency_returns_error() {
 	let root = tmp_root("invalid-dependency");
 	write(
