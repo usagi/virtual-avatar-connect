@@ -738,6 +738,12 @@ diagnostics API と同じ `TypeSchemaSummary` 形状を使い、GUI / docs gener
 `option<record<x>>` / `list<record<x>>` / `map<record<x>>` など generic の内側も同じ `collect_record_schema_refs` 経路で検出する。
 既存 node port / property の未定義 `record<schema_id>` warning と同じ read-only lint とし、ロード拒否や structural runtime validation はまだ行わない。
 
+### LF-5r Schema field type expressions ✅
+
+`type_schemas[]` に `field_type_exprs` を追加し、`fields` の socket type 文字列を parsed `SocketTypeExpr` として read-only 公開するようにした。
+node port / property の `type_expr` と同じ形状なので、GUI / docs generator は schema field ごとに parser API を叩かず generic type を描画できる。
+既存 `fields` 文字列はそのまま残し、互換性を保ちながら structured metadata を並走させる。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
