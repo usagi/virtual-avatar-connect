@@ -230,6 +230,8 @@ pub struct PackageLockEntry {
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub version: Option<String>,
 	pub source_fq: String,
+	/// Stable digest of package lock entry identity fields, encoded as `b3:<64 hex>`.
+	pub digest: String,
 	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
 	pub dependencies: BTreeMap<String, String>,
 }

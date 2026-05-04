@@ -1250,6 +1250,7 @@ export type FlowgraphPackageLockEntry = {
   id: string;
   version?: string;
   source_fq: string;
+  digest: string;
   dependencies: Record<string, string>;
 };
 

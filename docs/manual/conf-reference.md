@@ -98,7 +98,7 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 
 `GET /api/v1/control/flowgraph/diagnostics` は、ロード診断に加えて Flowgraph の signature / capability / state metadata を返します。
 `GET /api/v1/control/flowgraph/signature` は、同じ `graph_signature` JSON だけを返します。
-`package_manifests` は top-level `[package]` を file ごとに集約した catalog です。`package_dependency_order` は local package dependency DAG の dependency-first order です。`package_lock_preview` は lockfile 生成前に diagnostics API から観測できる read-only preview です。
+`package_manifests` は top-level `[package]` を file ごとに集約した catalog です。`package_dependency_order` は local package dependency DAG の dependency-first order です。`package_lock_preview` は lockfile 生成前に diagnostics API から観測できる read-only preview で、各 entry は `b3:<64 hex>` の `digest` を持ちます。
 `*.flowgraph.toml` は任意の top-level `[package]` を読めます。現在のフィールドは `id`, `version`, `exports` で、`graph_signature.files[]` の `package_id`, `package_version`, `package_exports` として公開されます。
 `[package].id` は必須で、`example.pkg-name` のような lowercase dot-separated identifier です。同一 flowgraph root 内で package id は重複できません。`[package].version` は任意ですが、書く場合は SemVer 形式です。`[package].exports` は flowgraph ルート内に存在する fq を指定します。`[package.dependencies]` は dependency package id から version requirement への table で、現在は exact SemVer または `"*"` を読めます。package id は dot を含むため `"example.dep" = "1.2.3"` のように quoted key で書きます。dependency id は同一 flowgraph root 内の `[package].id` と一致する必要があります。exact SemVer は dependency package の `[package].version` と一致した場合だけ有効で、`"*"` は version 未指定の dependency も許可します。空エントリ、未知 fq、正規化後に重複する fq、不正 dependency、未存在 dependency、version mismatch、自分自身への dependency、dependency cycle は `invalid-package-manifest` としてロードエラーになります。
 state 関連の値は reload 直後の read-only snapshot であり、worker 実行後の live state ではありません。

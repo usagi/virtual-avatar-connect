@@ -661,14 +661,48 @@ fn build_package_lock_preview(package_manifests: &[PackageManifestSummary], pack
 		.iter()
 		.filter_map(|id| {
 			let manifest = manifests_by_id.get(id)?;
+			let digest = package_lock_entry_digest(id, manifest.version.as_deref(), &manifest.source_fq, &manifest.dependencies);
 			Some(PackageLockEntry {
 				id: id.clone(),
 				version: manifest.version.clone(),
 				source_fq: manifest.source_fq.clone(),
+				digest,
 				dependencies: manifest.dependencies.clone(),
 			})
 		})
 		.collect()
+}
+
+fn package_lock_entry_digest(id: &str, version: Option<&str>, source_fq: &str, dependencies: &BTreeMap<String, String>) -> String {
+	let mut bytes: Vec<u8> = Vec::new();
+	bytes.extend_from_slice(b"vac.package-lock-entry.v1\0");
+	bytes.extend_from_slice(b"id\0");
+	bytes.extend_from_slice(id.as_bytes());
+	bytes.push(0);
+	bytes.extend_from_slice(b"version\0");
+	bytes.extend_from_slice(version.unwrap_or("").as_bytes());
+	bytes.push(0);
+	bytes.extend_from_slice(b"source_fq\0");
+	bytes.extend_from_slice(source_fq.as_bytes());
+	bytes.push(0);
+	for (dependency_id, requirement) in dependencies {
+		bytes.extend_from_slice(b"dependency\0");
+		bytes.extend_from_slice(dependency_id.as_bytes());
+		bytes.push(0);
+		bytes.extend_from_slice(requirement.as_bytes());
+		bytes.push(0);
+	}
+	format!("b3:{}", hex_encode_32(blake3::hash(&bytes).as_bytes()))
+}
+
+fn hex_encode_32(bytes: &[u8; 32]) -> String {
+	const HEX: &[u8; 16] = b"0123456789abcdef";
+	let mut out = String::with_capacity(64);
+	for byte in bytes {
+		out.push(HEX[(byte >> 4) as usize] as char);
+		out.push(HEX[(byte & 0x0f) as usize] as char);
+	}
+	out
 }
 
 fn build_graph_signature(
