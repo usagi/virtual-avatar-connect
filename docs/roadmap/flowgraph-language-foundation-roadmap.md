@@ -539,6 +539,12 @@ order は同一 flowgraph root に存在する package id だけを対象にし�
 各 entry は package id、version、source fq、direct dependency requirements だけを持つ read-only metadata で、将来の lockfile writer が使う最小 envelope とする。
 まだファイル書き込み、hash / content digest、external registry pinning、transitive closure object は扱わず、runtime diagnostics で観測できる preview に留める。
 
+### LF-4l Package lock preview digest ✅
+
+`package_lock_preview[]` に package id / version / source fq / direct dependency requirements から計算した stable digest を追加した。
+digest は `b3:<64 hex>` 形式で、lockfile writer や GUI が preview entry の変更検知に使える最小単位にする。
+まだ package source content digest、registry artifact digest、lockfile write、If-Match 型の更新 API は扱わず、manifest-derived preview entry の deterministic digest に留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
