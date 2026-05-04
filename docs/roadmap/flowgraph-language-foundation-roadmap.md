@@ -563,6 +563,12 @@ entry digest は package id / version / source fq / direct dependency requiremen
 GUI や外部 tooling が writer 実装前から lock preview surface だけを安定して参照できる入口にする。
 まだ package lockfile write、If-Match 更新、resolver 実行は扱わず、既存 runtime metadata の専用 read endpoint に留める。
 
+### LF-4p Package lockfile JSON envelope ✅
+
+`PackageLockFile` と `read_package_lock_file` / `write_package_lock_file` を追加し、`flowgraph.lock.json` の on-disk JSON envelope を固定した。
+envelope は `kind = "vac.flowgraph.package_lock"`, `schema_version = 1`, `digest`, `entry_count`, `entries` を持ち、preview entry count と digest の basic shape を validate する。
+まだ Control API からの保存、If-Match 更新、external resolver metadata は扱わず、writer が使う file format と read/write helper の契約に留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
