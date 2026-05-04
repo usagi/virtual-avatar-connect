@@ -193,6 +193,8 @@ properties.value = "tooling"
 		.expect("main package lock preview");
 	assert_eq!(main_lock.source_fq, "main");
 	assert_eq!(main_lock.version.as_deref(), Some("1.2.3-alpha.1+build.5"));
+	assert!(main_lock.source_digest.starts_with("b3:"), "{}", main_lock.source_digest);
+	assert_eq!(main_lock.source_digest.len(), 67);
 	assert!(main_lock.digest.starts_with("b3:"), "{}", main_lock.digest);
 	assert_eq!(main_lock.digest.len(), 67);
 	assert_eq!(main_lock.dependencies.get("example.dep").map(String::as_str), Some("2.0.0"));

@@ -238,6 +238,7 @@ pub fn load_file(path: &Path, file_fq_path_hint: Option<&str>) -> Result<LoadRep
 
 	let ctx = BuildContext {
 		files: vec![(fq.clone(), path.to_path_buf(), parsed)],
+		source_digests: HashMap::from([(fq.clone(), package_source_digest(&src))]),
 		known_file_fqs: known,
 	};
 	ctx.build(registry())
@@ -294,6 +295,8 @@ fn validate_enum_definitions(file: &FlowgraphFile, file_path: &Path, diagnostics
 pub(crate) struct BuildContext {
 	/// (fq_path, ファイルパス, パース済み構造)
 	pub files: Vec<(String, PathBuf, FlowgraphFile)>,
+	/// fq_path ごとの raw source content digest。lockfile preview 用の read-only metadata。
+	pub source_digests: HashMap<String, String>,
 	/// 既知の fq path 集合（main 規約解決に使う）。
 	pub known_file_fqs: HashSet<String>,
 }
@@ -561,7 +564,7 @@ impl BuildContext {
 		})?;
 
 		let capability_summary = crate::flowgraph::loader::diagnostic::GraphCapabilitySummary::from_node_meta(reg, &node_meta);
-		let package_manifests = build_package_manifest_summary(&self.files);
+		let package_manifests = build_package_manifest_summary(&self.files, &self.source_digests);
 		let package_dependency_order = build_package_dependency_order(&package_manifests);
 		let package_lock_preview = build_package_lock_preview(&package_manifests, &package_dependency_order);
 		let package_lock_preview_digest = build_package_lock_preview_digest(&package_lock_preview);
@@ -591,17 +594,22 @@ impl BuildContext {
 	}
 }
 
-fn build_package_manifest_summary(files: &[(String, PathBuf, FlowgraphFile)]) -> Vec<PackageManifestSummary> {
+fn build_package_manifest_summary(
+	files: &[(String, PathBuf, FlowgraphFile)],
+	source_digests: &HashMap<String, String>,
+) -> Vec<PackageManifestSummary> {
 	let mut manifests: Vec<PackageManifestSummary> = files
 		.iter()
 		.filter_map(|(fq, _, file)| {
 			let package = file.package.as_ref()?;
+			let source_digest = source_digests.get(fq).cloned().unwrap_or_else(|| package_source_digest(""));
 			Some(PackageManifestSummary {
 				source_fq: fq.clone(),
 				id: package.id.clone(),
 				version: package.version.clone(),
 				exports: package.exports.clone(),
 				dependencies: package.dependencies.clone(),
+				source_digest: Some(source_digest),
 			})
 		})
 		.collect();
@@ -663,11 +671,19 @@ fn build_package_lock_preview(package_manifests: &[PackageManifestSummary], pack
 		.iter()
 		.filter_map(|id| {
 			let manifest = manifests_by_id.get(id)?;
-			let digest = package_lock_entry_digest(id, manifest.version.as_deref(), &manifest.source_fq, &manifest.dependencies);
+			let source_digest = manifest.source_digest.clone().unwrap_or_else(|| package_source_digest(""));
+			let digest = package_lock_entry_digest(
+				id,
+				manifest.version.as_deref(),
+				&manifest.source_fq,
+				&source_digest,
+				&manifest.dependencies,
+			);
 			Some(PackageLockEntry {
 				id: id.clone(),
 				version: manifest.version.clone(),
 				source_fq: manifest.source_fq.clone(),
+				source_digest,
 				digest,
 				dependencies: manifest.dependencies.clone(),
 			})
@@ -691,7 +707,17 @@ fn build_package_lock_preview_digest(entries: &[PackageLockEntry]) -> Option<Str
 	Some(format!("b3:{}", hex_encode_32(blake3::hash(&bytes).as_bytes())))
 }
 
-fn package_lock_entry_digest(id: &str, version: Option<&str>, source_fq: &str, dependencies: &BTreeMap<String, String>) -> String {
+pub(crate) fn package_source_digest(src: &str) -> String {
+	format!("b3:{}", hex_encode_32(blake3::hash(src.as_bytes()).as_bytes()))
+}
+
+fn package_lock_entry_digest(
+	id: &str,
+	version: Option<&str>,
+	source_fq: &str,
+	source_digest: &str,
+	dependencies: &BTreeMap<String, String>,
+) -> String {
 	let mut bytes: Vec<u8> = Vec::new();
 	bytes.extend_from_slice(b"vac.package-lock-entry.v1\0");
 	bytes.extend_from_slice(b"id\0");
@@ -702,6 +728,9 @@ fn package_lock_entry_digest(id: &str, version: Option<&str>, source_fq: &str, d
 	bytes.push(0);
 	bytes.extend_from_slice(b"source_fq\0");
 	bytes.extend_from_slice(source_fq.as_bytes());
+	bytes.push(0);
+	bytes.extend_from_slice(b"source_digest\0");
+	bytes.extend_from_slice(source_digest.as_bytes());
 	bytes.push(0);
 	for (dependency_id, requirement) in dependencies {
 		bytes.extend_from_slice(b"dependency\0");

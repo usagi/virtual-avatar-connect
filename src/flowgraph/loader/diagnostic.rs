@@ -218,6 +218,8 @@ impl std::fmt::Debug for LoadReport {
 pub struct PackageManifestSummary {
 	pub source_fq: String,
 	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub source_digest: Option<String>,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub id: Option<String>,
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub version: Option<String>,
@@ -233,6 +235,8 @@ pub struct PackageLockEntry {
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub version: Option<String>,
 	pub source_fq: String,
+	/// Stable digest of the source `.flowgraph.toml` content, encoded as `b3:<64 hex>`.
+	pub source_digest: String,
 	/// Stable digest of package lock entry identity fields, encoded as `b3:<64 hex>`.
 	pub digest: String,
 	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]

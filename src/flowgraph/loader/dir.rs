@@ -487,12 +487,14 @@ pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 		// 空は warning: プログラムは空グラフで構築可能にしておく
 		let ctx = BuildContext {
 			files: vec![],
+			source_digests: HashMap::new(),
 			known_file_fqs: HashSet::new(),
 		};
 		return ctx.build(registry());
 	}
 
 	let mut parsed: Vec<(String, PathBuf, FlowgraphFile)> = Vec::new();
+	let mut source_digests: HashMap<String, String> = HashMap::new();
 	let mut known_file_fqs: HashSet<String> = HashSet::new();
 	let mut parse_diags: Vec<Diagnostic> = Vec::new();
 
@@ -521,6 +523,7 @@ pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 					);
 					continue;
 				}
+				source_digests.insert(fq.clone(), crate::flowgraph::loader::file::package_source_digest(&src));
 				parsed.push((fq, file_path, file));
 			}
 			Err(mut e) => parse_diags.append(&mut e.diagnostics),
@@ -545,6 +548,7 @@ pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 
 	let ctx = BuildContext {
 		files: parsed,
+		source_digests,
 		known_file_fqs,
 	};
 	let mut report = ctx.build(registry())?;
