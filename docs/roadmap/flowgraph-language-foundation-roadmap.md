@@ -732,6 +732,12 @@ field 名の空白 / 空 field も `InvalidTypeDefinition` として扱い、sch
 diagnostics API と同じ `TypeSchemaSummary` 形状を使い、GUI / docs generator / package tooling が signature だけで record schema catalog を取得できる。
 実データ validation ではなく read-only surface の拡張に留め、既存 graph-as-node signature surface と同じ流れに乗せる。
 
+### LF-5q Nested record schema reference diagnostics ✅
+
+`[[types]].fields` 内の `record<schema_id>` 参照を再帰的に収集し、未定義 schema id を warning diagnostic として返すようにした。
+`option<record<x>>` / `list<record<x>>` / `map<record<x>>` など generic の内側も同じ `collect_record_schema_refs` 経路で検出する。
+既存 node port / property の未定義 `record<schema_id>` warning と同じ read-only lint とし、ロード拒否や structural runtime validation はまだ行わない。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
