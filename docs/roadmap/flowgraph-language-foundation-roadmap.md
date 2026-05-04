@@ -452,6 +452,12 @@ Table / JSON の出力全体を固定すると fixture が重くなるため、�
 `LoadReport` と同じ graph capability summary を fixture JSON に載せ、テスト結果、mock I/O、recorded effects、required capability を同じ report で確認できるようにする。
 これにより、後続の capability policy preview と fixture mock 設計を接続しやすくする。
 
+### LF-3q fixture graph signature assertions ✅
+
+`FixtureRunReport` に LF-1b の `graph_signature` を追加し、`[tests.expect]` から graph signature の file / edge / external trigger / boundary port 件数と required capability を検証できるようにした。
+`flowgraph.example/twitch-echo` は signature file / edge / trigger count を fixture で固定し、ingress graph の公開面が意図せず変わる regression を検知できる。
+詳細な port-by-port assertion は explicit export 構文が入る LF-4 以降に送るが、現段階でも graph-as-node / library boundary の粗い contract を fixture で pin できる。
+
 ## 5. 追加計画項目
 
 以下は重要だが、詳細設計は必要になった段階で起こす。
