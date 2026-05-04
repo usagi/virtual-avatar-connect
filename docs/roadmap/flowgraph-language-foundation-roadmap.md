@@ -1060,6 +1060,11 @@ section coverage guard に加えて、node 詳細は存在するが contract / e
 Generated catalog の全 `Metadata` line が `contract` / `effect` / `capabilities` / `trigger` / `state` の各 field を含むことを unit test で固定した。
 metadata line の本数が合っていても、generator 変更で一部 field だけ欠落する regression を docs test で検知できる。
 
+### LF-8ac Control API / manual catalog parity guard ✅
+
+Control API catalog enrichment 経路で生成した `effect_class` / `capabilities` / `control_triggerable` / `state_model` metadata と、generated manual catalog の summary / capability index が一致することを unit test で固定した。
+manual catalog が `NodeRegistry` を直接読む一方で GUI / Control API catalog は JSON enrichment を通るため、どちらか片方の metadata vocabulary だけが変わる regression を検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
