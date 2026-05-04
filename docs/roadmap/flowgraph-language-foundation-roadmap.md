@@ -527,6 +527,12 @@ exact SemVer requirement は dependency package の `[package].version` と一�
 dependency id / requirement / availability / exact version が valid な edge だけを cycle 検査対象にし、既存の manifest shape error と重複しすぎない診断に留める。
 まだ transitive dependency resolution や lockfile ordering は生成せず、後続 resolver が DAG を前提にできる最小条件だけを loader で保証する。
 
+### LF-4j Package dependency order metadata ✅
+
+validated package catalog から local package dependency DAG の dependency-first order を生成し、`LoadReport` / runtime diagnostics / GUI DTO に `package_dependency_order` として公開した。
+order は同一 flowgraph root に存在する package id だけを対象にし、依存先が依存元より先に現れる deterministic metadata として lockfile / resolver tooling の足場にする。
+まだ resolver execution、transitive closure object、external registry fetch、lockfile write は行わず、既存 diagnostics API で観測できる read-only order に留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
