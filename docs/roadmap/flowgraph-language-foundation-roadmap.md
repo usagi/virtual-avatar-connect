@@ -473,6 +473,12 @@ Table / JSON の出力全体を固定すると fixture が重くなるため、�
 `library_uses` を manifest / lockfile / semver / compatibility policy へ発展させる。
 標準ライブラリー、ユーザーライブラリー、VAC API ライブラリーを配布・固定・依存解決できるようにする。
 
+### LF-4a Minimal package manifest read model ✅
+
+`*.flowgraph.toml` の top-level `[package]` を loader schema に追加し、`id`, `version`, `exports` を read-only metadata として読むようにした。
+Graph signature の `files[]` へ `package_id`, `package_version`, `package_exports` を流し、LF-1b/LF-1c の signature surface から package boundary contract を観測できる。
+この段階では package id validation、export fq validation、semver compatibility、lockfile、dependency resolution は行わず、既存 `library_uses` と同居できる manifest 入口に留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
