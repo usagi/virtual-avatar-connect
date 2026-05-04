@@ -1509,6 +1509,13 @@ mod tests {
 		let collection_expr = collection_response.type_expr.expect("collection expr");
 		assert_eq!(collection_expr.name, "list");
 		assert_eq!(collection_expr.args[0].name, "option");
+
+		let record_response = parse_socket_type_response("record<twitch.event>");
+		assert!(record_response.valid);
+		assert_eq!(record_response.canonical_type.as_deref(), Some("record<twitch.event>"));
+		let record_expr = record_response.type_expr.expect("record expr");
+		assert_eq!(record_expr.name, "record");
+		assert_eq!(record_expr.display, "record<twitch.event>");
 	}
 
 	#[test]
@@ -1540,6 +1547,16 @@ mod tests {
 		assert_eq!(option.compatible, Some(true));
 		assert_eq!(option.from_type_expr.as_ref().expect("from expr").name, "option");
 		assert_eq!(option.to_type_expr.as_ref().expect("to expr").args[0].name, "list");
+
+		let record = socket_type_compatibility_response("record<twitch.event>", "record<twitch.event>");
+		assert!(record.valid);
+		assert_eq!(record.compatible, Some(true));
+		let different_record = socket_type_compatibility_response("record<twitch.event>", "record<obs.event>");
+		assert!(different_record.valid);
+		assert_eq!(different_record.compatible, Some(false));
+		let json_to_record = socket_type_compatibility_response("json", "record<twitch.event>");
+		assert!(json_to_record.valid);
+		assert_eq!(json_to_record.compatible, Some(true));
 	}
 
 	#[test]

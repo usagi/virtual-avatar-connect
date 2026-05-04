@@ -28,6 +28,9 @@ pub enum SocketType {
 	/// バイナリ payload（LF-5a）。JSON / TOML wire では base64 文字列として表現する。
 	Bytes,
 	Json,
+	/// named schema を参照する構造データ型（LF-5m）。
+	/// 現段階の runtime value は JSON object を使い、full structural validation は後続に送る。
+	Record(String),
 	List(Box<SocketType>),
 	Map(Box<SocketType>),
 	/// 値が存在しない可能性を明示する型（LF-5j）。
@@ -70,6 +73,7 @@ impl SocketType {
 			SocketType::String => Some(SocketValue::String(String::new())),
 			SocketType::Bytes => Some(SocketValue::Bytes(Vec::new())),
 			SocketType::Json => Some(SocketValue::Json(serde_json::Value::Null)),
+			SocketType::Record(_) => Some(SocketValue::Json(serde_json::Value::Object(Default::default()))),
 			SocketType::List(_) => Some(SocketValue::List(Vec::new())),
 			SocketType::Map(_) => Some(SocketValue::Map(BTreeMap::new())),
 			SocketType::Option(_) => Some(SocketValue::Option(None)),
@@ -88,6 +92,7 @@ impl SocketType {
 	/// 型表記文字列をパース。
 	///
 	/// - 原始型: `"bool" / "int" / "float" / "string" / "json" / "exec"`
+	/// - `"record<schema_id>"`（named schema read-model。runtime value は JSON object）
 	/// - `"list<T>"` / `"map<T>"` / `"map<string, T>"`（後者互換記法）
 	/// - `"dictionary<string, T>"`（将来語彙の parser alias。canonical は `map<T>`）
 	/// - `"collection<T>"`（将来語彙の parser alias。canonical は `list<T>`）
@@ -128,6 +133,8 @@ impl SocketType {
 			// として伝搬する（接続時点では型互換とみなす）。
 			(String, DateTime) | (DateTime, String) => true,
 			(Json, MotionFrame) | (MotionFrame, Json) => true,
+			(Json, Record(_)) | (Record(_), Json) => true,
+			(Record(a), Record(b)) => a == b,
 			(List(a), List(b)) => a.compatible_with(b),
 			(Map(a), Map(b)) => a.compatible_with(b),
 			(Option(a), Option(b)) => a.compatible_with(b),
@@ -167,6 +174,7 @@ impl Default for SocketTypeExpr {
 impl SocketTypeExpr {
 	pub fn from_socket_type(ty: &SocketType) -> Self {
 		match ty {
+			SocketType::Record(_) => Self::generic("record", ty, Vec::new()),
 			SocketType::List(inner) => Self::generic("list", ty, vec![inner.type_expr()]),
 			SocketType::Map(inner) => Self::generic("map", ty, vec![SocketType::String.type_expr(), inner.type_expr()]),
 			SocketType::Option(inner) => Self::generic("option", ty, vec![inner.type_expr()]),
@@ -267,6 +275,7 @@ pub fn coerce_to_type(value: SocketValue, target: &SocketType) -> Result<SocketV
 			.map(SocketValue::MotionFrame)
 			.map_err(|e| CoerceError::MotionFrameFromJsonError { reason: e.to_string() }),
 		(SocketValue::MotionFrame(m), SocketType::Json) => Ok(SocketValue::Json(m.to_json_value())),
+		(SocketValue::Json(j), SocketType::Record(_)) if j.is_object() => Ok(SocketValue::Json(j)),
 		// 既に一致しているならそのまま
 		(v, t) if v.matches(t) => Ok(v),
 		// どれでもなければミスマッチ
@@ -300,6 +309,7 @@ impl fmt::Display for SocketType {
 			SocketType::String => f.write_str("string"),
 			SocketType::Bytes => f.write_str("bytes"),
 			SocketType::Json => f.write_str("json"),
+			SocketType::Record(schema_id) => write!(f, "record<{schema_id}>"),
 			SocketType::List(inner) => write!(f, "list<{inner}>"),
 			SocketType::Map(inner) => write!(f, "map<{inner}>"),
 			SocketType::Option(inner) => write!(f, "option<{inner}>"),
@@ -340,6 +350,10 @@ pub enum TypeParseError {
 	UnknownPrimitive(String),
 	#[error("'<' に対応する '>' が見つからない: '{0}'")]
 	UnbalancedBracket(String),
+	#[error("record<schema_id> の schema_id が空: '{0}'")]
+	EmptyRecordSchema(String),
+	#[error("record<schema_id> の schema_id が不正: '{0}'")]
+	InvalidRecordSchema(String),
 	#[error("list<T> の要素型が空: '{0}'")]
 	EmptyListInner(String),
 	#[error("collection<T> の要素型が空: '{0}'")]
@@ -377,7 +391,17 @@ fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
 		"motion_frame" => return Ok(SocketType::MotionFrame),
 		_ => {}
 	}
-	// 複合型: list<T> / collection<T> / map<T> / map<string, T> / dictionary<string, T> / option<T> / result<T>
+	// 複合型: record<schema_id> / list<T> / collection<T> / map<T> / map<string, T> / dictionary<string, T> / option<T> / result<T>
+	if let Some(schema_id) = strip_generic(s, "record")? {
+		let schema_id = schema_id.trim();
+		if schema_id.is_empty() {
+			return Err(TypeParseError::EmptyRecordSchema(s.to_string()));
+		}
+		if !is_valid_record_schema_id(schema_id) {
+			return Err(TypeParseError::InvalidRecordSchema(schema_id.to_string()));
+		}
+		return Ok(SocketType::Record(schema_id.to_string()));
+	}
 	if let Some(inner) = strip_generic(s, "list")? {
 		let inner = inner.trim();
 		if inner.is_empty() {
@@ -459,6 +483,12 @@ fn strip_generic<'a>(s: &'a str, name: &str) -> Result<Option<&'a str>, TypePars
 		return Err(TypeParseError::UnbalancedBracket(s.to_string()));
 	}
 	Ok(Some(&rest[1..rest.len() - 1]))
+}
+
+fn is_valid_record_schema_id(schema_id: &str) -> bool {
+	schema_id
+		.chars()
+		.all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.'))
 }
 
 fn find_top_level_comma(s: &str) -> Option<usize> {
@@ -734,6 +764,7 @@ impl SocketValue {
 			| (SocketValue::Quantity(_), SocketType::Quantity)
 			| (SocketValue::DateTime(_), SocketType::DateTime)
 			| (SocketValue::MotionFrame(_), SocketType::MotionFrame) => true,
+			(SocketValue::Json(value), SocketType::Record(_)) => value.is_object(),
 			(SocketValue::List(xs), SocketType::List(inner)) => xs.iter().all(|v| v.matches(inner)),
 			(SocketValue::Map(m), SocketType::Map(inner)) => m.values().all(|v| v.matches(inner)),
 			(SocketValue::Option(value), SocketType::Option(inner)) => value.as_ref().map(|v| v.matches(inner)).unwrap_or(true),
@@ -764,6 +795,7 @@ pub fn from_toml_value(expected: &SocketType, v: &toml::Value) -> Result<SocketV
 		(SocketType::String, toml::Value::String(s)) => Ok(SocketValue::String(s.clone())),
 		(SocketType::Bytes, toml::Value::String(s)) => decode_base64_bytes(s).map(SocketValue::Bytes),
 		(SocketType::Json, any) => toml_to_json(any).map(SocketValue::Json),
+		(SocketType::Record(_), toml::Value::Table(_)) => toml_to_json(v).map(SocketValue::Json),
 		(SocketType::MotionFrame, any) => {
 			let j = toml_to_json(any)?;
 			serde_json::from_value(j)
@@ -1003,6 +1035,10 @@ mod tests {
 		assert_eq!(SocketType::parse("string").unwrap(), SocketType::String);
 		assert_eq!(SocketType::parse("bytes").unwrap(), SocketType::Bytes);
 		assert_eq!(SocketType::parse("json").unwrap(), SocketType::Json);
+		assert_eq!(
+			SocketType::parse("record<twitch.event>").unwrap(),
+			SocketType::Record("twitch.event".into())
+		);
 		assert_eq!(SocketType::parse("exec").unwrap(), SocketType::Exec);
 		assert_eq!(SocketType::parse("table").unwrap(), SocketType::Table);
 		let mf = SocketType::MotionFrame;
@@ -1089,6 +1125,12 @@ mod tests {
 		let json = serde_json::to_value(&expr).unwrap();
 		assert_eq!(json["kind"].as_str(), Some("generic"));
 		assert_eq!(json["args"][0]["args"][0]["args"][0]["args"].as_array().unwrap().len(), 2);
+
+		let record = SocketType::Record("twitch.event".into()).type_expr();
+		assert_eq!(record.kind, SocketTypeExprKind::Generic);
+		assert_eq!(record.name, "record");
+		assert_eq!(record.display, "record<twitch.event>");
+		assert!(record.args.is_empty());
 	}
 
 	#[test]
@@ -1106,6 +1148,11 @@ mod tests {
 	#[test]
 	fn parse_rejects_unknown() {
 		assert!(matches!(SocketType::parse("unknown"), Err(TypeParseError::UnknownPrimitive(_))));
+		assert!(matches!(SocketType::parse("record<>"), Err(TypeParseError::EmptyRecordSchema(_))));
+		assert!(matches!(
+			SocketType::parse("record<twitch event>"),
+			Err(TypeParseError::InvalidRecordSchema(_))
+		));
 		assert!(matches!(SocketType::parse("list<>"), Err(TypeParseError::EmptyListInner(_))));
 		assert!(matches!(
 			SocketType::parse("collection<>"),
@@ -1167,6 +1214,11 @@ mod tests {
 		let some = SocketValue::Option(Some(Box::new(SocketValue::String("ok".into()))));
 		assert!(some.matches(&SocketType::Option(Box::new(SocketType::String))));
 		assert!(!some.matches(&SocketType::Option(Box::new(SocketType::Int))));
+
+		let record = SocketValue::Json(serde_json::json!({ "type": "message" }));
+		assert!(record.matches(&SocketType::Record("twitch.event".into())));
+		let not_record = SocketValue::Json(serde_json::json!(["message"]));
+		assert!(!not_record.matches(&SocketType::Record("twitch.event".into())));
 	}
 
 	#[test]
@@ -1234,6 +1286,31 @@ mod tests {
 		assert_eq!(
 			from_toml_value(&ty, &toml_some).unwrap(),
 			SocketValue::Option(Some(Box::new(SocketValue::String("hello".into()))))
+		);
+	}
+
+	#[test]
+	fn record_type_roundtrip_default_json_and_toml() {
+		let ty = SocketType::Record("twitch.event".into());
+		assert_eq!(ty.to_string(), "record<twitch.event>");
+		assert_eq!(SocketType::parse("record<twitch.event>").unwrap(), ty);
+		assert_eq!(serde_json::to_string(&ty).unwrap(), "\"record<twitch.event>\"");
+		let default = ty.default_value().unwrap();
+		assert_eq!(default, SocketValue::Json(serde_json::json!({})));
+		assert!(default.matches(&ty));
+
+		let repr = crate::flowgraph::node::SocketValueRepr(serde_json::json!({ "id": "abc" }));
+		assert_eq!(
+			repr.to_socket_value(&ty),
+			Some(SocketValue::Json(serde_json::json!({ "id": "abc" })))
+		);
+		let not_object = crate::flowgraph::node::SocketValueRepr(serde_json::json!(["abc"]));
+		assert_eq!(not_object.to_socket_value(&ty), None);
+
+		let parsed: toml::Table = toml::from_str("id = \"abc\"").unwrap();
+		assert_eq!(
+			from_toml_value(&ty, &toml::Value::Table(parsed)).unwrap(),
+			SocketValue::Json(serde_json::json!({ "id": "abc" }))
 		);
 	}
 

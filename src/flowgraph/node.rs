@@ -212,6 +212,7 @@ pub(crate) fn json_to_socket_value(ty: &SocketType, v: &serde_json::Value) -> Op
 		(SocketType::String, J::String(s)) => Some(SocketValue::String(s.clone())),
 		(SocketType::Bytes, J::String(s)) => base64::engine::general_purpose::STANDARD.decode(s).ok().map(SocketValue::Bytes),
 		(SocketType::Json, any) => Some(SocketValue::Json(any.clone())),
+		(SocketType::Record(_), J::Object(_)) => Some(SocketValue::Json(v.clone())),
 		(SocketType::List(inner), J::Array(arr)) => {
 			let mut out = Vec::with_capacity(arr.len());
 			for e in arr {
