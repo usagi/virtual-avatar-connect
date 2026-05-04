@@ -22,6 +22,20 @@ fn normalize_library_use_fq(s: &str) -> String {
 	t.trim_matches('/').to_string()
 }
 
+fn package_id_is_valid(id: &str) -> bool {
+	if id != id.trim() {
+		return false;
+	}
+	id.split('.').all(|segment| {
+		let mut chars = segment.chars();
+		let Some(first) = chars.next() else {
+			return false;
+		};
+		(first.is_ascii_lowercase() || first.is_ascii_digit())
+			&& chars.all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '_' || ch == '-')
+	})
+}
+
 /// `[meta].library_uses` の参照先検証と閉路検出（エラー時はロード失敗）。
 fn library_use_dependency_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], known: &HashSet<String>) -> Vec<Diagnostic> {
 	let mut diagnostics: Vec<Diagnostic> = Vec::new();
@@ -124,17 +138,38 @@ fn library_use_dependency_diagnostics(files: &[(String, PathBuf, FlowgraphFile)]
 
 fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], known: &HashSet<String>) -> Vec<Diagnostic> {
 	let mut diagnostics: Vec<Diagnostic> = Vec::new();
+	let mut seen_package_ids: HashMap<String, PathBuf> = HashMap::new();
 	for (_fq, path, file) in files {
 		let Some(package) = file.package.as_ref() else {
 			continue;
 		};
 
-		if package.id.as_deref().is_none_or(|id| id.trim().is_empty()) {
-			diagnostics.push(
+		match package.id.as_deref() {
+			None | Some("") => diagnostics.push(
 				Diagnostic::error(DiagnosticCode::InvalidPackageManifest, "[package].id が未指定または空です")
 					.with_file(path.clone())
 					.with_hint("[package].id"),
-			);
+			),
+			Some(id) if !package_id_is_valid(id) => diagnostics.push(
+				Diagnostic::error(
+					DiagnosticCode::InvalidPackageManifest,
+					format!("[package].id '{id}' は lowercase dot-separated identifier ではありません"),
+				)
+				.with_file(path.clone())
+				.with_hint("[package].id"),
+			),
+			Some(id) => {
+				if let Some(first_path) = seen_package_ids.insert(id.to_string(), path.clone()) {
+					diagnostics.push(
+						Diagnostic::error(
+							DiagnosticCode::InvalidPackageManifest,
+							format!("[package].id が重複しています: '{id}'"),
+						)
+						.with_file(path.clone())
+						.with_hint(format!("first declared in {}", first_path.display())),
+					);
+				}
+			}
 		}
 
 		let mut seen_exports: HashSet<String> = HashSet::new();
