@@ -990,6 +990,11 @@ Generated Summary と Metadata Index が個別に effect / capability / state su
 Generated catalog の通常 Index entry と各 node section heading が `NodeRegistry::all_specs()` の全 feature を含むことを unit test で固定した。
 カテゴリ再編や生成器 refactor 時に、summary / metadata は更新されていても通常 Index や詳細 section から特定 node が抜ける regression を検知できる。
 
+### LF-8o Generated markdown table shape guard ✅
+
+Generated catalog 内の Markdown table について、連続する table row の delimiter 数が揃っていることを unit test で固定した。
+escaped pipe は delimiter として数えないため、description / default / note に `|` や改行を含む node metadata が増えた場合も、生成 table が壊れていないかを docs test で検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
