@@ -1243,6 +1243,7 @@ export type FlowgraphPackageManifestSummary = {
   id?: string;
   version?: string;
   exports: string[];
+  dependencies: Record<string, string>;
 };
 
 export type FlowgraphDiagnosticsResponse = {

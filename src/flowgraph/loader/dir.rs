@@ -57,6 +57,13 @@ fn package_version_is_valid(version: &str) -> bool {
 	parts.len() == 3 && parts.iter().all(|part| semver_number_is_valid(part))
 }
 
+fn package_version_requirement_is_valid(requirement: &str) -> bool {
+	if requirement != requirement.trim() || requirement.is_empty() {
+		return false;
+	}
+	requirement == "*" || package_version_is_valid(requirement)
+}
+
 fn semver_number_is_valid(part: &str) -> bool {
 	!part.is_empty() && part.chars().all(|ch| ch.is_ascii_digit()) && (part == "0" || !part.starts_with('0'))
 }
@@ -70,7 +77,7 @@ fn semver_identifiers_are_valid(identifiers: &str, allow_numeric_leading_zero: b
 		})
 }
 
-/// `[meta`].library_uses` の参照先検証と閉路検出（エラー時はロード失敗）。
+/// `[meta].library_uses` の参照先検証と閉路検出（エラー時はロード失敗）。
 fn library_use_dependency_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], known: &HashSet<String>) -> Vec<Diagnostic> {
 	let mut diagnostics: Vec<Diagnostic> = Vec::new();
 	let mut adj: HashMap<String, Vec<String>> = HashMap::new();
@@ -218,6 +225,40 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 				);
 			}
 		}
+
+		for (dependency_id, requirement) in &package.dependencies {
+			if !package_id_is_valid(dependency_id) {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidPackageManifest,
+						format!("[package].dependencies の id '{dependency_id}' は lowercase dot-separated identifier ではありません"),
+					)
+					.with_file(path.clone())
+					.with_hint(format!("[package].dependencies.{dependency_id}")),
+				);
+			}
+			if !package_version_requirement_is_valid(requirement) {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidPackageManifest,
+						format!("[package].dependencies.{dependency_id} = '{requirement}' は未対応の version requirement です"),
+					)
+					.with_file(path.clone())
+					.with_hint(format!("[package].dependencies.{dependency_id}")),
+				);
+			}
+			if package.id.as_deref() == Some(dependency_id.as_str()) {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidPackageManifest,
+						format!("[package].dependencies が自分自身を参照しています: '{dependency_id}'"),
+					)
+					.with_file(path.clone())
+					.with_hint(format!("[package].dependencies.{dependency_id}")),
+				);
+			}
+		}
+
 		let mut seen_exports: HashSet<String> = HashSet::new();
 		for export in &package.exports {
 			let target = normalize_library_use_fq(export);

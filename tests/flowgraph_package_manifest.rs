@@ -118,6 +118,10 @@ id = "example.version"
 version = "1.2.3-alpha.1+build.5"
 exports = ["main"]
 
+[package.dependencies]
+"example.dep" = "2.0.0"
+"example.tooling" = "*"
+
 [[nodes]]
 id = "lit"
 feature = "flowgraph.literal.string"
@@ -135,5 +139,44 @@ properties.value = "hi"
 	assert_eq!(report.package_manifests[0].id.as_deref(), Some("example.version"));
 	assert_eq!(report.package_manifests[0].version.as_deref(), Some("1.2.3-alpha.1+build.5"));
 	assert_eq!(report.package_manifests[0].exports, vec!["main".to_string()]);
+	assert_eq!(
+		report.package_manifests[0].dependencies.get("example.dep").map(String::as_str),
+		Some("2.0.0")
+	);
+	assert_eq!(
+		report.package_manifests[0].dependencies.get("example.tooling").map(String::as_str),
+		Some("*")
+	);
+	let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn package_invalid_dependency_returns_error() {
+	let root = tmp_root("invalid-dependency");
+	write(
+		&root.join("main.flowgraph.toml"),
+		r#"[package]
+id = "example.main"
+exports = ["main"]
+
+[package.dependencies]
+"Example.Bad" = "1.0.0"
+"example.main" = "*"
+"example.other" = "1.02.0"
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "hi"
+"#,
+	);
+
+	let err = load_flowgraph_dir(&root).expect_err("invalid package dependency");
+	assert!(
+		err.errors()
+			.any(|diagnostic| diagnostic.code == DiagnosticCode::InvalidPackageManifest),
+		"{:#?}",
+		err.diagnostics
+	);
 	let _ = std::fs::remove_dir_all(&root);
 }

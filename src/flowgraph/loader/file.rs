@@ -16,7 +16,7 @@ use crate::flowgraph::registry::{registry, NodeRegistry};
 use crate::flowgraph::socket::{from_toml_value, SocketValue};
 use crate::flowgraph::{FlowgraphBuilder, FlowgraphProgram, PortRef};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 // ---------------------------------------------------------------------
@@ -49,6 +49,8 @@ pub struct FlowgraphPackageManifest {
 	pub version: Option<String>,
 	#[serde(default)]
 	pub exports: Vec<String>,
+	#[serde(default)]
+	pub dependencies: BTreeMap<String, String>,
 }
 
 /// TOML `[[enums]]` 1 行相当。
@@ -593,6 +595,7 @@ fn build_package_manifest_summary(files: &[(String, PathBuf, FlowgraphFile)]) ->
 				id: package.id.clone(),
 				version: package.version.clone(),
 				exports: package.exports.clone(),
+				dependencies: package.dependencies.clone(),
 			})
 		})
 		.collect();

@@ -214,6 +214,8 @@ pub struct PackageManifestSummary {
 	pub version: Option<String>,
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub exports: Vec<String>,
+	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+	pub dependencies: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
