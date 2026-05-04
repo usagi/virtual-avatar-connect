@@ -1035,6 +1035,11 @@ Windows checkout / formatter / bless 経路の違いで generated catalog の改
 Generated catalog 内の `](#...)` anchor link target が、`NodeRegistry::features()` 由来の feature heading anchor に解決できることを unit test で固定した。
 Metadata Index や通常 Index の link 生成を変更した際、存在しない section へ飛ぶ manual link regression を docs test で検知できる。
 
+### LF-8x Generated feature section uniqueness guard ✅
+
+Generated catalog の feature detail section 数が `NodeRegistry::features()` の件数と一致することを unit test で固定した。
+通常 Index / Metadata Index の coverage guard が「抜け」を検知するのに加えて、generator refactor で同じ node section が重複出力される regression も検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
