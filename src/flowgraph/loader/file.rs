@@ -354,6 +354,37 @@ fn validate_type_definitions(file: &FlowgraphFile, file_path: &Path, diagnostics
 				.with_hint(hint.clone()),
 			);
 		}
+		for (field_name, field_type) in &ty.fields {
+			let field_hint = format!("{hint}.fields.{field_name}");
+			if field_name.trim().is_empty() {
+				diagnostics.push(
+					Diagnostic::error(DiagnosticCode::InvalidTypeDefinition, format!("types '{id}' の field 名が空"))
+						.with_file(file_path.to_path_buf())
+						.with_hint(field_hint.clone()),
+				);
+				continue;
+			}
+			if field_name.trim() != field_name {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidTypeDefinition,
+						format!("types '{id}' の field 名 '{field_name}' が不正"),
+					)
+					.with_file(file_path.to_path_buf())
+					.with_hint(field_hint.clone()),
+				);
+			}
+			if let Err(error) = crate::flowgraph::SocketType::parse(field_type) {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidTypeDefinition,
+						format!("types '{id}' の field '{field_name}' の型 '{field_type}' が不正: {error}"),
+					)
+					.with_file(file_path.to_path_buf())
+					.with_hint(field_hint),
+				);
+			}
+		}
 	}
 }
 
@@ -1482,6 +1513,30 @@ mod tests {
 		);
 		let err = load_file(&path, None).expect_err("invalid schema metadata");
 		assert!(err.errors().any(|d| d.code == DiagnosticCode::InvalidTypeDefinition));
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
+	fn load_invalid_type_schema_field_type_errors() {
+		let path = write_tmp(
+			"bad-schema-field.flowgraph.toml",
+			r#"
+				[[types]]
+				id = "twitch.event"
+
+				[types.fields]
+				payload = "record<>"
+
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "x"
+			"#,
+		);
+		let err = load_file(&path, None).expect_err("invalid schema field type");
+		assert!(err
+			.errors()
+			.any(|d| d.code == DiagnosticCode::InvalidTypeDefinition && d.message.contains("field 'payload'")));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
