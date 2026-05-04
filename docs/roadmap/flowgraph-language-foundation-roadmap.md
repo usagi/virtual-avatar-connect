@@ -551,6 +551,12 @@ digest は `b3:<64 hex>` 形式で、lockfile writer や GUI が preview entry �
 aggregate digest は ordered entry id と entry digest だけから計算し、preview の順序や entry identity が変わったときに安定して変化する。
 まだ lockfile 書き込み、optimistic update API、package content digest は扱わず、diagnostics API で読める preview 全体の変更検知 metadata に留める。
 
+### LF-4n Package source content digest ✅
+
+`package_lock_preview[]` に raw `.flowgraph.toml` content の `source_digest` を追加した。
+entry digest は package id / version / source fq / direct dependency requirements に加えて `source_digest` も含め、manifest metadata では見えない package source の変更を lock preview と aggregate digest に反映できるようにした。
+まだ package archive digest、external registry artifact digest、lockfile writer は扱わず、local source package の変更検知 metadata に留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
