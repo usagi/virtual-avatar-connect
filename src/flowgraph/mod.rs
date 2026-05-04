@@ -20,6 +20,7 @@ pub mod loader;
 pub mod node;
 pub mod nodes;
 pub mod osc;
+pub mod package_lock_file;
 pub mod quantity;
 pub mod registry;
 pub mod runtime;
@@ -48,6 +49,10 @@ pub use loader::{
 pub use node::{
 	EffectfulNode, ExecCtx, ExecFireSet, InputMap, NodeDescriptor, NodeExecError, NodeImpl, NodeOutput, NodeSpec, OutputMap, PortDirection,
 	PortSpec, PropertySpec, PureEvalHost, PureNode, SocketValueRepr, StatefulNode,
+};
+pub use package_lock_file::{
+	read_package_lock_file, write_package_lock_file, PackageLockFile, PackageLockFileError, FLOWGRAPH_PACKAGE_LOCK_FILE_KIND,
+	FLOWGRAPH_PACKAGE_LOCK_FILE_NAME, FLOWGRAPH_PACKAGE_LOCK_FILE_SCHEMA_VERSION,
 };
 pub use registry::{default_registry, registry, NodeRegistry};
 pub use runtime::{shared_flowgraph_new, FlowgraphRuntime, RuntimeHandle, SharedFlowgraph};
