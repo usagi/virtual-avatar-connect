@@ -569,6 +569,12 @@ GUI や外部 tooling が writer 実装前から lock preview surface だけを�
 envelope は `kind = "vac.flowgraph.package_lock"`, `schema_version = 1`, `digest`, `entry_count`, `entries` を持ち、preview entry count と digest の basic shape を validate する。
 まだ Control API からの保存、If-Match 更新、external resolver metadata は扱わず、writer が使う file format と read/write helper の契約に留める。
 
+### LF-4q Package lock preview save API ✅
+
+`POST /api/v1/control/flowgraph/package-lock-preview/save` を追加し、現在 runtime が保持する package lock preview を flowgraph root 直下の `flowgraph.lock.json` に明示保存できるようにした。
+response は保存先 path、aggregate digest、entry count、written flag を返し、保存 payload は LF-4p の `PackageLockFile` envelope を使う。
+まだ If-Match 更新、既存 lockfile との差分確認、external resolver metadata は扱わず、local preview の explicit write API に留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
