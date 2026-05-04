@@ -639,6 +639,38 @@ mod docs_tests {
 	}
 
 	#[test]
+	fn node_catalog_type_labels_cover_all_registry_socket_types() {
+		let registry = default_registry();
+		let specs = registry.all_specs();
+		let rendered = render_node_catalog_md(&registry);
+		let type_line = rendered
+			.lines()
+			.find(|line| line.starts_with("> 型の表記:"))
+			.expect("generated catalog should include type label line");
+
+		for spec in specs {
+			for port in spec.inputs.iter().chain(spec.outputs.iter()) {
+				let label = format!("`{}`", port.ty);
+				assert!(
+					type_line.contains(&label),
+					"missing port type label for {}:{}: {label}",
+					spec.feature,
+					port.name
+				);
+			}
+			for property in &spec.properties {
+				let label = format!("`{}`", property.ty);
+				assert!(
+					type_line.contains(&label),
+					"missing property type label for {}:{}: {label}",
+					spec.feature,
+					property.name
+				);
+			}
+		}
+	}
+
+	#[test]
 	fn node_catalog_anchors_are_unique() {
 		let registry = default_registry();
 		let mut seen = std::collections::BTreeMap::new();
