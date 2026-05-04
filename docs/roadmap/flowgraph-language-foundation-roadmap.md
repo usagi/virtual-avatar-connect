@@ -581,6 +581,12 @@ response は保存先 path、aggregate digest、entry count、written flag を�
 lockfile が未作成の場合は `exists = false`、parse / validation 失敗時は `exists = true` と `error` を返し、GUI や外部 tooling が stale / broken lockfile を区別できるようにする。
 まだ If-Match 更新、diff payload、load-time warning は扱わず、保存済み lockfile と現在 preview の read-only status surface に留める。
 
+### LF-4s Package lock save optimistic guard ✅
+
+`POST /api/v1/control/flowgraph/package-lock-preview/save` が任意の `If-Match: b3:<digest>` を受け取り、保存済み `flowgraph.lock.json` の digest と一致するときだけ更新できるようにした。
+header 未指定時は従来通り blind save を許容し、未作成 lockfile や stale digest は `409 optimistic_lock_failed`、不正 header は `400 bad_if_match` として返す。
+まだ diff payload、GUI conflict dialog、load-time stale warning は扱わず、外部 tooling / GUI が安全に保存操作を組み立てるための最小 optimistic guard に留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
