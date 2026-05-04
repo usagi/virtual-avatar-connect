@@ -503,6 +503,59 @@ mod docs_tests {
 	}
 
 	#[test]
+	fn node_catalog_metadata_index_counts_match_registry() {
+		let registry = default_registry();
+		let specs = registry.all_specs();
+		let effectful = specs
+			.iter()
+			.filter(|spec| registry.effect_class(&spec.feature) == Some("effectful"))
+			.count();
+		let stateful = specs
+			.iter()
+			.filter(|spec| registry.effect_class(&spec.feature) == Some("stateful"))
+			.count();
+		let mut by_capability = std::collections::BTreeMap::<&str, usize>::new();
+		for spec in &specs {
+			for capability in registry.capabilities(&spec.feature) {
+				*by_capability.entry(capability).or_default() += 1;
+			}
+		}
+		let snapshot_supported = specs
+			.iter()
+			.filter(|spec| {
+				registry
+					.state_model(&spec.feature)
+					.map(|model| model.snapshot_supported)
+					.unwrap_or(false)
+			})
+			.count();
+		let restore_supported = specs
+			.iter()
+			.filter(|spec| {
+				registry
+					.state_model(&spec.feature)
+					.map(|model| model.restore_supported)
+					.unwrap_or(false)
+			})
+			.count();
+
+		let rendered = render_node_catalog_md(&registry);
+		for row in [
+			format!("- **effectful** ({effectful}):"),
+			format!("- **stateful** ({stateful}):"),
+			format!("- **snapshot** ({snapshot_supported}):"),
+			format!("- **restore** ({restore_supported}):"),
+		] {
+			assert!(rendered.contains(&row), "missing metadata index count: {row}");
+		}
+
+		for (capability, count) in by_capability {
+			let row = format!("- **{capability}** ({count}):");
+			assert!(rendered.contains(&row), "missing capability index count: {row}");
+		}
+	}
+
+	#[test]
 	fn node_catalog_anchors_are_unique() {
 		let registry = default_registry();
 		let mut seen = std::collections::BTreeMap::new();
