@@ -71,87 +71,42 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 
 fn render_catalog_summary(out: &mut String, registry: &NodeRegistry, by_category: &BTreeMap<String, Vec<NodeSpec>>) {
 	let specs: Vec<&NodeSpec> = by_category.values().flat_map(|items| items.iter()).collect();
+	let index = collect_metadata_index(registry, specs.iter().copied());
 	let total_nodes = specs.len();
-	let effectful_count = specs
-		.iter()
-		.filter(|spec| registry.effect_class(&spec.feature) == Some("effectful"))
-		.count();
-	let stateful_count = specs
-		.iter()
-		.filter(|spec| registry.effect_class(&spec.feature) == Some("stateful"))
-		.count();
-	let capability_group_count = specs
-		.iter()
-		.flat_map(|spec| registry.capabilities(&spec.feature))
-		.collect::<std::collections::BTreeSet<_>>()
-		.len();
-	let snapshot_supported_count = specs
-		.iter()
-		.filter(|spec| {
-			registry
-				.state_model(&spec.feature)
-				.map(|model| model.snapshot_supported)
-				.unwrap_or(false)
-		})
-		.count();
-	let restore_supported_count = specs
-		.iter()
-		.filter(|spec| {
-			registry
-				.state_model(&spec.feature)
-				.map(|model| model.restore_supported)
-				.unwrap_or(false)
-		})
-		.count();
 
 	out.push_str("## Generated Summary\n\n");
 	out.push_str("| Metric | Count |\n");
 	out.push_str("|---|---:|\n");
 	out.push_str(&format!("| Nodes | {} |\n", total_nodes));
 	out.push_str(&format!("| Categories | {} |\n", by_category.len()));
-	out.push_str(&format!("| Effectful nodes | {} |\n", effectful_count));
-	out.push_str(&format!("| Stateful nodes | {} |\n", stateful_count));
-	out.push_str(&format!("| Capability groups | {} |\n", capability_group_count));
-	out.push_str(&format!("| Snapshot-supported nodes | {} |\n", snapshot_supported_count));
-	out.push_str(&format!("| Restore-supported nodes | {} |\n\n", restore_supported_count));
+	out.push_str(&format!("| Effectful nodes | {} |\n", index.effectful.len()));
+	out.push_str(&format!("| Stateful nodes | {} |\n", index.stateful.len()));
+	out.push_str(&format!("| Capability groups | {} |\n", index.by_capability.len()));
+	out.push_str(&format!("| Snapshot-supported nodes | {} |\n", index.snapshot_supported.len()));
+	out.push_str(&format!("| Restore-supported nodes | {} |\n\n", index.restore_supported.len()));
 }
 
 fn render_metadata_index(out: &mut String, registry: &NodeRegistry, by_category: &BTreeMap<String, Vec<NodeSpec>>) {
 	let specs: Vec<&NodeSpec> = by_category.values().flat_map(|items| items.iter()).collect();
-	let mut effectful = Vec::new();
-	let mut stateful = Vec::new();
-	let mut by_capability: BTreeMap<String, Vec<&NodeSpec>> = BTreeMap::new();
-	let mut snapshot_supported = Vec::new();
-	let mut restore_supported = Vec::new();
-
-	for spec in specs {
-		match registry.effect_class(&spec.feature).unwrap_or("unknown") {
-			"effectful" => effectful.push(spec),
-			"stateful" => stateful.push(spec),
-			_ => {}
-		}
-		for cap in registry.capabilities(&spec.feature) {
-			by_capability.entry(cap.to_string()).or_default().push(spec);
-		}
-		if let Some(model) = registry.state_model(&spec.feature) {
-			if model.snapshot_supported {
-				snapshot_supported.push(spec);
-			}
-			if model.restore_supported {
-				restore_supported.push(spec);
-			}
-		}
-	}
+	let index = collect_metadata_index(registry, specs.iter().copied());
 
 	out.push_str("## Metadata Index\n\n");
 	out.push_str("### Effect Classes\n\n");
-	out.push_str(&format!("- **effectful** ({}): {}\n", effectful.len(), feature_links(&effectful)));
-	out.push_str(&format!("- **stateful** ({}): {}\n\n", stateful.len(), feature_links(&stateful)));
+	out.push_str(&format!(
+		"- **effectful** ({}): {}\n",
+		index.effectful.len(),
+		feature_links(&index.effectful)
+	));
+	out.push_str(&format!(
+		"- **stateful** ({}): {}\n\n",
+		index.stateful.len(),
+		feature_links(&index.stateful)
+	));
 	out.push_str("### Capability Groups\n\n");
-	if by_capability.is_empty() {
+	if index.by_capability.is_empty() {
 		out.push_str("- —\n\n");
 	} else {
-		for (capability, specs) in by_capability {
+		for (capability, specs) in index.by_capability {
 			out.push_str(&format!("- **{}** ({}): {}\n", capability, specs.len(), feature_links(&specs)));
 		}
 		out.push('\n');
@@ -159,14 +114,53 @@ fn render_metadata_index(out: &mut String, registry: &NodeRegistry, by_category:
 	out.push_str("### Snapshot / Restore Support\n\n");
 	out.push_str(&format!(
 		"- **snapshot** ({}): {}\n",
-		snapshot_supported.len(),
-		feature_links(&snapshot_supported),
+		index.snapshot_supported.len(),
+		feature_links(&index.snapshot_supported),
 	));
 	out.push_str(&format!(
 		"- **restore** ({}): {}\n\n",
-		restore_supported.len(),
-		feature_links(&restore_supported),
+		index.restore_supported.len(),
+		feature_links(&index.restore_supported),
 	));
+}
+
+struct CatalogMetadataIndex<'a> {
+	effectful: Vec<&'a NodeSpec>,
+	stateful: Vec<&'a NodeSpec>,
+	by_capability: BTreeMap<String, Vec<&'a NodeSpec>>,
+	snapshot_supported: Vec<&'a NodeSpec>,
+	restore_supported: Vec<&'a NodeSpec>,
+}
+
+fn collect_metadata_index<'a>(registry: &NodeRegistry, specs: impl IntoIterator<Item = &'a NodeSpec>) -> CatalogMetadataIndex<'a> {
+	let mut index = CatalogMetadataIndex {
+		effectful: Vec::new(),
+		stateful: Vec::new(),
+		by_capability: BTreeMap::new(),
+		snapshot_supported: Vec::new(),
+		restore_supported: Vec::new(),
+	};
+
+	for spec in specs {
+		match registry.effect_class(&spec.feature).unwrap_or("unknown") {
+			"effectful" => index.effectful.push(spec),
+			"stateful" => index.stateful.push(spec),
+			_ => {}
+		}
+		for cap in registry.capabilities(&spec.feature) {
+			index.by_capability.entry(cap.to_string()).or_default().push(spec);
+		}
+		if let Some(model) = registry.state_model(&spec.feature) {
+			if model.snapshot_supported {
+				index.snapshot_supported.push(spec);
+			}
+			if model.restore_supported {
+				index.restore_supported.push(spec);
+			}
+		}
+	}
+
+	index
 }
 
 fn feature_links(specs: &[&NodeSpec]) -> String {
@@ -450,52 +444,22 @@ mod docs_tests {
 	fn node_catalog_summary_counts_match_registry() {
 		let registry = default_registry();
 		let specs = registry.all_specs();
+		let index = collect_metadata_index(&registry, specs.iter());
 		let categories = specs
 			.iter()
 			.map(|spec| spec.category.as_str())
 			.collect::<std::collections::BTreeSet<_>>()
 			.len();
-		let effectful = specs
-			.iter()
-			.filter(|spec| registry.effect_class(&spec.feature) == Some("effectful"))
-			.count();
-		let stateful = specs
-			.iter()
-			.filter(|spec| registry.effect_class(&spec.feature) == Some("stateful"))
-			.count();
-		let capability_groups = specs
-			.iter()
-			.flat_map(|spec| registry.capabilities(&spec.feature))
-			.collect::<std::collections::BTreeSet<_>>()
-			.len();
-		let snapshot_supported = specs
-			.iter()
-			.filter(|spec| {
-				registry
-					.state_model(&spec.feature)
-					.map(|model| model.snapshot_supported)
-					.unwrap_or(false)
-			})
-			.count();
-		let restore_supported = specs
-			.iter()
-			.filter(|spec| {
-				registry
-					.state_model(&spec.feature)
-					.map(|model| model.restore_supported)
-					.unwrap_or(false)
-			})
-			.count();
 
 		let rendered = render_node_catalog_md(&registry);
 		for (metric, count) in [
 			("Nodes", specs.len()),
 			("Categories", categories),
-			("Effectful nodes", effectful),
-			("Stateful nodes", stateful),
-			("Capability groups", capability_groups),
-			("Snapshot-supported nodes", snapshot_supported),
-			("Restore-supported nodes", restore_supported),
+			("Effectful nodes", index.effectful.len()),
+			("Stateful nodes", index.stateful.len()),
+			("Capability groups", index.by_capability.len()),
+			("Snapshot-supported nodes", index.snapshot_supported.len()),
+			("Restore-supported nodes", index.restore_supported.len()),
 		] {
 			let row = format!("| {metric} | {count} |");
 			assert!(rendered.contains(&row), "missing generated summary row: {row}");
@@ -506,51 +470,20 @@ mod docs_tests {
 	fn node_catalog_metadata_index_counts_match_registry() {
 		let registry = default_registry();
 		let specs = registry.all_specs();
-		let effectful = specs
-			.iter()
-			.filter(|spec| registry.effect_class(&spec.feature) == Some("effectful"))
-			.count();
-		let stateful = specs
-			.iter()
-			.filter(|spec| registry.effect_class(&spec.feature) == Some("stateful"))
-			.count();
-		let mut by_capability = std::collections::BTreeMap::<&str, usize>::new();
-		for spec in &specs {
-			for capability in registry.capabilities(&spec.feature) {
-				*by_capability.entry(capability).or_default() += 1;
-			}
-		}
-		let snapshot_supported = specs
-			.iter()
-			.filter(|spec| {
-				registry
-					.state_model(&spec.feature)
-					.map(|model| model.snapshot_supported)
-					.unwrap_or(false)
-			})
-			.count();
-		let restore_supported = specs
-			.iter()
-			.filter(|spec| {
-				registry
-					.state_model(&spec.feature)
-					.map(|model| model.restore_supported)
-					.unwrap_or(false)
-			})
-			.count();
+		let index = collect_metadata_index(&registry, specs.iter());
 
 		let rendered = render_node_catalog_md(&registry);
 		for row in [
-			format!("- **effectful** ({effectful}):"),
-			format!("- **stateful** ({stateful}):"),
-			format!("- **snapshot** ({snapshot_supported}):"),
-			format!("- **restore** ({restore_supported}):"),
+			format!("- **effectful** ({}):", index.effectful.len()),
+			format!("- **stateful** ({}):", index.stateful.len()),
+			format!("- **snapshot** ({}):", index.snapshot_supported.len()),
+			format!("- **restore** ({}):", index.restore_supported.len()),
 		] {
 			assert!(rendered.contains(&row), "missing metadata index count: {row}");
 		}
 
-		for (capability, count) in by_capability {
-			let row = format!("- **{capability}** ({count}):");
+		for (capability, specs) in index.by_capability {
+			let row = format!("- **{capability}** ({}):", specs.len());
 			assert!(rendered.contains(&row), "missing capability index count: {row}");
 		}
 	}
