@@ -72,6 +72,12 @@ v1 signature は明示 export 構文をまだ導入せず、既存 TOML / `NodeS
 `GET /flowgraph/diagnostics` と fixture JSON report にも同じ `graph_signature` を載せ、GUI diagnostics では compact count を表示する。
 この段階では signature を validation enforcement や graph-as-node 実行には使わず、LF-4 manifest / export / dependency diagnostics と LF-8 後続生成が読む stable observation surface として固定する。
 
+### LF-1c Graph signature Control API ✅
+
+`GET /flowgraph/signature` を追加し、ロード済み runtime が保持する `graph_signature` だけを JSON で取得できるようにした。
+`GET /flowgraph/diagnostics` に含まれる同一 metadata を軽量 endpoint として切り出すことで、GUI / package tooling / CI script が診断全体を走査せず graph boundary contract を読める。
+GUI API client にも `flowgraphSignature()` を追加したが、UI は LF-1b の compact diagnostics 表示に留め、専用画面や validation enforcement は LF-4 の manifest / export 設計後に接続する。
+
 ## 3. LF-2 Capability / Effect
 
 Pure / Stateful / Effectful の大分類に加えて、具体的な権限と effect kind を扱う。
