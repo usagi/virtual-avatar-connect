@@ -509,6 +509,12 @@ valid な prerelease / build metadata は `graph_signature.files[].package_versi
 `graph_signature.files[]` の package metadata は graph boundary に紐づく観測面として残しつつ、lockfile / package tooling は `package_manifests[]` を直接読める。
 この段階では dependency graph や registry resolution は扱わず、validated manifest identity / version / exports を runtime diagnostics へ流すだけに留める。
 
+### LF-4g Package dependency read model ✅
+
+`[package.dependencies]` を dependency package id → version requirement の table として loader schema / package catalog に追加した。
+現段階の requirement は exact SemVer または `"*"` のみを受け付け、dependency id syntax と self-dependency を `invalid-package-manifest` で検査する。
+まだ dependency resolution、version range、lockfile generation、missing dependency diagnostics は扱わず、後続 LF-4 lockfile / resolver が読む manifest dependency surface だけを固定する。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
