@@ -750,6 +750,12 @@ node port / property の `type_expr` と同じ形状なので、GUI / docs gener
 `option<record<x>>` や `list<record<x>>` のような nested generic も再帰的に収集し、schema dependency graph を diagnostics / signature API だけで組み立てられる。
 未定義参照 warning と同じ収集経路を使い、実行時 validation には踏み込まず catalog metadata の表現力だけを増やす。
 
+### LF-5t Schema-level record reference metadata ✅
+
+`type_schemas[]` に `record_refs` を追加し、schema 全体が参照する `record<schema_id>` の重複なし一覧を read-only 公開するようにした。
+field 単位の `field_record_refs` と schema 単位の `record_refs` を併せて、GUI / docs generator が dependency graph と field drilldown の両方を API 追加なしで扱える。
+参照一覧は stable sort されるため、snapshot / diff / package tooling の出力にも使いやすい。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
