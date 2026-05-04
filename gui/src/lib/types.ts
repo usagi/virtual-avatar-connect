@@ -1297,6 +1297,12 @@ export type FlowgraphPackageLockStatusResponse = {
   lock_digest: string | null;
   matches_preview: boolean | null;
   entry_count: number | null;
+  diff: {
+    added_ids: string[];
+    removed_ids: string[];
+    changed_ids: string[];
+    unchanged_ids: string[];
+  } | null;
   file: {
     kind: string;
     schema_version: number;

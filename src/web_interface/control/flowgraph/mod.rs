@@ -576,8 +576,49 @@ pub struct PackageLockStatusResponse {
 	pub lock_digest: Option<String>,
 	pub matches_preview: Option<bool>,
 	pub entry_count: Option<usize>,
+	pub diff: Option<PackageLockStatusDiff>,
 	pub file: Option<PackageLockFile>,
 	pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+pub struct PackageLockStatusDiff {
+	pub added_ids: Vec<String>,
+	pub removed_ids: Vec<String>,
+	pub changed_ids: Vec<String>,
+	pub unchanged_ids: Vec<String>,
+}
+
+fn package_lock_status_diff(
+	saved: &[crate::flowgraph::loader::PackageLockEntry],
+	preview: &[crate::flowgraph::loader::PackageLockEntry],
+) -> PackageLockStatusDiff {
+	let saved_by_id: std::collections::BTreeMap<&str, &crate::flowgraph::loader::PackageLockEntry> =
+		saved.iter().map(|entry| (entry.id.as_str(), entry)).collect();
+	let preview_by_id: std::collections::BTreeMap<&str, &crate::flowgraph::loader::PackageLockEntry> =
+		preview.iter().map(|entry| (entry.id.as_str(), entry)).collect();
+	let mut added_ids: Vec<String> = Vec::new();
+	let mut removed_ids: Vec<String> = Vec::new();
+	let mut changed_ids: Vec<String> = Vec::new();
+	let mut unchanged_ids: Vec<String> = Vec::new();
+	for (id, preview_entry) in &preview_by_id {
+		match saved_by_id.get(id) {
+			Some(saved_entry) if saved_entry.digest == preview_entry.digest => unchanged_ids.push((*id).to_string()),
+			Some(_) => changed_ids.push((*id).to_string()),
+			None => added_ids.push((*id).to_string()),
+		}
+	}
+	for id in saved_by_id.keys() {
+		if !preview_by_id.contains_key(id) {
+			removed_ids.push((*id).to_string());
+		}
+	}
+	PackageLockStatusDiff {
+		added_ids,
+		removed_ids,
+		changed_ids,
+		unchanged_ids,
+	}
 }
 
 fn package_lock_status_response(rt: &FlowgraphRuntime) -> PackageLockStatusResponse {
@@ -588,6 +629,7 @@ fn package_lock_status_response(rt: &FlowgraphRuntime) -> PackageLockStatusRespo
 		Ok(file) => {
 			let lock_digest = file.digest.clone();
 			let matches_preview = Some(lock_digest == preview_digest);
+			let diff = package_lock_status_diff(&file.entries, &rt.package_lock_preview);
 			PackageLockStatusResponse {
 				path: path_text,
 				exists: true,
@@ -595,6 +637,7 @@ fn package_lock_status_response(rt: &FlowgraphRuntime) -> PackageLockStatusRespo
 				lock_digest,
 				matches_preview,
 				entry_count: Some(file.entry_count),
+				diff: Some(diff),
 				file: Some(file),
 				error: None,
 			}
@@ -606,6 +649,7 @@ fn package_lock_status_response(rt: &FlowgraphRuntime) -> PackageLockStatusRespo
 			lock_digest: None,
 			matches_preview: None,
 			entry_count: None,
+			diff: None,
 			file: None,
 			error: None,
 		},
@@ -616,6 +660,7 @@ fn package_lock_status_response(rt: &FlowgraphRuntime) -> PackageLockStatusRespo
 			lock_digest: None,
 			matches_preview: None,
 			entry_count: None,
+			diff: None,
 			file: None,
 			error: Some(error.to_string()),
 		},
@@ -1465,6 +1510,78 @@ mod tests {
 		rt.package_lock_preview_digest = Some("b3:1111111111111111111111111111111111111111111111111111111111111111".into());
 		let stale = package_lock_status_response(&rt);
 		assert_eq!(stale.matches_preview, Some(false));
+		let _ = std::fs::remove_dir_all(root);
+	}
+
+	#[test]
+	fn package_lock_status_response_reports_diff_payload() {
+		let root = temp_dir("package-lock-diff");
+		let mut rt = runtime_with_snapshot_path(None);
+		rt.root_dir = root.clone();
+		rt.package_lock_preview_digest = Some("b3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into());
+		rt.package_lock_preview = vec![
+			PackageLockEntry {
+				id: "example.changed".into(),
+				version: Some("1.0.0".into()),
+				source_fq: "changed".into(),
+				source_digest: "b3:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789".into(),
+				digest: "b3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".into(),
+				dependencies: BTreeMap::new(),
+			},
+			PackageLockEntry {
+				id: "example.removed".into(),
+				version: Some("1.0.0".into()),
+				source_fq: "removed".into(),
+				source_digest: "b3:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789".into(),
+				digest: "b3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb".into(),
+				dependencies: BTreeMap::new(),
+			},
+			PackageLockEntry {
+				id: "example.same".into(),
+				version: Some("1.0.0".into()),
+				source_fq: "same".into(),
+				source_digest: "b3:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789".into(),
+				digest: "b3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc".into(),
+				dependencies: BTreeMap::new(),
+			},
+		];
+		save_package_lock_preview_response(&rt, None).expect("save package lock");
+
+		rt.package_lock_preview_digest = Some("b3:1111111111111111111111111111111111111111111111111111111111111111".into());
+		rt.package_lock_preview = vec![
+			PackageLockEntry {
+				id: "example.added".into(),
+				version: Some("1.0.0".into()),
+				source_fq: "added".into(),
+				source_digest: "b3:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789".into(),
+				digest: "b3:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd".into(),
+				dependencies: BTreeMap::new(),
+			},
+			PackageLockEntry {
+				id: "example.changed".into(),
+				version: Some("1.0.0".into()),
+				source_fq: "changed".into(),
+				source_digest: "b3:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789".into(),
+				digest: "b3:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee".into(),
+				dependencies: BTreeMap::new(),
+			},
+			PackageLockEntry {
+				id: "example.same".into(),
+				version: Some("1.0.0".into()),
+				source_fq: "same".into(),
+				source_digest: "b3:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789".into(),
+				digest: "b3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc".into(),
+				dependencies: BTreeMap::new(),
+			},
+		];
+
+		let response = package_lock_status_response(&rt);
+		let diff = response.diff.expect("diff");
+
+		assert_eq!(diff.added_ids, vec!["example.added".to_string()]);
+		assert_eq!(diff.removed_ids, vec!["example.removed".to_string()]);
+		assert_eq!(diff.changed_ids, vec!["example.changed".to_string()]);
+		assert_eq!(diff.unchanged_ids, vec!["example.same".to_string()]);
 		let _ = std::fs::remove_dir_all(root);
 	}
 
