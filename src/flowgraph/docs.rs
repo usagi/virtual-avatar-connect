@@ -627,6 +627,32 @@ mod docs_tests {
 	}
 
 	#[test]
+	fn node_catalog_categories_cover_registry_once() {
+		let registry = default_registry();
+		let rendered = render_node_catalog_md(&registry);
+		let categories = registry
+			.all_specs()
+			.into_iter()
+			.map(|spec| spec.category)
+			.collect::<std::collections::BTreeSet<_>>();
+
+		for category in &categories {
+			let index_line = format!("- **{category}**");
+			let detail_heading = format!("## {category}");
+			assert_eq!(
+				rendered.lines().filter(|line| *line == index_line).count(),
+				1,
+				"generated catalog should contain exactly one index category entry for {category}"
+			);
+			assert_eq!(
+				rendered.lines().filter(|line| *line == detail_heading).count(),
+				1,
+				"generated catalog should contain exactly one detail category section for {category}"
+			);
+		}
+	}
+
+	#[test]
 	fn generated_catalog_anchor_links_resolve_to_registry_features() {
 		let registry = default_registry();
 		let rendered = render_node_catalog_md(&registry);
