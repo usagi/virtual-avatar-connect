@@ -1015,6 +1015,11 @@ TTS engine の閉集合 input や datetime / easing / signal 系 property choice
 Generated catalog の Reading guide に、Port / Property table の Note 欄に出る `enum:` / `choices:` が GUI catalog と同じ選択肢 metadata 由来であることを追記した。
 LF-8q で追加した選択肢表示の読み方を catalog 冒頭に固定し、manual 利用者が閉集合 input と property choices を見落としにくくした。
 
+### LF-8t Generated type label list ✅
+
+Generated catalog 冒頭の型表記一覧を固定文字列から `NodeRegistry` に登録された port / property 型の実集合へ変更した。
+`quantity` / `datetime` / `table` / `motion_frame` など、後から増えた型が catalog 冒頭から漏れないようにし、node spec と manual の型語彙を揃えた。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
