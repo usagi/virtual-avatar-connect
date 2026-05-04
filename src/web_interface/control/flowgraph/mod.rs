@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 use crate::flowgraph::loader::{parse_flowgraph_file, Diagnostic, FlowgraphFile};
 use crate::flowgraph::quantity::{parse_unit, Quantity};
 use crate::flowgraph::registry::registry;
-use crate::flowgraph::{FlowgraphRuntime, ProgramCommandError, StateSnapshotFileError};
+use crate::flowgraph::{FlowgraphRuntime, PackageLockFile, PackageLockFileError, ProgramCommandError, StateSnapshotFileError};
 use crate::SharedState;
 
 use util::{
@@ -409,6 +409,66 @@ pub async fn get_package_lock_preview(state: Data<SharedState>) -> impl Responde
 		);
 	};
 	HttpResponse::Ok().json(package_lock_preview_response(rt))
+}
+
+// ============================================================================
+// POST /flowgraph/package-lock-preview/save
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct SavePackageLockPreviewResponse {
+	pub path: String,
+	pub digest: Option<String>,
+	pub entry_count: usize,
+	pub written: bool,
+}
+
+#[derive(Debug)]
+enum SavePackageLockPreviewError {
+	WriteFailed {
+		path: std::path::PathBuf,
+		error: PackageLockFileError,
+	},
+}
+
+fn save_package_lock_preview_response(rt: &FlowgraphRuntime) -> Result<SavePackageLockPreviewResponse, SavePackageLockPreviewError> {
+	let path = rt.root_dir.join(crate::flowgraph::FLOWGRAPH_PACKAGE_LOCK_FILE_NAME);
+	let file = PackageLockFile::new(rt.package_lock_preview_digest.clone(), rt.package_lock_preview.clone());
+	let entry_count = file.entry_count;
+	let digest = file.digest.clone();
+	match crate::flowgraph::write_package_lock_file(&path, &file) {
+		Ok(()) => Ok(SavePackageLockPreviewResponse {
+			path: path.display().to_string().replace('\\', "/"),
+			digest,
+			entry_count,
+			written: true,
+		}),
+		Err(error) => Err(SavePackageLockPreviewError::WriteFailed { path, error }),
+	}
+}
+
+#[post("/flowgraph/package-lock-preview/save")]
+pub async fn post_save_package_lock_preview(state: Data<SharedState>) -> impl Responder {
+	let rt = {
+		let fg = state.read().await.flowgraph.clone();
+		let rt = fg.read().await.clone();
+		rt
+	};
+	let Some(rt) = rt else {
+		return err_json(
+			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+			"flowgraph_dir_unset",
+			"conf.flowgraph_dir が未設定です",
+		);
+	};
+	match save_package_lock_preview_response(&rt) {
+		Ok(response) => HttpResponse::Ok().json(response),
+		Err(SavePackageLockPreviewError::WriteFailed { path, error }) => err_json(
+			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+			"package_lock_write_failed",
+			format!("package lockfile の保存に失敗しました ({}): {error}", path.display()),
+		),
+	}
 }
 
 // ============================================================================
@@ -1031,6 +1091,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 		.service(get_diagnostics)
 		.service(get_signature)
 		.service(get_package_lock_preview)
+		.service(post_save_package_lock_preview)
 		.service(post_save_loaded_state_snapshot)
 		.service(post_save_live_state_snapshot)
 		.service(post_reload_preserving_state)
@@ -1165,6 +1226,32 @@ mod tests {
 		assert_eq!(response.digest, rt.package_lock_preview_digest);
 		assert_eq!(response.entry_count, 1);
 		assert_eq!(response.entries[0].id, "example.pkg");
+	}
+
+	#[test]
+	fn save_package_lock_preview_response_writes_lockfile() {
+		let root = temp_dir("package-lock-save");
+		let mut rt = runtime_with_snapshot_path(None);
+		rt.root_dir = root.clone();
+		rt.package_lock_preview_digest = Some("b3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into());
+		rt.package_lock_preview = vec![PackageLockEntry {
+			id: "example.pkg".into(),
+			version: Some("1.0.0".into()),
+			source_fq: "main".into(),
+			source_digest: "b3:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789".into(),
+			digest: "b3:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210".into(),
+			dependencies: BTreeMap::new(),
+		}];
+
+		let response = save_package_lock_preview_response(&rt).expect("save package lock");
+
+		assert!(response.path.ends_with("/flowgraph.lock.json"));
+		assert_eq!(response.entry_count, 1);
+		assert!(response.written);
+		let decoded = crate::flowgraph::read_package_lock_file(root.join(crate::flowgraph::FLOWGRAPH_PACKAGE_LOCK_FILE_NAME))
+			.expect("read package lock");
+		assert_eq!(decoded.entries[0].id, "example.pkg");
+		let _ = std::fs::remove_dir_all(root);
 	}
 
 	#[tokio::test]

@@ -1283,6 +1283,13 @@ export type FlowgraphPackageLockPreviewResponse = {
   entry_count: number;
 };
 
+export type FlowgraphSavePackageLockPreviewResponse = {
+  path: string;
+  digest: string | null;
+  entry_count: number;
+  written: boolean;
+};
+
 export type FlowgraphCreateFileRequest = {
   fq: string;
   initial_toml?: string;
