@@ -442,4 +442,16 @@ mod docs_tests {
 	fn markdown_table_cells_escape_pipes_and_newlines() {
 		assert_eq!(table_cell("a|b\nc\rd"), "a\\|b c d");
 	}
+
+	#[test]
+	fn node_catalog_anchors_are_unique() {
+		let registry = default_registry();
+		let mut seen = std::collections::BTreeMap::new();
+		for feature in registry.features() {
+			let anchor = anchor(&feature);
+			if let Some(previous) = seen.insert(anchor.clone(), feature.clone()) {
+				panic!("node catalog anchor collision: {previous} and {feature} both map to {anchor}");
+			}
+		}
+	}
 }
