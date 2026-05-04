@@ -557,6 +557,12 @@ aggregate digest は ordered entry id と entry digest だけから計算し、p
 entry digest は package id / version / source fq / direct dependency requirements に加えて `source_digest` も含め、manifest metadata では見えない package source の変更を lock preview と aggregate digest に反映できるようにした。
 まだ package archive digest、external registry artifact digest、lockfile writer は扱わず、local source package の変更検知 metadata に留める。
 
+### LF-4o Package lock preview API ✅
+
+`GET /api/v1/control/flowgraph/package-lock-preview` を追加し、diagnostics 全体を読まずに package lock preview の aggregate digest / entries / entry count を取得できる read-only API を用意した。
+GUI や外部 tooling が writer 実装前から lock preview surface だけを安定して参照できる入口にする。
+まだ package lockfile write、If-Match 更新、resolver 実行は扱わず、既存 runtime metadata の専用 read endpoint に留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
