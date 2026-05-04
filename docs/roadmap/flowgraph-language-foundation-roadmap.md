@@ -497,6 +497,12 @@ package id の文字種・namespace 予約・semver policy はまだ固定せず
 同一 flowgraph root 内で同じ package id を複数回宣言する manifest も loader error にし、package boundary の identity が一意に観測できる状態にした。
 namespace 予約、semver compatibility、package-level dependency graph はまだ扱わず、manifest identity の最小不変条件だけを固定する。
 
+### LF-4e Package version SemVer guard ✅
+
+`[package].version` が指定された場合に SemVer 形状を検査し、空白・leading zero 付き core version・不正な prerelease/build identifier を `invalid-package-manifest` として拒否するようにした。
+valid な prerelease / build metadata は `graph_signature.files[].package_version` へそのまま流し、後続 lockfile / compatibility policy が読む version string を loader 段階で正規化可能な範囲に固定する。
+この段階では version range、dependency compatibility、package registry resolution は扱わず、単一 manifest の version field 形状だけを保証する。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
