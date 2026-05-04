@@ -5,6 +5,8 @@ VAC v2 Flowgraph の組み込みノード一覧。**本ファイルは自動生�
 再生成:
 
 ```powershell
+./scripts/bless-node-catalog.ps1
+# or:
 $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 ```
 

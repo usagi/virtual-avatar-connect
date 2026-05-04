@@ -6,6 +6,8 @@
 //! 自動で書き戻す。
 //!
 //! ```powershell
+//! ./scripts/bless-node-catalog.ps1
+//! # or:
 //! $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 //! ```
 
@@ -33,6 +35,8 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 	out.push_str("VAC v2 Flowgraph の組み込みノード一覧。**本ファイルは自動生成**されるので、手で編集せずノード定義側を更新してからテストで再生成してください。\n\n");
 	out.push_str("再生成:\n\n");
 	out.push_str("```powershell\n");
+	out.push_str("./scripts/bless-node-catalog.ps1\n");
+	out.push_str("# or:\n");
 	out.push_str("$env:BLESS_NODE_CATALOG=\"1\"; cargo test --lib node_catalog_md_up_to_date\n");
 	out.push_str("```\n\n");
 	out.push_str("> 型の表記: `bool` / `int` / `float` / `string` / `bytes` / `json` / `list<T>` / `map<T>` / `exec`\n\n");
