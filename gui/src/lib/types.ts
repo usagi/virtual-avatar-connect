@@ -1265,6 +1265,7 @@ export type FlowgraphDiagnosticsResponse = {
   package_manifests: FlowgraphPackageManifestSummary[];
   package_dependency_order: string[];
   package_lock_preview: FlowgraphPackageLockEntry[];
+  package_lock_preview_digest: string | null;
   loaded_state_summary: FlowgraphProgramStateSummary;
   loaded_state_snapshot: FlowgraphProgramStateSnapshot;
   loaded_state_restore_report: FlowgraphProgramStateRestoreReport | null;

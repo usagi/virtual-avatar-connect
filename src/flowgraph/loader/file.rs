@@ -564,6 +564,7 @@ impl BuildContext {
 		let package_manifests = build_package_manifest_summary(&self.files);
 		let package_dependency_order = build_package_dependency_order(&package_manifests);
 		let package_lock_preview = build_package_lock_preview(&package_manifests, &package_dependency_order);
+		let package_lock_preview_digest = build_package_lock_preview_digest(&package_lock_preview);
 		let graph_signature = build_graph_signature(
 			reg,
 			&self.files,
@@ -583,6 +584,7 @@ impl BuildContext {
 			package_manifests,
 			package_dependency_order,
 			package_lock_preview,
+			package_lock_preview_digest,
 			capability_summary,
 			file_activation,
 		})
@@ -671,6 +673,22 @@ fn build_package_lock_preview(package_manifests: &[PackageManifestSummary], pack
 			})
 		})
 		.collect()
+}
+
+fn build_package_lock_preview_digest(entries: &[PackageLockEntry]) -> Option<String> {
+	if entries.is_empty() {
+		return None;
+	}
+	let mut bytes: Vec<u8> = Vec::new();
+	bytes.extend_from_slice(b"vac.package-lock-preview.v1\0");
+	for entry in entries {
+		bytes.extend_from_slice(b"entry\0");
+		bytes.extend_from_slice(entry.id.as_bytes());
+		bytes.push(0);
+		bytes.extend_from_slice(entry.digest.as_bytes());
+		bytes.push(0);
+	}
+	Some(format!("b3:{}", hex_encode_32(blake3::hash(&bytes).as_bytes())))
 }
 
 fn package_lock_entry_digest(id: &str, version: Option<&str>, source_fq: &str, dependencies: &BTreeMap<String, String>) -> String {

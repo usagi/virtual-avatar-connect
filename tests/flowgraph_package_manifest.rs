@@ -183,6 +183,9 @@ properties.value = "tooling"
 	);
 	let lock_ids: Vec<&str> = report.package_lock_preview.iter().map(|entry| entry.id.as_str()).collect();
 	assert_eq!(lock_ids, vec!["example.dep", "example.tooling", "example.version"]);
+	let lock_preview_digest = report.package_lock_preview_digest.as_deref().expect("package lock preview digest");
+	assert!(lock_preview_digest.starts_with("b3:"), "{lock_preview_digest}");
+	assert_eq!(lock_preview_digest.len(), 67);
 	let main_lock = report
 		.package_lock_preview
 		.iter()

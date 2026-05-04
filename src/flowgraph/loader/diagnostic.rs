@@ -190,6 +190,8 @@ pub struct LoadReport {
 	pub package_dependency_order: Vec<String>,
 	/// LF-4: lockfile 生成前に diagnostics API から観測できる read-only package lock preview。
 	pub package_lock_preview: Vec<PackageLockEntry>,
+	/// LF-4: package lock preview 全体の stable digest。空 preview では `None`。
+	pub package_lock_preview_digest: Option<String>,
 	/// LF-2: graph 全体が要求する capability の集計。policy enforcement ではなく read-only metadata。
 	pub capability_summary: GraphCapabilitySummary,
 	/// RM-3: 各 `.flowgraph.toml` の fq → `[meta]` の mode 系メタ（省略時は既定）。
@@ -204,6 +206,7 @@ impl std::fmt::Debug for LoadReport {
 			.field("package_manifests", &self.package_manifests)
 			.field("package_dependency_order", &self.package_dependency_order)
 			.field("package_lock_preview", &self.package_lock_preview)
+			.field("package_lock_preview_digest", &self.package_lock_preview_digest)
 			.field("capability_summary", &self.capability_summary)
 			.field("file_activation", &self.file_activation.keys().collect::<Vec<_>>())
 			.field("diagnostics", &self.diagnostics)
