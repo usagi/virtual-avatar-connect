@@ -264,6 +264,8 @@ pub struct TypeSchemaSummary {
 	pub field_type_exprs: BTreeMap<String, SocketTypeExpr>,
 	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
 	pub field_record_refs: BTreeMap<String, Vec<String>>,
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub record_refs: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]

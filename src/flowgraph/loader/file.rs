@@ -730,6 +730,7 @@ fn build_type_schema_summary(files: &[(String, PathBuf, FlowgraphFile)]) -> Vec<
 			file.types.iter().map(|ty| {
 				let mut field_type_exprs = BTreeMap::new();
 				let mut field_record_refs = BTreeMap::new();
+				let mut record_refs = BTreeSet::new();
 				for (field_name, field_type) in &ty.fields {
 					let Ok(parsed) = crate::flowgraph::SocketType::parse(field_type) else {
 						continue;
@@ -738,6 +739,7 @@ fn build_type_schema_summary(files: &[(String, PathBuf, FlowgraphFile)]) -> Vec<
 					let mut refs = BTreeSet::new();
 					collect_record_schema_refs(&parsed, &mut refs);
 					if !refs.is_empty() {
+						record_refs.extend(refs.iter().cloned());
 						field_record_refs.insert(field_name.clone(), refs.into_iter().collect());
 					}
 				}
@@ -753,6 +755,7 @@ fn build_type_schema_summary(files: &[(String, PathBuf, FlowgraphFile)]) -> Vec<
 					fields: ty.fields.clone(),
 					field_type_exprs,
 					field_record_refs,
+					record_refs: record_refs.into_iter().collect(),
 				}
 			})
 		})
@@ -1666,6 +1669,7 @@ mod tests {
 			.expect("known.event schema");
 		assert_eq!(schema.field_record_refs.get("payload"), Some(&vec!["known.payload".to_string()]));
 		assert_eq!(schema.field_record_refs.get("items"), Some(&vec!["known.item".to_string()]));
+		assert_eq!(schema.record_refs, vec!["known.item".to_string(), "known.payload".to_string()]);
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
