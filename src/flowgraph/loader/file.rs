@@ -727,16 +727,28 @@ fn build_type_schema_summary(files: &[(String, PathBuf, FlowgraphFile)]) -> Vec<
 	let mut schemas: Vec<TypeSchemaSummary> = files
 		.iter()
 		.flat_map(|(fq, _, file)| {
-			file.types.iter().map(|ty| TypeSchemaSummary {
-				source_fq: fq.clone(),
-				id: ty.id.clone(),
-				kind: if ty.kind.trim().is_empty() {
-					default_type_schema_kind()
-				} else {
-					ty.kind.clone()
-				},
-				description: ty.description.clone(),
-				fields: ty.fields.clone(),
+			file.types.iter().map(|ty| {
+				let field_type_exprs = ty
+					.fields
+					.iter()
+					.filter_map(|(field_name, field_type)| {
+						crate::flowgraph::SocketType::parse(field_type)
+							.ok()
+							.map(|parsed| (field_name.clone(), parsed.type_expr()))
+					})
+					.collect();
+				TypeSchemaSummary {
+					source_fq: fq.clone(),
+					id: ty.id.clone(),
+					kind: if ty.kind.trim().is_empty() {
+						default_type_schema_kind()
+					} else {
+						ty.kind.clone()
+					},
+					description: ty.description.clone(),
+					fields: ty.fields.clone(),
+					field_type_exprs,
+				}
 			})
 		})
 		.collect();
@@ -1530,6 +1542,10 @@ mod tests {
 		assert_eq!(schema.kind, "record");
 		assert_eq!(schema.description.as_deref(), Some("Twitch event payload"));
 		assert_eq!(schema.fields.get("payload").map(String::as_str), Some("json"));
+		assert_eq!(
+			schema.field_type_exprs.get("payload").map(|expr| expr.display.as_str()),
+			Some("json")
+		);
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 

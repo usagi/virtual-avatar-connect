@@ -11,6 +11,7 @@ use crate::flowgraph::state_model::{
 	FlowgraphStateModel, StateLifetime, StateMigrationPolicy, StatePersistencePolicy, StateRestorePolicy, StateScope, StateSnapshotFormat,
 	StateSnapshotPolicy, StateStorage,
 };
+use crate::flowgraph::SocketTypeExpr;
 
 /// 診断の深刻度。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -259,6 +260,8 @@ pub struct TypeSchemaSummary {
 	pub description: Option<String>,
 	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
 	pub fields: BTreeMap<String, String>,
+	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+	pub field_type_exprs: BTreeMap<String, SocketTypeExpr>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
