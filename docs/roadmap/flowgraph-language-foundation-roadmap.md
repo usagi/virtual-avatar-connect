@@ -503,6 +503,12 @@ namespace 予約、semver compatibility、package-level dependency graph はま�
 valid な prerelease / build metadata は `graph_signature.files[].package_version` へそのまま流し、後続 lockfile / compatibility policy が読む version string を loader 段階で正規化可能な範囲に固定する。
 この段階では version range、dependency compatibility、package registry resolution は扱わず、単一 manifest の version field 形状だけを保証する。
 
+### LF-4f Package manifest catalog ✅
+
+`LoadReport` / `FlowgraphRuntime` / Control API diagnostics に `package_manifests` を追加し、top-level `[package]` を file ごとの read-only catalog として取得できるようにした。
+`graph_signature.files[]` の package metadata は graph boundary に紐づく観測面として残しつつ、lockfile / package tooling は `package_manifests[]` を直接読める。
+この段階では dependency graph や registry resolution は扱わず、validated manifest identity / version / exports を runtime diagnostics へ流すだけに留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
