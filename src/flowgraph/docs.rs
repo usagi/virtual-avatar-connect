@@ -2,8 +2,7 @@
 //!
 //! δ-8c-3 で `docs/manual/node-catalog.md` を NodeRegistry から生成するためのモジュール。
 //! テスト（`docs_tests::node_catalog_md_up_to_date`）が on-disk の Markdown と一致を
-//! 保証する。更新したい場合は環境変数 `BLESS_NODE_CATALOG=1` でテストを走らせると
-//! 自動で書き戻す。
+//! 保証する。更新したい場合は repository-local script でテストを走らせると自動で書き戻す。
 //!
 //! ```powershell
 //! ./scripts/bless-node-catalog.ps1
@@ -414,14 +413,14 @@ mod docs_tests {
 		let actual = std::fs::read_to_string(&path).unwrap_or_else(|e| {
 			panic!(
 				"docs/manual/node-catalog.md の読み込みに失敗: {e}\n\
-				 初回生成するには BLESS_NODE_CATALOG=1 を付けて再実行してください。\n\
-				 （powershell: `$env:BLESS_NODE_CATALOG=\"1\"; cargo test --lib node_catalog_md_up_to_date`）"
+				 初回生成するには `./scripts/bless-node-catalog.ps1` を実行してください。\n\
+				 （fallback: `$env:BLESS_NODE_CATALOG=\"1\"; cargo test --lib node_catalog_md_up_to_date`）"
 			);
 		});
 		let actual_norm = actual.replace("\r\n", "\n");
 
 		if actual_norm != expected_norm {
-			let diff_hint = "BLESS_NODE_CATALOG=1 で再生成してください。";
+			let diff_hint = "./scripts/bless-node-catalog.ps1 で再生成してください。";
 			panic!("docs/manual/node-catalog.md が registry と不一致。{diff_hint}");
 		}
 	}
