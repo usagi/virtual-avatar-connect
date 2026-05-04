@@ -678,4 +678,103 @@ mod tests {
 			);
 		}
 	}
+
+	fn control_api_capability_summary(value: &serde_json::Value) -> String {
+		let capabilities = value["capabilities"].as_array().expect("capabilities should be an array");
+		if capabilities.is_empty() {
+			return "—".into();
+		}
+		capabilities
+			.iter()
+			.map(|capability| format!("`{}`", capability.as_str().expect("capability should be a string")))
+			.collect::<Vec<_>>()
+			.join(", ")
+	}
+
+	fn control_api_state_summary(value: &serde_json::Value) -> String {
+		let state_model = &value["state_model"];
+		if state_model["stateful"].as_bool() != Some(true) {
+			return "stateless".into();
+		}
+
+		let json_str = |key: &str| state_model[key].as_str().expect("state model field should be a string");
+		let snapshot = if state_model["snapshot_supported"].as_bool() == Some(true) {
+			format!("{}/{}", json_str("snapshot_policy"), json_str("snapshot_format"))
+		} else {
+			"unsupported".into()
+		};
+		let restore = if state_model["restore_supported"].as_bool() == Some(true) {
+			json_str("restore_policy").to_string()
+		} else {
+			"unsupported".into()
+		};
+		format!(
+			"stateful; scope=`{}`; storage=`{}`; lifetime=`{}`; reload={}; snapshot={}; restore={}; migration=`{}`; persistence=`{}`",
+			json_str("scope"),
+			json_str("storage"),
+			json_str("lifetime"),
+			if state_model["reinitialized_on_reload"].as_bool() == Some(true) {
+				"reinitialized"
+			} else {
+				"preserved"
+			},
+			snapshot,
+			restore,
+			json_str("migration_policy"),
+			json_str("persistence_policy"),
+		)
+	}
+
+	#[test]
+	fn generated_manual_catalog_node_metadata_matches_control_api_catalog_metadata() {
+		use crate::flowgraph::docs::render_node_catalog_md;
+		use crate::flowgraph::registry::registry;
+
+		let reg = registry();
+		let rendered = render_node_catalog_md(reg);
+		for spec in reg.all_specs() {
+			let mut value = serde_json::to_value(&spec).unwrap();
+			enrich_node_catalog_spec_json(reg, &mut value);
+			let contract = &value["contract"]["summary"];
+			let contract_summary = format!(
+				"inputs={} / outputs={} / properties={} / exec_in={} / exec_out={}",
+				contract["input_count"].as_u64().expect("input count"),
+				contract["output_count"].as_u64().expect("output count"),
+				contract["property_count"].as_u64().expect("property count"),
+				if contract["has_exec_input"].as_bool() == Some(true) {
+					"yes"
+				} else {
+					"no"
+				},
+				if contract["has_exec_output"].as_bool() == Some(true) {
+					"yes"
+				} else {
+					"no"
+				},
+			);
+			let metadata_line = format!(
+				"**Metadata:** contract: {}; effect: `{}`; capabilities: {}; trigger: {}; state: {}",
+				contract_summary,
+				value["effect_class"].as_str().expect("effect class"),
+				control_api_capability_summary(&value),
+				if value["control_triggerable"].as_bool() == Some(true) {
+					"control"
+				} else {
+					"—"
+				},
+				control_api_state_summary(&value),
+			);
+
+			let section_heading = format!("### `{}`", spec.feature);
+			let section_start = rendered.find(&section_heading).expect("feature section should exist");
+			let section_rest = &rendered[section_start..];
+			let section_end = section_rest.find("\n### `").unwrap_or(section_rest.len());
+			let section = &section_rest[..section_end];
+			assert!(
+				section.contains(&metadata_line),
+				"manual metadata line should match Control API metadata for {}: {metadata_line}",
+				spec.feature
+			);
+		}
+	}
 }
