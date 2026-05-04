@@ -955,6 +955,11 @@ escaping helper は unit test で固定し、今後 node description / JSON defa
 `scripts/bless-node-catalog.ps1` を追加し、`BLESS_NODE_CATALOG=1 cargo test --lib node_catalog_md_up_to_date` の定型操作を repository 内の明示 script として実行できるようにした。
 生成済み `docs/manual/node-catalog.md` の再生成手順にも同 script を出力し、manual / generator / 開発者操作の入口を揃えた。
 
+### LF-8h Manual node catalog entrypoints ✅
+
+Manual index と quickstart の Node Catalog 導線を更新し、従来の port / property spec だけでなく effect / capability / state metadata の逆引きにも使えることを明示した。
+生成 catalog 側に追加した Generated Summary / Metadata Index の入口を、ユーザーが最初に読む manual page から辿れるようにした。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
