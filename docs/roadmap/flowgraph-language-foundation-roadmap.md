@@ -1020,6 +1020,11 @@ LF-8q で追加した選択肢表示の読み方を catalog 冒頭に固定し�
 Generated catalog 冒頭の型表記一覧を固定文字列から `NodeRegistry` に登録された port / property 型の実集合へ変更した。
 `quantity` / `datetime` / `table` / `motion_frame` など、後から増えた型が catalog 冒頭から漏れないようにし、node spec と manual の型語彙を揃えた。
 
+### LF-8u Type label coverage guard ✅
+
+`NodeRegistry::all_specs()` を走査し、全 port / property の `SocketType` 表記が generated catalog 冒頭の型表記一覧に含まれることを unit test で固定した。
+新しい socket type や nested type が追加された場合、node table には出ているのに catalog 冒頭の型語彙から漏れる regression を docs test で検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
