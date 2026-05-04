@@ -660,6 +660,12 @@ WASM は Flowgraph の主表現ではなく、module / package system の実行�
 既存の `content: string` は Base64 互換出力として残し、bridge は `__content__` と `__content_bytes__` の両方を投入する。
 これにより既存グラフはそのまま動き、binary-aware graph は Base64 round-trip を挟まず `content_bytes -> motion.vmc_parse.payload` へ接続できる。
 
+### LF-5e Generic type expression read model ✅
+
+既存の `SocketType` 文字列表現を壊さず、`SocketTypeExpr` として `kind`, `name`, `display`, `args[]` を持つ read-only 型 AST を追加した。
+`map<T>` は key が `string` 固定である現行仕様を `args = [string, T]` として表現し、将来の `dictionary<K,V>` / `record` / generic UI が同じ shape を読めるようにする。
+node catalog の `contract.*[]` と `graph_signature` の port surface に `type_expr` を追加し、GUI / docs / tooling が型文字列の ad hoc parse に依存しなくても generic 型を観測できる。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
