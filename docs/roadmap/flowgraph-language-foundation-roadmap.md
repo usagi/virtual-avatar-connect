@@ -714,6 +714,12 @@ Stage 5 Record / Schema Type への足場として、`record<schema_id>` を `So
 現段階では runtime value は JSON object のままとし、default / JSON wire / TOML table 復元 / `type_expr` / parser API / compatibility API から観測できる read-model shell に留める。
 同じ schema id の record 同士と `json <-> record<schema_id>` を互換にし、full structural validation と `[types]` metadata は後続に送る。
 
+### LF-5n `[[types]]` record schema metadata catalog ✅
+
+`[[types]]` を `record<schema_id>` 向け named schema metadata として読み込み、LoadReport / diagnostics API / GUI DTO から `type_schemas[]` として観測できるようにした。
+LF-5n では `kind = "record"`、`description`、`fields` の read-only catalog に留め、空 id / 重複 id / unsupported kind を loader diagnostic として返す。
+標準ノードや custom node が `record<schema_id>` を宣言したとき、対応する `[[types]]` が無い場合は warning diagnostic を返す足場も追加した。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
