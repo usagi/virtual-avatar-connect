@@ -73,6 +73,7 @@ import {
   type VmcStatusResponse,
   type WhoAmIResponse,
   type FlowgraphNodeCatalogResponse,
+  type FlowgraphSocketTypeExpr,
   type FlowgraphTreeResponse,
   type FlowgraphFileResponse,
   type FlowgraphDiagnosticsResponse,
@@ -105,6 +106,14 @@ export type FlowgraphParseUnitResponse = {
   valid: boolean;
   dimension: string | null;
   canonical_unit: string | null;
+  error: string | null;
+};
+
+/** `GET /flowgraph/parse-socket-type` の JSON。LF-5 generic 型文字列検証用。 */
+export type FlowgraphParseSocketTypeResponse = {
+  valid: boolean;
+  canonical_type: string | null;
+  type_expr: FlowgraphSocketTypeExpr | null;
   error: string | null;
 };
 
@@ -579,6 +588,15 @@ export const api = {
     const q = new URLSearchParams({ text });
     return request<FlowgraphParseUnitResponse>(
       `/flowgraph/parse-unit?${q.toString()}`,
+    );
+  },
+  /** LF-5: socket type 文字列をサーバの `SocketType::parse` と同じルールで検証する。 */
+  flowgraphParseSocketType(
+    text: string,
+  ): Promise<FlowgraphParseSocketTypeResponse> {
+    const q = new URLSearchParams({ text });
+    return request<FlowgraphParseSocketTypeResponse>(
+      `/flowgraph/parse-socket-type?${q.toString()}`,
     );
   },
   /** `flowgraph_dir` 配下のファイル一覧を取得する（各ファイルの meta / node 数 / パースエラー含む）。 */

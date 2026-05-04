@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 use crate::flowgraph::loader::{parse_flowgraph_file, Diagnostic, FlowgraphFile};
 use crate::flowgraph::quantity::{parse_unit, Quantity};
 use crate::flowgraph::registry::registry;
-use crate::flowgraph::{FlowgraphRuntime, PackageLockFile, PackageLockFileError, ProgramCommandError, StateSnapshotFileError};
+use crate::flowgraph::{FlowgraphRuntime, PackageLockFile, PackageLockFileError, ProgramCommandError, SocketType, StateSnapshotFileError};
 use crate::SharedState;
 
 use util::{
@@ -75,6 +75,37 @@ struct ParseUnitQuery {
 	text: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct ParseSocketTypeQuery {
+	/// URL クエリで渡す socket type 文字列（例 `list%3Cmap%3Cjson%3E%3E`）。
+	text: String,
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+pub struct ParseSocketTypeResponse {
+	pub valid: bool,
+	pub canonical_type: Option<String>,
+	pub type_expr: Option<crate::flowgraph::SocketTypeExpr>,
+	pub error: Option<String>,
+}
+
+fn parse_socket_type_response(text: &str) -> ParseSocketTypeResponse {
+	match SocketType::parse(text) {
+		Ok(ty) => ParseSocketTypeResponse {
+			valid: true,
+			canonical_type: Some(ty.to_string()),
+			type_expr: Some(ty.type_expr()),
+			error: None,
+		},
+		Err(error) => ParseSocketTypeResponse {
+			valid: false,
+			canonical_type: None,
+			type_expr: None,
+			error: Some(error.to_string()),
+		},
+	}
+}
+
 /// Phase ξ-5: プロパティエディタが単位文字列をサーバと同じ `parse_unit` で検証するための軽量 API。
 #[get("/flowgraph/parse-unit")]
 pub async fn get_parse_unit(q: web::Query<ParseUnitQuery>) -> impl Responder {
@@ -109,6 +140,12 @@ pub async fn get_parse_unit(q: web::Query<ParseUnitQuery>) -> impl Responder {
 			"error": e.to_string(),
 		})),
 	}
+}
+
+/// LF-5: GUI / tooling がサーバと同じ `SocketType::parse` で generic 型文字列を検証するための軽量 API。
+#[get("/flowgraph/parse-socket-type")]
+pub async fn get_parse_socket_type(q: web::Query<ParseSocketTypeQuery>) -> impl Responder {
+	HttpResponse::Ok().json(parse_socket_type_response(&q.text))
 }
 
 // ============================================================================
@@ -1297,6 +1334,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 	cfg.app_data(web::PayloadConfig::new(ZIP_BODY_LIMIT_BYTES))
 		.service(get_node_catalog)
 		.service(get_parse_unit)
+		.service(get_parse_socket_type)
 		.service(get_tree)
 		.service(get_diagnostics)
 		.service(get_signature)
@@ -1376,6 +1414,28 @@ mod tests {
 			trigger_gate: None,
 			handle: None,
 		}
+	}
+
+	#[test]
+	fn parse_socket_type_response_reports_canonical_expr() {
+		let response = parse_socket_type_response(" map<string, list<json>> ");
+		assert!(response.valid);
+		assert_eq!(response.canonical_type.as_deref(), Some("map<list<json>>"));
+		let expr = response.type_expr.expect("type expr");
+		assert_eq!(expr.name, "map");
+		assert_eq!(expr.args[0].name, "string");
+		assert_eq!(expr.args[1].name, "list");
+		assert_eq!(expr.args[1].args[0].name, "json");
+		assert!(response.error.is_none());
+	}
+
+	#[test]
+	fn parse_socket_type_response_reports_errors() {
+		let response = parse_socket_type_response("map<int, string>");
+		assert!(!response.valid);
+		assert!(response.canonical_type.is_none());
+		assert!(response.type_expr.is_none());
+		assert!(response.error.as_deref().unwrap_or_default().contains("map の key 型は string"));
 	}
 
 	#[test]
