@@ -1050,6 +1050,11 @@ feature 単位の coverage / uniqueness guard に加えて、カテゴリ再編�
 Generated catalog の category と feature が、通常 Index と詳細 section の両方で `BTreeMap` / feature 名ソート順に並ぶことを unit test で固定した。
 registry 登録順や generator refactor の影響で manual diff が不安定化したり、同じ catalog 内容でも順序だけが揺れる regression を docs test で検知できる。
 
+### LF-8aa Feature metadata line coverage guard ✅
+
+Generated catalog の feature detail section ごとに `Metadata` line が 1 本ずつ出ることを unit test で固定した。
+section coverage guard に加えて、node 詳細は存在するが contract / effect / capability / trigger / state summary が抜ける regression を docs test で検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
