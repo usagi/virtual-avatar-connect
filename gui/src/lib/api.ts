@@ -117,6 +117,17 @@ export type FlowgraphParseSocketTypeResponse = {
   error: string | null;
 };
 
+/** `GET /flowgraph/socket-type-compatibility` の JSON。LF-5 型接続検証用。 */
+export type FlowgraphSocketTypeCompatibilityResponse = {
+  valid: boolean;
+  compatible: boolean | null;
+  from_canonical_type: string | null;
+  to_canonical_type: string | null;
+  from_type_expr: FlowgraphSocketTypeExpr | null;
+  to_type_expr: FlowgraphSocketTypeExpr | null;
+  error: string | null;
+};
+
 const API_BASE = "/api/v1/control";
 
 type JsonInit = Omit<RequestInit, "body" | "headers"> & {
@@ -597,6 +608,16 @@ export const api = {
     const q = new URLSearchParams({ text });
     return request<FlowgraphParseSocketTypeResponse>(
       `/flowgraph/parse-socket-type?${q.toString()}`,
+    );
+  },
+  /** LF-5: 上流型から下流型へ接続可能かをサーバの `SocketType::compatible_with` と同じルールで検証する。 */
+  flowgraphSocketTypeCompatibility(
+    from: string,
+    to: string,
+  ): Promise<FlowgraphSocketTypeCompatibilityResponse> {
+    const q = new URLSearchParams({ from, to });
+    return request<FlowgraphSocketTypeCompatibilityResponse>(
+      `/flowgraph/socket-type-compatibility?${q.toString()}`,
     );
   },
   /** `flowgraph_dir` 配下のファイル一覧を取得する（各ファイルの meta / node 数 / パースエラー含む）。 */

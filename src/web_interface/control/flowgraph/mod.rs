@@ -81,11 +81,30 @@ struct ParseSocketTypeQuery {
 	text: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct SocketTypeCompatibilityQuery {
+	/// 上流 port の socket type 文字列。
+	from: String,
+	/// 下流 port の socket type 文字列。
+	to: String,
+}
+
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct ParseSocketTypeResponse {
 	pub valid: bool,
 	pub canonical_type: Option<String>,
 	pub type_expr: Option<crate::flowgraph::SocketTypeExpr>,
+	pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+pub struct SocketTypeCompatibilityResponse {
+	pub valid: bool,
+	pub compatible: Option<bool>,
+	pub from_canonical_type: Option<String>,
+	pub to_canonical_type: Option<String>,
+	pub from_type_expr: Option<crate::flowgraph::SocketTypeExpr>,
+	pub to_type_expr: Option<crate::flowgraph::SocketTypeExpr>,
 	pub error: Option<String>,
 }
 
@@ -103,6 +122,40 @@ fn parse_socket_type_response(text: &str) -> ParseSocketTypeResponse {
 			type_expr: None,
 			error: Some(error.to_string()),
 		},
+	}
+}
+
+fn socket_type_compatibility_response(from: &str, to: &str) -> SocketTypeCompatibilityResponse {
+	let from_parsed = SocketType::parse(from);
+	let to_parsed = SocketType::parse(to);
+	match (from_parsed, to_parsed) {
+		(Ok(from_ty), Ok(to_ty)) => SocketTypeCompatibilityResponse {
+			valid: true,
+			compatible: Some(from_ty.compatible_with(&to_ty)),
+			from_canonical_type: Some(from_ty.to_string()),
+			to_canonical_type: Some(to_ty.to_string()),
+			from_type_expr: Some(from_ty.type_expr()),
+			to_type_expr: Some(to_ty.type_expr()),
+			error: None,
+		},
+		(from_result, to_result) => {
+			let mut errors = Vec::new();
+			if let Err(error) = from_result {
+				errors.push(format!("from: {error}"));
+			}
+			if let Err(error) = to_result {
+				errors.push(format!("to: {error}"));
+			}
+			SocketTypeCompatibilityResponse {
+				valid: false,
+				compatible: None,
+				from_canonical_type: None,
+				to_canonical_type: None,
+				from_type_expr: None,
+				to_type_expr: None,
+				error: Some(errors.join("; ")),
+			}
+		}
 	}
 }
 
@@ -146,6 +199,12 @@ pub async fn get_parse_unit(q: web::Query<ParseUnitQuery>) -> impl Responder {
 #[get("/flowgraph/parse-socket-type")]
 pub async fn get_parse_socket_type(q: web::Query<ParseSocketTypeQuery>) -> impl Responder {
 	HttpResponse::Ok().json(parse_socket_type_response(&q.text))
+}
+
+/// LF-5: GUI / tooling がサーバと同じ socket type compatibility rule を参照するための軽量 API。
+#[get("/flowgraph/socket-type-compatibility")]
+pub async fn get_socket_type_compatibility(q: web::Query<SocketTypeCompatibilityQuery>) -> impl Responder {
+	HttpResponse::Ok().json(socket_type_compatibility_response(&q.from, &q.to))
 }
 
 // ============================================================================
@@ -1335,6 +1394,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 		.service(get_node_catalog)
 		.service(get_parse_unit)
 		.service(get_parse_socket_type)
+		.service(get_socket_type_compatibility)
 		.service(get_tree)
 		.service(get_diagnostics)
 		.service(get_signature)
@@ -1436,6 +1496,32 @@ mod tests {
 		assert!(response.canonical_type.is_none());
 		assert!(response.type_expr.is_none());
 		assert!(response.error.as_deref().unwrap_or_default().contains("map の key 型は string"));
+	}
+
+	#[test]
+	fn socket_type_compatibility_response_reports_engine_rule() {
+		let response = socket_type_compatibility_response("list<float>", "list<quantity>");
+		assert!(response.valid);
+		assert_eq!(response.compatible, Some(true));
+		assert_eq!(response.from_canonical_type.as_deref(), Some("list<float>"));
+		assert_eq!(response.to_canonical_type.as_deref(), Some("list<quantity>"));
+		assert_eq!(response.from_type_expr.as_ref().expect("from expr").name, "list");
+		assert_eq!(response.to_type_expr.as_ref().expect("to expr").args[0].name, "quantity");
+		assert!(response.error.is_none());
+
+		let rejected = socket_type_compatibility_response("string", "quantity");
+		assert!(rejected.valid);
+		assert_eq!(rejected.compatible, Some(false));
+	}
+
+	#[test]
+	fn socket_type_compatibility_response_reports_parse_errors() {
+		let response = socket_type_compatibility_response("map<int, string>", "list<>");
+		assert!(!response.valid);
+		assert!(response.compatible.is_none());
+		let error = response.error.as_deref().unwrap_or_default();
+		assert!(error.contains("from:"), "{error}");
+		assert!(error.contains("to:"), "{error}");
 	}
 
 	#[test]
