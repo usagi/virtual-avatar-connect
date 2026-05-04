@@ -674,6 +674,7 @@ impl BuildContext {
 		let graph_signature = build_graph_signature(
 			reg,
 			&self.files,
+			&type_schemas,
 			&node_meta,
 			&node_specs,
 			&connected_inputs,
@@ -935,6 +936,7 @@ fn hex_encode_32(bytes: &[u8; 32]) -> String {
 fn build_graph_signature(
 	reg: &NodeRegistry,
 	files: &[(String, PathBuf, FlowgraphFile)],
+	type_schemas: &[TypeSchemaSummary],
 	node_meta: &HashMap<String, LoadedNodeMeta>,
 	node_specs: &HashMap<String, NodeSpec>,
 	connected_inputs: &BTreeSet<(String, String)>,
@@ -1027,6 +1029,7 @@ fn build_graph_signature(
 		restore_supported_state_node_count: capability_summary.restore_supported_state_node_count,
 		required_capabilities: capability_summary.capabilities.clone(),
 		files: files_meta,
+		type_schemas: type_schemas.to_vec(),
 		external_triggers,
 		boundary_inputs,
 		boundary_outputs,
@@ -1648,6 +1651,7 @@ mod tests {
 		assert_eq!(sig.files[0].package_id.as_deref(), Some("example.signature"));
 		assert_eq!(sig.files[0].package_version.as_deref(), Some("0.2.0"));
 		assert_eq!(sig.files[0].package_exports, vec!["demo/main".to_string()]);
+		assert!(sig.type_schemas.is_empty());
 
 		let trigger = sig
 			.external_triggers
@@ -1673,6 +1677,30 @@ mod tests {
 			.boundary_outputs
 			.iter()
 			.any(|port| port.node == "demo/main::log" && port.port == "exec_out" && port.exec));
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
+	fn graph_signature_includes_type_schemas() {
+		let path = write_tmp(
+			"signature-schema.flowgraph.toml",
+			r#"
+				[[types]]
+				id = "twitch.event"
+				description = "Twitch event payload"
+
+				[types.fields]
+				event_type = "string"
+
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "x"
+			"#,
+		);
+		let report = load_file(&path, Some("demo/schema")).expect("load");
+		assert_eq!(report.graph_signature.type_schemas, report.type_schemas);
+		assert_eq!(report.graph_signature.type_schemas[0].id, "twitch.event");
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 

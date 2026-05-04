@@ -1245,6 +1245,7 @@ export type FlowgraphSignature = {
   restore_supported_state_node_count: number;
   required_capabilities: string[];
   files: FlowgraphSignatureFile[];
+  type_schemas: FlowgraphTypeSchemaSummary[];
   external_triggers: FlowgraphSignatureTrigger[];
   boundary_inputs: FlowgraphSignaturePort[];
   boundary_outputs: FlowgraphSignaturePort[];

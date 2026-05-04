@@ -274,6 +274,8 @@ pub struct GraphSignature {
 	pub restore_supported_state_node_count: usize,
 	pub required_capabilities: Vec<String>,
 	pub files: Vec<GraphSignatureFile>,
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub type_schemas: Vec<TypeSchemaSummary>,
 	pub external_triggers: Vec<GraphSignatureTrigger>,
 	pub boundary_inputs: Vec<GraphSignaturePort>,
 	pub boundary_outputs: Vec<GraphSignaturePort>,
