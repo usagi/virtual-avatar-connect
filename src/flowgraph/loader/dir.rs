@@ -181,6 +181,7 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 	let mut diagnostics: Vec<Diagnostic> = Vec::new();
 	let mut seen_package_ids: HashMap<String, PathBuf> = HashMap::new();
 	let mut package_versions: HashMap<String, Option<String>> = HashMap::new();
+	let mut package_dependencies: HashMap<String, Vec<String>> = HashMap::new();
 	for (_fq, path, file) in files {
 		let Some(package) = file.package.as_ref() else {
 			continue;
@@ -269,6 +270,7 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 		let Some(package) = file.package.as_ref() else {
 			continue;
 		};
+		let package_id = package.id.as_deref().filter(|id| package_id_is_valid(id));
 
 		for (dependency_id, requirement) in &package.dependencies {
 			let dependency_id_valid = package_id_is_valid(dependency_id);
@@ -330,6 +332,65 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 					.with_hint(format!("[package].dependencies.{dependency_id}")),
 				);
 			}
+			if let Some(package_id) = package_id {
+				package_dependencies
+					.entry(package_id.to_string())
+					.or_default()
+					.push(dependency_id.to_string());
+			}
+		}
+	}
+
+	let mut finished: HashSet<String> = HashSet::new();
+	let mut in_stack: HashSet<String> = HashSet::new();
+	let mut path_stack: Vec<String> = Vec::new();
+	let mut vertices: Vec<String> = package_dependencies.keys().cloned().collect();
+	vertices.sort();
+
+	fn visit_package_dependency(
+		package_id: &str,
+		adj: &HashMap<String, Vec<String>>,
+		path_stack: &mut Vec<String>,
+		in_stack: &mut HashSet<String>,
+		finished: &mut HashSet<String>,
+	) -> Option<Vec<String>> {
+		if let Some(pos) = path_stack.iter().position(|item| item == package_id) {
+			let mut cycle = path_stack[pos..].to_vec();
+			cycle.push(package_id.to_string());
+			return Some(cycle);
+		}
+		if finished.contains(package_id) || in_stack.contains(package_id) {
+			return None;
+		}
+		in_stack.insert(package_id.to_string());
+		path_stack.push(package_id.to_string());
+		for dependency_id in adj.get(package_id).into_iter().flatten() {
+			if let Some(cycle) = visit_package_dependency(dependency_id, adj, path_stack, in_stack, finished) {
+				return Some(cycle);
+			}
+		}
+		path_stack.pop();
+		in_stack.remove(package_id);
+		finished.insert(package_id.to_string());
+		None
+	}
+
+	for package_id in vertices {
+		if finished.contains(&package_id) {
+			continue;
+		}
+		path_stack.clear();
+		in_stack.clear();
+		if let Some(cycle) = visit_package_dependency(&package_id, &package_dependencies, &mut path_stack, &mut in_stack, &mut finished) {
+			diagnostics.push(
+				Diagnostic::error(
+					DiagnosticCode::InvalidPackageManifest,
+					format!("[package.dependencies] に閉路: {}", cycle.join(" -> ")),
+				)
+				.with_file(seen_package_ids.get(&cycle[0]).cloned().unwrap_or_default())
+				.with_hint("[package.dependencies]"),
+			);
+			break;
 		}
 	}
 

@@ -277,3 +277,62 @@ properties.value = "hi"
 	);
 	let _ = std::fs::remove_dir_all(&root);
 }
+
+#[test]
+fn package_dependency_cycle_returns_error() {
+	let root = tmp_root("dependency-cycle");
+	write(
+		&root.join("a.flowgraph.toml"),
+		r#"[package]
+id = "example.a"
+exports = ["a"]
+
+[package.dependencies]
+"example.b" = "*"
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "a"
+"#,
+	);
+	write(
+		&root.join("b.flowgraph.toml"),
+		r#"[package]
+id = "example.b"
+exports = ["b"]
+
+[package.dependencies]
+"example.c" = "*"
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "b"
+"#,
+	);
+	write(
+		&root.join("c.flowgraph.toml"),
+		r#"[package]
+id = "example.c"
+exports = ["c"]
+
+[package.dependencies]
+"example.a" = "*"
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "c"
+"#,
+	);
+
+	let err = load_flowgraph_dir(&root).expect_err("package dependency cycle");
+	assert!(
+		err.errors()
+			.any(|diagnostic| diagnostic.code == DiagnosticCode::InvalidPackageManifest),
+		"{:#?}",
+		err.diagnostics
+	);
+	let _ = std::fs::remove_dir_all(&root);
+}
