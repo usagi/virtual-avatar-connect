@@ -16,6 +16,7 @@
 use crate::flowgraph::activation::{mode_group_orphan_diagnostics, TriggerGate};
 use crate::flowgraph::loader::{
 	Diagnostic, FlowgraphFileActivationMeta, GraphCapabilitySummary, GraphSignature, LoadedNodeMeta, PackageManifestSummary, Severity,
+	TypeSchemaSummary,
 };
 use crate::flowgraph::node::PureEvalHost;
 use crate::flowgraph::node::TriggerHandle;
@@ -67,6 +68,8 @@ pub struct FlowgraphRuntime {
 	pub package_dependency_order: Vec<String>,
 	/// LF-4: diagnostics API から読める lockfile preview。
 	pub package_lock_preview: Vec<crate::flowgraph::loader::PackageLockEntry>,
+	/// LF-5: `[[types]]` named schema metadata catalog。
+	pub type_schemas: Vec<TypeSchemaSummary>,
 	/// LF-4: package lock preview 全体の stable digest。
 	pub package_lock_preview_digest: Option<String>,
 	/// LF-2: graph 全体の capability summary。GUI と policy preview 用の read-only metadata。
@@ -99,6 +102,7 @@ impl Clone for FlowgraphRuntime {
 			package_manifests: self.package_manifests.clone(),
 			package_dependency_order: self.package_dependency_order.clone(),
 			package_lock_preview: self.package_lock_preview.clone(),
+			type_schemas: self.type_schemas.clone(),
 			package_lock_preview_digest: self.package_lock_preview_digest.clone(),
 			capability_summary: self.capability_summary.clone(),
 			loaded_state_summary: self.loaded_state_summary.clone(),
@@ -207,6 +211,7 @@ impl FlowgraphRuntime {
 			package_manifests: Vec::new(),
 			package_dependency_order: Vec::new(),
 			package_lock_preview: Vec::new(),
+			type_schemas: Vec::new(),
 			package_lock_preview_digest: None,
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),
@@ -240,6 +245,7 @@ impl FlowgraphRuntime {
 					package_manifests: Vec::new(),
 					package_dependency_order: Vec::new(),
 					package_lock_preview: Vec::new(),
+					type_schemas: Vec::new(),
 					package_lock_preview_digest: None,
 					capability_summary: GraphCapabilitySummary::default(),
 					loaded_state_summary: ProgramStateSummary::default(),
@@ -264,6 +270,7 @@ impl FlowgraphRuntime {
 					package_manifests,
 					package_dependency_order,
 					package_lock_preview,
+					type_schemas,
 					package_lock_preview_digest,
 					capability_summary,
 					file_activation,
@@ -286,6 +293,7 @@ impl FlowgraphRuntime {
 								package_manifests,
 								package_dependency_order,
 								package_lock_preview,
+								type_schemas,
 								package_lock_preview_digest,
 								capability_summary,
 								loaded_state_summary: program.state_summary(),
@@ -315,6 +323,7 @@ impl FlowgraphRuntime {
 					package_manifests,
 					package_dependency_order,
 					package_lock_preview,
+					type_schemas,
 					package_lock_preview_digest,
 					capability_summary,
 					loaded_state_summary,
@@ -337,6 +346,7 @@ impl FlowgraphRuntime {
 					package_manifests: Vec::new(),
 					package_dependency_order: Vec::new(),
 					package_lock_preview: Vec::new(),
+					type_schemas: Vec::new(),
 					package_lock_preview_digest: None,
 					capability_summary: GraphCapabilitySummary::default(),
 					loaded_state_summary: ProgramStateSummary::default(),
@@ -436,6 +446,7 @@ impl FlowgraphRuntime {
 			package_manifests: Vec::new(),
 			package_dependency_order: Vec::new(),
 			package_lock_preview: Vec::new(),
+			type_schemas: Vec::new(),
 			package_lock_preview_digest: None,
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),

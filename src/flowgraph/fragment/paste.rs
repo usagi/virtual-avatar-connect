@@ -291,6 +291,7 @@ fn paste_single_fragment_file_fresh(
 		nodes: Vec::new(),
 		edges: Vec::new(),
 		enums: Vec::new(),
+		types: Vec::new(),
 		groups: Vec::new(),
 	};
 	let mut rewrite: HashMap<(String, String), String> = HashMap::new();

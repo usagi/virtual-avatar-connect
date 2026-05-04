@@ -63,6 +63,8 @@ pub enum DiagnosticCode {
 	InvalidPackageManifest,
 	/// LF-4: `flowgraph.lock.json` が stale または不正。
 	PackageLockFile,
+	/// LF-5: `[[types]]` named schema metadata が不正、または `record<schema_id>` の参照先が未定義。
+	InvalidTypeDefinition,
 	/// RM-3: `[meta].mode_groups` など activation メタが不正（空のグループ名など）。
 	InvalidModeMetadata,
 	/// RM-3: `[meta].mode_groups` の名前が、いかなる `[modes].flowgraph_groups` でも使われていない。
@@ -192,6 +194,8 @@ pub struct LoadReport {
 	pub package_dependency_order: Vec<String>,
 	/// LF-4: lockfile 生成前に diagnostics API から観測できる read-only package lock preview。
 	pub package_lock_preview: Vec<PackageLockEntry>,
+	/// LF-5: `[[types]]` named schema metadata catalog。
+	pub type_schemas: Vec<TypeSchemaSummary>,
 	/// LF-4: package lock preview 全体の stable digest。空 preview では `None`。
 	pub package_lock_preview_digest: Option<String>,
 	/// LF-2: graph 全体が要求する capability の集計。policy enforcement ではなく read-only metadata。
@@ -208,6 +212,7 @@ impl std::fmt::Debug for LoadReport {
 			.field("package_manifests", &self.package_manifests)
 			.field("package_dependency_order", &self.package_dependency_order)
 			.field("package_lock_preview", &self.package_lock_preview)
+			.field("type_schemas", &self.type_schemas)
 			.field("package_lock_preview_digest", &self.package_lock_preview_digest)
 			.field("capability_summary", &self.capability_summary)
 			.field("file_activation", &self.file_activation.keys().collect::<Vec<_>>())
@@ -243,6 +248,17 @@ pub struct PackageLockEntry {
 	pub digest: String,
 	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
 	pub dependencies: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TypeSchemaSummary {
+	pub source_fq: String,
+	pub id: String,
+	pub kind: String,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub description: Option<String>,
+	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+	pub fields: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]

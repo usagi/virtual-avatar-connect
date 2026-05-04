@@ -31,11 +31,11 @@ pub mod reference;
 pub use diagnostic::{
 	Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, GraphCapabilityNode, GraphCapabilitySummary, GraphSignature,
 	GraphSignatureFile, GraphSignaturePort, GraphSignatureTrigger, GraphStateNode, LoadError, LoadReport, LoadedNodeMeta, PackageLockEntry,
-	PackageManifestSummary, Severity,
+	PackageManifestSummary, Severity, TypeSchemaSummary,
 };
 pub use dir::{fq_path_of_file, is_flowgraph_file, load_flowgraph_dir, walk_flowgraph_dir};
 pub use file::{
 	file_activation_meta, load_file, normalized_library_id, parse_flowgraph_file, EdgeEntry, FileMeta, FlowgraphEnumDef, FlowgraphFile,
-	NodeEntry,
+	FlowgraphTypeDef, NodeEntry,
 };
 pub use reference::{parse_port_ref, resolve_fq_ref, PortRefStr, ResolveContext};

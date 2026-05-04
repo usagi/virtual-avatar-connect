@@ -9,6 +9,7 @@
 use crate::flowgraph::loader::diagnostic::{
 	Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, GraphCapabilitySummary, GraphSignature, GraphSignatureFile,
 	GraphSignaturePort, GraphSignatureTrigger, LoadError, LoadReport, LoadedNodeMeta, PackageLockEntry, PackageManifestSummary, Severity,
+	TypeSchemaSummary,
 };
 use crate::flowgraph::loader::reference::parse_port_ref;
 use crate::flowgraph::node::{InputMap, NodeSpec, PortSpec};
@@ -36,6 +37,9 @@ pub struct FlowgraphFile {
 	/// Phase λ: ユーザ定義閉集合（`[[enums]]`）。未指定は空。
 	#[serde(default)]
 	pub enums: Vec<FlowgraphEnumDef>,
+	/// LF-5: named schema metadata（`record<schema_id>` の read-model）。未指定は空。
+	#[serde(default)]
+	pub types: Vec<FlowgraphTypeDef>,
 	/// Phase υ: GUI 上の編集グループ。engine 実行には影響しない。
 	#[serde(default)]
 	pub groups: Vec<FlowgraphGroupDef>,
@@ -62,6 +66,22 @@ pub struct FlowgraphEnumDef {
 	pub primitive: Option<String>,
 	#[serde(default)]
 	pub variants: Vec<String>,
+}
+
+/// TOML `[[types]]` 1 行相当。LF-5m 時点では metadata / diagnostics 用の read model。
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct FlowgraphTypeDef {
+	pub id: String,
+	#[serde(default = "default_type_schema_kind")]
+	pub kind: String,
+	#[serde(default)]
+	pub description: Option<String>,
+	#[serde(default)]
+	pub fields: BTreeMap<String, String>,
+}
+
+fn default_type_schema_kind() -> String {
+	"record".into()
 }
 
 /// TOML `[[groups]]` 1 行相当。Flowgraph editor の視覚的なまとまりを保存する。
@@ -291,6 +311,52 @@ fn validate_enum_definitions(file: &FlowgraphFile, file_path: &Path, diagnostics
 	}
 }
 
+fn type_schema_id_is_valid(id: &str) -> bool {
+	id.chars().all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.'))
+}
+
+fn validate_type_definitions(file: &FlowgraphFile, file_path: &Path, diagnostics: &mut Vec<Diagnostic>) {
+	let mut seen: HashSet<String> = HashSet::new();
+	for (idx, ty) in file.types.iter().enumerate() {
+		let hint = format!("[[types]][{idx}]");
+		let id = ty.id.trim();
+		if id.is_empty() {
+			diagnostics.push(
+				Diagnostic::error(DiagnosticCode::InvalidTypeDefinition, "types.id が空")
+					.with_file(file_path.to_path_buf())
+					.with_hint(hint.clone()),
+			);
+			continue;
+		}
+		if id != ty.id || !type_schema_id_is_valid(id) {
+			diagnostics.push(
+				Diagnostic::error(DiagnosticCode::InvalidTypeDefinition, format!("types.id '{id}' が不正"))
+					.with_file(file_path.to_path_buf())
+					.with_hint(hint.clone()),
+			);
+			continue;
+		}
+		if !seen.insert(id.to_string()) {
+			diagnostics.push(
+				Diagnostic::error(DiagnosticCode::InvalidTypeDefinition, format!("types.id 重複: '{id}'"))
+					.with_file(file_path.to_path_buf())
+					.with_hint(hint.clone()),
+			);
+		}
+		let kind = ty.kind.trim();
+		if kind != "record" {
+			diagnostics.push(
+				Diagnostic::error(
+					DiagnosticCode::InvalidTypeDefinition,
+					format!("types '{id}' の kind='{kind}' は LF-5m では record のみサポート"),
+				)
+				.with_file(file_path.to_path_buf())
+				.with_hint(hint.clone()),
+			);
+		}
+	}
+}
+
 /// 複数ファイルの統合ビルド用文脈。単一ファイル loader も同じ経路を通る（files が 1 件）。
 pub(crate) struct BuildContext {
 	/// (fq_path, ファイルパス, パース済み構造)
@@ -308,8 +374,13 @@ impl BuildContext {
 			validate_enum_definitions(file, file_path, &mut diagnostics);
 		}
 		for (_, file_path, file) in &self.files {
+			validate_type_definitions(file, file_path, &mut diagnostics);
+		}
+		for (_, file_path, file) in &self.files {
 			validate_file_activation_meta(file, file_path, &mut diagnostics);
 		}
+		let type_schemas = build_type_schema_summary(&self.files);
+		let known_type_schema_ids: BTreeSet<String> = type_schemas.iter().map(|schema| schema.id.clone()).collect();
 		let file_activation: HashMap<String, FlowgraphFileActivationMeta> =
 			self.files.iter().map(|(fq, _, f)| (fq.clone(), file_activation_meta(f))).collect();
 
@@ -564,6 +635,7 @@ impl BuildContext {
 		})?;
 
 		let capability_summary = crate::flowgraph::loader::diagnostic::GraphCapabilitySummary::from_node_meta(reg, &node_meta);
+		validate_record_schema_refs(&node_specs, &known_type_schema_ids, &mut diagnostics);
 		let package_manifests = build_package_manifest_summary(&self.files, &self.source_digests);
 		let package_dependency_order = build_package_dependency_order(&package_manifests);
 		let package_lock_preview = build_package_lock_preview(&package_manifests, &package_dependency_order);
@@ -587,6 +659,7 @@ impl BuildContext {
 			package_manifests,
 			package_dependency_order,
 			package_lock_preview,
+			type_schemas,
 			package_lock_preview_digest,
 			capability_summary,
 			file_activation,
@@ -615,6 +688,82 @@ fn build_package_manifest_summary(
 		.collect();
 	manifests.sort_by(|a, b| a.source_fq.cmp(&b.source_fq));
 	manifests
+}
+
+fn build_type_schema_summary(files: &[(String, PathBuf, FlowgraphFile)]) -> Vec<TypeSchemaSummary> {
+	let mut schemas: Vec<TypeSchemaSummary> = files
+		.iter()
+		.flat_map(|(fq, _, file)| {
+			file.types.iter().map(|ty| TypeSchemaSummary {
+				source_fq: fq.clone(),
+				id: ty.id.clone(),
+				kind: if ty.kind.trim().is_empty() {
+					default_type_schema_kind()
+				} else {
+					ty.kind.clone()
+				},
+				description: ty.description.clone(),
+				fields: ty.fields.clone(),
+			})
+		})
+		.collect();
+	schemas.sort_by(|a, b| a.source_fq.cmp(&b.source_fq).then_with(|| a.id.cmp(&b.id)));
+	schemas
+}
+
+fn collect_record_schema_refs(ty: &crate::flowgraph::SocketType, out: &mut BTreeSet<String>) {
+	match ty {
+		crate::flowgraph::SocketType::Record(schema_id) => {
+			out.insert(schema_id.clone());
+		}
+		crate::flowgraph::SocketType::List(inner)
+		| crate::flowgraph::SocketType::Map(inner)
+		| crate::flowgraph::SocketType::Option(inner)
+		| crate::flowgraph::SocketType::Result(inner) => collect_record_schema_refs(inner, out),
+		_ => {}
+	}
+}
+
+fn validate_record_schema_refs(
+	node_specs: &HashMap<String, NodeSpec>,
+	known_type_schema_ids: &BTreeSet<String>,
+	diagnostics: &mut Vec<Diagnostic>,
+) {
+	let mut refs = BTreeSet::new();
+	for (node, spec) in node_specs {
+		for port in spec.inputs.iter().chain(spec.outputs.iter()) {
+			let mut local_refs = BTreeSet::new();
+			collect_record_schema_refs(&port.ty, &mut local_refs);
+			for schema_id in local_refs {
+				if refs.insert(schema_id.clone()) && !known_type_schema_ids.contains(&schema_id) {
+					diagnostics.push(
+						Diagnostic::warning(
+							DiagnosticCode::InvalidTypeDefinition,
+							format!("record schema '{schema_id}' が [[types]] で定義されていません"),
+						)
+						.with_node(node.clone())
+						.with_hint(port.name.clone()),
+					);
+				}
+			}
+		}
+		for property in &spec.properties {
+			let mut local_refs = BTreeSet::new();
+			collect_record_schema_refs(&property.ty, &mut local_refs);
+			for schema_id in local_refs {
+				if refs.insert(schema_id.clone()) && !known_type_schema_ids.contains(&schema_id) {
+					diagnostics.push(
+						Diagnostic::warning(
+							DiagnosticCode::InvalidTypeDefinition,
+							format!("record schema '{schema_id}' が [[types]] で定義されていません"),
+						)
+						.with_node(node.clone())
+						.with_hint(property.name.clone()),
+					);
+				}
+			}
+		}
+	}
 }
 
 fn build_package_dependency_order(package_manifests: &[PackageManifestSummary]) -> Vec<String> {
@@ -1216,6 +1365,29 @@ mod tests {
 	}
 
 	#[test]
+	fn parse_types_section() {
+		let src = r#"
+			[[types]]
+			id = "twitch.event"
+			description = "Twitch event payload"
+
+			[types.fields]
+			event_type = "string"
+			payload = "json"
+
+			[[nodes]]
+			id = "lit"
+			feature = "flowgraph.literal.string"
+		"#;
+		let f = parse_flowgraph_file(src, None).unwrap();
+		assert_eq!(f.types.len(), 1);
+		assert_eq!(f.types[0].id, "twitch.event");
+		assert_eq!(f.types[0].kind, "record");
+		assert_eq!(f.types[0].description.as_deref(), Some("Twitch event payload"));
+		assert_eq!(f.types[0].fields.get("event_type").map(String::as_str), Some("string"));
+	}
+
+	#[test]
 	fn parse_groups_section() {
 		let src = r##"
 			[[groups]]
@@ -1257,6 +1429,59 @@ mod tests {
 		);
 		let err = load_file(&path, None).expect_err("should fail");
 		assert!(err.errors().any(|d| d.code == DiagnosticCode::DuplicateEnumId));
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
+	fn load_type_schema_metadata_catalog() {
+		let path = write_tmp(
+			"schema.flowgraph.toml",
+			r#"
+				[[types]]
+				id = "twitch.event"
+				description = "Twitch event payload"
+
+				[types.fields]
+				event_type = "string"
+				payload = "json"
+
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "x"
+			"#,
+		);
+		let report = load_file(&path, Some("schema/demo")).expect("load");
+		assert_eq!(report.type_schemas.len(), 1);
+		let schema = &report.type_schemas[0];
+		assert_eq!(schema.source_fq, "schema/demo");
+		assert_eq!(schema.id, "twitch.event");
+		assert_eq!(schema.kind, "record");
+		assert_eq!(schema.description.as_deref(), Some("Twitch event payload"));
+		assert_eq!(schema.fields.get("payload").map(String::as_str), Some("json"));
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
+	fn load_invalid_type_schema_errors() {
+		let path = write_tmp(
+			"bad-schema.flowgraph.toml",
+			r#"
+				[[types]]
+				id = "bad schema"
+
+				[[types]]
+				id = "ok"
+				kind = "tuple"
+
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "x"
+			"#,
+		);
+		let err = load_file(&path, None).expect_err("invalid schema metadata");
+		assert!(err.errors().any(|d| d.code == DiagnosticCode::InvalidTypeDefinition));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
