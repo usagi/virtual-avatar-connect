@@ -440,6 +440,42 @@ mod docs_tests {
 		assert_eq!(table_cell("a|b\nc\rd"), "a\\|b c d");
 	}
 
+	fn markdown_table_delimiter_count(line: &str) -> usize {
+		let mut escaped = false;
+		let mut count = 0;
+		for ch in line.chars() {
+			if escaped {
+				escaped = false;
+				continue;
+			}
+			match ch {
+				'\\' => escaped = true,
+				'|' => count += 1,
+				_ => {}
+			}
+		}
+		count
+	}
+
+	#[test]
+	fn generated_markdown_tables_keep_consistent_shape() {
+		let rendered = render_node_catalog_md(&default_registry());
+		let mut expected_delimiters = None;
+		for line in rendered.lines() {
+			if !line.starts_with('|') {
+				expected_delimiters = None;
+				continue;
+			}
+
+			let delimiters = markdown_table_delimiter_count(line);
+			if let Some(expected) = expected_delimiters {
+				assert_eq!(delimiters, expected, "inconsistent markdown table row: {line}");
+			} else {
+				expected_delimiters = Some(delimiters);
+			}
+		}
+	}
+
 	#[test]
 	fn node_catalog_summary_counts_match_registry() {
 		let registry = default_registry();
