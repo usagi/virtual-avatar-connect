@@ -239,7 +239,7 @@ fn render_node(out: &mut String, registry: &NodeRegistry, spec: &NodeSpec) {
 				table_cell(&p.ty.to_string()),
 				table_cell(&property_default(p)),
 				if p.required { "✔" } else { "" },
-				table_cell(p.description.as_deref().unwrap_or("")),
+				table_cell(&property_note(p)),
 			));
 		}
 		out.push('\n');
@@ -362,6 +362,9 @@ fn port_note(p: &PortSpec) -> String {
 	if p.optional && p.default.is_none() {
 		parts.push("optional".into());
 	}
+	if let Some(variants) = p.closed_string_variants.as_ref().filter(|variants| !variants.is_empty()) {
+		parts.push(format!("enum: {}", choice_labels(variants)));
+	}
 	if let Some(d) = &p.description {
 		parts.push(d.clone());
 	}
@@ -370,6 +373,24 @@ fn port_note(p: &PortSpec) -> String {
 
 fn property_default(p: &PropertySpec) -> String {
 	compact_json(&p.default.0)
+}
+
+fn property_note(p: &PropertySpec) -> String {
+	let mut parts: Vec<String> = Vec::new();
+	if let Some(choices) = p.choices.as_ref().filter(|choices| !choices.is_empty()) {
+		parts.push(format!("choices: {}", choice_labels(choices)));
+	}
+	if let Some(validator) = &p.validator {
+		parts.push(format!("validator: `{}`", validator));
+	}
+	if let Some(description) = &p.description {
+		parts.push(description.clone());
+	}
+	parts.join("; ").replace('\n', " ")
+}
+
+fn choice_labels(values: &[String]) -> String {
+	values.iter().map(|value| format!("`{}`", value)).collect::<Vec<_>>().join(", ")
 }
 
 fn compact_json(v: &serde_json::Value) -> String {
@@ -458,6 +479,8 @@ mod docs_tests {
 		assert!(rendered.contains("capabilities: `trace_write`"));
 		assert!(rendered.contains("trigger: control"));
 		assert!(rendered.contains("snapshot=explicit/json"));
+		assert!(rendered.contains("enum: `aivis_speech`, `bouyomichan`, `coeiroink`, `os`, `voicepeak`, `voicevox`"));
+		assert!(rendered.contains("choices: `rfc3339`, `iso8601_compact`, `unix_seconds`, `unix_millis`, `custom`"));
 	}
 
 	#[test]

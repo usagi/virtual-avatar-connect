@@ -750,7 +750,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 | Property | Type | Default | Required | Note |
 |---|---|---|---|---|
-| `format` | `string` | `"rfc3339"` |  | Output shape. `rfc3339` / `iso8601_compact` / `unix_seconds` / `unix_millis` / `custom`. |
+| `format` | `string` | `"rfc3339"` |  | choices: `rfc3339`, `iso8601_compact`, `unix_seconds`, `unix_millis`, `custom`; Output shape. `rfc3339` / `iso8601_compact` / `unix_seconds` / `unix_millis` / `custom`. |
 | `custom_format` | `string` | `""` |  | strftime pattern used when `format = "custom"`. See jiff::fmt::strtime. Example: `"%Y-%m-%d %H:%M:%S"`. |
 | `timezone` | `string` | `""` |  | Fixed offset for display (`""` / `"Z"` / `"UTC"` = UTC, `"+09:00"` etc.). Applies to rfc3339 / iso8601_compact / custom. unix_* are always UTC-absolute and ignore this. |
 
@@ -852,7 +852,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 | Property | Type | Default | Required | Note |
 |---|---|---|---|---|
-| `curve` | `string` | `"linear"` |  | Easing curve name. One of: linear, quad_in/out/inout, cubic_in/out/inout, sine_in/out/inout, expo_in/out/inout, elastic_in/out/inout, bounce_in/out/inout. |
+| `curve` | `string` | `"linear"` |  | choices: `linear`, `quad_in`, `quad_out`, `quad_inout`, `cubic_in`, `cubic_out`, `cubic_inout`, `sine_in`, `sine_out`, `sine_inout`, `expo_in`, `expo_out`, `expo_inout`, `elastic_in`, `elastic_out`, `elastic_inout`, `bounce_in`, `bounce_out`, `bounce_inout`; Easing curve name. One of: linear, quad_in/out/inout, cubic_in/out/inout, sine_in/out/inout, expo_in/out/inout, elastic_in/out/inout, bounce_in/out/inout. |
 | `clamp_t` | `bool` | `true` |  | When true, t is clamped to [0, 1] before the curve is applied. Default true. |
 
 ## flow
@@ -3250,7 +3250,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 | Input | Type | Default | Note |
 |---|---|---|---|
 | `exec_in` | `exec` (in) | — |  |
-| `engine` | `string` | — |  |
+| `engine` | `string` | — | enum: `aivis_speech`, `bouyomichan`, `coeiroink`, `os`, `voicepeak`, `voicevox` |
 | `text` | `string` | — |  |
 | `voice` | `string` | `""` |  |
 | `speed` | `float` | `1.0` |  |
@@ -3944,7 +3944,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 
 | Property | Type | Default | Required | Note |
 |---|---|---|---|---|
-| `mode` | `string` | `"both"` |  | rising: low→high only, falling: high→low only, both: either transition. |
+| `mode` | `string` | `"both"` |  | choices: `rising`, `falling`, `both`; rising: low→high only, falling: high→low only, both: either transition. |
 
 ### `flowgraph.util.format`
 
