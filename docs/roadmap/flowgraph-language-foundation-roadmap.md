@@ -1000,6 +1000,11 @@ escaped pipe は delimiter として数えないため、description / default /
 Control API catalog JSON に含まれる `control_triggerable` metadata を generated manual catalog にも投影し、Generated Summary、Metadata Index、各 node metadata line から外部 trigger 可能 node を確認できるようにした。
 GUI catalog と manual catalog の発火可否語彙を揃え、現時点で明示 trigger に対応する `glossary.learn` / `glossary.forget` を manual から逆引きできる。
 
+### LF-8q Port / property enum metadata generation ✅
+
+Control API contract JSON に含まれる port enum (`closed_string_variants`) と property choices を generated manual catalog の Note 欄へ投影した。
+TTS engine の閉集合 input や datetime / easing / signal 系 property choices を manual から確認できるようにし、GUI catalog と manual catalog の選択肢 metadata を揃えた。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
