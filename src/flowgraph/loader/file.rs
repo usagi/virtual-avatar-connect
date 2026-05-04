@@ -413,6 +413,7 @@ impl BuildContext {
 		let type_schemas = build_type_schema_summary(&self.files);
 		let known_type_schema_ids: BTreeSet<String> = type_schemas.iter().map(|schema| schema.id.clone()).collect();
 		validate_type_schema_field_refs(&self.files, &known_type_schema_ids, &mut diagnostics);
+		validate_type_schema_cycles(&self.files, &known_type_schema_ids, &mut diagnostics);
 		let file_activation: HashMap<String, FlowgraphFileActivationMeta> =
 			self.files.iter().map(|(fq, _, f)| (fq.clone(), file_activation_meta(f))).collect();
 
@@ -852,6 +853,88 @@ fn validate_type_schema_field_refs(
 				}
 			}
 		}
+	}
+}
+
+fn build_type_schema_dependency_graph(
+	files: &[(String, PathBuf, FlowgraphFile)],
+	known_type_schema_ids: &BTreeSet<String>,
+) -> (BTreeMap<String, BTreeSet<String>>, BTreeMap<String, (PathBuf, String)>) {
+	let mut graph: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+	let mut sources: BTreeMap<String, (PathBuf, String)> = BTreeMap::new();
+	for (_, file_path, file) in files {
+		for (idx, ty) in file.types.iter().enumerate() {
+			let schema_id = ty.id.trim();
+			if schema_id.is_empty() || schema_id != ty.id || !type_schema_id_is_valid(schema_id) {
+				continue;
+			}
+			graph.entry(schema_id.to_string()).or_default();
+			sources
+				.entry(schema_id.to_string())
+				.or_insert_with(|| (file_path.clone(), format!("[[types]][{idx}]")));
+			for field_type in ty.fields.values() {
+				let Ok(parsed) = crate::flowgraph::SocketType::parse(field_type) else {
+					continue;
+				};
+				let mut refs = BTreeSet::new();
+				collect_record_schema_refs(&parsed, &mut refs);
+				for referenced_schema_id in refs {
+					if known_type_schema_ids.contains(&referenced_schema_id) {
+						graph.entry(schema_id.to_string()).or_default().insert(referenced_schema_id);
+					}
+				}
+			}
+		}
+	}
+	(graph, sources)
+}
+
+fn validate_type_schema_cycles(
+	files: &[(String, PathBuf, FlowgraphFile)],
+	known_type_schema_ids: &BTreeSet<String>,
+	diagnostics: &mut Vec<Diagnostic>,
+) {
+	let (graph, sources) = build_type_schema_dependency_graph(files, known_type_schema_ids);
+	let mut reported: BTreeSet<String> = BTreeSet::new();
+	fn visit(
+		schema_id: &str,
+		graph: &BTreeMap<String, BTreeSet<String>>,
+		path: &mut Vec<String>,
+		reported: &mut BTreeSet<String>,
+		diagnostics: &mut Vec<Diagnostic>,
+		sources: &BTreeMap<String, (PathBuf, String)>,
+	) {
+		if let Some(pos) = path.iter().position(|id| id == schema_id) {
+			let mut cycle = path[pos..].to_vec();
+			cycle.push(schema_id.to_string());
+			let mut key_ids = cycle[..cycle.len() - 1].to_vec();
+			key_ids.sort();
+			let key = key_ids.join("\0");
+			if reported.insert(key) {
+				let display = cycle.join(" -> ");
+				let mut diagnostic = Diagnostic::warning(
+					DiagnosticCode::InvalidTypeDefinition,
+					format!("record schema dependency cycle: {display}"),
+				);
+				if let Some((file_path, hint)) = sources.get(schema_id) {
+					diagnostic = diagnostic.with_file(file_path.clone()).with_hint(hint.clone());
+				}
+				diagnostics.push(diagnostic);
+			}
+			return;
+		}
+		path.push(schema_id.to_string());
+		if let Some(dependencies) = graph.get(schema_id) {
+			for dependency in dependencies {
+				visit(dependency, graph, path, reported, diagnostics, sources);
+			}
+		}
+		path.pop();
+	}
+
+	for schema_id in graph.keys() {
+		let mut path = Vec::new();
+		visit(schema_id, &graph, &mut path, &mut reported, diagnostics, &sources);
 	}
 }
 
@@ -1670,6 +1753,40 @@ mod tests {
 		assert_eq!(schema.field_record_refs.get("payload"), Some(&vec!["known.payload".to_string()]));
 		assert_eq!(schema.field_record_refs.get("items"), Some(&vec!["known.item".to_string()]));
 		assert_eq!(schema.record_refs, vec!["known.item".to_string(), "known.payload".to_string()]);
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
+	fn load_warns_on_record_schema_dependency_cycles() {
+		let path = write_tmp(
+			"schema-cycle.flowgraph.toml",
+			r#"
+				[[types]]
+				id = "cycle.a"
+
+				[types.fields]
+				b = "record<cycle.b>"
+
+				[[types]]
+				id = "cycle.b"
+
+				[types.fields]
+				a = "option<record<cycle.a>>"
+
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "x"
+			"#,
+		);
+		let report = load_file(&path, None).expect("schema cycles are warning diagnostics");
+		assert!(report.diagnostics.iter().any(|d| {
+			d.severity == Severity::Warning
+				&& d.code == DiagnosticCode::InvalidTypeDefinition
+				&& d.message.contains("record schema dependency cycle")
+				&& d.message.contains("cycle.a")
+				&& d.message.contains("cycle.b")
+		}));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
