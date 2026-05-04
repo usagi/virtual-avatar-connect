@@ -593,6 +593,12 @@ header 未指定時は従来通り blind save を許容し、未作成 lockfile 
 `diff` は `added_ids`, `removed_ids`, `changed_ids`, `unchanged_ids` を返し、GUI や外部 tooling が stale lockfile の理由を軽量に表示できる。
 まだ structured per-entry diff、GUI conflict dialog、load-time warning は扱わず、package id 単位の read-only diff payload に留める。
 
+### LF-4u Package lockfile load-time warning ✅
+
+Flowgraph root に `flowgraph.lock.json` が存在する場合、ロード時に lockfile digest と現在の package lock preview digest を比較し、不一致なら `package-lock-file` warning diagnostic を返すようにした。
+lockfile の JSON parse / schema validation に失敗した場合も warning diagnostic とし、壊れた lockfile と stale lockfile を diagnostics surface で観測できる。
+まだ load rejection、GUI dedicated warning UI、resolver enforcement は扱わず、既存 diagnostics API へ warning を合流するだけに留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
