@@ -728,15 +728,19 @@ fn build_type_schema_summary(files: &[(String, PathBuf, FlowgraphFile)]) -> Vec<
 		.iter()
 		.flat_map(|(fq, _, file)| {
 			file.types.iter().map(|ty| {
-				let field_type_exprs = ty
-					.fields
-					.iter()
-					.filter_map(|(field_name, field_type)| {
-						crate::flowgraph::SocketType::parse(field_type)
-							.ok()
-							.map(|parsed| (field_name.clone(), parsed.type_expr()))
-					})
-					.collect();
+				let mut field_type_exprs = BTreeMap::new();
+				let mut field_record_refs = BTreeMap::new();
+				for (field_name, field_type) in &ty.fields {
+					let Ok(parsed) = crate::flowgraph::SocketType::parse(field_type) else {
+						continue;
+					};
+					field_type_exprs.insert(field_name.clone(), parsed.type_expr());
+					let mut refs = BTreeSet::new();
+					collect_record_schema_refs(&parsed, &mut refs);
+					if !refs.is_empty() {
+						field_record_refs.insert(field_name.clone(), refs.into_iter().collect());
+					}
+				}
 				TypeSchemaSummary {
 					source_fq: fq.clone(),
 					id: ty.id.clone(),
@@ -748,6 +752,7 @@ fn build_type_schema_summary(files: &[(String, PathBuf, FlowgraphFile)]) -> Vec<
 					description: ty.description.clone(),
 					fields: ty.fields.clone(),
 					field_type_exprs,
+					field_record_refs,
 				}
 			})
 		})
@@ -1620,6 +1625,47 @@ mod tests {
 				&& d.message.contains("missing.payload")
 				&& d.hint.as_deref() == Some("[[types]][0].fields.payload")
 		}));
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
+	fn load_type_schema_field_record_refs_metadata() {
+		let path = write_tmp(
+			"schema-field-refs.flowgraph.toml",
+			r#"
+				[[types]]
+				id = "known.event"
+
+				[types.fields]
+				payload = "option<record<known.payload>>"
+				items = "list<record<known.item>>"
+
+				[[types]]
+				id = "known.payload"
+
+				[types.fields]
+				text = "string"
+
+				[[types]]
+				id = "known.item"
+
+				[types.fields]
+				name = "string"
+
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "x"
+			"#,
+		);
+		let report = load_file(&path, None).expect("load");
+		let schema = report
+			.type_schemas
+			.iter()
+			.find(|schema| schema.id == "known.event")
+			.expect("known.event schema");
+		assert_eq!(schema.field_record_refs.get("payload"), Some(&vec!["known.payload".to_string()]));
+		assert_eq!(schema.field_record_refs.get("items"), Some(&vec!["known.item".to_string()]));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 

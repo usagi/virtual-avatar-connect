@@ -1276,6 +1276,7 @@ export type FlowgraphTypeSchemaSummary = {
   description?: string;
   fields: Record<string, string>;
   field_type_exprs: Record<string, FlowgraphSocketTypeExpr>;
+  field_record_refs: Record<string, string[]>;
 };
 
 export type FlowgraphDiagnosticsResponse = {
