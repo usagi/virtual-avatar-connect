@@ -1240,6 +1240,7 @@ export type FlowgraphSignature = {
 
 export type FlowgraphPackageManifestSummary = {
   source_fq: string;
+  source_digest?: string;
   id?: string;
   version?: string;
   exports: string[];
