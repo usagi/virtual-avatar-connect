@@ -744,6 +744,12 @@ diagnostics API と同じ `TypeSchemaSummary` 形状を使い、GUI / docs gener
 node port / property の `type_expr` と同じ形状なので、GUI / docs generator は schema field ごとに parser API を叩かず generic type を描画できる。
 既存 `fields` 文字列はそのまま残し、互換性を保ちながら structured metadata を並走させる。
 
+### LF-5s Schema field record reference metadata ✅
+
+`type_schemas[]` に `field_record_refs` を追加し、各 field type が参照する `record<schema_id>` 一覧を read-only 公開するようにした。
+`option<record<x>>` や `list<record<x>>` のような nested generic も再帰的に収集し、schema dependency graph を diagnostics / signature API だけで組み立てられる。
+未定義参照 warning と同じ収集経路を使い、実行時 validation には踏み込まず catalog metadata の表現力だけを増やす。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
