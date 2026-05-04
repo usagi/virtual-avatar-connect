@@ -75,7 +75,7 @@ fn port_contracts(v: &serde_json::Value, key: &str) -> Vec<serde_json::Value> {
 							out.insert(to.to_string(), value.clone());
 						}
 					}
-					insert_type_expr(&mut out);
+					insert_type_expr_from_key(&mut out, "type");
 					Some(serde_json::Value::Object(out))
 				})
 				.collect()
@@ -104,7 +104,7 @@ fn property_contracts(v: &serde_json::Value) -> Vec<serde_json::Value> {
 							out.insert(to.to_string(), value.clone());
 						}
 					}
-					insert_type_expr(&mut out);
+					insert_type_expr_from_key(&mut out, "type");
 					Some(serde_json::Value::Object(out))
 				})
 				.collect()
@@ -112,8 +112,8 @@ fn property_contracts(v: &serde_json::Value) -> Vec<serde_json::Value> {
 		.unwrap_or_default()
 }
 
-fn insert_type_expr(out: &mut serde_json::Map<String, serde_json::Value>) {
-	let Some(ty) = out.get("type").and_then(|value| value.as_str()) else {
+fn insert_type_expr_from_key(out: &mut serde_json::Map<String, serde_json::Value>, key: &str) {
+	let Some(ty) = out.get(key).and_then(|value| value.as_str()) else {
 		return;
 	};
 	let Ok(ty) = SocketType::parse(ty) else {
@@ -123,6 +123,13 @@ fn insert_type_expr(out: &mut serde_json::Map<String, serde_json::Value>) {
 		return;
 	};
 	out.insert("type_expr".to_string(), value);
+}
+
+fn enrich_socket_type_expr_json(v: &mut serde_json::Value) {
+	let Some(obj) = v.as_object_mut() else {
+		return;
+	};
+	insert_type_expr_from_key(obj, "ty");
 }
 
 /// LF-1: 既存 NodeSpec から node signature / contract を派生する。
@@ -209,8 +216,14 @@ pub(crate) fn enrich_node_catalog_spec_json(reg: &crate::flowgraph::registry::No
 	for key in ["inputs", "outputs"] {
 		if let Some(serde_json::Value::Array(arr)) = obj.get_mut(key) {
 			for item in arr.iter_mut() {
+				enrich_socket_type_expr_json(item);
 				enrich_quantity_port_ui_hints(item);
 			}
+		}
+	}
+	if let Some(serde_json::Value::Array(arr)) = obj.get_mut("properties") {
+		for item in arr.iter_mut() {
+			enrich_socket_type_expr_json(item);
 		}
 	}
 	enrich_contract_json(v);
@@ -544,6 +557,16 @@ mod tests {
 		let spec = reg.spec("flowgraph.map.get").expect("map.get が registry に必要");
 		let mut v = serde_json::to_value(&spec).unwrap();
 		enrich_node_catalog_spec_json(reg, &mut v);
+
+		let catalog_inputs = v["inputs"].as_array().expect("catalog inputs");
+		let catalog_map_input = catalog_inputs
+			.iter()
+			.find(|p| p["name"].as_str() == Some("m"))
+			.expect("catalog map input");
+		assert_eq!(catalog_map_input["ty"].as_str(), Some("map<json>"));
+		assert_eq!(catalog_map_input["type_expr"]["kind"].as_str(), Some("generic"));
+		assert_eq!(catalog_map_input["type_expr"]["args"][0]["name"].as_str(), Some("string"));
+		assert_eq!(catalog_map_input["type_expr"]["args"][1]["name"].as_str(), Some("json"));
 
 		let inputs = v["contract"]["inputs"].as_array().expect("inputs contract");
 		let map_input = inputs.iter().find(|p| p["name"].as_str() == Some("m")).expect("map input");

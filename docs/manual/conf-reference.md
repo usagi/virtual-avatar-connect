@@ -98,7 +98,7 @@ v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サ�
 
 `GET /api/v1/control/flowgraph/diagnostics` は、ロード診断に加えて Flowgraph の signature / capability / state metadata を返します。
 `GET /api/v1/control/flowgraph/signature` は、同じ `graph_signature` JSON だけを返します。
-node catalog の `contract.inputs[]` / `contract.outputs[]` / `contract.properties[]` と `graph_signature` の port surface は、従来の `type` / `ty` 文字列に加えて `type_expr` を返します。`type_expr` は `kind`, `name`, `display`, `args[]` を持つ read-only generic type metadata です。
+node catalog の `inputs[]` / `outputs[]` / `properties[]` / `contract.*[]` と `graph_signature` の port surface は、従来の `type` / `ty` 文字列に加えて `type_expr` を返します。`type_expr` は `kind`, `name`, `display`, `args[]` を持つ read-only generic type metadata です。
 `GET /api/v1/control/flowgraph/package-lock` は、flowgraph root 直下の `flowgraph.lock.json` を読み、保存済み digest と現在の preview digest が一致するか、package id 単位の追加 / 削除 / 変更 / 不変差分を返します。
 `GET /api/v1/control/flowgraph/package-lock-preview` は、`digest`, `entries`, `entry_count` だけを返す read-only package lock preview API です。
 `POST /api/v1/control/flowgraph/package-lock-preview/save` は、現在の package lock preview を flowgraph root 直下の `flowgraph.lock.json` に保存します。`If-Match: b3:<digest>` を付けた場合は保存済み lockfile の digest と一致するときだけ更新します。

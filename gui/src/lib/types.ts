@@ -895,6 +895,7 @@ export type FlowgraphPortSpec = {
   name: string;
   label: string;
   ty: FlowgraphSocketType;
+  type_expr?: FlowgraphSocketTypeExpr;
   direction: FlowgraphPortDirection;
   is_exec: boolean;
   optional: boolean;
@@ -978,6 +979,7 @@ export type FlowgraphPropertySpec = {
   name: string;
   label: string;
   ty: FlowgraphSocketType;
+  type_expr?: FlowgraphSocketTypeExpr;
   default: unknown;
   required: boolean;
   description?: string;
