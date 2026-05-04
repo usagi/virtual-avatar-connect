@@ -702,6 +702,12 @@ wire 表現は `null` または inner 型の値とし、JSON / TOML 復元、def
 現ランタイムでは key が `string` 固定なので、canonical type / type_expr は従来通り `map<T>` / `args=[string,T]` を返す。
 `dictionary<int,T>` のような非 string key は明示エラーにし、将来 `dictionary<K,V>` を本実装するときの互換境界を残す。
 
+### LF-5l `collection<T>` parser alias ✅
+
+将来の `collection<T>` 語彙へ寄せる準備として、`collection<T>` を `list<T>` と同じ意味の parser alias として受理するようにした。
+現ランタイムでは順序付き collection は `list<T>` なので、canonical type / type_expr は従来通り `list<T>` / `args=[T]` を返す。
+GUI / tooling は alias 入力を受け付けつつ、既存 loader / node catalog / edge validation の read model を変えずに扱える。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
