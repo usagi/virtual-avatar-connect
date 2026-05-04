@@ -362,7 +362,7 @@ Flowgraph を汎用プログラミング言語へ近づけるための基礎整�
 
 優先:
 
-- [~] LF-1 Schema / Contract。`record` / `table schema` / node signature / library signature を統一する。初段として node catalog に派生 `contract` metadata を追加。
+- [~] LF-1 Schema / Contract。`record` / `table schema` / node signature / library signature を統一する。node catalog に派生 `contract` metadata を追加し、ロード済み graph の `graph_signature` metadata 抽出まで進行。
 - [~] LF-2 Capability / Effect。file / network / db / notification / OBS / Twitch などの権限と effect kind を明示する。初段として node catalog に `effect_class` / `capabilities` metadata を追加し、GUI palette / node card で表示。
 - [~] LF-3 Testing / Debugger。graph fixture test、mock capability、trace、watch、trigger history を整える。初段として CLI fixture runner / trace JSON を追加。
 

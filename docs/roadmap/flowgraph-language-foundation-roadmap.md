@@ -54,6 +54,24 @@ VAC Flowgraph を汎用プログラミング言語に近づけるための基礎
 
 この段階では validation enforcement は行わない。既存 `NodeSpec` からの派生値として出し、後続で named `record` / `table schema` / library signature に接続する。
 
+### LF-1b Graph signature extraction ✅
+
+`LoadReport` に `graph_signature` を追加し、ロード済み Flowgraph を graph-as-node / library signature へ接続するための read-only boundary metadata を抽出できるようにした。
+v1 signature は明示 export 構文をまだ導入せず、既存 TOML / `NodeSpec` / edge 解決結果から安定に推論できる範囲に限定する。
+
+`graph_signature` v1:
+
+- `version = 1`, `kind = "flowgraph"`
+- `file_count`, `node_count`, `edge_count`
+- `effectful_node_count`, `stateful_node_count`, snapshot / restore 対応 stateful node 件数
+- `required_capabilities`: graph 全体の capability set
+- `files[]`: fq、title / description、normalized library id、mode activation metadata
+- `external_triggers[]`: `flowgraph.ingress.*` と `control_triggerable` node の exec / data input surface
+- `boundary_inputs[]` / `boundary_outputs[]`: edge で内部接続されていない port surface
+
+`GET /flowgraph/diagnostics` と fixture JSON report にも同じ `graph_signature` を載せ、GUI diagnostics では compact count を表示する。
+この段階では signature を validation enforcement や graph-as-node 実行には使わず、LF-4 manifest / export / dependency diagnostics と LF-8 後続生成が読む stable observation surface として固定する。
+
 ## 3. LF-2 Capability / Effect
 
 Pure / Stateful / Effectful の大分類に加えて、具体的な権限と effect kind を扱う。
