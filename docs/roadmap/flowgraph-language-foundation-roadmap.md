@@ -1025,6 +1025,11 @@ Generated catalog 冒頭の型表記一覧を固定文字列から `NodeRegistry
 `NodeRegistry::all_specs()` を走査し、全 port / property の `SocketType` 表記が generated catalog 冒頭の型表記一覧に含まれることを unit test で固定した。
 新しい socket type や nested type が追加された場合、node table には出ているのに catalog 冒頭の型語彙から漏れる regression を docs test で検知できる。
 
+### LF-8v Generated catalog EOL guard ✅
+
+`render_node_catalog_md` の出力が CR を含まない LF-only であり、末尾改行を持つことを unit test で固定した。
+Windows checkout / formatter / bless 経路の違いで generated catalog の改行方針が揺れる regression を docs test で検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
