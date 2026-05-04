@@ -17,6 +17,7 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 - **Index**: category ごとの通常一覧。feature 名から node 詳細へ移動するための入口です。
 - **Metadata Index**: effect / capability / control trigger / snapshot support から node を逆引きするための一覧です。GUI catalog と同じ registry metadata から生成します。
 - 各 node section の **Metadata** line は contract summary、effect class、capability、control trigger、state model を compact に示します。
+- Port / Property table の **Note** 欄に出る `enum:` / `choices:` は、GUI catalog と同じ選択肢 metadata から生成されます。
 
 ## Generated Summary
 

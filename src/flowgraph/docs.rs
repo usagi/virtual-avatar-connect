@@ -43,7 +43,10 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 	out.push_str("- **Index**: category ごとの通常一覧。feature 名から node 詳細へ移動するための入口です。\n");
 	out.push_str("- **Metadata Index**: effect / capability / control trigger / snapshot support から node を逆引きするための一覧です。GUI catalog と同じ registry metadata から生成します。\n");
 	out.push_str(
-		"- 各 node section の **Metadata** line は contract summary、effect class、capability、control trigger、state model を compact に示します。\n\n",
+		"- 各 node section の **Metadata** line は contract summary、effect class、capability、control trigger、state model を compact に示します。\n",
+	);
+	out.push_str(
+		"- Port / Property table の **Note** 欄に出る `enum:` / `choices:` は、GUI catalog と同じ選択肢 metadata から生成されます。\n\n",
 	);
 	render_catalog_summary(&mut out, registry, &by_category);
 
@@ -466,6 +469,7 @@ mod docs_tests {
 		let rendered = render_node_catalog_md(&default_registry());
 		assert!(rendered.contains("## Reading This Catalog"));
 		assert!(rendered.contains("GUI catalog と同じ registry metadata"));
+		assert!(rendered.contains("`enum:` / `choices:`"));
 		assert!(rendered.contains("## Generated Summary"));
 		assert!(rendered.contains("| Control-triggerable nodes |"));
 		assert!(rendered.contains("| Snapshot-supported nodes |"));
