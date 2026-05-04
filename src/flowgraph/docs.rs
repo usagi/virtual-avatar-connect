@@ -588,6 +588,37 @@ mod docs_tests {
 	}
 
 	#[test]
+	fn node_catalog_enum_metadata_covers_all_registry_choices() {
+		let registry = default_registry();
+		let rendered = render_node_catalog_md(&registry);
+		for spec in registry.all_specs() {
+			for port in spec.inputs.iter().chain(spec.outputs.iter()) {
+				if let Some(variants) = port.closed_string_variants.as_ref().filter(|variants| !variants.is_empty()) {
+					let note = format!("enum: {}", choice_labels(variants));
+					assert!(
+						rendered.contains(&note),
+						"missing port enum note for {}:{}: {note}",
+						spec.feature,
+						port.name
+					);
+				}
+			}
+
+			for property in &spec.properties {
+				if let Some(choices) = property.choices.as_ref().filter(|choices| !choices.is_empty()) {
+					let note = format!("choices: {}", choice_labels(choices));
+					assert!(
+						rendered.contains(&note),
+						"missing property choices note for {}:{}: {note}",
+						spec.feature,
+						property.name
+					);
+				}
+			}
+		}
+	}
+
+	#[test]
 	fn node_catalog_anchors_are_unique() {
 		let registry = default_registry();
 		let mut seen = std::collections::BTreeMap::new();
