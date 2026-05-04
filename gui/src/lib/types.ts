@@ -1277,6 +1277,12 @@ export type FlowgraphDiagnosticsResponse = {
   inactive_exec_nodes: string[];
 };
 
+export type FlowgraphPackageLockPreviewResponse = {
+  digest: string | null;
+  entries: FlowgraphPackageLockEntry[];
+  entry_count: number;
+};
+
 export type FlowgraphCreateFileRequest = {
   fq: string;
   initial_toml?: string;

@@ -378,6 +378,40 @@ pub async fn get_signature(state: Data<SharedState>) -> impl Responder {
 }
 
 // ============================================================================
+// GET /flowgraph/package-lock-preview
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct PackageLockPreviewResponse {
+	pub digest: Option<String>,
+	pub entries: Vec<crate::flowgraph::loader::PackageLockEntry>,
+	pub entry_count: usize,
+}
+
+fn package_lock_preview_response(rt: &FlowgraphRuntime) -> PackageLockPreviewResponse {
+	let entries = rt.package_lock_preview.clone();
+	PackageLockPreviewResponse {
+		digest: rt.package_lock_preview_digest.clone(),
+		entry_count: entries.len(),
+		entries,
+	}
+}
+
+#[get("/flowgraph/package-lock-preview")]
+pub async fn get_package_lock_preview(state: Data<SharedState>) -> impl Responder {
+	let fg = state.read().await.flowgraph.clone();
+	let rt = fg.read().await;
+	let Some(rt) = rt.as_ref() else {
+		return err_json(
+			actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+			"flowgraph_dir_unset",
+			"conf.flowgraph_dir が未設定です",
+		);
+	};
+	HttpResponse::Ok().json(package_lock_preview_response(rt))
+}
+
+// ============================================================================
 // POST /flowgraph/state-snapshot/loaded/save
 // ============================================================================
 
@@ -996,6 +1030,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 		.service(get_tree)
 		.service(get_diagnostics)
 		.service(get_signature)
+		.service(get_package_lock_preview)
 		.service(post_save_loaded_state_snapshot)
 		.service(post_save_live_state_snapshot)
 		.service(post_reload_preserving_state)
@@ -1017,9 +1052,9 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::flowgraph::loader::{GraphCapabilitySummary, GraphSignature};
+	use crate::flowgraph::loader::{GraphCapabilitySummary, GraphSignature, PackageLockEntry};
 	use crate::flowgraph::{ProgramStateSnapshot, ProgramStateSnapshotNode, ProgramStateSummary, StateSnapshotFormat};
-	use std::collections::HashMap;
+	use std::collections::{BTreeMap, HashMap};
 	use std::path::PathBuf;
 	use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -1110,6 +1145,26 @@ mod tests {
 			}
 			SaveLoadedStateSnapshotError::PathUnset => panic!("expected write failure"),
 		}
+	}
+
+	#[test]
+	fn package_lock_preview_response_reports_digest_and_count() {
+		let mut rt = runtime_with_snapshot_path(None);
+		rt.package_lock_preview_digest = Some("b3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into());
+		rt.package_lock_preview = vec![PackageLockEntry {
+			id: "example.pkg".into(),
+			version: Some("1.0.0".into()),
+			source_fq: "main".into(),
+			source_digest: "b3:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789".into(),
+			digest: "b3:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210".into(),
+			dependencies: BTreeMap::new(),
+		}];
+
+		let response = package_lock_preview_response(&rt);
+
+		assert_eq!(response.digest, rt.package_lock_preview_digest);
+		assert_eq!(response.entry_count, 1);
+		assert_eq!(response.entries[0].id, "example.pkg");
 	}
 
 	#[tokio::test]
