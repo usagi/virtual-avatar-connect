@@ -1045,6 +1045,11 @@ Generated catalog の feature detail section 数が `NodeRegistry::features()` �
 `NodeRegistry::all_specs()` 由来の category が、generated catalog の通常 Index と詳細 category section にそれぞれ 1 回ずつ出ることを unit test で固定した。
 feature 単位の coverage / uniqueness guard に加えて、カテゴリ再編や generator refactor で category 見出しが抜ける・重複する regression を検知できる。
 
+### LF-8z Generated catalog ordering guard ✅
+
+Generated catalog の category と feature が、通常 Index と詳細 section の両方で `BTreeMap` / feature 名ソート順に並ぶことを unit test で固定した。
+registry 登録順や generator refactor の影響で manual diff が不安定化したり、同じ catalog 内容でも順序だけが揺れる regression を docs test で検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
