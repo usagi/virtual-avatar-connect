@@ -16,6 +16,18 @@ $env:BLESS_NODE_CATALOG="1"; cargo test --lib node_catalog_md_up_to_date
 - **Metadata Index**: effect / capability / snapshot support から node を逆引きするための一覧です。GUI catalog と同じ registry metadata から生成します。
 - 各 node section の **Metadata** line は contract summary、effect class、capability、state model を compact に示します。
 
+## Generated Summary
+
+| Metric | Count |
+|---|---:|
+| Nodes | 244 |
+| Categories | 41 |
+| Effectful nodes | 67 |
+| Stateful nodes | 14 |
+| Capability groups | 11 |
+| Snapshot-supported nodes | 5 |
+| Restore-supported nodes | 5 |
+
 ## Index
 
 - **bytes**

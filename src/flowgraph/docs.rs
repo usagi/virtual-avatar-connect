@@ -42,6 +42,7 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 	out.push_str(
 		"- 各 node section の **Metadata** line は contract summary、effect class、capability、state model を compact に示します。\n\n",
 	);
+	render_catalog_summary(&mut out, registry, &by_category);
 
 	// Index
 	out.push_str("## Index\n\n");
@@ -63,6 +64,53 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 	}
 
 	out
+}
+
+fn render_catalog_summary(out: &mut String, registry: &NodeRegistry, by_category: &BTreeMap<String, Vec<NodeSpec>>) {
+	let specs: Vec<&NodeSpec> = by_category.values().flat_map(|items| items.iter()).collect();
+	let total_nodes = specs.len();
+	let effectful_count = specs
+		.iter()
+		.filter(|spec| registry.effect_class(&spec.feature) == Some("effectful"))
+		.count();
+	let stateful_count = specs
+		.iter()
+		.filter(|spec| registry.effect_class(&spec.feature) == Some("stateful"))
+		.count();
+	let capability_group_count = specs
+		.iter()
+		.flat_map(|spec| registry.capabilities(&spec.feature))
+		.collect::<std::collections::BTreeSet<_>>()
+		.len();
+	let snapshot_supported_count = specs
+		.iter()
+		.filter(|spec| {
+			registry
+				.state_model(&spec.feature)
+				.map(|model| model.snapshot_supported)
+				.unwrap_or(false)
+		})
+		.count();
+	let restore_supported_count = specs
+		.iter()
+		.filter(|spec| {
+			registry
+				.state_model(&spec.feature)
+				.map(|model| model.restore_supported)
+				.unwrap_or(false)
+		})
+		.count();
+
+	out.push_str("## Generated Summary\n\n");
+	out.push_str("| Metric | Count |\n");
+	out.push_str("|---|---:|\n");
+	out.push_str(&format!("| Nodes | {} |\n", total_nodes));
+	out.push_str(&format!("| Categories | {} |\n", by_category.len()));
+	out.push_str(&format!("| Effectful nodes | {} |\n", effectful_count));
+	out.push_str(&format!("| Stateful nodes | {} |\n", stateful_count));
+	out.push_str(&format!("| Capability groups | {} |\n", capability_group_count));
+	out.push_str(&format!("| Snapshot-supported nodes | {} |\n", snapshot_supported_count));
+	out.push_str(&format!("| Restore-supported nodes | {} |\n\n", restore_supported_count));
 }
 
 fn render_metadata_index(out: &mut String, registry: &NodeRegistry, by_category: &BTreeMap<String, Vec<NodeSpec>>) {
@@ -370,6 +418,8 @@ mod docs_tests {
 		let rendered = render_node_catalog_md(&default_registry());
 		assert!(rendered.contains("## Reading This Catalog"));
 		assert!(rendered.contains("GUI catalog と同じ registry metadata"));
+		assert!(rendered.contains("## Generated Summary"));
+		assert!(rendered.contains("| Snapshot-supported nodes |"));
 		assert!(rendered.contains("## Metadata Index"));
 		assert!(rendered.contains("- **trace_write**"));
 		assert!(rendered.contains("### Snapshot / Restore Support"));
