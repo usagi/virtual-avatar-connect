@@ -180,6 +180,7 @@ fn library_use_dependency_diagnostics(files: &[(String, PathBuf, FlowgraphFile)]
 fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], known: &HashSet<String>) -> Vec<Diagnostic> {
 	let mut diagnostics: Vec<Diagnostic> = Vec::new();
 	let mut seen_package_ids: HashMap<String, PathBuf> = HashMap::new();
+	let mut package_versions: HashMap<String, Option<String>> = HashMap::new();
 	for (_fq, path, file) in files {
 		let Some(package) = file.package.as_ref() else {
 			continue;
@@ -200,7 +201,7 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 				.with_hint("[package].id"),
 			),
 			Some(id) => {
-				if let Some(first_path) = seen_package_ids.insert(id.to_string(), path.clone()) {
+				if let Some(first_path) = seen_package_ids.get(id) {
 					diagnostics.push(
 						Diagnostic::error(
 							DiagnosticCode::InvalidPackageManifest,
@@ -209,6 +210,9 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 						.with_file(path.clone())
 						.with_hint(format!("first declared in {}", first_path.display())),
 					);
+				} else {
+					seen_package_ids.insert(id.to_string(), path.clone());
+					package_versions.insert(id.to_string(), package.version.clone());
 				}
 			}
 		}
@@ -222,39 +226,6 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 					)
 					.with_file(path.clone())
 					.with_hint("[package].version"),
-				);
-			}
-		}
-
-		for (dependency_id, requirement) in &package.dependencies {
-			if !package_id_is_valid(dependency_id) {
-				diagnostics.push(
-					Diagnostic::error(
-						DiagnosticCode::InvalidPackageManifest,
-						format!("[package].dependencies の id '{dependency_id}' は lowercase dot-separated identifier ではありません"),
-					)
-					.with_file(path.clone())
-					.with_hint(format!("[package].dependencies.{dependency_id}")),
-				);
-			}
-			if !package_version_requirement_is_valid(requirement) {
-				diagnostics.push(
-					Diagnostic::error(
-						DiagnosticCode::InvalidPackageManifest,
-						format!("[package].dependencies.{dependency_id} = '{requirement}' は未対応の version requirement です"),
-					)
-					.with_file(path.clone())
-					.with_hint(format!("[package].dependencies.{dependency_id}")),
-				);
-			}
-			if package.id.as_deref() == Some(dependency_id.as_str()) {
-				diagnostics.push(
-					Diagnostic::error(
-						DiagnosticCode::InvalidPackageManifest,
-						format!("[package].dependencies が自分自身を参照しています: '{dependency_id}'"),
-					)
-					.with_file(path.clone())
-					.with_hint(format!("[package].dependencies.{dependency_id}")),
 				);
 			}
 		}
@@ -293,6 +264,75 @@ fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], know
 			}
 		}
 	}
+
+	for (_fq, path, file) in files {
+		let Some(package) = file.package.as_ref() else {
+			continue;
+		};
+
+		for (dependency_id, requirement) in &package.dependencies {
+			let dependency_id_valid = package_id_is_valid(dependency_id);
+			let requirement_valid = package_version_requirement_is_valid(requirement);
+			if !dependency_id_valid {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidPackageManifest,
+						format!("[package].dependencies の id '{dependency_id}' は lowercase dot-separated identifier ではありません"),
+					)
+					.with_file(path.clone())
+					.with_hint(format!("[package].dependencies.{dependency_id}")),
+				);
+			}
+			if !requirement_valid {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidPackageManifest,
+						format!("[package].dependencies.{dependency_id} = '{requirement}' は未対応の version requirement です"),
+					)
+					.with_file(path.clone())
+					.with_hint(format!("[package].dependencies.{dependency_id}")),
+				);
+			}
+			if package.id.as_deref() == Some(dependency_id.as_str()) {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidPackageManifest,
+						format!("[package].dependencies が自分自身を参照しています: '{dependency_id}'"),
+					)
+					.with_file(path.clone())
+					.with_hint(format!("[package].dependencies.{dependency_id}")),
+				);
+			}
+			if !dependency_id_valid || !requirement_valid || package.id.as_deref() == Some(dependency_id.as_str()) {
+				continue;
+			}
+			let Some(version) = package_versions.get(dependency_id) else {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidPackageManifest,
+						format!("[package].dependencies.{dependency_id} の package が flowgraph ルート内に存在しません"),
+					)
+					.with_file(path.clone())
+					.with_hint(format!("[package].dependencies.{dependency_id}")),
+				);
+				continue;
+			};
+			if requirement != "*" && version.as_deref() != Some(requirement.as_str()) {
+				let actual = version.as_deref().unwrap_or("<none>");
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidPackageManifest,
+						format!(
+							"[package].dependencies.{dependency_id} は version '{requirement}' を要求していますが、catalog には '{actual}' が登録されています"
+						),
+					)
+					.with_file(path.clone())
+					.with_hint(format!("[package].dependencies.{dependency_id}")),
+				);
+			}
+		}
+	}
+
 	diagnostics
 }
 

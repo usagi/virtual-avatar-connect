@@ -112,6 +112,19 @@ properties.value = "hi"
 fn package_semver_prerelease_and_build_loads() {
 	let root = tmp_root("valid-version");
 	write(
+		&root.join("dep.flowgraph.toml"),
+		r#"[package]
+id = "example.dep"
+version = "2.0.0"
+exports = ["dep"]
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "dep"
+"#,
+	);
+	write(
 		&root.join("main.flowgraph.toml"),
 		r#"[package]
 id = "example.version"
@@ -128,25 +141,38 @@ feature = "flowgraph.literal.string"
 properties.value = "hi"
 "#,
 	);
+	write(
+		&root.join("tooling.flowgraph.toml"),
+		r#"[package]
+id = "example.tooling"
+exports = ["tooling"]
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "tooling"
+"#,
+	);
 
 	let report = load_flowgraph_dir(&root).expect("valid package version");
-	assert_eq!(
-		report.graph_signature.files[0].package_version.as_deref(),
-		Some("1.2.3-alpha.1+build.5")
-	);
-	assert_eq!(report.package_manifests.len(), 1);
-	assert_eq!(report.package_manifests[0].source_fq, "main");
-	assert_eq!(report.package_manifests[0].id.as_deref(), Some("example.version"));
-	assert_eq!(report.package_manifests[0].version.as_deref(), Some("1.2.3-alpha.1+build.5"));
-	assert_eq!(report.package_manifests[0].exports, vec!["main".to_string()]);
-	assert_eq!(
-		report.package_manifests[0].dependencies.get("example.dep").map(String::as_str),
-		Some("2.0.0")
-	);
-	assert_eq!(
-		report.package_manifests[0].dependencies.get("example.tooling").map(String::as_str),
-		Some("*")
-	);
+	let main_signature = report
+		.graph_signature
+		.files
+		.iter()
+		.find(|file| file.fq == "main")
+		.expect("main signature file");
+	assert_eq!(main_signature.package_version.as_deref(), Some("1.2.3-alpha.1+build.5"));
+	assert_eq!(report.package_manifests.len(), 3);
+	let main_manifest = report
+		.package_manifests
+		.iter()
+		.find(|manifest| manifest.id.as_deref() == Some("example.version"))
+		.expect("main package manifest");
+	assert_eq!(main_manifest.source_fq, "main");
+	assert_eq!(main_manifest.version.as_deref(), Some("1.2.3-alpha.1+build.5"));
+	assert_eq!(main_manifest.exports, vec!["main".to_string()]);
+	assert_eq!(main_manifest.dependencies.get("example.dep").map(String::as_str), Some("2.0.0"));
+	assert_eq!(main_manifest.dependencies.get("example.tooling").map(String::as_str), Some("*"));
 	let _ = std::fs::remove_dir_all(&root);
 }
 
@@ -172,6 +198,77 @@ properties.value = "hi"
 	);
 
 	let err = load_flowgraph_dir(&root).expect_err("invalid package dependency");
+	assert!(
+		err.errors()
+			.any(|diagnostic| diagnostic.code == DiagnosticCode::InvalidPackageManifest),
+		"{:#?}",
+		err.diagnostics
+	);
+	let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn package_missing_dependency_returns_error() {
+	let root = tmp_root("missing-dependency");
+	write(
+		&root.join("main.flowgraph.toml"),
+		r#"[package]
+id = "example.main"
+exports = ["main"]
+
+[package.dependencies]
+"example.missing" = "*"
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "hi"
+"#,
+	);
+
+	let err = load_flowgraph_dir(&root).expect_err("missing package dependency");
+	assert!(
+		err.errors()
+			.any(|diagnostic| diagnostic.code == DiagnosticCode::InvalidPackageManifest),
+		"{:#?}",
+		err.diagnostics
+	);
+	let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn package_dependency_version_mismatch_returns_error() {
+	let root = tmp_root("dependency-version-mismatch");
+	write(
+		&root.join("dep.flowgraph.toml"),
+		r#"[package]
+id = "example.dep"
+version = "2.0.0"
+exports = ["dep"]
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "dep"
+"#,
+	);
+	write(
+		&root.join("main.flowgraph.toml"),
+		r#"[package]
+id = "example.main"
+exports = ["main"]
+
+[package.dependencies]
+"example.dep" = "1.0.0"
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "hi"
+"#,
+	);
+
+	let err = load_flowgraph_dir(&root).expect_err("dependency version mismatch");
 	assert!(
 		err.errors()
 			.any(|diagnostic| diagnostic.code == DiagnosticCode::InvalidPackageManifest),
