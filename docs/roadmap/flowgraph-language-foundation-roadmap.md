@@ -985,6 +985,11 @@ Generated Summary と Metadata Index の両方を同じ registry source から�
 Generated Summary と Metadata Index が個別に effect / capability / state support を集計していた重複を `collect_metadata_index` に集約した。
 表示生成と unit test が同じ分類 helper を参照することで、今後 metadata の分類語彙を増やす際に片方だけ更新して件数や index がずれる risk を下げた。
 
+### LF-8n Catalog feature coverage guard ✅
+
+Generated catalog の通常 Index entry と各 node section heading が `NodeRegistry::all_specs()` の全 feature を含むことを unit test で固定した。
+カテゴリ再編や生成器 refactor 時に、summary / metadata は更新されていても通常 Index や詳細 section から特定 node が抜ける regression を検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
