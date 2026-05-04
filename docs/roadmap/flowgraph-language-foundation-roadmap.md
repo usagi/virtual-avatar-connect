@@ -756,6 +756,12 @@ node port / property の `type_expr` と同じ形状なので、GUI / docs gener
 field 単位の `field_record_refs` と schema 単位の `record_refs` を併せて、GUI / docs generator が dependency graph と field drilldown の両方を API 追加なしで扱える。
 参照一覧は stable sort されるため、snapshot / diff / package tooling の出力にも使いやすい。
 
+### LF-5u Record schema dependency cycle diagnostics ✅
+
+`[[types]].fields` の `record<schema_id>` 参照から schema dependency graph を作り、cycle を warning diagnostic として返すようにした。
+`option<record<x>>` など generic 内の参照も `record_refs` と同じ収集経路で扱い、未定義参照は従来通り別 warning とする。
+現段階では recursive schema を loader error にはせず、GUI / docs / package tooling が循環を観測できる read-only lint に留める。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
@@ -1339,7 +1345,7 @@ node signature 由来の contract、effect / capability、control trigger、stat
 - [~] LF-1 Schema / Contract
 - [~] LF-2 Capability / Effect
 - [~] LF-3 Testing / Debugger
-- [ ] LF-4 Module / Package System
+- [x] LF-4 Module / Package System
 - [~] LF-5 Generic / Type Parameter
 - [~] LF-6 Error Model
 - [~] LF-7 Persistence / State Model
