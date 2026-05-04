@@ -1055,6 +1055,11 @@ registry 登録順や generator refactor の影響で manual diff が不安定�
 Generated catalog の feature detail section ごとに `Metadata` line が 1 本ずつ出ることを unit test で固定した。
 section coverage guard に加えて、node 詳細は存在するが contract / effect / capability / trigger / state summary が抜ける regression を docs test で検知できる。
 
+### LF-8ab Feature metadata field guard ✅
+
+Generated catalog の全 `Metadata` line が `contract` / `effect` / `capabilities` / `trigger` / `state` の各 field を含むことを unit test で固定した。
+metadata line の本数が合っていても、generator 変更で一部 field だけ欠落する regression を docs test で検知できる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
