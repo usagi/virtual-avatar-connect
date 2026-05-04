@@ -368,7 +368,7 @@ Flowgraph を汎用プログラミング言語へ近づけるための基礎整�
 
 計画として保持:
 
-- [ ] LF-4 Module / Package System。manifest / lockfile / semver / dependency resolution。WASM compiled module target はここに含める。
+- [x] LF-4 Module / Package System。local package manifest / dependency DAG / lock preview / `flowgraph.lock.json` envelope / save & status API / stale warning の基盤を完了。external registry resolution、version range solving、WASM ABI は後続設計へ送る。
 - [ ] LF-5 Generic / Type Parameter。`list<T>` / `dictionary<K,V>` / `result<T>` の型束縛。
 - [ ] LF-6 Error Model。`result<T>` / `on_error` / fatal diagnostics / retry policy の統一。
 - [ ] LF-7 Persistence / State Model。state 寿命、reload、profile scope、snapshot / migration。

@@ -599,6 +599,12 @@ Flowgraph root に `flowgraph.lock.json` が存在する場合、ロード時に
 lockfile の JSON parse / schema validation に失敗した場合も warning diagnostic とし、壊れた lockfile と stale lockfile を diagnostics surface で観測できる。
 まだ load rejection、GUI dedicated warning UI、resolver enforcement は扱わず、既存 diagnostics API へ warning を合流するだけに留める。
 
+### LF-4v Module / Package System foundation closure ✅
+
+LF-4 は local flowgraph root 内の package manifest / dependency DAG / lock preview / lockfile JSON envelope / save & status API / stale warning までを完了範囲として閉じる。
+この時点で package tooling は `[package]` catalog、dependency-first order、source-aware entry digest、aggregate digest、`flowgraph.lock.json` の read/write/status/diff/If-Match guard を利用できる。
+外部 registry resolution、version range solving、WASM ABI、package artifact archive、resolver enforcement は LF-4 の基盤完了後の後続設計へ送る。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
