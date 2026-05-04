@@ -587,6 +587,12 @@ lockfile が未作成の場合は `exists = false`、parse / validation 失敗�
 header 未指定時は従来通り blind save を許容し、未作成 lockfile や stale digest は `409 optimistic_lock_failed`、不正 header は `400 bad_if_match` として返す。
 まだ diff payload、GUI conflict dialog、load-time stale warning は扱わず、外部 tooling / GUI が安全に保存操作を組み立てるための最小 optimistic guard に留める。
 
+### LF-4t Package lock status diff payload ✅
+
+`GET /api/v1/control/flowgraph/package-lock` の response に `diff` を追加し、保存済み lockfile と現在 preview を package id / entry digest で比較できるようにした。
+`diff` は `added_ids`, `removed_ids`, `changed_ids`, `unchanged_ids` を返し、GUI や外部 tooling が stale lockfile の理由を軽量に表示できる。
+まだ structured per-entry diff、GUI conflict dialog、load-time warning は扱わず、package id 単位の read-only diff payload に留める。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
