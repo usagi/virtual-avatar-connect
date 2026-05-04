@@ -41,9 +41,9 @@ pub fn render_node_catalog_md(registry: &NodeRegistry) -> String {
 	out.push_str("> 型の表記: `bool` / `int` / `float` / `string` / `bytes` / `json` / `list<T>` / `map<T>` / `exec`\n\n");
 	out.push_str("## Reading This Catalog\n\n");
 	out.push_str("- **Index**: category ごとの通常一覧。feature 名から node 詳細へ移動するための入口です。\n");
-	out.push_str("- **Metadata Index**: effect / capability / snapshot support から node を逆引きするための一覧です。GUI catalog と同じ registry metadata から生成します。\n");
+	out.push_str("- **Metadata Index**: effect / capability / control trigger / snapshot support から node を逆引きするための一覧です。GUI catalog と同じ registry metadata から生成します。\n");
 	out.push_str(
-		"- 各 node section の **Metadata** line は contract summary、effect class、capability、state model を compact に示します。\n\n",
+		"- 各 node section の **Metadata** line は contract summary、effect class、capability、control trigger、state model を compact に示します。\n\n",
 	);
 	render_catalog_summary(&mut out, registry, &by_category);
 
@@ -82,6 +82,7 @@ fn render_catalog_summary(out: &mut String, registry: &NodeRegistry, by_category
 	out.push_str(&format!("| Effectful nodes | {} |\n", index.effectful.len()));
 	out.push_str(&format!("| Stateful nodes | {} |\n", index.stateful.len()));
 	out.push_str(&format!("| Capability groups | {} |\n", index.by_capability.len()));
+	out.push_str(&format!("| Control-triggerable nodes | {} |\n", index.control_triggerable.len()));
 	out.push_str(&format!("| Snapshot-supported nodes | {} |\n", index.snapshot_supported.len()));
 	out.push_str(&format!("| Restore-supported nodes | {} |\n\n", index.restore_supported.len()));
 }
@@ -111,6 +112,12 @@ fn render_metadata_index(out: &mut String, registry: &NodeRegistry, by_category:
 		}
 		out.push('\n');
 	}
+	out.push_str("### Control Triggering\n\n");
+	out.push_str(&format!(
+		"- **control triggerable** ({}): {}\n\n",
+		index.control_triggerable.len(),
+		feature_links(&index.control_triggerable),
+	));
 	out.push_str("### Snapshot / Restore Support\n\n");
 	out.push_str(&format!(
 		"- **snapshot** ({}): {}\n",
@@ -128,6 +135,7 @@ struct CatalogMetadataIndex<'a> {
 	effectful: Vec<&'a NodeSpec>,
 	stateful: Vec<&'a NodeSpec>,
 	by_capability: BTreeMap<String, Vec<&'a NodeSpec>>,
+	control_triggerable: Vec<&'a NodeSpec>,
 	snapshot_supported: Vec<&'a NodeSpec>,
 	restore_supported: Vec<&'a NodeSpec>,
 }
@@ -137,6 +145,7 @@ fn collect_metadata_index<'a>(registry: &NodeRegistry, specs: impl IntoIterator<
 		effectful: Vec::new(),
 		stateful: Vec::new(),
 		by_capability: BTreeMap::new(),
+		control_triggerable: Vec::new(),
 		snapshot_supported: Vec::new(),
 		restore_supported: Vec::new(),
 	};
@@ -149,6 +158,9 @@ fn collect_metadata_index<'a>(registry: &NodeRegistry, specs: impl IntoIterator<
 		}
 		for cap in registry.capabilities(&spec.feature) {
 			index.by_capability.entry(cap.to_string()).or_default().push(spec);
+		}
+		if registry.is_control_triggerable(&spec.feature) {
+			index.control_triggerable.push(spec);
 		}
 		if let Some(model) = registry.state_model(&spec.feature) {
 			if model.snapshot_supported {
@@ -242,10 +254,11 @@ fn render_node_metadata(out: &mut String, registry: &NodeRegistry, spec: &NodeSp
 		.unwrap_or_else(|| FlowgraphStateModel::for_effect_class(effect_class));
 
 	out.push_str(&format!(
-		"\n**Metadata:** contract: {}; effect: `{}`; capabilities: {}; state: {}\n\n",
+		"\n**Metadata:** contract: {}; effect: `{}`; capabilities: {}; trigger: {}; state: {}\n\n",
 		contract_summary(spec),
 		effect_class,
 		capability_summary(&capabilities),
+		trigger_summary(registry, spec),
 		state_summary(&state_model),
 	));
 }
@@ -268,6 +281,14 @@ fn capability_summary(capabilities: &[&str]) -> String {
 		"—".into()
 	} else {
 		capabilities.iter().map(|cap| format!("`{}`", cap)).collect::<Vec<_>>().join(", ")
+	}
+}
+
+fn trigger_summary(registry: &NodeRegistry, spec: &NodeSpec) -> &'static str {
+	if registry.is_control_triggerable(&spec.feature) {
+		"control"
+	} else {
+		"—"
 	}
 }
 
@@ -425,13 +446,17 @@ mod docs_tests {
 		assert!(rendered.contains("## Reading This Catalog"));
 		assert!(rendered.contains("GUI catalog と同じ registry metadata"));
 		assert!(rendered.contains("## Generated Summary"));
+		assert!(rendered.contains("| Control-triggerable nodes |"));
 		assert!(rendered.contains("| Snapshot-supported nodes |"));
 		assert!(rendered.contains("## Metadata Index"));
 		assert!(rendered.contains("- **trace_write**"));
+		assert!(rendered.contains("### Control Triggering"));
+		assert!(rendered.contains("- **control triggerable**"));
 		assert!(rendered.contains("### Snapshot / Restore Support"));
 		assert!(rendered.contains("**Metadata:** contract: inputs="));
 		assert!(rendered.contains("effect: `effectful`"));
 		assert!(rendered.contains("capabilities: `trace_write`"));
+		assert!(rendered.contains("trigger: control"));
 		assert!(rendered.contains("snapshot=explicit/json"));
 	}
 
@@ -494,6 +519,7 @@ mod docs_tests {
 			("Effectful nodes", index.effectful.len()),
 			("Stateful nodes", index.stateful.len()),
 			("Capability groups", index.by_capability.len()),
+			("Control-triggerable nodes", index.control_triggerable.len()),
 			("Snapshot-supported nodes", index.snapshot_supported.len()),
 			("Restore-supported nodes", index.restore_supported.len()),
 		] {
@@ -512,6 +538,7 @@ mod docs_tests {
 		for row in [
 			format!("- **effectful** ({}):", index.effectful.len()),
 			format!("- **stateful** ({}):", index.stateful.len()),
+			format!("- **control triggerable** ({}):", index.control_triggerable.len()),
 			format!("- **snapshot** ({}):", index.snapshot_supported.len()),
 			format!("- **restore** ({}):", index.restore_supported.len()),
 		] {
