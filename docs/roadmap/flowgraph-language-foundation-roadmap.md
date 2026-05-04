@@ -1010,6 +1010,11 @@ TTS engine の閉集合 input や datetime / easing / signal 系 property choice
 `NodeRegistry::all_specs()` を走査し、port の `closed_string_variants` と property `choices` が generated manual catalog の Note 欄に出力されることを unit test で固定した。
 今後 node choices が増えた場合、Control API / GUI catalog だけに選択肢が出て manual から抜ける regression を docs test で検知できる。
 
+### LF-8s Enum metadata reading guide ✅
+
+Generated catalog の Reading guide に、Port / Property table の Note 欄に出る `enum:` / `choices:` が GUI catalog と同じ選択肢 metadata 由来であることを追記した。
+LF-8q で追加した選択肢表示の読み方を catalog 冒頭に固定し、manual 利用者が閉集合 input と property choices を見落としにくくした。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
