@@ -726,6 +726,12 @@ LF-5n では `kind = "record"`、`description`、`fields` の read-only catalog 
 field 名の空白 / 空 field も `InvalidTypeDefinition` として扱い、schema metadata の typo を loader 時点で検出できる。
 まだ実データの structural validation は行わず、record schema catalog の品質を先に固める。
 
+### LF-5p Graph signature type schema metadata ✅
+
+`[[types]]` 由来の `type_schemas[]` を graph signature にも含め、`/flowgraph/signature` から schema metadata を読めるようにした。
+diagnostics API と同じ `TypeSchemaSummary` 形状を使い、GUI / docs generator / package tooling が signature だけで record schema catalog を取得できる。
+実データ validation ではなく read-only surface の拡張に留め、既存 graph-as-node signature surface と同じ流れに乗せる。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
