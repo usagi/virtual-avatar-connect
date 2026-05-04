@@ -690,6 +690,12 @@ FlowgraphCanvas の edge validation が、node catalog に `type_expr` がある
 `list<float> -> list<quantity>` や `json <-> motion_frame` のような nested / boundary compatibility を GUI 側でも同じ形で扱える。
 古い backend などで `type_expr` が無い場合は従来の文字列ベース fallback を残し、互換表示を壊さない。
 
+### LF-5j first-class `option<T>` socket type ✅
+
+値が存在しない可能性を Flowgraph の型として表現するため、`SocketType::Option(Box<SocketType>)` と `SocketValue::Option` を追加した。
+wire 表現は `null` または inner 型の値とし、JSON / TOML 復元、default value、type expression、recursive compatibility / coerce に対応した。
+`option<T>` は GUI / tooling 向け parser API と compatibility API からも同じ形で観測できる。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
