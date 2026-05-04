@@ -1494,6 +1494,14 @@ mod tests {
 		let option_expr = option_response.type_expr.expect("option expr");
 		assert_eq!(option_expr.name, "option");
 		assert_eq!(option_expr.args[0].name, "list");
+
+		let dictionary_response = parse_socket_type_response("dictionary<string, list<json>>");
+		assert!(dictionary_response.valid);
+		assert_eq!(dictionary_response.canonical_type.as_deref(), Some("map<list<json>>"));
+		let dictionary_expr = dictionary_response.type_expr.expect("dictionary expr");
+		assert_eq!(dictionary_expr.name, "map");
+		assert_eq!(dictionary_expr.args[0].name, "string");
+		assert_eq!(dictionary_expr.args[1].name, "list");
 	}
 
 	#[test]

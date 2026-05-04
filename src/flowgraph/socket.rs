@@ -88,7 +88,9 @@ impl SocketType {
 	/// 型表記文字列をパース。
 	///
 	/// - 原始型: `"bool" / "int" / "float" / "string" / "json" / "exec"`
-	/// - `"list<T>"` / `"map<T>"` / `"map<string, T>"`（後者互換記法）/ `"option<T>"` / `"result<T>"`
+	/// - `"list<T>"` / `"map<T>"` / `"map<string, T>"`（後者互換記法）
+	/// - `"dictionary<string, T>"`（将来語彙の parser alias。canonical は `map<T>`）
+	/// - `"option<T>"` / `"result<T>"`
 	pub fn parse(s: &str) -> Result<Self, TypeParseError> {
 		parse_type(s.trim())
 	}
@@ -343,6 +345,10 @@ pub enum TypeParseError {
 	EmptyMapInner(String),
 	#[error("map の key 型は string のみ許容: '{0}'")]
 	InvalidMapKey(String),
+	#[error("dictionary<K,V> の value 型が空: '{0}'")]
+	EmptyDictionaryValue(String),
+	#[error("dictionary<K,V> の key 型は現段階では string のみ許容: '{0}'")]
+	InvalidDictionaryKey(String),
 	#[error("option<T> の value 型が空: '{0}'")]
 	EmptyOptionInner(String),
 	#[error("result<T> の value 型が空: '{0}'")]
@@ -368,7 +374,7 @@ fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
 		"motion_frame" => return Ok(SocketType::MotionFrame),
 		_ => {}
 	}
-	// 複合型: list<T> / map<T> / map<string, T> / option<T> / result<T>
+	// 複合型: list<T> / map<T> / map<string, T> / dictionary<string, T> / option<T> / result<T>
 	if let Some(inner) = strip_generic(s, "list")? {
 		let inner = inner.trim();
 		if inner.is_empty() {
@@ -397,6 +403,22 @@ fn parse_type(s: &str) -> Result<SocketType, TypeParseError> {
 		}
 		// "map<T>" 短縮記法
 		return Ok(SocketType::Map(Box::new(parse_type(inner)?)));
+	}
+	if let Some(inner) = strip_generic(s, "dictionary")? {
+		let inner = inner.trim();
+		let Some(pos) = find_top_level_comma(inner) else {
+			return Err(TypeParseError::EmptyDictionaryValue(s.to_string()));
+		};
+		let (key, value) = inner.split_at(pos);
+		let key = key.trim();
+		let value = value[1..].trim();
+		if key != "string" {
+			return Err(TypeParseError::InvalidDictionaryKey(key.to_string()));
+		}
+		if value.is_empty() {
+			return Err(TypeParseError::EmptyDictionaryValue(s.to_string()));
+		}
+		return Ok(SocketType::Map(Box::new(parse_type(value)?)));
 	}
 	if let Some(inner) = strip_generic(s, "option")? {
 		let inner = inner.trim();
@@ -1029,6 +1051,10 @@ mod tests {
 			SocketType::parse("option<map<string, json>>").unwrap(),
 			SocketType::Option(Box::new(SocketType::Map(Box::new(SocketType::Json))))
 		);
+		assert_eq!(
+			SocketType::parse("dictionary<string, list<quantity>>").unwrap(),
+			SocketType::Map(Box::new(SocketType::List(Box::new(SocketType::Quantity))))
+		);
 	}
 
 	#[test]
@@ -1057,12 +1083,20 @@ mod tests {
 			SocketType::parse("map<int, string>"),
 			Err(TypeParseError::InvalidMapKey(_))
 		));
+		assert!(matches!(
+			SocketType::parse("dictionary<int, string>"),
+			Err(TypeParseError::InvalidDictionaryKey(_))
+		));
 	}
 
 	#[test]
 	fn parse_rejects_unknown() {
 		assert!(matches!(SocketType::parse("unknown"), Err(TypeParseError::UnknownPrimitive(_))));
 		assert!(matches!(SocketType::parse("list<>"), Err(TypeParseError::EmptyListInner(_))));
+		assert!(matches!(
+			SocketType::parse("dictionary<string>"),
+			Err(TypeParseError::EmptyDictionaryValue(_))
+		));
 		assert!(matches!(SocketType::parse("option<>"), Err(TypeParseError::EmptyOptionInner(_))));
 		assert!(matches!(SocketType::parse("result<>"), Err(TypeParseError::EmptyResultInner(_))));
 	}
