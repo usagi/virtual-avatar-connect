@@ -965,6 +965,11 @@ Manual index と quickstart の Node Catalog 導線を更新し、従来の port
 `CONTRIBUTING.md` に `docs/manual/node-catalog.md` が自動生成ファイルであることと、node spec / metadata 変更時に `./scripts/bless-node-catalog.ps1` を実行して生成差分を含めることを追記した。
 既存 manual 内の古い `BLESS_NODE_CATALOG=1 cargo test` 参照も bless script に寄せ、開発者向けの再生成導線を統一した。
 
+### LF-8j Catalog generation failure hints ✅
+
+`node_catalog_md_up_to_date` の missing / mismatch panic hint を `./scripts/bless-node-catalog.ps1` 優先に更新し、失敗時に開発者が repository-local script へ直行できるようにした。
+PowerShell script 本体も LF / trailing newline を固定し、Windows 作業コピーでも repository の LF 方針と再生成 workflow がずれないようにした。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
