@@ -653,6 +653,59 @@ mod docs_tests {
 	}
 
 	#[test]
+	fn node_catalog_keeps_stable_category_and_feature_order() {
+		let registry = default_registry();
+		let rendered = render_node_catalog_md(&registry);
+		let mut by_category = std::collections::BTreeMap::<String, Vec<NodeSpec>>::new();
+		for spec in registry.all_specs() {
+			by_category.entry(spec.category.clone()).or_default().push(spec);
+		}
+		for specs in by_category.values_mut() {
+			specs.sort_by(|a, b| a.feature.cmp(&b.feature));
+		}
+
+		let mut previous_index_category = 0;
+		let mut previous_detail_category = 0;
+		for (category, specs) in &by_category {
+			let index_category = format!("- **{category}**");
+			let detail_category = format!("## {category}");
+			let index_category_pos = rendered.find(&index_category).expect("category should appear in index");
+			let detail_category_pos = rendered.find(&detail_category).expect("category should appear as section");
+			assert!(
+				index_category_pos >= previous_index_category,
+				"category index order should be stable: {category}"
+			);
+			assert!(
+				detail_category_pos >= previous_detail_category,
+				"category section order should be stable: {category}"
+			);
+			previous_index_category = index_category_pos;
+			previous_detail_category = detail_category_pos;
+
+			let mut previous_index_feature = index_category_pos;
+			let mut previous_detail_feature = detail_category_pos;
+			for spec in specs {
+				let index_entry = format!("  - [`{}`](#{}) — {}", spec.feature, anchor(&spec.feature), spec.title);
+				let section_heading = format!("### `{}`", spec.feature);
+				let index_feature_pos = rendered.find(&index_entry).expect("feature should appear in index");
+				let detail_feature_pos = rendered.find(&section_heading).expect("feature should appear as section");
+				assert!(
+					index_feature_pos >= previous_index_feature,
+					"feature index order should be stable: {}",
+					spec.feature
+				);
+				assert!(
+					detail_feature_pos >= previous_detail_feature,
+					"feature section order should be stable: {}",
+					spec.feature
+				);
+				previous_index_feature = index_feature_pos;
+				previous_detail_feature = detail_feature_pos;
+			}
+		}
+	}
+
+	#[test]
 	fn generated_catalog_anchor_links_resolve_to_registry_features() {
 		let registry = default_registry();
 		let rendered = render_node_catalog_md(&registry);
