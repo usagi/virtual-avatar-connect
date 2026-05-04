@@ -1246,6 +1246,13 @@ export type FlowgraphPackageManifestSummary = {
   dependencies: Record<string, string>;
 };
 
+export type FlowgraphPackageLockEntry = {
+  id: string;
+  version?: string;
+  source_fq: string;
+  dependencies: Record<string, string>;
+};
+
 export type FlowgraphDiagnosticsResponse = {
   root_dir: string;
   ok: boolean;
@@ -1256,6 +1263,7 @@ export type FlowgraphDiagnosticsResponse = {
   graph_signature: FlowgraphSignature;
   package_manifests: FlowgraphPackageManifestSummary[];
   package_dependency_order: string[];
+  package_lock_preview: FlowgraphPackageLockEntry[];
   loaded_state_summary: FlowgraphProgramStateSummary;
   loaded_state_snapshot: FlowgraphProgramStateSnapshot;
   loaded_state_restore_report: FlowgraphProgramStateRestoreReport | null;

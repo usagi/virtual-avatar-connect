@@ -8,7 +8,7 @@
 
 use crate::flowgraph::loader::diagnostic::{
 	Diagnostic, DiagnosticCode, FlowgraphFileActivationMeta, GraphCapabilitySummary, GraphSignature, GraphSignatureFile,
-	GraphSignaturePort, GraphSignatureTrigger, LoadError, LoadReport, LoadedNodeMeta, PackageManifestSummary, Severity,
+	GraphSignaturePort, GraphSignatureTrigger, LoadError, LoadReport, LoadedNodeMeta, PackageLockEntry, PackageManifestSummary, Severity,
 };
 use crate::flowgraph::loader::reference::parse_port_ref;
 use crate::flowgraph::node::{InputMap, NodeSpec, PortSpec};
@@ -563,6 +563,7 @@ impl BuildContext {
 		let capability_summary = crate::flowgraph::loader::diagnostic::GraphCapabilitySummary::from_node_meta(reg, &node_meta);
 		let package_manifests = build_package_manifest_summary(&self.files);
 		let package_dependency_order = build_package_dependency_order(&package_manifests);
+		let package_lock_preview = build_package_lock_preview(&package_manifests, &package_dependency_order);
 		let graph_signature = build_graph_signature(
 			reg,
 			&self.files,
@@ -581,6 +582,7 @@ impl BuildContext {
 			graph_signature,
 			package_manifests,
 			package_dependency_order,
+			package_lock_preview,
 			capability_summary,
 			file_activation,
 		})
@@ -647,6 +649,26 @@ fn build_package_dependency_order(package_manifests: &[PackageManifestSummary]) 
 		visit(id, &dependencies_by_id, &mut visiting, &mut visited, &mut order);
 	}
 	order
+}
+
+fn build_package_lock_preview(package_manifests: &[PackageManifestSummary], package_dependency_order: &[String]) -> Vec<PackageLockEntry> {
+	let manifests_by_id: BTreeMap<String, &PackageManifestSummary> = package_manifests
+		.iter()
+		.filter_map(|manifest| manifest.id.as_ref().map(|id| (id.clone(), manifest)))
+		.collect();
+
+	package_dependency_order
+		.iter()
+		.filter_map(|id| {
+			let manifest = manifests_by_id.get(id)?;
+			Some(PackageLockEntry {
+				id: id.clone(),
+				version: manifest.version.clone(),
+				source_fq: manifest.source_fq.clone(),
+				dependencies: manifest.dependencies.clone(),
+			})
+		})
+		.collect()
 }
 
 fn build_graph_signature(

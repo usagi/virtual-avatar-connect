@@ -181,6 +181,16 @@ properties.value = "tooling"
 			"example.version".to_string()
 		]
 	);
+	let lock_ids: Vec<&str> = report.package_lock_preview.iter().map(|entry| entry.id.as_str()).collect();
+	assert_eq!(lock_ids, vec!["example.dep", "example.tooling", "example.version"]);
+	let main_lock = report
+		.package_lock_preview
+		.iter()
+		.find(|entry| entry.id == "example.version")
+		.expect("main package lock preview");
+	assert_eq!(main_lock.source_fq, "main");
+	assert_eq!(main_lock.version.as_deref(), Some("1.2.3-alpha.1+build.5"));
+	assert_eq!(main_lock.dependencies.get("example.dep").map(String::as_str), Some("2.0.0"));
 	let _ = std::fs::remove_dir_all(&root);
 }
 

@@ -188,6 +188,8 @@ pub struct LoadReport {
 	pub package_manifests: Vec<PackageManifestSummary>,
 	/// LF-4: local package dependency DAG の dependency-first order。
 	pub package_dependency_order: Vec<String>,
+	/// LF-4: lockfile 生成前に diagnostics API から観測できる read-only package lock preview。
+	pub package_lock_preview: Vec<PackageLockEntry>,
 	/// LF-2: graph 全体が要求する capability の集計。policy enforcement ではなく read-only metadata。
 	pub capability_summary: GraphCapabilitySummary,
 	/// RM-3: 各 `.flowgraph.toml` の fq → `[meta]` の mode 系メタ（省略時は既定）。
@@ -201,6 +203,7 @@ impl std::fmt::Debug for LoadReport {
 			.field("graph_signature", &self.graph_signature)
 			.field("package_manifests", &self.package_manifests)
 			.field("package_dependency_order", &self.package_dependency_order)
+			.field("package_lock_preview", &self.package_lock_preview)
 			.field("capability_summary", &self.capability_summary)
 			.field("file_activation", &self.file_activation.keys().collect::<Vec<_>>())
 			.field("diagnostics", &self.diagnostics)
@@ -217,6 +220,16 @@ pub struct PackageManifestSummary {
 	pub version: Option<String>,
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub exports: Vec<String>,
+	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+	pub dependencies: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PackageLockEntry {
+	pub id: String,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub version: Option<String>,
+	pub source_fq: String,
 	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
 	pub dependencies: BTreeMap<String, String>,
 }

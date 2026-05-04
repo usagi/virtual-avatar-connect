@@ -65,6 +65,8 @@ pub struct FlowgraphRuntime {
 	pub package_manifests: Vec<PackageManifestSummary>,
 	/// LF-4: local package dependency DAG の dependency-first order。
 	pub package_dependency_order: Vec<String>,
+	/// LF-4: diagnostics API から読める lockfile preview。
+	pub package_lock_preview: Vec<crate::flowgraph::loader::PackageLockEntry>,
 	/// LF-2: graph 全体の capability summary。GUI と policy preview 用の read-only metadata。
 	pub capability_summary: GraphCapabilitySummary,
 	/// LF-7: ロード直後の stateful node summary。worker 実行後の live state ではない。
@@ -94,6 +96,7 @@ impl Clone for FlowgraphRuntime {
 			graph_signature: self.graph_signature.clone(),
 			package_manifests: self.package_manifests.clone(),
 			package_dependency_order: self.package_dependency_order.clone(),
+			package_lock_preview: self.package_lock_preview.clone(),
 			capability_summary: self.capability_summary.clone(),
 			loaded_state_summary: self.loaded_state_summary.clone(),
 			loaded_state_snapshot: self.loaded_state_snapshot.clone(),
@@ -200,6 +203,7 @@ impl FlowgraphRuntime {
 			graph_signature: GraphSignature::default(),
 			package_manifests: Vec::new(),
 			package_dependency_order: Vec::new(),
+			package_lock_preview: Vec::new(),
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),
 			loaded_state_snapshot: ProgramStateSnapshot::default(),
@@ -231,6 +235,7 @@ impl FlowgraphRuntime {
 					graph_signature: GraphSignature::default(),
 					package_manifests: Vec::new(),
 					package_dependency_order: Vec::new(),
+					package_lock_preview: Vec::new(),
 					capability_summary: GraphCapabilitySummary::default(),
 					loaded_state_summary: ProgramStateSummary::default(),
 					loaded_state_snapshot: ProgramStateSnapshot::default(),
@@ -253,6 +258,7 @@ impl FlowgraphRuntime {
 					graph_signature,
 					package_manifests,
 					package_dependency_order,
+					package_lock_preview,
 					capability_summary,
 					file_activation,
 					..
@@ -273,6 +279,7 @@ impl FlowgraphRuntime {
 								graph_signature,
 								package_manifests,
 								package_dependency_order,
+								package_lock_preview,
 								capability_summary,
 								loaded_state_summary: program.state_summary(),
 								loaded_state_snapshot: program.export_state_snapshot(),
@@ -300,6 +307,7 @@ impl FlowgraphRuntime {
 					graph_signature,
 					package_manifests,
 					package_dependency_order,
+					package_lock_preview,
 					capability_summary,
 					loaded_state_summary,
 					loaded_state_snapshot,
@@ -320,6 +328,7 @@ impl FlowgraphRuntime {
 					graph_signature: GraphSignature::default(),
 					package_manifests: Vec::new(),
 					package_dependency_order: Vec::new(),
+					package_lock_preview: Vec::new(),
 					capability_summary: GraphCapabilitySummary::default(),
 					loaded_state_summary: ProgramStateSummary::default(),
 					loaded_state_snapshot: ProgramStateSnapshot::default(),
@@ -417,6 +426,7 @@ impl FlowgraphRuntime {
 			graph_signature: GraphSignature::default(),
 			package_manifests: Vec::new(),
 			package_dependency_order: Vec::new(),
+			package_lock_preview: Vec::new(),
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),
 			loaded_state_snapshot: ProgramStateSnapshot::default(),

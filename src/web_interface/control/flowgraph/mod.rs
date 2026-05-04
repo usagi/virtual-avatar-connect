@@ -296,6 +296,8 @@ pub struct DiagnosticsResponse {
 	pub package_manifests: Vec<crate::flowgraph::loader::PackageManifestSummary>,
 	/// LF-4: local package dependency DAG の dependency-first order。
 	pub package_dependency_order: Vec<String>,
+	/// LF-4: lockfile 生成前に観測できる read-only preview。
+	pub package_lock_preview: Vec<crate::flowgraph::loader::PackageLockEntry>,
 	/// LF-7: ロード直後の stateful node summary。worker 実行後の live state ではない。
 	pub loaded_state_summary: crate::flowgraph::ProgramStateSummary,
 	/// LF-7: ロード直後に snapshot export できる state payload。worker 実行後の live state ではない。
@@ -347,6 +349,7 @@ pub async fn get_diagnostics(state: Data<SharedState>) -> impl Responder {
 		graph_signature: rt.graph_signature.clone(),
 		package_manifests: rt.package_manifests.clone(),
 		package_dependency_order: rt.package_dependency_order.clone(),
+		package_lock_preview: rt.package_lock_preview.clone(),
 		loaded_state_summary: rt.loaded_state_summary.clone(),
 		loaded_state_snapshot: rt.loaded_state_snapshot.clone(),
 		loaded_state_restore_report: rt.loaded_state_restore_report.clone(),
@@ -1052,6 +1055,7 @@ mod tests {
 			graph_signature: GraphSignature::default(),
 			package_manifests: Vec::new(),
 			package_dependency_order: Vec::new(),
+			package_lock_preview: Vec::new(),
 			capability_summary: GraphCapabilitySummary::default(),
 			loaded_state_summary: ProgramStateSummary::default(),
 			loaded_state_snapshot: snapshot(),
