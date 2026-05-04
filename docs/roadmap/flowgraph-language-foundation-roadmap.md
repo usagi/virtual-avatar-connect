@@ -950,6 +950,11 @@ escaping helper は unit test で固定し、今後 node description / JSON defa
 `docs/manual/node-catalog.md` の Index / Metadata Index が参照する feature-derived anchor について、現行 registry 全体で衝突しないことを unit test で固定した。
 今後 feature 名の追加や alias 整理で GitHub-style anchor が衝突した場合、manual link が壊れる前に docs test で検知できる。
 
+### LF-8g Node catalog bless script ✅
+
+`scripts/bless-node-catalog.ps1` を追加し、`BLESS_NODE_CATALOG=1 cargo test --lib node_catalog_md_up_to_date` の定型操作を repository 内の明示 script として実行できるようにした。
+生成済み `docs/manual/node-catalog.md` の再生成手順にも同 script を出力し、manual / generator / 開発者操作の入口を揃えた。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
