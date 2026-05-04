@@ -119,6 +119,46 @@ fn library_use_dependency_diagnostics(files: &[(String, PathBuf, FlowgraphFile)]
 	diagnostics
 }
 
+fn package_manifest_diagnostics(files: &[(String, PathBuf, FlowgraphFile)], known: &HashSet<String>) -> Vec<Diagnostic> {
+	let mut diagnostics: Vec<Diagnostic> = Vec::new();
+	for (_fq, path, file) in files {
+		let Some(package) = file.package.as_ref() else {
+			continue;
+		};
+
+		if package.id.as_deref().is_some_and(|id| id.trim().is_empty()) {
+			diagnostics.push(
+				Diagnostic::error(DiagnosticCode::InvalidPackageManifest, "[package].id が空です")
+					.with_file(path.clone())
+					.with_hint("[package].id"),
+			);
+		}
+
+		for export in &package.exports {
+			let target = normalize_library_use_fq(export);
+			if target.is_empty() {
+				diagnostics.push(
+					Diagnostic::error(DiagnosticCode::InvalidPackageManifest, "[package].exports に空エントリ")
+						.with_file(path.clone())
+						.with_hint(format!("[package].exports / {export:?}")),
+				);
+				continue;
+			}
+			if !known.contains(&target) {
+				diagnostics.push(
+					Diagnostic::error(
+						DiagnosticCode::InvalidPackageManifest,
+						format!("[package].exports の参照先 '{target}' が flowgraph ルート内に存在しない"),
+					)
+					.with_file(path.clone())
+					.with_hint(export.clone()),
+				);
+			}
+		}
+	}
+	diagnostics
+}
+
 /// 指定パスが `*.flowgraph.toml`（`.disabled` は除外）か。
 pub fn is_flowgraph_file(p: &Path) -> bool {
 	let name = match p.file_name().and_then(|s| s.to_str()) {
@@ -258,6 +298,12 @@ pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 		return Err(LoadError::new(parse_diags));
 	}
 
+	let mut package_diags = package_manifest_diagnostics(&parsed, &known_file_fqs);
+	if package_diags.iter().any(|d| d.severity == Severity::Error) {
+		parse_diags.append(&mut package_diags);
+		return Err(LoadError::new(parse_diags));
+	}
+
 	let ctx = BuildContext {
 		files: parsed,
 		known_file_fqs,
@@ -266,6 +312,7 @@ pub fn load_flowgraph_dir(root: &Path) -> Result<LoadReport, LoadError> {
 	// パース時の warning を合流
 	let mut all = parse_diags;
 	all.append(&mut lib_diags);
+	all.append(&mut package_diags);
 	all.append(&mut report.diagnostics);
 	report.diagnostics = all;
 	Ok(report)
@@ -513,6 +560,55 @@ library_uses = ["a"]
 			"{:#?}",
 			err.diagnostics
 		);
+		let _ = std::fs::remove_dir_all(&root);
+	}
+
+	#[test]
+	fn package_exports_unknown_fq_returns_error() {
+		let root = tmp_root();
+		write(
+			&root.join("main.flowgraph.toml"),
+			r#"[package]
+id = "example.bad"
+version = "0.1.0"
+exports = ["missing"]
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "hi"
+
+"#,
+		);
+		let err = load_flowgraph_dir(&root).expect_err("unknown package export");
+		assert!(
+			err.errors().any(|d| d.code == DiagnosticCode::InvalidPackageManifest),
+			"{:#?}",
+			err.diagnostics
+		);
+		let _ = std::fs::remove_dir_all(&root);
+	}
+
+	#[test]
+	fn package_exports_existing_fq_loads() {
+		let root = tmp_root();
+		write(
+			&root.join("main.flowgraph.toml"),
+			r#"[package]
+id = "example.good"
+version = "0.1.0"
+exports = ["main"]
+
+[[nodes]]
+id = "lit"
+feature = "flowgraph.literal.string"
+properties.value = "hi"
+
+"#,
+		);
+		let report = load_flowgraph_dir(&root).expect("known package export");
+		assert_eq!(report.graph_signature.files[0].package_id.as_deref(), Some("example.good"));
+		assert_eq!(report.graph_signature.files[0].package_exports, vec!["main".to_string()]);
 		let _ = std::fs::remove_dir_all(&root);
 	}
 

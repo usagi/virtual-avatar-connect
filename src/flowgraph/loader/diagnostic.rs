@@ -59,6 +59,8 @@ pub enum DiagnosticCode {
 	UnknownLibraryRef,
 	/// Phase λ: `library_uses` の依存グラフに閉路がある。
 	LibraryDependencyCycle,
+	/// LF-4: `[package]` manifest が不正（空 id / 不明 export fq 等）。
+	InvalidPackageManifest,
 	/// RM-3: `[meta].mode_groups` など activation メタが不正（空のグループ名など）。
 	InvalidModeMetadata,
 	/// RM-3: `[meta].mode_groups` の名前が、いかなる `[modes].flowgraph_groups` でも使われていない。
