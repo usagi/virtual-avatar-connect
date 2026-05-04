@@ -491,6 +491,12 @@ Export 先が存在する場合はロードを継続し、`graph_signature.files
 `exports` は正規化後の fq で重複検査し、`main` と `./main.flowgraph.toml` のように同じ対象を二重に公開する manifest を loader error にする。
 package id の文字種・namespace 予約・semver policy はまだ固定せず、破壊的変更期間に合わせて最小の構造保証だけを先に置く。
 
+### LF-4d Package id identity guard ✅
+
+`[package].id` を lowercase dot-separated identifier として検査し、空白・大文字・slash など tooling / lockfile に不向きな id を `invalid-package-manifest` として拒否するようにした。
+同一 flowgraph root 内で同じ package id を複数回宣言する manifest も loader error にし、package boundary の identity が一意に観測できる状態にした。
+namespace 予約、semver compatibility、package-level dependency graph はまだ扱わず、manifest identity の最小不変条件だけを固定する。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
