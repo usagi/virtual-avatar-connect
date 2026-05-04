@@ -521,6 +521,12 @@ valid な prerelease / build metadata は `graph_signature.files[].package_versi
 exact SemVer requirement は dependency package の `[package].version` と一致する場合だけ valid とし、`"*"` は version 未指定 package も受け付ける。
 まだ外部 registry resolution、version range solving、transitive dependency closure、lockfile generation は扱わず、local catalog で観測できる package dependency boundary だけを固定する。
 
+### LF-4i Package dependency cycle guard ✅
+
+同一 flowgraph root 内の `[package.dependencies]` から local package dependency graph を作り、cycle を `invalid-package-manifest` として拒否するようにした。
+dependency id / requirement / availability / exact version が valid な edge だけを cycle 検査対象にし、既存の manifest shape error と重複しすぎない診断に留める。
+まだ transitive dependency resolution や lockfile ordering は生成せず、後続 resolver が DAG を前提にできる最小条件だけを loader で保証する。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
