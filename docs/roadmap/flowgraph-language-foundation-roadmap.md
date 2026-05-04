@@ -995,6 +995,11 @@ Generated catalog の通常 Index entry と各 node section heading が `NodeReg
 Generated catalog 内の Markdown table について、連続する table row の delimiter 数が揃っていることを unit test で固定した。
 escaped pipe は delimiter として数えないため、description / default / note に `|` や改行を含む node metadata が増えた場合も、生成 table が壊れていないかを docs test で検知できる。
 
+### LF-8p Control trigger metadata generation ✅
+
+Control API catalog JSON に含まれる `control_triggerable` metadata を generated manual catalog にも投影し、Generated Summary、Metadata Index、各 node metadata line から外部 trigger 可能 node を確認できるようにした。
+GUI catalog と manual catalog の発火可否語彙を揃え、現時点で明示 trigger に対応する `glossary.learn` / `glossary.forget` を manual から逆引きできる。
+
 ## 6. 実装順序
 
 - [~] LF-1 Schema / Contract
