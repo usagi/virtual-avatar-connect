@@ -489,6 +489,19 @@ mod docs_tests {
 	}
 
 	#[test]
+	fn node_catalog_index_and_sections_cover_all_registry_features() {
+		let registry = default_registry();
+		let rendered = render_node_catalog_md(&registry);
+		for spec in registry.all_specs() {
+			let index_entry = format!("  - [`{}`](#{}) — {}", spec.feature, anchor(&spec.feature), spec.title);
+			assert!(rendered.contains(&index_entry), "missing catalog index entry: {index_entry}");
+
+			let section_heading = format!("### `{}`", spec.feature);
+			assert!(rendered.contains(&section_heading), "missing catalog section: {section_heading}");
+		}
+	}
+
+	#[test]
 	fn node_catalog_anchors_are_unique() {
 		let registry = default_registry();
 		let mut seen = std::collections::BTreeMap::new();
