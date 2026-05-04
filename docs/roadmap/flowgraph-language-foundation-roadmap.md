@@ -479,6 +479,12 @@ Table / JSON の出力全体を固定すると fixture が重くなるため、�
 Graph signature の `files[]` へ `package_id`, `package_version`, `package_exports` を流し、LF-1b/LF-1c の signature surface から package boundary contract を観測できる。
 この段階では package id validation、export fq validation、semver compatibility、lockfile、dependency resolution は行わず、既存 `library_uses` と同居できる manifest 入口に留める。
 
+### LF-4b Package export fq validation ✅
+
+Directory loader が `[package].exports` を検査し、空エントリや flowgraph ルート内に存在しない fq を `invalid-package-manifest` の load error として返すようにした。
+Export 先が存在する場合はロードを継続し、`graph_signature.files[].package_exports` に同じ値を保持する。
+まだ package id syntax、version compatibility、exported port-by-port contract、dependency resolution は扱わず、graph-as-node / package tooling が依存できる最小の存在保証だけを固定する。
+
 #### WASM compiled module target
 
 WASM は Flowgraph の主表現ではなく、module / package system の実行ターゲットの 1 つとして扱う。
