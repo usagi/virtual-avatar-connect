@@ -91,7 +91,7 @@ copy flowgraph.example flowgraph -Recurse
 | 翻訳字幕を 2 言語で出す | [translate-multilang](./tutorials/translate-multilang.md) |
 | ゲーム画面の OCR を AI に読ませる | [ocr-screencap](./tutorials/ocr-screencap.md) |
 
-各 conf 設定の詳細は [conf-reference.md](./conf-reference.md)、全ノードの spec は [node-catalog.md](./node-catalog.md) を参照。
+各 conf 設定の詳細は [conf-reference.md](./conf-reference.md)、全ノードの spec と effect / capability / state metadata の逆引きは [node-catalog.md](./node-catalog.md) を参照。
 
 ---
 
