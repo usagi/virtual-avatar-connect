@@ -412,6 +412,7 @@ impl BuildContext {
 		}
 		let type_schemas = build_type_schema_summary(&self.files);
 		let known_type_schema_ids: BTreeSet<String> = type_schemas.iter().map(|schema| schema.id.clone()).collect();
+		validate_type_schema_field_refs(&self.files, &known_type_schema_ids, &mut diagnostics);
 		let file_activation: HashMap<String, FlowgraphFileActivationMeta> =
 			self.files.iter().map(|(fq, _, f)| (fq.clone(), file_activation_meta(f))).collect();
 
@@ -792,6 +793,42 @@ fn validate_record_schema_refs(
 						.with_node(node.clone())
 						.with_hint(property.name.clone()),
 					);
+				}
+			}
+		}
+	}
+}
+
+fn validate_type_schema_field_refs(
+	files: &[(String, PathBuf, FlowgraphFile)],
+	known_type_schema_ids: &BTreeSet<String>,
+	diagnostics: &mut Vec<Diagnostic>,
+) {
+	for (_, file_path, file) in files {
+		for (idx, ty) in file.types.iter().enumerate() {
+			let schema_id = ty.id.trim();
+			if schema_id.is_empty() || schema_id != ty.id || !type_schema_id_is_valid(schema_id) {
+				continue;
+			}
+			for (field_name, field_type) in &ty.fields {
+				let Ok(parsed) = crate::flowgraph::SocketType::parse(field_type) else {
+					continue;
+				};
+				let mut refs = BTreeSet::new();
+				collect_record_schema_refs(&parsed, &mut refs);
+				for referenced_schema_id in refs {
+					if !known_type_schema_ids.contains(&referenced_schema_id) {
+						diagnostics.push(
+							Diagnostic::warning(
+								DiagnosticCode::InvalidTypeDefinition,
+								format!(
+									"types '{schema_id}' の field '{field_name}' が未定義 record schema '{referenced_schema_id}' を参照しています"
+								),
+							)
+							.with_file(file_path.clone())
+							.with_hint(format!("[[types]][{idx}].fields.{field_name}")),
+						);
+					}
 				}
 			}
 		}
@@ -1540,6 +1577,33 @@ mod tests {
 		assert!(err
 			.errors()
 			.any(|d| d.code == DiagnosticCode::InvalidTypeDefinition && d.message.contains("field 'payload'")));
+		let _ = std::fs::remove_dir_all(path.parent().unwrap());
+	}
+
+	#[test]
+	fn load_warns_on_missing_nested_record_schema_field_refs() {
+		let path = write_tmp(
+			"missing-nested-schema.flowgraph.toml",
+			r#"
+				[[types]]
+				id = "known.event"
+
+				[types.fields]
+				payload = "option<record<missing.payload>>"
+
+				[[nodes]]
+				id = "lit"
+				feature = "flowgraph.literal.string"
+				properties.value = "x"
+			"#,
+		);
+		let report = load_file(&path, None).expect("missing nested schema is a warning");
+		assert!(report.diagnostics.iter().any(|d| {
+			d.severity == Severity::Warning
+				&& d.code == DiagnosticCode::InvalidTypeDefinition
+				&& d.message.contains("missing.payload")
+				&& d.hint.as_deref() == Some("[[types]][0].fields.payload")
+		}));
 		let _ = std::fs::remove_dir_all(path.parent().unwrap());
 	}
 
