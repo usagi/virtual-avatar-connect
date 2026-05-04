@@ -508,6 +508,13 @@ mod docs_tests {
 		assert_eq!(table_cell("a|b\nc\rd"), "a\\|b c d");
 	}
 
+	#[test]
+	fn rendered_node_catalog_is_lf_only_with_final_newline() {
+		let rendered = render_node_catalog_md(&default_registry());
+		assert!(!rendered.contains('\r'), "generated node catalog should be LF-only");
+		assert!(rendered.ends_with('\n'), "generated node catalog should end with a newline");
+	}
+
 	fn markdown_table_delimiter_count(line: &str) -> usize {
 		let mut escaped = false;
 		let mut count = 0;
