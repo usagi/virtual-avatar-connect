@@ -684,6 +684,12 @@ LF-5e の `type_expr` を node catalog の top-level `inputs[]` / `outputs[]` / 
 成功時は canonical type string、両側の `SocketTypeExpr`、`compatible` を返し、`list<float> -> list<quantity>` のような再帰的 compatibility も同じ rule で観測できる。
 現段階では read-only validation API に留め、FlowgraphCanvas の live edge validation への置き換えや async debounce は後続に送る。
 
+### LF-5i GUI edge validation uses type expressions ✅
+
+FlowgraphCanvas の edge validation が、node catalog に `type_expr` がある場合は `SocketType::compatible_with` と同じ再帰 rule を使うようにした。
+`list<float> -> list<quantity>` や `json <-> motion_frame` のような nested / boundary compatibility を GUI 側でも同じ形で扱える。
+古い backend などで `type_expr` が無い場合は従来の文字列ベース fallback を残し、互換表示を壊さない。
+
 ### LF-6 Error Model
 
 `result<T>`, `on_error`, fatal diagnostics, retry policy, fallback を統一する。
