@@ -89,4 +89,4 @@ default_timezone = "+09:00"   # 空 / 未指定 / "Z" / "UTC" は UTC
 ## 関連
 
 - 単位次元（時間以外）: [Dimensional Quantity System](./dimensional-quantity-system.md)
-- 全ノードのポート仕様: [Node Catalog](./node-catalog.md)（`BLESS_NODE_CATALOG=1 cargo test` で生成）
+- 全ノードのポート仕様: [Node Catalog](./node-catalog.md)（`./scripts/bless-node-catalog.ps1` で生成）
