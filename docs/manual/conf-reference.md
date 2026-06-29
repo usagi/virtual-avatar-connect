@@ -2,6 +2,8 @@
 
 v2 配布物に含まれる `conf.toml` の全キー一覧。個別の外部サービス設定（Twitch / OpenAI / TTS / 翻訳 / OCR / Voice / 起動時 run_with / Control API 認証）の詳細は `conf.example-*.toml` を参照してください。
 
+U.N. Motion / U.N. Avatar と接続する最小例は [`../../conf.example-un-suite.toml`](../../conf.example-un-suite.toml) と [tutorials/un-suite-vmc-hub.md](tutorials/un-suite-vmc-hub.md) を参照してください。
+
 > **大原則**: v2 の `conf.toml` に `[[processors]]` は **書けません**（voice 暫定例外のみ、詳細は `conf.example-voice.toml`）。データの配線はすべて `flowgraph_dir` 配下の `*.flowgraph.toml` で行います。
 
 ---

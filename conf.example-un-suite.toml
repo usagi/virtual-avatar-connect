@@ -1,0 +1,54 @@
+# =========================================================================
+# conf.example-un-suite.toml
+# =========================================================================
+# U.N. Motion -> VAC -> U.N. Avatar の最小 VMC/UDP hub 構成。
+#
+# 想定:
+# - un-motion は VMC/UDP output を 127.0.0.1:39539 へ送る。
+# - VAC は 0.0.0.0:39539 で受け、un-avatar の VMC input へ転送する。
+# - un-avatar 側 profile の [motion.vmc_udp].address は 127.0.0.1:39540 等へ変更する。
+#
+# UNMF/Z / Zenoh は後続。まず既存の VMC/UDP 経路で実用線を閉じる。
+
+web_ui_address = "127.0.0.1:57000"
+log_level = "Info"
+flowgraph_dir = "flowgraph.example"
+
+default_runtime_mode = "daily"
+
+# 実環境に合わせて command / working_dir を書き換える。
+# `id` は Runtime Mode の managed_apps.* から参照する安定 ID。
+run_with = [
+  { id = "un-motion", label = "U.N. Motion", command = "C:\\Program Files\\U.N. Motion\\un-motion-supervisor.exe", if_not_running = "un-motion-supervisor", minimized = true },
+  { id = "un-avatar", label = "U.N. Avatar", command = "C:\\Program Files\\U.N. Avatar\\un-avatar-supervisor.exe", if_not_running = "un-avatar-supervisor" },
+]
+
+[modes.daily]
+display_name = "Daily"
+flowgraph_groups.enable = ["assistant", "alerts"]
+flowgraph_groups.disable = ["streaming", "avatar", "motion"]
+managed_apps.leave = ["un-motion", "un-avatar"]
+notifications.level = "normal"
+capability_policy.allow = ["file_read", "network", "desktop_notification"]
+capability_policy.deny = ["obs_control"]
+
+[modes.streaming]
+display_name = "Streaming"
+flowgraph_groups.enable = ["assistant", "streaming", "avatar", "motion", "obs"]
+managed_apps.start = ["un-motion", "un-avatar"]
+notifications.level = "stream_safe"
+capability_policy.allow = ["file_read", "file_write", "network", "obs_control", "twitch_api", "process_control"]
+
+[motion]
+
+# un-motion VMC output -> VAC -> un-avatar VMC input
+[[motion.vmc_passthrough]]
+enabled = true
+label = "un-motion-to-un-avatar"
+bind = "0.0.0.0:39539"
+forward_to = [
+  "127.0.0.1:39540",
+]
+
+# VRChat OSC は VMC ではなく /avatar/parameters/* の OSC なので、この passthrough には混ぜない。
+# Flowgraph 側では flowgraph.vrchat.* ノードまたは un-motion の VRC OSC output を使う。

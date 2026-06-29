@@ -189,6 +189,7 @@ Flowgraph engine に **SI 準拠の単位次元システム**を第一級概念�
 - [x] M-4a feat(flowgraph,motion,deps): `flowgraph.motion.vmc_parse`（Base64→OSC→JSON）+ Phase ρ 先取り `flowgraph.osc.send`（UDP）+ `rosc` + `flowgraph::fixture_runner` 最小 + `src/app_core/`（Step 7 一段）
 - [x] M-4 feat(flowgraph): `MotionFrame` 第一級型 + `motion_frame` ソケット（`json` と coerce 往復）+ `flowgraph.motion.vmc_parse` / `filter` / `map`（ワイヤ表現は `byte_len` + `osc_messages`。**head_pose 等の意味 IR**は M5 以降 / `v2-vmc` §M4 参照）
 - [x] M-5 docs+flowgraph: 用途拡張の first slice として `flowgraph.vmc.extract_blendshape` と型付き pose / blendshape 出力、`flowgraph.example/vmc-blendshape-trigger` / `vmc-ai-mode-control` / `vmc-obs-scene-control`、`flowgraph.obs.request` / `flowgraph.obs.set_current_program_scene` を追加（表情・gesture トリガー、AI 入力、Runtime Mode 制御、OBS scene 制御の土台）。
+- [~] M-6 UN Suite integration: `un-motion -> VAC -> un-avatar` を VMC/UDP hub として接続する。初段として [`roadmap/un-suite-integration-roadmap.md`](roadmap/un-suite-integration-roadmap.md) と [`conf.example-un-suite.toml`](../conf.example-un-suite.toml) を追加。UNMF/Z / Zenoh は VMC 実運用確認後に判断。
 
 ### v2 crate / runner / GUI 同梱（再構造化メタ）
 
