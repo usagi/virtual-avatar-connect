@@ -48,10 +48,13 @@ VMC packet を Flowgraph に入れる場合は、`flowgraph.ingress.vmc_udp` と
 
 既存 example:
 
+- [`flowgraph.example/un-suite-vmc-monitor`](../../../flowgraph.example/un-suite-vmc-monitor)
 - [`flowgraph.example/vmc-udp-ingress`](../../../flowgraph.example/vmc-udp-ingress)
 - [`flowgraph.example/vmc-blendshape-trigger`](../../../flowgraph.example/vmc-blendshape-trigger)
 - [`flowgraph.example/vmc-ai-mode-control`](../../../flowgraph.example/vmc-ai-mode-control)
 - [`flowgraph.example/vmc-obs-scene-control`](../../../flowgraph.example/vmc-obs-scene-control)
+
+`un-suite-vmc-monitor` は passthrough と同じ port を使わないよう、既定で `127.0.0.1:39543` を bind します。un-motion 側で monitor 用の VMC output を追加して使います。
 
 ## VRChat との違い
 

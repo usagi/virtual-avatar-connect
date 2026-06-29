@@ -1,0 +1,70 @@
+# U.N. Motion / U.N. Avatar 接続確認用の VMC monitor。
+#
+# un-motion 側で VMC/UDP output を 127.0.0.1:39543 へ追加し、この graph で
+# `/VMC/Ext/Blend/Val` の Joy を抽出して JSON 文字列として log する。
+#
+# `conf.example-un-suite.toml` の passthrough (39539 -> 39540) とは別 port を使う。
+# passthrough と monitor を同じ port で同時 bind することはできない。
+
+[meta]
+title = "UN Suite VMC monitor"
+description = "un-motion VMC output -> VAC Flowgraph monitor"
+tags = ["example", "un-suite", "un-motion", "un-avatar", "vmc", "motion"]
+mode_groups = ["motion", "avatar", "streaming"]
+
+[[nodes]]
+id = "vmc_in"
+feature = "flowgraph.ingress.vmc_udp"
+position = [80, 140]
+properties.bind = "127.0.0.1:39543"
+properties.fixed_channel = "un_motion_vmc"
+
+[[nodes]]
+id = "parse"
+feature = "flowgraph.motion.vmc_parse"
+position = [320, 140]
+
+[[nodes]]
+id = "extract_joy"
+feature = "flowgraph.vmc.extract_blendshape"
+position = [560, 140]
+
+[[nodes]]
+id = "joy_name"
+feature = "flowgraph.literal.string"
+position = [560, 300]
+properties.value = "Joy"
+
+[[nodes]]
+id = "stringify_joy"
+feature = "flowgraph.json.stringify"
+position = [800, 140]
+
+[[nodes]]
+id = "log_joy"
+feature = "flowgraph.util.log"
+position = [1040, 140]
+
+[[edges]]
+from = "vmc_in:exec_out"
+to = "log_joy:exec_in"
+
+[[edges]]
+from = "vmc_in:content_bytes"
+to = "parse:payload"
+
+[[edges]]
+from = "parse:frame"
+to = "extract_joy:frame"
+
+[[edges]]
+from = "joy_name:value"
+to = "extract_joy:blendshape_name"
+
+[[edges]]
+from = "extract_joy:blendshape"
+to = "stringify_joy:value"
+
+[[edges]]
+from = "stringify_joy:text"
+to = "log_joy:value"
